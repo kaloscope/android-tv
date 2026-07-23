@@ -1,0 +1,32 @@
+{
+  "request_id": "fixture-indexer-list",
+  "status": 200,
+  "message": "",
+  "data": {
+    "total": 1,
+    "items": [
+      {
+        "id": 11,
+        "created_at": "2026-07-01T08:00:00Z",
+        "updated_at": "2026-07-20T08:00:00Z",
+        "name": "示例视频站点",
+        "icon": "icons/example-indexer.webp",
+        "description": "用于契约测试的脱敏站点",
+        "category": "indexer",
+        "revision": 1,
+        "state": "published",
+        "editable": false,
+        "success_rate": null,
+        "average_time": null,
+        "last_exec": null,
+        "node_types": [
+          "search_start",
+          "details_start"
+        ],
+        "only_preview": true,
+        "tmpl": null,
+        "newest_tmpl": null
+      }
+    ]
+  }
+}

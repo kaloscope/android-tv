@@ -1,0 +1,34 @@
+{
+  "request_id": "fixture-indexer-config",
+  "status": 200,
+  "message": "",
+  "data": {
+    "auth": {
+      "login": {
+        "mode": "web",
+        "required": false
+      }
+    },
+    "search": {
+      "display": {
+        "page_size": 20,
+        "view_modes": [
+          "grid"
+        ],
+        "cover_ratio": "2/3"
+      },
+      "keyword": {
+        "global": false,
+        "required": true
+      },
+      "filters": {}
+    },
+    "board": null,
+    "details": {
+      "specific": {
+        "media_type": "video",
+        "video_type": "hls"
+      }
+    }
+  }
+}

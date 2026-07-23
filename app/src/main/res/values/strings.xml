@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kaloscope</string>
+    <string name="tv_experience">TV EXPERIENCE</string>
+    <string name="loading">正在连接 Kaloscope…</string>
+
+    <string name="setup_eyebrow">第一步</string>
+    <string name="setup_title">添加服务器</string>
+    <string name="setup_description">输入你的 Kaloscope 服务器地址。测试成功后，服务器会安全地保存在这台设备上。</string>
+    <string name="server_name">服务器名称</string>
+    <string name="server_name_hint">例如：家庭服务器</string>
+    <string name="server_url">服务器地址</string>
+    <string name="server_url_hint">例如：http://192.168.1.2:8000</string>
+    <string name="test_connection">测试连接</string>
+    <string name="testing">正在测试…</string>
+    <string name="save_continue">保存并继续</string>
+    <string name="saving">正在保存…</string>
+    <string name="connection_success">连接成功  %1$s</string>
+    <string name="saved_servers">已保存服务器</string>
+    <string name="add_another_server">添加新服务器</string>
+
+    <string name="login_eyebrow">第二步</string>
+    <string name="login_title">登录账户</string>
+    <string name="login_server">%1$s\n%2$s</string>
+    <string name="username">用户名</string>
+    <string name="username_hint">输入用户名</string>
+    <string name="password">密码</string>
+    <string name="password_hint">输入密码</string>
+    <string name="login">登录</string>
+    <string name="logging_in">正在登录…</string>
+    <string name="change_server">更换服务器</string>
+
+    <string name="ready_eyebrow">连接完成</string>
+    <string name="ready_title">欢迎使用 Kaloscope</string>
+    <string name="ready_description">%1$s 已登录 %2$s</string>
+    <string name="ready_next">当前会话已通过服务器验证。</string>
+    <string name="logout">退出登录</string>
+
+    <string name="connection_error_eyebrow">连接中断</string>
+    <string name="connection_error_title">暂时无法连接</string>
+    <string name="connection_error_server">无法验证 %1$s 的会话，本地登录信息仍然保留。</string>
+    <string name="retry">重试</string>
+    <string name="login_again">重新登录</string>
+
+    <string name="error_server_name">请输入服务器名称</string>
+    <string name="error_server_url">请输入有效的 HTTP 或 HTTPS 服务器地址</string>
+    <string name="error_server_save">无法保存服务器，请重试</string>
+    <string name="error_credentials">请输入用户名和密码</string>
+    <string name="error_unauthorized">用户名、密码或登录状态无效</string>
+    <string name="error_forbidden">当前账户没有访问权限</string>
+    <string name="error_not_found">服务器没有提供所需接口</string>
+    <string name="error_timeout">连接超时，请检查服务器后重试</string>
+    <string name="error_offline">无法连接服务器，请检查网络和地址</string>
+    <string name="error_api">服务器返回错误：%1$s</string>
+    <string name="error_invalid_data">服务器响应格式无效</string>
+</resources>

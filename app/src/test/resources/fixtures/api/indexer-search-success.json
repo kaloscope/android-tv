@@ -1,0 +1,30 @@
+{
+  "request_id": "fixture-indexer-search",
+  "status": 200,
+  "message": "",
+  "data": {
+    "total": 1,
+    "items": [
+      {
+        "id": "video-fixture-001",
+        "title": "星际回声",
+        "cover": "https://example.invalid/posters/video-fixture-001.webp?proxy=true",
+        "ranking": null,
+        "rating": 8.6,
+        "link": "https://example.invalid/video/video-fixture-001",
+        "size": null,
+        "misc": null,
+        "category": "科幻",
+        "uploader": "示例发布者",
+        "uploaded_at": "2026-07-01",
+        "media_type": "video",
+        "url": null,
+        "video_type": "hls",
+        "definitions": null,
+        "chapters": null,
+        "danmakus": null,
+        "favorite": false
+      }
+    ]
+  }
+}

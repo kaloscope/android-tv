@@ -1,0 +1,48 @@
+{
+  "request_id": "fixture-indexer-details",
+  "status": 200,
+  "message": "",
+  "data": {
+    "id": "video-fixture-001",
+    "title": "星际回声",
+    "cover": "https://example.invalid/posters/video-fixture-001.webp?proxy=true",
+    "uploader": "示例发布者",
+    "uploaded_at": "2026-07-01",
+    "media_type": "video",
+    "url": "/_api/media/proxy?url=https%3A%2F%2Fexample.invalid%2Fvideo%2Fmaster.m3u8",
+    "video_type": "hls",
+    "definitions": [
+      {
+        "url": "/_api/media/proxy?url=https%3A%2F%2Fexample.invalid%2Fvideo%2F1080p.m3u8",
+        "definition": "1080P"
+      },
+      {
+        "url": "/_api/media/proxy?url=https%3A%2F%2Fexample.invalid%2Fvideo%2F720p.m3u8",
+        "definition": "720P"
+      }
+    ],
+    "chapters": [
+      {
+        "id": "episode-1",
+        "url": null,
+        "title": "第 1 集",
+        "volume": "第 1 季"
+      },
+      {
+        "id": "episode-2",
+        "url": null,
+        "title": "第 2 集",
+        "volume": "第 1 季"
+      }
+    ],
+    "danmakus": [
+      {
+        "id": "comment-1",
+        "text": "契约测试弹幕",
+        "mode": "scroll",
+        "color": "#FFFFFF",
+        "start": 12500
+      }
+    ]
+  }
+}

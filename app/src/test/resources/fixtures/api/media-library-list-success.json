@@ -1,0 +1,21 @@
+{
+  "request_id": "fixture-media-library-list",
+  "status": 200,
+  "message": "",
+  "data": [
+    {
+      "id": 21,
+      "created_at": "2026-07-01T08:00:00Z",
+      "updated_at": "2026-07-20T08:00:00Z",
+      "lib_type": "tv_show",
+      "dir": "/media/tv",
+      "name": "剧集库",
+      "language": "zh-CN",
+      "priority": 1,
+      "danmaku_server": null,
+      "danmaku_ttl": 24,
+      "triggers": [],
+      "scanning": false
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "request_id": "fixture-history-video-list",
+  "status": 200,
+  "message": "",
+  "data": {
+    "total": 1,
+    "items": [
+      {
+        "id": 401,
+        "created_at": "2026-07-22T08:00:00Z",
+        "updated_at": "2026-07-23T08:00:00Z",
+        "rel_type": "video",
+        "rel_id": 301,
+        "repetitions": 2,
+        "keyword": null,
+        "position": 1694,
+        "percentage": 63,
+        "media": {
+          "id": 301,
+          "dir": "/media/tv/Stellar Archive/Season 01",
+          "path": "/media/tv/Stellar Archive/Season 01/S01E01.mkv",
+          "name": "S01E01.mkv",
+          "hash": "0123456789abcdef0123456789abcdef",
+          "size": 2147483648,
+          "visible": true,
+          "nfo_path": "/media/tv/Stellar Archive/Season 01/S01E01.nfo",
+          "nfo_mtime": "2026-07-20T08:00:00Z",
+          "nfo_source": "fixture",
+          "danmaku_path": null,
+          "danmaku_meta": null,
+          "unique_id": "fixture-episode-301",
+          "title": "启程",
+          "year": 2026,
+          "aired": "2026-01-01",
+          "season": 1,
+          "episode": 1,
+          "poster": null,
+          "backdrop": null,
+          "rating": 8.5
+        }
+      }
+    ]
+  }
+}

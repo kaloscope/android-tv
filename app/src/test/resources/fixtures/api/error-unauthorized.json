@@ -1,0 +1,5 @@
+{
+  "description": "401 — Unauthorized",
+  "status": 401,
+  "message": "unauthorized"
+}

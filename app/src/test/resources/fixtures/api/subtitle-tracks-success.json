@@ -1,0 +1,23 @@
+{
+  "request_id": "fixture-subtitle-tracks",
+  "status": 200,
+  "message": "",
+  "data": [
+    {
+      "id": "external-fixture-zh",
+      "type": "external",
+      "label": "简体中文",
+      "url": "/_api/subtitle/content?path=%2Fmedia%2Ftv%2FStellar%20Archive%2FSeason%2001%2FS01E01.zh-CN.srt",
+      "format": "vtt",
+      "language": "zh-CN"
+    },
+    {
+      "id": "embedded-fixture-en",
+      "type": "embedded",
+      "label": "English",
+      "url": "/_api/subtitle/content?path=%2Fmedia%2Ftv%2FStellar%20Archive%2FSeason%2001%2FS01E01.mkv&stream=2",
+      "format": "vtt",
+      "language": "en"
+    }
+  ]
+}

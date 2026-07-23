@@ -1,0 +1,31 @@
+{
+  "request_id": "fixture-danmaku-match",
+  "status": 200,
+  "message": "",
+  "data": {
+    "metadata": {
+      "anime_id": "fixture-anime-201",
+      "anime_title": "群星档案",
+      "episode_id": "fixture-episode-301",
+      "episode_title": "启程",
+      "type": "tvseries",
+      "type_description": "TV"
+    },
+    "comments": [
+      {
+        "id": "fixture-comment-1",
+        "text": "准备出发",
+        "mode": "scroll",
+        "color": "#FFFFFF",
+        "start": 12500
+      },
+      {
+        "id": "fixture-comment-2",
+        "text": "片头很棒",
+        "mode": "top",
+        "color": "#FFD166",
+        "start": 24000
+      }
+    ]
+  }
+}

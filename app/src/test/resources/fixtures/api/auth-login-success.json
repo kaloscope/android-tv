@@ -1,0 +1,29 @@
+{
+  "request_id": "fixture-auth-login",
+  "status": 200,
+  "message": "",
+  "data": {
+    "token": "fixture-token-not-for-production",
+    "user": {
+      "id": 1,
+      "login_id": "fixture-login-id",
+      "username": "tv_user",
+      "avatar": null,
+      "role": "user",
+      "preferences": {
+        "homepage": "/dashboard",
+        "vibration": false,
+        "recent_searches": true,
+        "recent_watches": true,
+        "search_records": 3,
+        "watch_records": 3
+      },
+      "user_agent": "KaloscopeTV/1.0",
+      "client_ip": "192.0.2.10",
+      "login_at": "2026-07-23T08:00:00Z",
+      "expire_at": "2026-07-28T08:00:00Z",
+      "last_activity": "2026-07-23T08:00:00Z",
+      "perms": null
+    }
+  }
+}
