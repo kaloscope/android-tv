@@ -65,6 +65,7 @@ class KaloscopeViewModel @Inject constructor(
 
     fun showServerSelection() {
         viewModelScope.launch {
+            // Drop any password-bearing login state before showing another root screen.
             stopLoginCollection()
             mutableBootstrapState.value = BootstrapState.NeedsServer(
                 bootstrapRepository.getServers(),
@@ -75,6 +76,7 @@ class KaloscopeViewModel @Inject constructor(
     fun selectServer(server: SavedServer) {
         viewModelScope.launch {
             serverRepository.setActiveServer(server.id)
+            // Tokens are isolated by server ID and never reused across origins.
             val token = sessionRepository.getToken(server.id)
             if (token.isNullOrBlank()) {
                 showLogin(server)
@@ -96,6 +98,7 @@ class KaloscopeViewModel @Inject constructor(
         val coordinator = loginCoordinator ?: return
         viewModelScope.launch {
             coordinator.submit()?.let { session ->
+                // Replacing the root state removes the entire login subtree from composition.
                 mutableBootstrapState.value = BootstrapState.Ready(session)
                 stopLoginCollection()
             }
@@ -127,6 +130,7 @@ class KaloscopeViewModel @Inject constructor(
     }
 
     private fun showLogin(server: SavedServer) {
+        // A coordinator is bound to one server, so switching servers must replace it.
         stopLoginCollection()
         val coordinator = LoginCoordinator(server, sessionRepository)
         loginCoordinator = coordinator
@@ -141,6 +145,7 @@ class KaloscopeViewModel @Inject constructor(
         loginStateJob?.cancel()
         loginStateJob = null
         loginCoordinator = null
+        // Resetting the state also removes any password still held in memory.
         mutableLoginState.value = LoginState()
     }
 }

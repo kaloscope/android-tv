@@ -2,6 +2,9 @@ package org.kaloscope.tv.core.network
 
 import java.net.URI
 
+/**
+ * Prevents a Kaloscope token from being attached to third-party resource URLs.
+ */
 object OriginAuthPolicy {
     fun shouldAttachToken(
         serverOrigin: String,
@@ -23,6 +26,7 @@ private fun String.toOrigin(): Origin? {
     val uri = runCatching { URI(this) }.getOrNull() ?: return null
     val scheme = uri.scheme?.lowercase() ?: return null
     val host = uri.host?.lowercase() ?: return null
+    // Explicit and implicit default ports represent the same HTTP origin.
     val port = when {
         uri.port >= 0 -> uri.port
         scheme == "http" -> 80

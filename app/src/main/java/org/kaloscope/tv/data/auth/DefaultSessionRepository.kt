@@ -38,6 +38,7 @@ class DefaultSessionRepository @Inject constructor(
         }
         return when (result) {
             is AppResult.Success -> {
+                // Persist only tokens from structurally valid login responses.
                 sessionStore.setToken(server.id, result.value.token)
                 AppResult.Success(result.value.toSession(server))
             }
@@ -48,6 +49,7 @@ class DefaultSessionRepository @Inject constructor(
 
     override suspend fun validate(server: SavedServer, token: String): AppResult<Session> {
         val result = networkCall(json) {
+            // The client is bound to this server origin before adding its token.
             apiClientFactory.create(server.origin)
                 .getCurrentUser("Token $token")
                 .dataOrThrow()

@@ -24,6 +24,7 @@ class BootstrapCoordinator(
             return when (val result = repository.validateSession(activeServer, token)) {
                 is AppResult.Success -> BootstrapState.Ready(result.value)
                 is AppResult.Failure -> {
+                    // Only authentication failures invalidate a stored session.
                     if (result.error == AppError.Unauthorized) {
                         repository.clearToken(activeServer.id)
                         BootstrapState.NeedsLogin(activeServer)

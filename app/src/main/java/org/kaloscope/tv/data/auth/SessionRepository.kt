@@ -4,6 +4,9 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 
+/**
+ * Keeps authentication operations and tokens scoped to a single saved server.
+ */
 interface SessionRepository {
     suspend fun login(
         server: SavedServer,

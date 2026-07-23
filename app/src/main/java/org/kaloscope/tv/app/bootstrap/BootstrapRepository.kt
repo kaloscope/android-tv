@@ -4,6 +4,9 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 
+/**
+ * Exposes only the persisted and remote data needed to resolve the root state.
+ */
 interface BootstrapRepository {
     suspend fun getServers(): List<SavedServer>
 

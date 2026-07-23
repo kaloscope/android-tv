@@ -19,6 +19,9 @@ class ApiClientFactory @Inject constructor(
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
+    /**
+     * Binds relative API calls to one normalized Kaloscope server origin.
+     */
     fun create(origin: String): KaloscopeApi =
         Retrofit.Builder()
             .baseUrl("$origin/_api/")

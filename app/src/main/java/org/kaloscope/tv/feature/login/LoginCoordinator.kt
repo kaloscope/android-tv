@@ -40,6 +40,7 @@ class LoginCoordinator(
 
     suspend fun submit(): Session? {
         val current = mutableState.value
+        // Guard against repeated D-pad presses while the request is active.
         if (current.isSubmitting) {
             return null
         }
@@ -58,6 +59,7 @@ class LoginCoordinator(
                 )
             ) {
                 is AppResult.Success -> {
+                    // Passwords are never retained after an authentication attempt.
                     mutableState.value = mutableState.value.copy(
                         password = "",
                         isSubmitting = false,
@@ -66,6 +68,7 @@ class LoginCoordinator(
                 }
 
                 is AppResult.Failure -> {
+                    // Keep the username for recovery, but always clear the password.
                     mutableState.value = mutableState.value.copy(
                         password = "",
                         isSubmitting = false,

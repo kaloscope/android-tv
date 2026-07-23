@@ -17,10 +17,12 @@ class AndroidKeystoreTokenCipher @Inject constructor() : TokenCipher {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
         val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+        // Prefixing the IV keeps the encrypted value self-contained.
         return Base64.encodeToString(cipher.iv + encrypted, Base64.NO_WRAP)
     }
 
     override fun decrypt(value: String): String? =
+        // Invalidated keys or corrupt payloads are treated as a missing session.
         runCatching {
             val payload = Base64.decode(value, Base64.NO_WRAP)
             require(payload.size > IV_SIZE)

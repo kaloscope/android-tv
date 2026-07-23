@@ -3,6 +3,9 @@ package org.kaloscope.tv.data.server
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.SavedServer
 
+/**
+ * Verifies server origins before they enter persistent client state.
+ */
 interface ServerRepository {
     suspend fun testConnection(origin: String): AppResult<String>
 

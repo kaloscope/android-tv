@@ -61,6 +61,7 @@ internal data class ErrorData(
 )
 
 internal fun <T> ApiEnvelope<T>.dataOrThrow(): T {
+    // The backend mirrors HTTP status in every successful JSON envelope.
     if (status != 200) {
         throw SerializationException("Unexpected envelope status")
     }

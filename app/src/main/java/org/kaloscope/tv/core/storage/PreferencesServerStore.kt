@@ -22,6 +22,7 @@ class PreferencesServerStore @Inject constructor(
 ) : ServerStore {
     override suspend fun getServers(): List<SavedServer> {
         val encoded = context.kaloscopeDataStore.data.first()[SERVERS] ?: return emptyList()
+        // Corrupt local metadata must not crash startup or expose stale servers.
         return runCatching {
             json.decodeFromString<List<StoredServer>>(encoded).map(StoredServer::toModel)
         }.getOrElse { emptyList() }
@@ -29,6 +30,7 @@ class PreferencesServerStore @Inject constructor(
 
     override suspend fun save(server: SavedServer) {
         context.kaloscopeDataStore.edit { preferences ->
+            // A corrupt list is replaced by the newly verified server.
             val current = preferences[SERVERS]
                 ?.let { encoded ->
                     runCatching {

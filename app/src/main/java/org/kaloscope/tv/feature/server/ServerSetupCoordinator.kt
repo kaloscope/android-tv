@@ -49,6 +49,7 @@ class ServerSetupCoordinator(
     }
 
     fun updateUrl(value: String) {
+        // A connection proof is valid only for the exact origin that was tested.
         mutableState.value = mutableState.value.copy(
             url = value,
             error = null,
@@ -95,6 +96,7 @@ class ServerSetupCoordinator(
 
     suspend fun save(): SavedServer? {
         val current = mutableState.value
+        // Never persist an address that has not passed the public version check.
         val origin = current.verifiedOrigin ?: return null
         if (!current.canSave) {
             return null
@@ -115,6 +117,7 @@ class ServerSetupCoordinator(
             mutableState.value = mutableState.value.copy(isSaving = false)
             throw error
         } catch (_: Exception) {
+            // Keep the verified draft available so the user can retry the local write.
             mutableState.value = mutableState.value.copy(
                 isSaving = false,
                 error = ServerSetupError.SaveFailed,

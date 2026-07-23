@@ -23,6 +23,7 @@ class SecureSessionStore @Inject constructor(
 
     override suspend fun setToken(serverId: String, token: String) {
         context.sessionDataStore.edit { preferences ->
+            // DataStore receives ciphertext only; plaintext remains process-local.
             preferences[key(serverId)] = cipher.encrypt(token)
         }
     }
@@ -33,5 +34,6 @@ class SecureSessionStore @Inject constructor(
         }
     }
 
+    // Separate keys prevent a session from being reused after switching servers.
     private fun key(serverId: String) = stringPreferencesKey("token_$serverId")
 }

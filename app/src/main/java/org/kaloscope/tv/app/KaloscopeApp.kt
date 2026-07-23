@@ -75,6 +75,7 @@ fun KaloscopeApp(viewModel: KaloscopeViewModel) {
             onSurface = OnBackground,
         ),
     ) {
+        // Exactly one root subtree is composed to prevent hidden screens from retaining focus.
         when (val state = bootstrapState) {
             BootstrapState.Loading -> LoadingScreen()
             is BootstrapState.NeedsServer -> {
@@ -139,6 +140,7 @@ private fun ServerSetupScreen(
     onSelectServer: (SavedServer) -> Unit,
 ) {
     val firstFocus = remember { FocusRequester() }
+    // Existing servers take focus priority; new installations start in the name field.
     LaunchedEffect(Unit) { firstFocus.requestFocus() }
 
     AppFrame {

@@ -2,6 +2,9 @@ package org.kaloscope.tv.core.storage
 
 import org.kaloscope.tv.core.model.SavedServer
 
+/**
+ * Stores user-approved servers and the active server selection.
+ */
 interface ServerStore {
     suspend fun getServers(): List<SavedServer>
 

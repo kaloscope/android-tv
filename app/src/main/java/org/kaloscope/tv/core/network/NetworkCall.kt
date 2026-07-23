@@ -16,6 +16,7 @@ suspend fun <T> networkCall(
     try {
         AppResult.Success(block())
     } catch (error: CancellationException) {
+        // Cancellation controls coroutine lifecycles and must not become a UI error.
         throw error
     } catch (error: HttpException) {
         AppResult.Failure(error.toAppError(json))
@@ -34,6 +35,7 @@ private fun HttpException.toAppError(json: Json): AppError =
         404 -> AppError.NotFound
         408, 502, 503, 504 -> AppError.Timeout
         else -> {
+            // Error bodies are optional, so HTTP status remains a reliable fallback.
             val errorData = runCatching {
                 response()?.errorBody()?.string()?.let {
                     json.decodeFromString<ErrorData>(it)
