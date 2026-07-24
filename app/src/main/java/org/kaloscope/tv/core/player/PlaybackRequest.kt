@@ -7,6 +7,9 @@ sealed interface PlaybackRequest {
     val serverId: String
     val title: String
     val origin: PlaybackOrigin
+    val autoplayNext: Boolean
+    val danmakuEnabled: Boolean
+    val subtitleEnabled: Boolean
 
     data class LocalMedia(
         override val requestId: String,
@@ -19,6 +22,9 @@ sealed interface PlaybackRequest {
         val playbackMode: PlaybackMode = PlaybackMode.Auto,
         val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
         val siblings: List<LocalEpisodeRef> = emptyList(),
+        override val autoplayNext: Boolean = true,
+        override val danmakuEnabled: Boolean = true,
+        override val subtitleEnabled: Boolean = true,
     ) : PlaybackRequest
 
     data class NetworkVideo(
@@ -28,6 +34,10 @@ sealed interface PlaybackRequest {
         override val origin: PlaybackOrigin = PlaybackOrigin.NetworkSearch,
         val source: NetworkPlaybackSource,
         val resumePositionMillis: Long = 0,
+        val preferredDefinition: TranscodeResolution = TranscodeResolution.P1080,
+        override val autoplayNext: Boolean = true,
+        override val danmakuEnabled: Boolean = true,
+        override val subtitleEnabled: Boolean = true,
     ) : PlaybackRequest
 }
 

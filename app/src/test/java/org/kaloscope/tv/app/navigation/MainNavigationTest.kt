@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.kaloscope.tv.core.model.StartPage
 
 class MainNavigationTest {
     @Test
@@ -55,5 +56,12 @@ class MainNavigationTest {
 
         assertFalse(backStack.handleMainBack())
         assertEquals(listOf(HomeRoute), backStack)
+    }
+
+    @Test
+    fun `saved start page selects the matching root route`() {
+        assertEquals(HomeRoute, StartPage.Home.toRootRoute())
+        assertEquals(SearchRoute, StartPage.Search.toRootRoute())
+        assertEquals(LibraryRoute, StartPage.Library.toRootRoute())
     }
 }

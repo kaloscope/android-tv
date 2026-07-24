@@ -64,6 +64,7 @@ import org.kaloscope.tv.core.player.PlaybackFailure
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestNavigator
+import org.kaloscope.tv.core.player.PlaybackSettingsPolicy
 import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -166,11 +167,11 @@ private fun PlayerContent(
     val status by controller.status.collectAsStateWithLifecycle()
     var positionMillis by remember(playbackIdentity) { mutableLongStateOf(0) }
     var controlsVisible by remember { mutableStateOf(true) }
-    var subtitlesEnabled by remember(playbackIdentity) {
-        mutableStateOf(state.subtitles.isNotEmpty())
+    var subtitlesEnabled by remember(state.request.requestId) {
+        mutableStateOf(state.request.subtitleEnabled)
     }
-    var danmakusEnabled by remember(playbackIdentity) {
-        mutableStateOf(state.danmakus.isNotEmpty())
+    var danmakusEnabled by remember(state.request.requestId) {
+        mutableStateOf(state.request.danmakuEnabled)
     }
     var definitionDrawerOpen by remember { mutableStateOf(false) }
     var restoreDefinitionFocus by remember { mutableStateOf(false) }
@@ -178,6 +179,7 @@ private fun PlayerContent(
     val playerFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
     val definitionFocus = remember { FocusRequester() }
+    val hasNext = PlaybackRequestNavigator.hasNext(state.request)
 
     BackHandler {
         if (definitionDrawerOpen) {
@@ -188,6 +190,9 @@ private fun PlayerContent(
         }
     }
 
+    LaunchedEffect(controller) {
+        controller.setSubtitlesEnabled(subtitlesEnabled)
+    }
     LaunchedEffect(controller) {
         while (true) {
             positionMillis = controller.player.currentPosition.coerceAtLeast(0)
@@ -238,6 +243,18 @@ private fun PlayerContent(
     LaunchedEffect(status.failure) {
         if (status.failure != null) {
             definitionDrawerOpen = false
+        }
+    }
+    LaunchedEffect(playbackIdentity, status.playbackState) {
+        if (
+            PlaybackSettingsPolicy.shouldAutoAdvance(
+                playbackState = status.playbackState,
+                autoplayNext = state.request.autoplayNext,
+                hasNext = hasNext,
+            )
+        ) {
+            controller.recordItemSwitchProgress()
+            onNext()
         }
     }
 
@@ -331,7 +348,7 @@ private fun PlayerContent(
                     (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
                 fallbackInProgress = status.fallbackInProgress,
                 hasPrevious = PlaybackRequestNavigator.hasPrevious(state.request),
-                hasNext = PlaybackRequestNavigator.hasNext(state.request),
+                hasNext = hasNext,
                 definitions = (state.request as? PlaybackRequest.NetworkVideo)
                     ?.source
                     ?.definitions

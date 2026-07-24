@@ -12,6 +12,7 @@ import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
+import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.player.PlaybackOrigin
 import org.kaloscope.tv.core.player.PlaybackProgressRecorder
@@ -20,7 +21,6 @@ import org.kaloscope.tv.core.player.PlaybackRequestNavigator
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.core.player.LocalEpisodeRef
 import org.kaloscope.tv.core.player.ProgressReason
-import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.history.HistoryRepository
 import org.kaloscope.tv.data.media.MediaRepository
 import org.kaloscope.tv.data.search.SearchRepository
@@ -42,6 +42,7 @@ class PlayerViewModel @Inject constructor(
     fun createFromHistory(
         session: Session,
         item: WatchHistoryItem,
+        settings: TvSettings = TvSettings(),
     ): String? =
         createLocalRequest(
             session = session,
@@ -50,6 +51,7 @@ class PlayerViewModel @Inject constructor(
             title = item.title,
             resumePositionSeconds = item.positionSeconds,
             origin = PlaybackOrigin.Home,
+            settings = settings,
         )
 
     fun createFromDetail(
@@ -57,6 +59,7 @@ class PlayerViewModel @Inject constructor(
         detail: MediaDetail,
         siblings: List<MediaSummary>,
         resumePositionSeconds: Long?,
+        settings: TvSettings = TvSettings(),
     ): String? =
         createLocalRequest(
             session = session,
@@ -66,6 +69,7 @@ class PlayerViewModel @Inject constructor(
             resumePositionSeconds = resumePositionSeconds,
             origin = PlaybackOrigin.MediaDetail,
             siblings = siblings,
+            settings = settings,
         )
 
     fun load(
@@ -165,7 +169,7 @@ class PlayerViewModel @Inject constructor(
                     session = session,
                     source = networkRequest.source,
                     chapterIndex = chapterIndex,
-                    preferredDefinition = TranscodeResolution.P1080,
+                    preferredDefinition = networkRequest.preferredDefinition,
                 )
             ) {
                 is AppResult.Success -> coordinator.replaceRequest(
@@ -208,6 +212,7 @@ class PlayerViewModel @Inject constructor(
         resumePositionSeconds: Long?,
         origin: PlaybackOrigin,
         siblings: List<MediaSummary> = emptyList(),
+        settings: TvSettings = TvSettings(),
     ): String? {
         if (mediaId <= 0 || path.isBlank() || title.isBlank()) {
             return null
@@ -220,6 +225,8 @@ class PlayerViewModel @Inject constructor(
             title = title,
             resumePositionSeconds = resumePositionSeconds?.coerceAtLeast(0),
             origin = origin,
+            playbackMode = settings.playbackMode,
+            transcodeResolution = settings.transcodeResolution,
             siblings = siblings.mapNotNull { item ->
                 LocalEpisodeRef(
                     mediaId = item.id,
@@ -227,6 +234,9 @@ class PlayerViewModel @Inject constructor(
                     title = item.title,
                 ).takeIf { it.mediaId > 0 && it.path.isNotBlank() && it.title.isNotBlank() }
             },
+            autoplayNext = settings.autoplayNext,
+            danmakuEnabled = settings.danmakuEnabled,
+            subtitleEnabled = settings.subtitleEnabled,
         )
         requestStore.put(request)
         return request.requestId

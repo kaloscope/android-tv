@@ -23,6 +23,7 @@ import org.junit.Test
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.model.MediaActor
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
@@ -32,6 +33,8 @@ import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryUiState
+import org.kaloscope.tv.feature.settings.SettingsSection
+import org.kaloscope.tv.feature.settings.SettingsUiState
 
 class MainShellTest {
     @get:Rule
@@ -74,6 +77,10 @@ class MainShellTest {
                     homeState = HomeUiState.Empty,
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
+                    settingsState = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.ServerAccount,
+                    ),
                     onRefresh = {},
                     onOpenLibrary = {},
                     onSelectLibrary = {},
@@ -102,7 +109,6 @@ class MainShellTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithText("服务器与账号").assertExists()
         composeRule.onNodeWithText("家庭服务器").assertExists()
         composeRule.onNodeWithText("tv_user").assertExists()
         composeRule.onNodeWithContentDescription("设置").assertIsSelected()

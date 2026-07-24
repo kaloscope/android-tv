@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.data.search.SearchRepository
 
@@ -52,7 +53,8 @@ class SearchViewModel @Inject constructor(
     fun play(
         session: Session,
         resultId: String,
-    ) = startRequest { coordinator.play(session, resultId) }
+        settings: TvSettings = TvSettings(),
+    ) = startRequest { coordinator.play(session, resultId, settings) }
 
     fun consumePlaybackRequest(requestId: String) =
         coordinator.consumePlaybackRequest(requestId)

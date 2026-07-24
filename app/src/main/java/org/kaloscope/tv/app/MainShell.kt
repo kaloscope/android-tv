@@ -70,12 +70,16 @@ import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
+import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.ProgressReason
+import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.feature.detail.MediaDetailScreen
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeUiState
@@ -85,6 +89,9 @@ import org.kaloscope.tv.feature.player.PlayerScreen
 import org.kaloscope.tv.feature.player.PlayerUiState
 import org.kaloscope.tv.feature.search.SearchScreen
 import org.kaloscope.tv.feature.search.SearchUiState
+import org.kaloscope.tv.feature.settings.SettingsScreen
+import org.kaloscope.tv.feature.settings.SettingsSection
+import org.kaloscope.tv.feature.settings.SettingsUiState
 
 private val ShellDivider = Color(0xFF252D40)
 private val Card = Color(0xFF182132)
@@ -117,6 +124,18 @@ internal fun MainShell(
     onRetryDetail: () -> Unit,
     onSelectMediaChild: (Long) -> Unit,
     onLogout: () -> Unit,
+    settingsState: SettingsUiState = SettingsUiState.Content(TvSettings()),
+    initialRoute: NavKey = HomeRoute,
+    onRetrySettings: () -> Unit = {},
+    onSelectSettingsSection: (SettingsSection) -> Unit = {},
+    onPlaybackModeSetting: (PlaybackMode) -> Unit = {},
+    onTranscodeResolutionSetting: (TranscodeResolution) -> Unit = {},
+    onAutoplayNextSetting: (Boolean) -> Unit = {},
+    onDanmakuEnabledSetting: (Boolean) -> Unit = {},
+    onSubtitleEnabledSetting: (Boolean) -> Unit = {},
+    onStartPageSetting: (StartPage) -> Unit = {},
+    onTestConnection: () -> Unit = {},
+    onManageServers: () -> Unit = {},
     playerState: PlayerUiState = PlayerUiState.Loading,
     playbackControllerFactory: PlaybackControllerFactory? = null,
     onPlayHistory: (WatchHistoryItem) -> String? = { null },
@@ -128,7 +147,9 @@ internal fun MainShell(
     onSwitchPlayerItem: (Int) -> Unit = {},
     onClosePlayer: (String) -> Unit = {},
 ) {
-    val backStack = rememberNavBackStack(HomeRoute)
+    // Saved start-page changes take effect only when a new authenticated shell is created.
+    val launchRoute = remember(session.server.id, session.user.id) { initialRoute }
+    val backStack = rememberNavBackStack(launchRoute)
     val homeFocus = remember { FocusRequester() }
     val searchFocus = remember { FocusRequester() }
     val libraryFocus = remember { FocusRequester() }
@@ -139,8 +160,20 @@ internal fun MainShell(
     }
 
     // TV launchers do not guarantee an initial Compose focus owner.
-    LaunchedEffect(homeFocus) {
-        homeFocus.requestFocus()
+    LaunchedEffect(launchRoute) {
+        when (launchRoute) {
+            SearchRoute -> {
+                onOpenSearch()
+                searchFocus.requestFocus()
+            }
+
+            LibraryRoute -> {
+                onOpenLibrary()
+                libraryFocus.requestFocus()
+            }
+
+            else -> homeFocus.requestFocus()
+        }
     }
 
     fun selectRoot(route: NavKey) {
@@ -292,6 +325,17 @@ internal fun MainShell(
                     entry<SettingsRoute> {
                         SettingsScreen(
                             session = session,
+                            state = settingsState,
+                            onRetry = onRetrySettings,
+                            onSelectSection = onSelectSettingsSection,
+                            onPlaybackMode = onPlaybackModeSetting,
+                            onTranscodeResolution = onTranscodeResolutionSetting,
+                            onAutoplayNext = onAutoplayNextSetting,
+                            onDanmakuEnabled = onDanmakuEnabledSetting,
+                            onSubtitleEnabled = onSubtitleEnabledSetting,
+                            onStartPage = onStartPageSetting,
+                            onTestConnection = onTestConnection,
+                            onManageServers = onManageServers,
                             onLogout = onLogout,
                         )
                     }
@@ -887,91 +931,3 @@ private fun historyErrorText(error: AppError): String =
         is AppError.Api -> stringResource(R.string.error_api, error.code.orEmpty())
         is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
     }
-
-@Composable
-private fun SettingsScreen(
-    session: Session,
-    onLogout: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = stringResource(R.string.settings),
-            color = OnBackground,
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = stringResource(R.string.settings_description),
-            color = Muted,
-            fontSize = 16.sp,
-        )
-        Spacer(Modifier.height(28.dp))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Panel, RoundedCornerShape(20.dp))
-                .padding(30.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.server_and_account),
-                color = OnBackground,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(22.dp))
-            SettingValue(
-                label = stringResource(R.string.current_server),
-                value = session.server.name,
-                detail = session.server.origin,
-            )
-            Spacer(Modifier.height(18.dp))
-            SettingValue(
-                label = stringResource(R.string.current_account),
-                value = session.user.username,
-                detail = session.user.role,
-            )
-            Spacer(Modifier.height(26.dp))
-            Button(
-                onClick = onLogout,
-                colors = ButtonDefaults.colors(
-                    containerColor = Color(0xFF2A3043),
-                    focusedContainerColor = Danger,
-                ),
-            ) {
-                Text(stringResource(R.string.logout))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingValue(
-    label: String,
-    value: String,
-    detail: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                color = Muted,
-                fontSize = 14.sp,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = value,
-                color = OnBackground,
-                fontSize = 19.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        Text(
-            text = detail,
-            color = Muted,
-            fontSize = 15.sp,
-        )
-    }
-}

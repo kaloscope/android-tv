@@ -2,6 +2,7 @@ package org.kaloscope.tv.app.navigation
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
+import org.kaloscope.tv.core.model.StartPage
 
 @Serializable
 data object HomeRoute : NavKey
@@ -63,4 +64,11 @@ fun MutableList<NavKey>.handleMainBack(): Boolean =
         }
 
         else -> false
+    }
+
+fun StartPage.toRootRoute(): NavKey =
+    when (this) {
+        StartPage.Home -> HomeRoute
+        StartPage.Search -> SearchRoute
+        StartPage.Library -> LibraryRoute
     }

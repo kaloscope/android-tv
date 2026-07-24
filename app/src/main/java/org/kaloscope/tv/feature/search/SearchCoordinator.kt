@@ -10,6 +10,7 @@ import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -223,6 +224,7 @@ class SearchCoordinator(
     suspend fun play(
         session: Session,
         resultId: String,
+        settings: TvSettings = TvSettings(),
     ) {
         val content = mutableState.value as? SearchUiState.Content ?: return
         val result = content.results.items.firstOrNull { it.id == resultId } ?: return
@@ -238,7 +240,7 @@ class SearchCoordinator(
                 session,
                 content.selectedIndexerId,
                 result,
-                TranscodeResolution.P1080,
+                settings.transcodeResolution,
             )
         ) {
             is AppResult.Failure -> updateContent {
@@ -251,6 +253,10 @@ class SearchCoordinator(
                     serverId = session.server.id,
                     title = playback.value.title,
                     source = playback.value,
+                    preferredDefinition = settings.transcodeResolution,
+                    autoplayNext = settings.autoplayNext,
+                    danmakuEnabled = settings.danmakuEnabled,
+                    subtitleEnabled = settings.subtitleEnabled,
                 )
                 requestStore.put(request)
                 updateContent {

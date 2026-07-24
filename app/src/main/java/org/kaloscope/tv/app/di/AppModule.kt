@@ -1,6 +1,8 @@
 package org.kaloscope.tv.app.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import coil3.ImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import dagger.Binds
@@ -20,6 +22,7 @@ import org.kaloscope.tv.core.storage.SecureSessionStore
 import org.kaloscope.tv.core.storage.ServerStore
 import org.kaloscope.tv.core.storage.SessionStore
 import org.kaloscope.tv.core.storage.TokenCipher
+import org.kaloscope.tv.core.storage.kaloscopeDataStore
 import org.kaloscope.tv.data.auth.DefaultSessionRepository
 import org.kaloscope.tv.data.auth.SessionRepository
 import org.kaloscope.tv.data.history.DefaultHistoryRepository
@@ -30,6 +33,8 @@ import org.kaloscope.tv.data.search.DefaultSearchRepository
 import org.kaloscope.tv.data.search.SearchRepository
 import org.kaloscope.tv.data.server.DefaultServerRepository
 import org.kaloscope.tv.data.server.ServerRepository
+import org.kaloscope.tv.data.settings.PreferencesSettingsRepository
+import org.kaloscope.tv.data.settings.SettingsRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -68,11 +73,22 @@ abstract class AppBindings {
     abstract fun bindBootstrapRepository(
         implementation: DefaultBootstrapRepository,
     ): BootstrapRepository
+
+    @Binds
+    abstract fun bindSettingsRepository(
+        implementation: PreferencesSettingsRepository,
+    ): SettingsRepository
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppProvides {
+    @Provides
+    @Singleton
+    fun provideDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<Preferences> = context.kaloscopeDataStore
+
     @Provides
     @Singleton
     fun provideJson(): Json = Json {

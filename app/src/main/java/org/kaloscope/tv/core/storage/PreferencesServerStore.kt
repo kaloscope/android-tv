@@ -1,10 +1,9 @@
 package org.kaloscope.tv.core.storage
 
-import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
@@ -13,15 +12,13 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.kaloscope.tv.core.model.SavedServer
 
-private val Context.kaloscopeDataStore by preferencesDataStore(name = "kaloscope")
-
 @Singleton
 class PreferencesServerStore @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val dataStore: DataStore<Preferences>,
     private val json: Json,
 ) : ServerStore {
     override suspend fun getServers(): List<SavedServer> {
-        val encoded = context.kaloscopeDataStore.data.first()[SERVERS] ?: return emptyList()
+        val encoded = dataStore.data.first()[SERVERS] ?: return emptyList()
         // Corrupt local metadata must not crash startup or expose stale servers.
         return runCatching {
             json.decodeFromString<List<StoredServer>>(encoded).map(StoredServer::toModel)
@@ -29,7 +26,7 @@ class PreferencesServerStore @Inject constructor(
     }
 
     override suspend fun save(server: SavedServer) {
-        context.kaloscopeDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             // A corrupt list is replaced by the newly verified server.
             val current = preferences[SERVERS]
                 ?.let { encoded ->
@@ -46,10 +43,10 @@ class PreferencesServerStore @Inject constructor(
     }
 
     override suspend fun getActiveServerId(): String? =
-        context.kaloscopeDataStore.data.first()[ACTIVE_SERVER]
+        dataStore.data.first()[ACTIVE_SERVER]
 
     override suspend fun setActiveServerId(serverId: String) {
-        context.kaloscopeDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[ACTIVE_SERVER] = serverId
         }
     }

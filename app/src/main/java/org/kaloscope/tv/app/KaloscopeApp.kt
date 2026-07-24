@@ -51,6 +51,7 @@ import androidx.tv.material3.Text
 import androidx.tv.material3.darkColorScheme
 import org.kaloscope.tv.R
 import org.kaloscope.tv.app.bootstrap.BootstrapState
+import org.kaloscope.tv.app.navigation.toRootRoute
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
@@ -61,6 +62,7 @@ import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.feature.login.LoginError
 import org.kaloscope.tv.feature.login.LoginState
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
@@ -77,6 +79,8 @@ import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchSourceState
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.search.SearchViewModel
+import org.kaloscope.tv.feature.settings.SettingsUiState
+import org.kaloscope.tv.feature.settings.SettingsViewModel
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 
 @Composable
@@ -87,6 +91,7 @@ fun KaloscopeApp(
     libraryViewModel: LibraryViewModel,
     detailViewModel: MediaDetailViewModel,
     playerViewModel: PlayerViewModel,
+    settingsViewModel: SettingsViewModel,
     playbackControllerFactory: PlaybackControllerFactory,
 ) {
     val bootstrapState by viewModel.bootstrapState.collectAsStateWithLifecycle()
@@ -95,6 +100,7 @@ fun KaloscopeApp(
     val libraryState by libraryViewModel.uiState.collectAsStateWithLifecycle()
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
+    val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
 
     KaloscopeTheme {
         // Exactly one root subtree is composed to prevent hidden screens from retaining focus.
@@ -149,12 +155,20 @@ fun KaloscopeApp(
                         playerViewModel.clearServer(state.session.server.id)
                     }
                 }
+                if (settingsState == SettingsUiState.Loading) {
+                    LoadingScreen()
+                    return@KaloscopeTheme
+                }
+                val activeSettings = settingsState as? SettingsUiState.Content
+                val currentSettings = activeSettings?.settings ?: TvSettings()
                 MainShell(
                     session = state.session,
                     homeState = homeState,
                     searchState = searchState,
                     libraryState = libraryState,
                     detailState = detailState,
+                    settingsState = settingsState,
+                    initialRoute = currentSettings.startPage.toRootRoute(),
                     onRefresh = { mainViewModel.loadHome(state.session, force = true) },
                     onOpenSearch = { searchViewModel.load(state.session) },
                     onSelectIndexer = { indexerId ->
@@ -172,7 +186,11 @@ fun KaloscopeApp(
                     onLoadMoreSearch = { searchViewModel.loadNext(state.session) },
                     onSearchResultFocused = searchViewModel::rememberFocusedResult,
                     onPlaySearchResult = { resultId ->
-                        searchViewModel.play(state.session, resultId)
+                        searchViewModel.play(
+                            state.session,
+                            resultId,
+                            currentSettings,
+                        )
                     },
                     onConsumeSearchPlayback = searchViewModel::consumePlaybackRequest,
                     onOpenLibrary = { libraryViewModel.load(state.session) },
@@ -197,11 +215,28 @@ fun KaloscopeApp(
                     onSelectMediaChild = { childId ->
                         detailViewModel.selectChild(state.session, childId)
                     },
+                    onRetrySettings = settingsViewModel::load,
+                    onSelectSettingsSection = settingsViewModel::selectSection,
+                    onPlaybackModeSetting = settingsViewModel::setPlaybackMode,
+                    onTranscodeResolutionSetting =
+                        settingsViewModel::setTranscodeResolution,
+                    onAutoplayNextSetting = settingsViewModel::setAutoplayNext,
+                    onDanmakuEnabledSetting = settingsViewModel::setDanmakuEnabled,
+                    onSubtitleEnabledSetting = settingsViewModel::setSubtitleEnabled,
+                    onStartPageSetting = settingsViewModel::setStartPage,
+                    onTestConnection = {
+                        settingsViewModel.testConnection(state.session)
+                    },
+                    onManageServers = viewModel::showServerSelection,
                     onLogout = viewModel::logout,
                     playerState = playerState,
                     playbackControllerFactory = playbackControllerFactory,
                     onPlayHistory = { item ->
-                        playerViewModel.createFromHistory(state.session, item)
+                        playerViewModel.createFromHistory(
+                            state.session,
+                            item,
+                            currentSettings,
+                        )
                     },
                     onPlayDetail = { detail, resumePosition ->
                         val siblings = (detailState as? MediaDetailUiState.Content)
@@ -213,6 +248,7 @@ fun KaloscopeApp(
                             detail = detail,
                             siblings = siblings,
                             resumePositionSeconds = resumePosition,
+                            settings = currentSettings,
                         )
                     },
                     onLoadPlayer = { requestId ->

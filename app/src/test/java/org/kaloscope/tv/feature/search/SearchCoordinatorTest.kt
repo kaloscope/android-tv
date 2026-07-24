@@ -21,6 +21,7 @@ import org.kaloscope.tv.core.player.PlaybackOrigin
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.data.search.SearchRepository
 
 class SearchCoordinatorTest {
@@ -137,6 +138,29 @@ class SearchCoordinatorTest {
         assertEquals(listOf("v1"), state.results.items.map { it.id })
         assertEquals(AppError.Offline, state.playbackError)
     }
+
+    @Test
+    fun `playback resolution follows persisted TV settings`() = runTest {
+        val store = PlaybackRequestStore()
+        val repository = FakeSearchRepository(
+            pages = mutableListOf(AppResult.Success(page("v1"))),
+            playback = AppResult.Success(playback()),
+        )
+        val coordinator = SearchCoordinator(repository, store) { "settings-request" }
+        coordinator.load(session())
+        coordinator.updateQuery("星际")
+        coordinator.search(session())
+
+        coordinator.play(
+            session = session(),
+            resultId = "v1",
+            settings = TvSettings(transcodeResolution = TranscodeResolution.P720),
+        )
+
+        assertEquals(TranscodeResolution.P720, repository.preferredDefinition)
+        val request = store.get("settings-request") as PlaybackRequest.NetworkVideo
+        assertEquals(TranscodeResolution.P720, request.preferredDefinition)
+    }
 }
 
 private class FakeSearchRepository(
@@ -150,6 +174,7 @@ private class FakeSearchRepository(
         AppResult.Failure(AppError.NotFound),
 ) : SearchRepository {
     val searchCalls = mutableListOf<SearchCall>()
+    var preferredDefinition: TranscodeResolution? = null
 
     override suspend fun getIndexers(session: Session): AppResult<List<NetworkIndexer>> =
         indexers
@@ -175,7 +200,10 @@ private class FakeSearchRepository(
         indexerId: Long,
         result: NetworkSearchResult,
         preferredDefinition: TranscodeResolution,
-    ): AppResult<NetworkPlaybackSource> = playback
+    ): AppResult<NetworkPlaybackSource> {
+        this.preferredDefinition = preferredDefinition
+        return playback
+    }
 
     override suspend fun resolveChapter(
         session: Session,
