@@ -1,0 +1,384 @@
+package org.kaloscope.tv.feature.detail
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Surface
+import androidx.tv.material3.Text
+import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.Muted
+import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.ServerImage
+import org.kaloscope.tv.core.model.MediaDetail
+import org.kaloscope.tv.core.model.MediaSummary
+import org.kaloscope.tv.core.model.Session
+
+@Composable
+fun MediaDetailScreen(
+    session: Session,
+    state: MediaDetailUiState,
+    onBack: () -> Unit,
+    onRetry: () -> Unit,
+    onSelectChild: (Long) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+            .padding(horizontal = 44.dp, vertical = 30.dp),
+    ) {
+        when (state) {
+            MediaDetailUiState.Loading -> DetailStatus(
+                title = stringResource(R.string.loading_detail),
+                description = stringResource(R.string.loading_detail_description),
+            )
+
+            is MediaDetailUiState.Error -> DetailError(
+                error = state.error,
+                onRetry = onRetry,
+            )
+
+            is MediaDetailUiState.Content -> DetailContent(
+                session = session,
+                state = state,
+                onBack = onBack,
+                onSelectChild = onSelectChild,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailContent(
+    session: Session,
+    state: MediaDetailUiState.Content,
+    onBack: () -> Unit,
+    onSelectChild: (Long) -> Unit,
+) {
+    val backFocus = remember { FocusRequester() }
+    val firstChildFocus = remember { FocusRequester() }
+    val displayed = state.selectedChild ?: state.parent
+
+    LaunchedEffect(state.parent.id) {
+        if (state.parent.children.isEmpty()) {
+            backFocus.requestFocus()
+        } else {
+            firstChildFocus.requestFocus()
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        DetailBackButton(
+            onBack = onBack,
+            modifier = Modifier.focusRequester(backFocus),
+        )
+        Spacer(Modifier.height(18.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
+        ) {
+            ServerImage(
+                session = session,
+                rawValue = displayed.posterPath ?: displayed.backdropPath,
+                fallbackText = displayed.title,
+                contentDescription = null,
+                modifier = Modifier
+                    .width(250.dp)
+                    .aspectRatio(2f / 3f),
+            )
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                item {
+                    Text(
+                        text = displayed.title,
+                        color = OnBackground,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    DetailMetadata(displayed)
+                    displayed.plot?.takeIf(String::isNotBlank)?.let { plot ->
+                        Spacer(Modifier.height(18.dp))
+                        Text(
+                            text = plot,
+                            color = OnBackground,
+                            fontSize = 17.sp,
+                            lineHeight = 26.sp,
+                        )
+                    }
+                    DetailCredits(displayed)
+                    if (state.parent.children.isNotEmpty()) {
+                        Spacer(Modifier.height(24.dp))
+                        Text(
+                            text = stringResource(R.string.episodes),
+                            color = OnBackground,
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(
+                                items = state.parent.children,
+                                key = MediaSummary::id,
+                            ) { child ->
+                                ChildButton(
+                                    child = child,
+                                    selected = state.selectedChild?.id == child.id,
+                                    loading = state.loadingChildId == child.id,
+                                    onClick = { onSelectChild(child.id) },
+                                    modifier = if (child == state.parent.children.first()) {
+                                        Modifier.focusRequester(firstChildFocus)
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                            }
+                        }
+                        state.childError?.let { error ->
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = detailErrorText(error),
+                                color = Danger,
+                                fontSize = 14.sp,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailBackButton(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val label = stringResource(R.string.back)
+    Surface(
+        onClick = onBack,
+        modifier = modifier
+            .width(54.dp)
+            .height(46.dp)
+            .semantics { contentDescription = label },
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "←",
+                color = OnBackground,
+                fontSize = 23.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailMetadata(detail: MediaDetail) {
+    val metadata = listOfNotNull(
+        detail.year?.toString(),
+        detail.season?.let { season ->
+            detail.episode?.let { episode ->
+                stringResource(R.string.season_episode, season, episode)
+            }
+        },
+        detail.rating?.let { stringResource(R.string.rating, it) },
+        detail.aired,
+    ).joinToString("  ·  ")
+    if (metadata.isNotBlank()) {
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = metadata,
+            color = Muted,
+            fontSize = 16.sp,
+        )
+    }
+    if (detail.genres.isNotEmpty()) {
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = detail.genres.joinToString("  ·  "),
+            color = Primary,
+            fontSize = 15.sp,
+        )
+    }
+}
+
+@Composable
+private fun DetailCredits(detail: MediaDetail) {
+    val credits = listOfNotNull(
+        detail.directors.takeIf(List<String>::isNotEmpty)?.let {
+            stringResource(R.string.directors, it.joinToString("、"))
+        },
+        detail.actors.takeIf { it.isNotEmpty() }?.let { actors ->
+            stringResource(
+                R.string.cast,
+                actors.take(6).joinToString("、") { it.name },
+            )
+        },
+    )
+    if (credits.isNotEmpty()) {
+        Spacer(Modifier.height(18.dp))
+        credits.forEach { line ->
+            Text(
+                text = line,
+                color = Muted,
+                fontSize = 15.sp,
+            )
+            Spacer(Modifier.height(5.dp))
+        }
+    }
+}
+
+@Composable
+private fun ChildButton(
+    child: MediaSummary,
+    selected: Boolean,
+    loading: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        selected = selected,
+        onClick = onClick,
+        enabled = !loading,
+        modifier = modifier.width(190.dp),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp)) {
+            Text(
+                text = child.title,
+                color = OnBackground,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            val episodeLabel = child.season?.let { season ->
+                child.episode?.let { episode ->
+                    stringResource(R.string.season_episode, season, episode)
+                }
+            }
+            if (episodeLabel != null || loading) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (loading) {
+                        stringResource(R.string.loading)
+                    } else {
+                        episodeLabel.orEmpty()
+                    },
+                    color = Muted,
+                    fontSize = 12.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailStatus(
+    title: String,
+    description: String,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Panel, RoundedCornerShape(18.dp))
+            .padding(30.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Column {
+            Text(
+                text = title,
+                color = OnBackground,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = description,
+                color = Muted,
+                fontSize = 16.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailError(
+    error: AppError,
+    onRetry: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Panel, RoundedCornerShape(18.dp))
+            .padding(30.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.detail_load_failed),
+            color = OnBackground,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = detailErrorText(error),
+            color = Danger,
+            fontSize = 16.sp,
+        )
+        Spacer(Modifier.height(18.dp))
+        Button(
+            onClick = onRetry,
+            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+        ) {
+            Text(stringResource(R.string.retry))
+        }
+    }
+}
+
+@Composable
+private fun detailErrorText(error: AppError): String =
+    when (error) {
+        AppError.Unauthorized -> stringResource(R.string.error_unauthorized)
+        AppError.Forbidden -> stringResource(R.string.error_forbidden)
+        AppError.NotFound -> stringResource(R.string.error_not_found)
+        AppError.Timeout -> stringResource(R.string.error_timeout)
+        AppError.Offline -> stringResource(R.string.error_offline)
+        is AppError.Api -> stringResource(R.string.error_api, error.code.orEmpty())
+        is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
+    }

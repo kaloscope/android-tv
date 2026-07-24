@@ -1,6 +1,9 @@
 package org.kaloscope.tv.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -50,15 +54,27 @@ import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
 import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.LibraryRoute
+import org.kaloscope.tv.app.navigation.MediaDetailRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
 import org.kaloscope.tv.app.navigation.handleMainBack
+import org.kaloscope.tv.app.navigation.openMediaDetail
 import org.kaloscope.tv.app.navigation.openSettings
 import org.kaloscope.tv.app.navigation.selectRoot
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.Muted
+import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
+import org.kaloscope.tv.feature.detail.MediaDetailScreen
+import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeUiState
+import org.kaloscope.tv.feature.library.LibraryScreen
+import org.kaloscope.tv.feature.library.LibraryUiState
 
 private val ShellDivider = Color(0xFF252D40)
 private val Card = Color(0xFF182132)
@@ -67,12 +83,26 @@ private val Card = Color(0xFF182132)
 internal fun MainShell(
     session: Session,
     homeState: HomeUiState,
+    libraryState: LibraryUiState,
+    detailState: MediaDetailUiState,
     onRefresh: () -> Unit,
+    onOpenLibrary: () -> Unit,
+    onSelectLibrary: (Long) -> Unit,
+    onLibraryQueryChange: (String) -> Unit,
+    onSearchLibrary: () -> Unit,
+    onRetryLibrary: () -> Unit,
+    onLoadMoreMedia: () -> Unit,
+    onMediaFocused: (Long) -> Unit,
+    onOpenMedia: (Long) -> Unit,
+    onRetryDetail: () -> Unit,
+    onSelectMediaChild: (Long) -> Unit,
     onLogout: () -> Unit,
 ) {
     val backStack = rememberNavBackStack(HomeRoute)
     val homeFocus = remember { FocusRequester() }
+    val libraryFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
+    var restoreMediaId by remember { mutableStateOf<Long?>(null) }
     var currentRoute by remember {
         mutableStateOf<NavKey>(backStack.lastOrNull() ?: HomeRoute)
     }
@@ -87,9 +117,21 @@ internal fun MainShell(
         currentRoute = route
     }
 
-    BackHandler(enabled = currentRoute != HomeRoute) {
+    fun goBack() {
+        val leavingRoute = currentRoute
+        val returnRoute = backStack.getOrNull(backStack.lastIndex - 1) ?: HomeRoute
+        if (leavingRoute is MediaDetailRoute &&
+            returnRoute in setOf(HomeRoute, LibraryRoute)
+        ) {
+            // Publish the restore target before the previous entry becomes active again.
+            restoreMediaId = leavingRoute.mediaId
+        }
         backStack.handleMainBack()
         currentRoute = backStack.lastOrNull() ?: HomeRoute
+    }
+
+    BackHandler(enabled = currentRoute != HomeRoute) {
+        goBack()
     }
 
     Column(
@@ -97,42 +139,102 @@ internal fun MainShell(
             .fillMaxSize()
             .background(Background),
     ) {
-        MainTopBar(
-            currentRoute = currentRoute,
-            onHome = { selectRoot(HomeRoute) },
-            onSearch = { selectRoot(SearchRoute) },
-            onLibrary = { selectRoot(LibraryRoute) },
-            onSettings = {
-                backStack.openSettings()
-                currentRoute = SettingsRoute
-            },
-            homeFocus = homeFocus,
-            settingsFocus = settingsFocus,
-        )
+        if (currentRoute !is MediaDetailRoute) {
+            MainTopBar(
+                currentRoute = currentRoute,
+                onHome = {
+                    restoreMediaId = null
+                    selectRoot(HomeRoute)
+                },
+                onSearch = { selectRoot(SearchRoute) },
+                onLibrary = {
+                    restoreMediaId = null
+                    selectRoot(LibraryRoute)
+                    onOpenLibrary()
+                },
+                onSettings = {
+                    backStack.openSettings()
+                    currentRoute = SettingsRoute
+                },
+                homeFocus = homeFocus,
+                libraryFocus = libraryFocus,
+                settingsFocus = settingsFocus,
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 44.dp, vertical = 24.dp),
+                .then(
+                    if (currentRoute is MediaDetailRoute) {
+                        Modifier
+                    } else {
+                        Modifier.padding(horizontal = 44.dp, vertical = 24.dp)
+                    },
+                ),
         ) {
             NavDisplay(
                 backStack = backStack,
+                onBack = ::goBack,
+                transitionSpec = {
+                    EnterTransition.None togetherWith ExitTransition.None
+                },
+                popTransitionSpec = {
+                    EnterTransition.None togetherWith ExitTransition.None
+                },
                 entryProvider = entryProvider {
                     entry<HomeRoute> {
                         HomeScreen(
                             state = homeState,
                             onRefresh = onRefresh,
+                            restoreMediaId = restoreMediaId,
+                            onOpenLibrary = {
+                                restoreMediaId = null
+                                selectRoot(LibraryRoute)
+                                onOpenLibrary()
+                            },
+                            onOpenMedia = { mediaId ->
+                                restoreMediaId = null
+                                backStack.openMediaDetail(mediaId)
+                                currentRoute = MediaDetailRoute(mediaId)
+                                onOpenMedia(mediaId)
+                            },
                         )
                     }
                     entry<SearchRoute> {
                         UnavailableDestination(stringResource(R.string.search))
                     }
                     entry<LibraryRoute> {
-                        UnavailableDestination(stringResource(R.string.library))
+                        LibraryScreen(
+                            session = session,
+                            state = libraryState,
+                            restoreMediaId = restoreMediaId,
+                            onSelectLibrary = onSelectLibrary,
+                            onQueryChange = onLibraryQueryChange,
+                            onSearch = onSearchLibrary,
+                            onRetry = onRetryLibrary,
+                            onLoadMore = onLoadMoreMedia,
+                            onMediaFocused = onMediaFocused,
+                            onOpenMedia = { mediaId ->
+                                restoreMediaId = null
+                                backStack.openMediaDetail(mediaId)
+                                currentRoute = MediaDetailRoute(mediaId)
+                                onOpenMedia(mediaId)
+                            },
+                        )
                     }
                     entry<SettingsRoute> {
                         SettingsScreen(
                             session = session,
                             onLogout = onLogout,
+                        )
+                    }
+                    entry<MediaDetailRoute> {
+                        MediaDetailScreen(
+                            session = session,
+                            state = detailState,
+                            onBack = ::goBack,
+                            onRetry = onRetryDetail,
+                            onSelectChild = onSelectMediaChild,
                         )
                     }
                 },
@@ -149,6 +251,7 @@ private fun MainTopBar(
     onLibrary: () -> Unit,
     onSettings: () -> Unit,
     homeFocus: FocusRequester,
+    libraryFocus: FocusRequester,
     settingsFocus: FocusRequester,
 ) {
     Row(
@@ -180,10 +283,10 @@ private fun MainTopBar(
                 selected = currentRoute == HomeRoute,
                 enabled = true,
                 onClick = onHome,
-                // Bridge the gap left by disabled P0 destinations.
+                // Skip the disabled search destination in the top-level focus chain.
                 modifier = Modifier
                     .focusRequester(homeFocus)
-                    .focusProperties { right = settingsFocus },
+                    .focusProperties { right = libraryFocus },
             )
             MainNavButton(
                 text = stringResource(R.string.search),
@@ -194,8 +297,14 @@ private fun MainTopBar(
             MainNavButton(
                 text = stringResource(R.string.library),
                 selected = currentRoute == LibraryRoute,
-                enabled = false,
+                enabled = true,
                 onClick = onLibrary,
+                modifier = Modifier
+                    .focusRequester(libraryFocus)
+                    .focusProperties {
+                        left = homeFocus
+                        right = settingsFocus
+                    },
             )
         }
         Spacer(Modifier.weight(1f))
@@ -204,7 +313,7 @@ private fun MainTopBar(
             onClick = onSettings,
             modifier = Modifier
                 .focusRequester(settingsFocus)
-                .focusProperties { left = homeFocus },
+                .focusProperties { left = libraryFocus },
         )
         Spacer(Modifier.width(18.dp))
         Clock()
@@ -294,6 +403,9 @@ private fun formatCurrentTime(): String =
 private fun HomeScreen(
     state: HomeUiState,
     onRefresh: () -> Unit,
+    restoreMediaId: Long?,
+    onOpenLibrary: () -> Unit,
+    onOpenMedia: (Long) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -331,9 +443,8 @@ private fun HomeScreen(
                 description = stringResource(R.string.loading_history_description),
             )
 
-            HomeUiState.Empty -> StatusPanel(
-                title = stringResource(R.string.no_history),
-                description = stringResource(R.string.no_history_description),
+            HomeUiState.Empty -> HomeEmpty(
+                onOpenLibrary = onOpenLibrary,
             )
 
             is HomeUiState.Error -> ErrorPanel(
@@ -341,15 +452,27 @@ private fun HomeScreen(
                 onRetry = onRefresh,
             )
 
-            is HomeUiState.Content -> HistoryContent(state.items)
+            is HomeUiState.Content -> HistoryContent(
+                items = state.items,
+                restoreMediaId = restoreMediaId,
+                onOpenMedia = onOpenMedia,
+            )
         }
     }
 }
 
 @Composable
-private fun HistoryContent(items: List<WatchHistoryItem>) {
+private fun HistoryContent(
+    items: List<WatchHistoryItem>,
+    restoreMediaId: Long?,
+    onOpenMedia: (Long) -> Unit,
+) {
     val featured = items.first()
-    FeaturedHistoryCard(featured)
+    FeaturedHistoryCard(
+        item = featured,
+        restoreFocus = featured.mediaId == restoreMediaId,
+        onOpenMedia = onOpenMedia,
+    )
     if (items.size > 1) {
         Spacer(Modifier.height(22.dp))
         Text(
@@ -364,14 +487,29 @@ private fun HistoryContent(items: List<WatchHistoryItem>) {
                 items = items.drop(1),
                 key = WatchHistoryItem::historyId,
             ) { item ->
-                CompactHistoryCard(item)
+                CompactHistoryCard(
+                    item = item,
+                    restoreFocus = item.mediaId == restoreMediaId,
+                    onOpenMedia = onOpenMedia,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun FeaturedHistoryCard(item: WatchHistoryItem) {
+private fun FeaturedHistoryCard(
+    item: WatchHistoryItem,
+    restoreFocus: Boolean,
+    onOpenMedia: (Long) -> Unit,
+) {
+    val detailFocus = remember(item.mediaId) { FocusRequester() }
+    LaunchedEffect(restoreFocus) {
+        if (restoreFocus) {
+            withFrameNanos { }
+            detailFocus.requestFocus()
+        }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -410,33 +548,93 @@ private fun FeaturedHistoryCard(item: WatchHistoryItem) {
                 color = Muted,
                 fontSize = 14.sp,
             )
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = { onOpenMedia(item.mediaId) },
+                modifier = Modifier.focusRequester(detailFocus),
+                colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+            ) {
+                Text(stringResource(R.string.view_detail))
+            }
         }
     }
 }
 
 @Composable
-private fun CompactHistoryCard(item: WatchHistoryItem) {
-    Column(
+private fun CompactHistoryCard(
+    item: WatchHistoryItem,
+    restoreFocus: Boolean,
+    onOpenMedia: (Long) -> Unit,
+) {
+    val cardFocus = remember(item.mediaId) { FocusRequester() }
+    LaunchedEffect(restoreFocus) {
+        if (restoreFocus) {
+            withFrameNanos { }
+            cardFocus.requestFocus()
+        }
+    }
+    Surface(
+        onClick = { onOpenMedia(item.mediaId) },
         modifier = Modifier
             .width(250.dp)
-            .background(Card, RoundedCornerShape(16.dp))
-            .padding(16.dp),
+            .focusRequester(cardFocus),
     ) {
-        HistoryArtwork(
-            item = item,
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(112.dp),
-        )
-        Spacer(Modifier.height(12.dp))
+                .background(Card, RoundedCornerShape(16.dp))
+                .padding(16.dp),
+        ) {
+            HistoryArtwork(
+                item = item,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(112.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = item.title,
+                color = OnBackground,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(10.dp))
+            ProgressBar(item.percentage)
+        }
+    }
+}
+
+@Composable
+private fun HomeEmpty(
+    onOpenLibrary: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+            .background(Panel, RoundedCornerShape(20.dp))
+            .padding(34.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.Start,
+    ) {
         Text(
-            text = item.title,
+            text = stringResource(R.string.no_history),
             color = OnBackground,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(10.dp))
-        ProgressBar(item.percentage)
+        Text(
+            text = stringResource(R.string.no_history_description),
+            color = Muted,
+            fontSize = 17.sp,
+        )
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = onOpenLibrary,
+            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+        ) {
+            Text(stringResource(R.string.open_library))
+        }
     }
 }
 

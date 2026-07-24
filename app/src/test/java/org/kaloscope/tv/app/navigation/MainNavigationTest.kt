@@ -28,6 +28,17 @@ class MainNavigationTest {
     }
 
     @Test
+    fun `media detail returns to its library`() {
+        val backStack = mutableListOf<NavKey>(LibraryRoute)
+
+        backStack.openMediaDetail(201)
+        val handled = backStack.handleMainBack()
+
+        assertTrue(handled)
+        assertEquals(listOf(LibraryRoute), backStack)
+    }
+
+    @Test
     fun `home delegates back to the system`() {
         val backStack = mutableListOf<NavKey>(HomeRoute)
 

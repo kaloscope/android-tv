@@ -1,12 +1,17 @@
 package org.kaloscope.tv.app.di
 
+import android.content.Context
+import coil3.ImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
 import org.kaloscope.tv.app.bootstrap.BootstrapRepository
 import org.kaloscope.tv.app.bootstrap.DefaultBootstrapRepository
 import org.kaloscope.tv.core.storage.AndroidKeystoreTokenCipher
@@ -19,6 +24,8 @@ import org.kaloscope.tv.data.auth.DefaultSessionRepository
 import org.kaloscope.tv.data.auth.SessionRepository
 import org.kaloscope.tv.data.history.DefaultHistoryRepository
 import org.kaloscope.tv.data.history.HistoryRepository
+import org.kaloscope.tv.data.media.DefaultMediaRepository
+import org.kaloscope.tv.data.media.MediaRepository
 import org.kaloscope.tv.data.server.DefaultServerRepository
 import org.kaloscope.tv.data.server.ServerRepository
 
@@ -46,6 +53,11 @@ abstract class AppBindings {
     ): HistoryRepository
 
     @Binds
+    abstract fun bindMediaRepository(
+        implementation: DefaultMediaRepository,
+    ): MediaRepository
+
+    @Binds
     abstract fun bindBootstrapRepository(
         implementation: DefaultBootstrapRepository,
     ): BootstrapRepository
@@ -60,4 +72,15 @@ object AppProvides {
         ignoreUnknownKeys = true
         explicitNulls = false
     }
+
+    @Provides
+    @Singleton
+    fun provideImageLoader(
+        @ApplicationContext context: Context,
+    ): ImageLoader = ImageLoader.Builder(context)
+        .components {
+            // Authentication is attached per request after validating its origin.
+            add(OkHttpNetworkFetcherFactory(callFactory = { OkHttpClient() }))
+        }
+        .build()
 }

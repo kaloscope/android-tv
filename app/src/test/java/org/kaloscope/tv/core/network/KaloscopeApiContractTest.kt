@@ -93,6 +93,75 @@ class KaloscopeApiContractTest {
         assertEquals("Token fixture-token", request.getHeader("Authorization"))
         assertEquals(301L, response.data.items.single().media?.id)
         assertEquals(63, response.data.items.single().percentage)
+        assertEquals("8.5", response.data.items.single().media?.rating)
+    }
+
+    @Test
+    fun `library list uses authenticated unpaged endpoint`() = runTest {
+        server.enqueue(jsonResponse(fixture("media-library-list-success.json")))
+
+        val response = api.getMediaLibraries("Token fixture-token")
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals("/_api/media/lib/list", request.path)
+        assertEquals("Token fixture-token", request.getHeader("Authorization"))
+        assertEquals(21L, response.data.single().id)
+        assertEquals("tv_show", response.data.single().libraryType)
+    }
+
+    @Test
+    fun `media page sends library pagination and omits empty keyword`() = runTest {
+        server.enqueue(jsonResponse(fixture("media-list-success.json")))
+
+        val response = api.getMediaPage(
+            authorization = "Token fixture-token",
+            libraryId = 21,
+        )
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals(
+            "/_api/media/list?page_num=1&page_size=20&lib_id=21",
+            request.path,
+        )
+        assertEquals(201L, response.data.items.single().id)
+    }
+
+    @Test
+    fun `media page sends confirmed keyword and requested page`() = runTest {
+        server.enqueue(jsonResponse(fixture("media-list-success.json")))
+
+        api.getMediaPage(
+            authorization = "Token fixture-token",
+            pageNumber = 2,
+            libraryId = 21,
+            keyword = "群 星",
+        )
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals(
+            "/_api/media/list?page_num=2&page_size=20&lib_id=21&keyword=%E7%BE%A4%20%E6%98%9F",
+            request.path,
+        )
+    }
+
+    @Test
+    fun `media detail uses stable media id route`() = runTest {
+        server.enqueue(jsonResponse(fixture("media-detail-success.json")))
+
+        val response = api.getMediaDetail(
+            authorization = "Token fixture-token",
+            mediaId = 201,
+        )
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals("/_api/media/201", request.path)
+        assertEquals("Token fixture-token", request.getHeader("Authorization"))
+        assertEquals("群星档案", response.data.title)
+        assertEquals(301L, response.data.children.single().id)
     }
 
     private fun fixture(name: String): String =

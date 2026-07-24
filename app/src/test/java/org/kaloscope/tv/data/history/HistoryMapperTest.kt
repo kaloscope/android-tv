@@ -1,6 +1,5 @@
 package org.kaloscope.tv.data.history
 
-import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -12,7 +11,7 @@ class HistoryMapperTest {
     fun `maps numeric string rating and clamps progress`() {
         val item = historyItem(
             percentage = 140,
-            rating = JsonPrimitive("8.5"),
+            rating = "8.5",
         )
 
         val mapped = item.toModel()
@@ -39,10 +38,10 @@ private fun historyItem(
         episode = 1,
         poster = null,
         backdrop = null,
-        rating = JsonPrimitive(8.5),
+        rating = "8.5",
     ),
     percentage: Int = 63,
-    rating: JsonPrimitive = JsonPrimitive(8.5),
+    rating: String = "8.5",
 ) = HistoryItemData(
     id = 401,
     updatedAt = "2026-07-23T08:00:00Z",

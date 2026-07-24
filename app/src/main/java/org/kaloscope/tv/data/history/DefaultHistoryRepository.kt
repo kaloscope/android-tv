@@ -4,8 +4,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
@@ -56,7 +54,7 @@ internal fun HistoryItemData.toModel(): WatchHistoryItem? {
         episode = source.episode,
         posterPath = source.poster?.takeIf(String::isNotBlank),
         backdropPath = source.backdrop?.takeIf(String::isNotBlank),
-        rating = source.rating?.jsonPrimitive?.doubleOrNull,
+        rating = source.rating?.toDoubleOrNull(),
         updatedAt = updatedAt,
     )
 }

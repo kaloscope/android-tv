@@ -15,6 +15,11 @@ data object LibraryRoute : NavKey
 @Serializable
 data object SettingsRoute : NavKey
 
+@Serializable
+data class MediaDetailRoute(
+    val mediaId: Long,
+) : NavKey
+
 fun MutableList<NavKey>.selectRoot(route: NavKey) {
     clear()
     add(route)
@@ -26,9 +31,16 @@ fun MutableList<NavKey>.openSettings() {
     }
 }
 
+fun MutableList<NavKey>.openMediaDetail(mediaId: Long) {
+    val route = MediaDetailRoute(mediaId)
+    if (lastOrNull() != route) {
+        add(route)
+    }
+}
+
 fun MutableList<NavKey>.handleMainBack(): Boolean =
     when {
-        lastOrNull() == SettingsRoute && size > 1 -> {
+        size > 1 -> {
             removeLastOrNull()
             true
         }

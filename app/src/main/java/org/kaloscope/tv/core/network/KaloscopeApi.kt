@@ -3,13 +3,16 @@ package org.kaloscope.tv.core.network
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.JsonElement
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.http.Query
+import org.kaloscope.tv.data.media.remote.MediaItemData
+import org.kaloscope.tv.data.media.remote.MediaLibraryData
+import org.kaloscope.tv.data.media.remote.MediaPageData
 
 interface KaloscopeApi {
     @GET("system/version")
@@ -35,6 +38,26 @@ interface KaloscopeApi {
         @Query("page_size") pageSize: Int = 20,
         @Query("ordering") ordering: String = "-updated_at",
     ): ApiEnvelope<HistoryListData>
+
+    @GET("media/lib/list")
+    suspend fun getMediaLibraries(
+        @Header("Authorization") authorization: String,
+    ): ApiEnvelope<List<MediaLibraryData>>
+
+    @GET("media/list")
+    suspend fun getMediaPage(
+        @Header("Authorization") authorization: String,
+        @Query("page_num") pageNumber: Int = 1,
+        @Query("page_size") pageSize: Int = 20,
+        @Query("lib_id") libraryId: Long,
+        @Query("keyword") keyword: String? = null,
+    ): ApiEnvelope<MediaPageData>
+
+    @GET("media/{mediaId}")
+    suspend fun getMediaDetail(
+        @Header("Authorization") authorization: String,
+        @Path("mediaId") mediaId: Long,
+    ): ApiEnvelope<MediaItemData>
 }
 
 @Serializable
@@ -92,7 +115,7 @@ data class HistoryMediaData(
     val episode: Int? = null,
     val poster: String? = null,
     val backdrop: String? = null,
-    val rating: JsonElement? = null,
+    val rating: String? = null,
 )
 
 @Serializable

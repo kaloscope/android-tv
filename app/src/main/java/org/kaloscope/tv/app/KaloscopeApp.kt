@@ -52,29 +52,37 @@ import androidx.tv.material3.darkColorScheme
 import org.kaloscope.tv.R
 import org.kaloscope.tv.app.bootstrap.BootstrapState
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.Muted
+import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.feature.login.LoginError
 import org.kaloscope.tv.feature.login.LoginState
+import org.kaloscope.tv.feature.detail.MediaDetailUiState
+import org.kaloscope.tv.feature.detail.MediaDetailViewModel
 import org.kaloscope.tv.feature.home.HomeUiState
+import org.kaloscope.tv.feature.library.LibraryItemsState
+import org.kaloscope.tv.feature.library.LibraryUiState
+import org.kaloscope.tv.feature.library.LibraryViewModel
 import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
-
-internal val Background = Color(0xFF080C16)
-internal val Panel = Color(0xFF141A28)
-internal val Primary = Color(0xFF8B7CFF)
-internal val OnBackground = Color(0xFFF5F6FC)
-internal val Muted = Color(0xFFA9B1C7)
-internal val Success = Color(0xFF56D99B)
-internal val Danger = Color(0xFFFF7A8A)
 
 @Composable
 fun KaloscopeApp(
     viewModel: KaloscopeViewModel,
     mainViewModel: MainViewModel,
+    libraryViewModel: LibraryViewModel,
+    detailViewModel: MediaDetailViewModel,
 ) {
     val bootstrapState by viewModel.bootstrapState.collectAsStateWithLifecycle()
     val homeState by mainViewModel.homeState.collectAsStateWithLifecycle()
+    val libraryState by libraryViewModel.uiState.collectAsStateWithLifecycle()
+    val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
 
     KaloscopeTheme {
         // Exactly one root subtree is composed to prevent hidden screens from retaining focus.
@@ -109,21 +117,50 @@ fun KaloscopeApp(
                 LaunchedEffect(state.session.server.id, state.session.user.id) {
                     mainViewModel.loadHome(state.session)
                 }
-                LaunchedEffect(homeState) {
-                    if (homeState is HomeUiState.Error &&
-                        (homeState as HomeUiState.Error).error == AppError.Unauthorized
+                LaunchedEffect(homeState, libraryState, detailState) {
+                    if (homeState.hasUnauthorized() ||
+                        libraryState.hasUnauthorized() ||
+                        detailState.hasUnauthorized()
                     ) {
                         viewModel.handleUnauthorized(state.session)
                     }
                 }
-                // Home state belongs to one authenticated server origin.
+                // Authenticated feature state must not survive a server switch.
                 DisposableEffect(state.session.server.id) {
-                    onDispose(mainViewModel::reset)
+                    onDispose {
+                        mainViewModel.reset()
+                        libraryViewModel.reset()
+                        detailViewModel.reset()
+                    }
                 }
                 MainShell(
                     session = state.session,
                     homeState = homeState,
+                    libraryState = libraryState,
+                    detailState = detailState,
                     onRefresh = { mainViewModel.loadHome(state.session, force = true) },
+                    onOpenLibrary = { libraryViewModel.load(state.session) },
+                    onSelectLibrary = { libraryId ->
+                        libraryViewModel.selectLibrary(state.session, libraryId)
+                    },
+                    onLibraryQueryChange = libraryViewModel::updateQuery,
+                    onSearchLibrary = { libraryViewModel.search(state.session) },
+                    onRetryLibrary = {
+                        if (libraryState is LibraryUiState.Content) {
+                            libraryViewModel.retryContent(state.session)
+                        } else {
+                            libraryViewModel.load(state.session, force = true)
+                        }
+                    },
+                    onLoadMoreMedia = { libraryViewModel.loadNext(state.session) },
+                    onMediaFocused = libraryViewModel::rememberFocusedMedia,
+                    onOpenMedia = { mediaId ->
+                        detailViewModel.load(state.session, mediaId)
+                    },
+                    onRetryDetail = { detailViewModel.retry(state.session) },
+                    onSelectMediaChild = { childId ->
+                        detailViewModel.selectChild(state.session, childId)
+                    },
                     onLogout = viewModel::logout,
                 )
             }
@@ -137,6 +174,30 @@ fun KaloscopeApp(
         }
     }
 }
+
+private fun HomeUiState.hasUnauthorized(): Boolean =
+    this is HomeUiState.Error && error == AppError.Unauthorized
+
+private fun LibraryUiState.hasUnauthorized(): Boolean =
+    when (this) {
+        is LibraryUiState.Error -> error == AppError.Unauthorized
+        is LibraryUiState.Content -> when (val itemState = items) {
+            is LibraryItemsState.Error -> itemState.error == AppError.Unauthorized
+            is LibraryItemsState.Content ->
+                itemState.loadMoreError == AppError.Unauthorized
+
+            else -> false
+        }
+
+        else -> false
+    }
+
+private fun MediaDetailUiState.hasUnauthorized(): Boolean =
+    when (this) {
+        is MediaDetailUiState.Error -> error == AppError.Unauthorized
+        is MediaDetailUiState.Content -> childError == AppError.Unauthorized
+        MediaDetailUiState.Loading -> false
+    }
 
 @Composable
 internal fun KaloscopeTheme(content: @Composable () -> Unit) {
