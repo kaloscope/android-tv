@@ -14,6 +14,7 @@ import org.kaloscope.tv.app.bootstrap.BootstrapCoordinator
 import org.kaloscope.tv.app.bootstrap.BootstrapRepository
 import org.kaloscope.tv.app.bootstrap.BootstrapState
 import org.kaloscope.tv.core.model.SavedServer
+import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.data.auth.SessionRepository
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.feature.login.LoginCoordinator
@@ -127,6 +128,14 @@ class KaloscopeViewModel @Inject constructor(
     fun logout() {
         val ready = mutableBootstrapState.value as? BootstrapState.Ready ?: return
         useDifferentAccount(ready.session.server)
+    }
+
+    fun handleUnauthorized(session: Session) {
+        val ready = mutableBootstrapState.value as? BootstrapState.Ready ?: return
+        if (ready.session.server.id != session.server.id) {
+            return
+        }
+        useDifferentAccount(session.server)
     }
 
     private fun showLogin(server: SavedServer) {

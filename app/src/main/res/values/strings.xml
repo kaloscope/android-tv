@@ -30,11 +30,29 @@
     <string name="logging_in">正在登录…</string>
     <string name="change_server">更换服务器</string>
 
-    <string name="ready_eyebrow">连接完成</string>
-    <string name="ready_title">欢迎使用 Kaloscope</string>
-    <string name="ready_description">%1$s 已登录 %2$s</string>
-    <string name="ready_next">当前会话已通过服务器验证。</string>
     <string name="logout">退出登录</string>
+
+    <string name="home">首页</string>
+    <string name="search">网络搜索</string>
+    <string name="library">媒体库</string>
+    <string name="settings">设置</string>
+    <string name="recent_watch_description">来自当前服务器的真实观看历史</string>
+    <string name="refresh">刷新</string>
+    <string name="loading_history">正在加载观看历史</string>
+    <string name="loading_history_description">正在从当前 Kaloscope 服务器获取最近观看。</string>
+    <string name="no_history">暂无观看记录</string>
+    <string name="no_history_description">播放媒体库内容后，真实进度会显示在这里。</string>
+    <string name="history_load_failed">无法加载观看历史</string>
+    <string name="continue_watching">最近观看</string>
+    <string name="more_history">更多记录</string>
+    <string name="watched_percent">已观看 %1$d%%</string>
+    <string name="season_episode">第 %1$d 季 · 第 %2$d 集</string>
+    <string name="rating">评分 %1$.1f</string>
+    <string name="settings_description">当前切片仅提供服务器与账号管理。</string>
+    <string name="server_and_account">服务器与账号</string>
+    <string name="current_server">当前服务器</string>
+    <string name="current_account">当前账号</string>
+    <string name="not_available_yet">该功能将在后续纵向切片中启用。</string>
 
     <string name="connection_error_eyebrow">连接中断</string>
     <string name="connection_error_title">暂时无法连接</string>

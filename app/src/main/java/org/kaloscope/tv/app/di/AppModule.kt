@@ -17,6 +17,8 @@ import org.kaloscope.tv.core.storage.SessionStore
 import org.kaloscope.tv.core.storage.TokenCipher
 import org.kaloscope.tv.data.auth.DefaultSessionRepository
 import org.kaloscope.tv.data.auth.SessionRepository
+import org.kaloscope.tv.data.history.DefaultHistoryRepository
+import org.kaloscope.tv.data.history.HistoryRepository
 import org.kaloscope.tv.data.server.DefaultServerRepository
 import org.kaloscope.tv.data.server.ServerRepository
 
@@ -37,6 +39,11 @@ abstract class AppBindings {
 
     @Binds
     abstract fun bindSessionRepository(implementation: DefaultSessionRepository): SessionRepository
+
+    @Binds
+    abstract fun bindHistoryRepository(
+        implementation: DefaultHistoryRepository,
+    ): HistoryRepository
 
     @Binds
     abstract fun bindBootstrapRepository(

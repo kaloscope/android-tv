@@ -3,11 +3,13 @@ package org.kaloscope.tv.core.network
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.JsonElement
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface KaloscopeApi {
     @GET("system/version")
@@ -24,6 +26,15 @@ interface KaloscopeApi {
     suspend fun getCurrentUser(
         @Header("Authorization") authorization: String,
     ): ApiEnvelope<UserData>
+
+    @GET("user/history/list")
+    suspend fun getVideoHistory(
+        @Header("Authorization") authorization: String,
+        @Query("rel_type") relationType: String = "video",
+        @Query("page_num") pageNumber: Int = 1,
+        @Query("page_size") pageSize: Int = 20,
+        @Query("ordering") ordering: String = "-updated_at",
+    ): ApiEnvelope<HistoryListData>
 }
 
 @Serializable
@@ -51,6 +62,37 @@ data class UserData(
     val id: Long,
     val username: String,
     val role: String,
+)
+
+@Serializable
+data class HistoryListData(
+    val total: Int = 0,
+    val items: List<HistoryItemData> = emptyList(),
+)
+
+@Serializable
+data class HistoryItemData(
+    val id: Long,
+    @SerialName("updated_at")
+    val updatedAt: String? = null,
+    @SerialName("rel_id")
+    val relId: Long,
+    val position: Long = 0,
+    val percentage: Int = 0,
+    val media: HistoryMediaData? = null,
+)
+
+@Serializable
+data class HistoryMediaData(
+    val id: Long,
+    val name: String = "",
+    val title: String? = null,
+    val year: Int? = null,
+    val season: Int? = null,
+    val episode: Int? = null,
+    val poster: String? = null,
+    val backdrop: String? = null,
+    val rating: JsonElement? = null,
 )
 
 @Serializable

@@ -7,15 +7,17 @@ import androidx.activity.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.kaloscope.tv.app.KaloscopeApp
 import org.kaloscope.tv.app.KaloscopeViewModel
+import org.kaloscope.tv.app.MainViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel: KaloscopeViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            KaloscopeApp(viewModel)
+            KaloscopeApp(viewModel, mainViewModel)
         }
     }
 }

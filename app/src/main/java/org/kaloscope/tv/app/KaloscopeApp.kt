@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +31,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -50,31 +56,27 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.feature.login.LoginError
 import org.kaloscope.tv.feature.login.LoginState
+import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
 
-private val Background = Color(0xFF080C16)
-private val Panel = Color(0xFF141A28)
-private val Primary = Color(0xFF8B7CFF)
-private val OnBackground = Color(0xFFF5F6FC)
-private val Muted = Color(0xFFA9B1C7)
-private val Success = Color(0xFF56D99B)
-private val Danger = Color(0xFFFF7A8A)
+internal val Background = Color(0xFF080C16)
+internal val Panel = Color(0xFF141A28)
+internal val Primary = Color(0xFF8B7CFF)
+internal val OnBackground = Color(0xFFF5F6FC)
+internal val Muted = Color(0xFFA9B1C7)
+internal val Success = Color(0xFF56D99B)
+internal val Danger = Color(0xFFFF7A8A)
 
 @Composable
-fun KaloscopeApp(viewModel: KaloscopeViewModel) {
+fun KaloscopeApp(
+    viewModel: KaloscopeViewModel,
+    mainViewModel: MainViewModel,
+) {
     val bootstrapState by viewModel.bootstrapState.collectAsStateWithLifecycle()
+    val homeState by mainViewModel.homeState.collectAsStateWithLifecycle()
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Primary,
-            background = Background,
-            surface = Panel,
-            onPrimary = Color.White,
-            onBackground = OnBackground,
-            onSurface = OnBackground,
-        ),
-    ) {
+    KaloscopeTheme {
         // Exactly one root subtree is composed to prevent hidden screens from retaining focus.
         when (val state = bootstrapState) {
             BootstrapState.Loading -> LoadingScreen()
@@ -103,10 +105,28 @@ fun KaloscopeApp(viewModel: KaloscopeViewModel) {
                 )
             }
 
-            is BootstrapState.Ready -> ReadyScreen(
-                session = state.session,
-                onLogout = viewModel::logout,
-            )
+            is BootstrapState.Ready -> {
+                LaunchedEffect(state.session.server.id, state.session.user.id) {
+                    mainViewModel.loadHome(state.session)
+                }
+                LaunchedEffect(homeState) {
+                    if (homeState is HomeUiState.Error &&
+                        (homeState as HomeUiState.Error).error == AppError.Unauthorized
+                    ) {
+                        viewModel.handleUnauthorized(state.session)
+                    }
+                }
+                // Home state belongs to one authenticated server origin.
+                DisposableEffect(state.session.server.id) {
+                    onDispose(mainViewModel::reset)
+                }
+                MainShell(
+                    session = state.session,
+                    homeState = homeState,
+                    onRefresh = { mainViewModel.loadHome(state.session, force = true) },
+                    onLogout = viewModel::logout,
+                )
+            }
 
             is BootstrapState.ConnectionError -> ConnectionErrorScreen(
                 server = state.server,
@@ -116,6 +136,21 @@ fun KaloscopeApp(viewModel: KaloscopeViewModel) {
             )
         }
     }
+}
+
+@Composable
+internal fun KaloscopeTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = Primary,
+            background = Background,
+            surface = Panel,
+            onPrimary = Color.White,
+            onBackground = OnBackground,
+            onSurface = OnBackground,
+        ),
+        content = content,
+    )
 }
 
 @Composable
@@ -130,7 +165,7 @@ private fun LoadingScreen() {
 }
 
 @Composable
-private fun ServerSetupScreen(
+internal fun ServerSetupScreen(
     savedServers: List<SavedServer>,
     state: ServerSetupState,
     onNameChange: (String) -> Unit,
@@ -139,9 +174,18 @@ private fun ServerSetupScreen(
     onSave: () -> Unit,
     onSelectServer: (SavedServer) -> Unit,
 ) {
-    val firstFocus = remember { FocusRequester() }
+    val savedServerFocus = remember { FocusRequester() }
+    val nameFocus = remember { FocusRequester() }
+    val urlFocus = remember { FocusRequester() }
+    val testFocus = remember { FocusRequester() }
     // Existing servers take focus priority; new installations start in the name field.
-    LaunchedEffect(Unit) { firstFocus.requestFocus() }
+    LaunchedEffect(savedServers.isEmpty()) {
+        if (savedServers.isEmpty()) {
+            nameFocus.requestFocus()
+        } else {
+            savedServerFocus.requestFocus()
+        }
+    }
 
     AppFrame {
         FormPanel(
@@ -163,7 +207,7 @@ private fun ServerSetupScreen(
                         enabled = true,
                         onClick = { onSelectServer(server) },
                         modifier = if (index == 0) {
-                            Modifier.focusRequester(firstFocus)
+                            Modifier.focusRequester(savedServerFocus)
                         } else {
                             Modifier
                         },
@@ -184,11 +228,8 @@ private fun ServerSetupScreen(
                 onValueChange = onNameChange,
                 label = stringResource(R.string.server_name),
                 placeholder = stringResource(R.string.server_name_hint),
-                modifier = if (savedServers.isEmpty()) {
-                    Modifier.focusRequester(firstFocus)
-                } else {
-                    Modifier
-                },
+                modifier = Modifier.focusRequester(nameFocus),
+                onMoveDown = { urlFocus.requestFocus() },
             )
             Spacer(Modifier.height(18.dp))
             AppTextField(
@@ -196,6 +237,9 @@ private fun ServerSetupScreen(
                 onValueChange = onUrlChange,
                 label = stringResource(R.string.server_url),
                 placeholder = stringResource(R.string.server_url_hint),
+                modifier = Modifier.focusRequester(urlFocus),
+                onMoveUp = { nameFocus.requestFocus() },
+                onMoveDown = { testFocus.requestFocus() },
             )
             Spacer(Modifier.height(18.dp))
             state.error?.let {
@@ -222,6 +266,7 @@ private fun ServerSetupScreen(
                     },
                     enabled = !state.isTesting && !state.isSaving,
                     onClick = onTest,
+                    modifier = Modifier.focusRequester(testFocus),
                 )
                 if (state.verifiedOrigin != null) {
                     PrimaryButton(
@@ -248,8 +293,10 @@ private fun LoginScreen(
     onLogin: () -> Unit,
     onChangeServer: () -> Unit,
 ) {
-    val firstFocus = remember { FocusRequester() }
-    LaunchedEffect(server.id) { firstFocus.requestFocus() }
+    val usernameFocus = remember { FocusRequester() }
+    val passwordFocus = remember { FocusRequester() }
+    val loginFocus = remember { FocusRequester() }
+    LaunchedEffect(server.id) { usernameFocus.requestFocus() }
 
     AppFrame {
         FormPanel(
@@ -262,7 +309,8 @@ private fun LoginScreen(
                 onValueChange = onUsernameChange,
                 label = stringResource(R.string.username),
                 placeholder = stringResource(R.string.username_hint),
-                modifier = Modifier.focusRequester(firstFocus),
+                modifier = Modifier.focusRequester(usernameFocus),
+                onMoveDown = { passwordFocus.requestFocus() },
             )
             Spacer(Modifier.height(18.dp))
             AppTextField(
@@ -271,6 +319,9 @@ private fun LoginScreen(
                 label = stringResource(R.string.password),
                 placeholder = stringResource(R.string.password_hint),
                 isPassword = true,
+                modifier = Modifier.focusRequester(passwordFocus),
+                onMoveUp = { usernameFocus.requestFocus() },
+                onMoveDown = { loginFocus.requestFocus() },
             )
             Spacer(Modifier.height(18.dp))
             state.error?.let {
@@ -286,6 +337,7 @@ private fun LoginScreen(
                     },
                     enabled = !state.isSubmitting,
                     onClick = onLogin,
+                    modifier = Modifier.focusRequester(loginFocus),
                 )
                 PrimaryButton(
                     text = stringResource(R.string.change_server),
@@ -293,36 +345,6 @@ private fun LoginScreen(
                     onClick = onChangeServer,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun ReadyScreen(
-    session: Session,
-    onLogout: () -> Unit,
-) {
-    AppFrame {
-        FormPanel(
-            eyebrow = stringResource(R.string.ready_eyebrow),
-            title = stringResource(R.string.ready_title),
-            description = stringResource(
-                R.string.ready_description,
-                session.user.username,
-                session.server.name,
-            ),
-        ) {
-            Text(
-                text = stringResource(R.string.ready_next),
-                color = Muted,
-                fontSize = 18.sp,
-            )
-            Spacer(Modifier.height(24.dp))
-            PrimaryButton(
-                text = stringResource(R.string.logout),
-                enabled = true,
-                onClick = onLogout,
-            )
         }
     }
 }
@@ -443,6 +465,8 @@ private fun AppTextField(
     placeholder: String,
     modifier: Modifier = Modifier,
     isPassword: Boolean = false,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     Column(modifier = modifier.fillMaxWidth()) {
@@ -465,6 +489,25 @@ private fun AppTextField(
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) {
+                        false
+                    } else {
+                        when (event.key) {
+                            Key.DirectionUp -> onMoveUp?.let {
+                                it()
+                                true
+                            } ?: false
+
+                            Key.DirectionDown -> onMoveDown?.let {
+                                it()
+                                true
+                            } ?: false
+
+                            else -> false
+                        }
+                    }
+                }
                 .onFocusChanged { focused = it.isFocused }
                 .background(Color(0xFF0D1220), RoundedCornerShape(10.dp))
                 .border(
