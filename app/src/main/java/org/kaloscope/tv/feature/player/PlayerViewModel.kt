@@ -9,27 +9,33 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.core.model.MediaDetail
+import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.player.PlaybackOrigin
 import org.kaloscope.tv.core.player.PlaybackProgressRecorder
 import org.kaloscope.tv.core.player.PlaybackRequest
+import org.kaloscope.tv.core.player.PlaybackRequestNavigator
 import org.kaloscope.tv.core.player.PlaybackRequestStore
+import org.kaloscope.tv.core.player.LocalEpisodeRef
 import org.kaloscope.tv.core.player.ProgressReason
+import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.history.HistoryRepository
 import org.kaloscope.tv.data.media.MediaRepository
+import org.kaloscope.tv.data.search.SearchRepository
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val requestStore: PlaybackRequestStore,
     mediaRepository: MediaRepository,
     private val historyRepository: HistoryRepository,
+    private val searchRepository: SearchRepository,
 ) : ViewModel() {
     private val coordinator = PlayerCoordinator(requestStore, mediaRepository)
     private var currentRequestId: String? = null
     private var loadJob: Job? = null
-    private var progressRecorder = PlaybackProgressRecorder()
+    private val progressRecorders = mutableMapOf<Long, PlaybackProgressRecorder>()
 
     val uiState: StateFlow<PlayerUiState> = coordinator.state
 
@@ -49,6 +55,7 @@ class PlayerViewModel @Inject constructor(
     fun createFromDetail(
         session: Session,
         detail: MediaDetail,
+        siblings: List<MediaSummary>,
         resumePositionSeconds: Long?,
     ): String? =
         createLocalRequest(
@@ -58,6 +65,7 @@ class PlayerViewModel @Inject constructor(
             title = detail.title,
             resumePositionSeconds = resumePositionSeconds,
             origin = PlaybackOrigin.MediaDetail,
+            siblings = siblings,
         )
 
     fun load(
@@ -68,7 +76,6 @@ class PlayerViewModel @Inject constructor(
             return
         }
         currentRequestId = requestId
-        progressRecorder = PlaybackProgressRecorder()
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             coordinator.load(session, requestId)
@@ -77,14 +84,17 @@ class PlayerViewModel @Inject constructor(
 
     fun recordProgress(
         session: Session,
+        request: PlaybackRequest,
         positionMillis: Long,
         durationMillis: Long,
         reason: ProgressReason,
     ) {
-        val request = (uiState.value as? PlayerUiState.Content)?.request
-            as? PlaybackRequest.LocalMedia
-            ?: return
-        if (!progressRecorder.shouldRecord(
+        // A retiring controller must not write its position to the newly selected episode.
+        val localRequest = request as? PlaybackRequest.LocalMedia ?: return
+        val recorder = progressRecorders.getOrPut(localRequest.mediaId) {
+            PlaybackProgressRecorder()
+        }
+        if (!recorder.shouldRecord(
                 positionMillis = positionMillis,
                 durationMillis = durationMillis,
                 nowMillis = android.os.SystemClock.elapsedRealtime(),
@@ -99,12 +109,75 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val result = historyRepository.recordVideoProgress(
                 session = session,
-                mediaId = request.mediaId,
+                mediaId = localRequest.mediaId,
                 positionSeconds = positionSeconds,
                 percentage = percentage,
             )
             if (result is AppResult.Failure) {
                 coordinator.reportProgressFailure(result.error)
+            }
+        }
+    }
+
+    fun selectDefinition(
+        session: Session,
+        definitionIndex: Int,
+        positionMillis: Long,
+    ) {
+        val request = (uiState.value as? PlayerUiState.Content)?.request
+            as? PlaybackRequest.NetworkVideo
+            ?: return
+        val selected = PlaybackRequestNavigator.selectDefinition(
+            request,
+            definitionIndex,
+            positionMillis,
+        ) ?: return
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            coordinator.replaceRequest(session, selected)
+        }
+    }
+
+    fun switchAdjacent(
+        session: Session,
+        offset: Int,
+    ) {
+        val request = (uiState.value as? PlayerUiState.Content)?.request ?: return
+        if (request is PlaybackRequest.LocalMedia) {
+            val selected = PlaybackRequestNavigator.selectLocalAdjacent(request, offset) ?: return
+            coordinator.beginItemSwitch()
+            loadJob?.cancel()
+            loadJob = viewModelScope.launch {
+                coordinator.replaceRequest(session, selected)
+            }
+            return
+        }
+        val networkRequest = request as PlaybackRequest.NetworkVideo
+        val chapterIndex = PlaybackRequestNavigator.adjacentNetworkChapter(
+            networkRequest,
+            offset,
+        ) ?: return
+        coordinator.beginItemSwitch()
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            when (
+                val result = searchRepository.resolveChapter(
+                    session = session,
+                    source = networkRequest.source,
+                    chapterIndex = chapterIndex,
+                    preferredDefinition = TranscodeResolution.P1080,
+                )
+            ) {
+                is AppResult.Success -> coordinator.replaceRequest(
+                    session,
+                    networkRequest.copy(
+                        title = result.value.title,
+                        source = result.value,
+                        resumePositionMillis = 0,
+                    ),
+                )
+
+                is AppResult.Failure -> coordinator.reportItemSwitchFailure(result.error)
             }
         }
     }
@@ -115,6 +188,7 @@ class PlayerViewModel @Inject constructor(
             loadJob?.cancel()
             loadJob = null
             currentRequestId = null
+            progressRecorders.clear()
         }
     }
 
@@ -122,6 +196,7 @@ class PlayerViewModel @Inject constructor(
         loadJob?.cancel()
         loadJob = null
         currentRequestId = null
+        progressRecorders.clear()
         requestStore.clearServer(serverId)
     }
 
@@ -132,6 +207,7 @@ class PlayerViewModel @Inject constructor(
         title: String,
         resumePositionSeconds: Long?,
         origin: PlaybackOrigin,
+        siblings: List<MediaSummary> = emptyList(),
     ): String? {
         if (mediaId <= 0 || path.isBlank() || title.isBlank()) {
             return null
@@ -144,6 +220,13 @@ class PlayerViewModel @Inject constructor(
             title = title,
             resumePositionSeconds = resumePositionSeconds?.coerceAtLeast(0),
             origin = origin,
+            siblings = siblings.mapNotNull { item ->
+                LocalEpisodeRef(
+                    mediaId = item.id,
+                    path = item.path,
+                    title = item.title,
+                ).takeIf { it.mediaId > 0 && it.path.isNotBlank() && it.title.isNotBlank() }
+            },
         )
         requestStore.put(request)
         return request.requestId

@@ -7,8 +7,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.model.NetworkVideoType
+import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.data.search.remote.IndexerChapterData
 import org.kaloscope.tv.data.search.remote.IndexerDanmakuData
 import org.kaloscope.tv.data.search.remote.IndexerData
+import org.kaloscope.tv.data.search.remote.IndexerDefinitionData
 import org.kaloscope.tv.data.search.remote.IndexerPageData
 import org.kaloscope.tv.data.search.remote.IndexerResourceData
 import org.kaloscope.tv.data.search.remote.IndexerResourcePageData
@@ -72,7 +75,11 @@ class SearchMapperTest {
                 IndexerDanmakuData("d1", " Ready ", "scroll", "#FFFFFF", 12_500),
                 IndexerDanmakuData("d2", "", "scroll", null, 10),
             ),
-        ).toPlaybackSource(indexerId = 11, fallbackTitle = "备用")
+        ).toPlaybackSource(
+            indexerId = 11,
+            fallbackTitle = "备用",
+            preferredDefinition = TranscodeResolution.P1080,
+        )
 
         checkNotNull(source)
         assertEquals("/_api/media/proxy?id=1", source.url)
@@ -81,10 +88,73 @@ class SearchMapperTest {
     }
 
     @Test
-    fun `details without playable top level source are rejected`() {
+    fun `preferred definition is selected and chapter metadata is retained`() {
+        val source = IndexerResourceData(
+            id = "v1",
+            title = "视频",
+            mediaType = "video",
+            url = "https://cdn.example/master.m3u8",
+            videoType = "hls",
+            definitions = listOf(
+                IndexerDefinitionData(
+                    url = "https://cdn.example/720.m3u8",
+                    definition = JsonPrimitive("720P"),
+                ),
+                IndexerDefinitionData(
+                    url = "https://cdn.example/1080.m3u8",
+                    definition = JsonPrimitive(1080),
+                ),
+            ),
+            chapters = listOf(
+                IndexerChapterData("ep-1", null, "第 1 集", "第 1 季"),
+                IndexerChapterData(null, "https://cdn.example/ep-2.m3u8", "第 2 集", null),
+            ),
+        ).toPlaybackSource(
+            indexerId = 11,
+            fallbackTitle = "备用",
+            preferredDefinition = TranscodeResolution.P1080,
+        )
+
+        checkNotNull(source)
+        assertEquals("https://cdn.example/1080.m3u8", source.url)
+        assertEquals("1080", source.selectedDefinition?.label)
+        assertEquals(listOf("第 1 集", "第 2 集"), source.chapters.map { it.title })
+    }
+
+    @Test
+    fun `first direct chapter becomes playable when top level source is absent`() {
+        val source = IndexerResourceData(
+            id = "v1",
+            title = "视频",
+            mediaType = "video",
+            videoType = "dash",
+            chapters = listOf(
+                IndexerChapterData(
+                    id = null,
+                    url = "https://cdn.example/ep-1.mpd",
+                    title = "第 1 集",
+                ),
+            ),
+        ).toPlaybackSource(
+            indexerId = 11,
+            fallbackTitle = "备用",
+            preferredDefinition = TranscodeResolution.P1080,
+        )
+
+        checkNotNull(source)
+        assertEquals("https://cdn.example/ep-1.mpd", source.url)
+        assertEquals(NetworkVideoType.Dash, source.videoType)
+        assertEquals(0, source.selectedChapterIndex)
+    }
+
+    @Test
+    fun `details without any playable source are rejected`() {
         assertNull(
-            resource("v1", "视频", "video")
-                .toPlaybackSource(indexerId = 11, fallbackTitle = "备用"),
+            resource("v1", "视频", "video").toPlaybackSource(
+                indexerId = 11,
+                fallbackTitle = "备用",
+                preferredDefinition = TranscodeResolution.P1080,
+            ),
         )
     }
 }

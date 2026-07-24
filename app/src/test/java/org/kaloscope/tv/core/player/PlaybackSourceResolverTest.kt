@@ -1,5 +1,6 @@
 package org.kaloscope.tv.core.player
 
+import java.util.Base64
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.kaloscope.tv.core.model.SavedServer
@@ -73,6 +74,40 @@ class PlaybackSourceResolverTest {
 
         assertEquals("https://cdn.example/video.mp4", source.url)
         assertEquals("video/mp4", source.mimeType)
+    }
+
+    @Test
+    fun `network DASH URL declares DASH media type`() {
+        val source = PlaybackSourceResolver.networkMediaSource(
+            session = session(),
+            rawUrl = "https://cdn.example/manifest.mpd",
+            videoType = NetworkVideoType.Dash,
+        )
+
+        assertEquals("https://cdn.example/manifest.mpd", source.url)
+        assertEquals("application/dash+xml", source.mimeType)
+    }
+
+    @Test
+    fun `inline DASH rewrites server API base and becomes data URI`() {
+        val source = PlaybackSourceResolver.networkMediaSource(
+            session = session(),
+            rawUrl = """
+                <?xml version="1.0"?>
+                <MPD><Period><BaseURL>/_api/media/proxy/</BaseURL></Period></MPD>
+            """.trimIndent(),
+            videoType = NetworkVideoType.Dash,
+        )
+
+        assertEquals("application/dash+xml", source.mimeType)
+        val encodedManifest = source.url.substringAfter("base64,")
+        assertEquals(
+            """
+                <?xml version="1.0"?>
+                <MPD><Period><BaseURL>http://127.0.0.1:8000/_api/media/proxy/</BaseURL></Period></MPD>
+            """.trimIndent(),
+            String(Base64.getDecoder().decode(encodedManifest), Charsets.UTF_8),
+        )
     }
 }
 

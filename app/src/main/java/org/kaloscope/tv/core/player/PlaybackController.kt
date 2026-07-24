@@ -12,6 +12,7 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -40,7 +41,7 @@ class PlaybackController internal constructor(
     private val session: Session,
     private val request: PlaybackRequest,
     private val subtitles: List<SubtitleTrack>,
-    private val onProgress: (Long, Long, ProgressReason) -> Unit,
+    private val onProgress: (PlaybackRequest, Long, Long, ProgressReason) -> Unit,
 ) {
     private var sourceKind = when (request) {
         is PlaybackRequest.LocalMedia -> PlaybackSourcePolicy.initialSource(request.playbackMode)
@@ -114,7 +115,10 @@ class PlaybackController internal constructor(
     private val mediaSession: MediaSession
 
     init {
-        val dataSourceFactory = OkHttpDataSource.Factory(authenticatedClient(session))
+        val dataSourceFactory = DefaultDataSource.Factory(
+            context,
+            OkHttpDataSource.Factory(authenticatedClient(session)),
+        )
         player = ExoPlayer.Builder(context)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .setSeekBackIncrementMs(SEEK_INCREMENT_MILLIS)
@@ -156,6 +160,10 @@ class PlaybackController internal constructor(
 
     fun recordPeriodicProgress() {
         record(ProgressReason.Periodic)
+    }
+
+    fun recordItemSwitchProgress() {
+        record(ProgressReason.ItemChanged)
     }
 
     fun release() {
@@ -219,7 +227,7 @@ class PlaybackController internal constructor(
     }
 
     private fun record(reason: ProgressReason) {
-        onProgress(player.currentPosition, player.duration, reason)
+        onProgress(request, player.currentPosition, player.duration, reason)
     }
 
     private fun currentPositionMillis(): Long =
@@ -263,7 +271,7 @@ class PlaybackController internal constructor(
     private fun PlaybackRequest.resumePositionMillis(): Long =
         when (this) {
             is PlaybackRequest.LocalMedia -> resumePositionSeconds.orZero() * 1_000
-            is PlaybackRequest.NetworkVideo -> 0
+            is PlaybackRequest.NetworkVideo -> resumePositionMillis.coerceAtLeast(0)
         }
 
     private companion object {
@@ -279,7 +287,7 @@ class PlaybackControllerFactory @Inject constructor(
         session: Session,
         request: PlaybackRequest,
         subtitles: List<SubtitleTrack>,
-        onProgress: (Long, Long, ProgressReason) -> Unit,
+        onProgress: (PlaybackRequest, Long, Long, ProgressReason) -> Unit,
     ): PlaybackController = PlaybackController(
         context = context,
         session = session,

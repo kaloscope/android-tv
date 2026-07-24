@@ -7,6 +7,7 @@ import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.player.TranscodeResolution
 
 interface SearchRepository {
     suspend fun getIndexers(session: Session): AppResult<List<NetworkIndexer>>
@@ -27,5 +28,13 @@ interface SearchRepository {
         session: Session,
         indexerId: Long,
         result: NetworkSearchResult,
+        preferredDefinition: TranscodeResolution,
+    ): AppResult<NetworkPlaybackSource>
+
+    suspend fun resolveChapter(
+        session: Session,
+        source: NetworkPlaybackSource,
+        chapterIndex: Int,
+        preferredDefinition: TranscodeResolution,
     ): AppResult<NetworkPlaybackSource>
 }

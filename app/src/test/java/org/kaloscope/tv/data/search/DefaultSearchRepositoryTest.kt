@@ -17,6 +17,7 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.network.ApiClientFactory
+import org.kaloscope.tv.core.player.TranscodeResolution
 
 class DefaultSearchRepositoryTest {
     private lateinit var server: MockWebServer
@@ -71,12 +72,112 @@ class DefaultSearchRepositoryTest {
 
         val page = repository.search(session(), profile, "星际", 1)
         val result = (page as AppResult.Success).value.items.single()
-        val playback = repository.resolvePlayback(session(), 11, result)
+        val playback = repository.resolvePlayback(
+            session(),
+            11,
+            result,
+            TranscodeResolution.P1080,
+        )
 
         val source = (playback as AppResult.Success).value
         assertEquals("video-fixture-001", source.resourceId)
         assertEquals(NetworkVideoType.Hls, source.videoType)
         assertEquals(12_500, source.danmakus.single().startMillis)
+    }
+
+    @Test
+    fun `details re-resolves first id-only chapter`() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{"status":200,"message":"","data":{""" +
+                    """"id":"series-1","title":"Series","media_type":"video",""" +
+                    """"video_type":"dash","chapters":[{"id":"episode-1",""" +
+                    """"title":"Episode 1"}]}}""",
+            ),
+        )
+        server.enqueue(
+            jsonResponse(
+                """{"status":200,"message":"","data":{""" +
+                    """"id":"series-1","title":"Episode 1","media_type":"video",""" +
+                    """"video_type":"dash","url":"https://cdn.example/episode-1.mpd"}}""",
+            ),
+        )
+
+        val playback = repository.resolvePlayback(
+            session = session(),
+            indexerId = 11,
+            result = NetworkSearchResult(
+                id = "series-1",
+                title = "Series",
+                coverPath = null,
+                rating = null,
+                category = null,
+                uploader = null,
+                uploadedAt = null,
+            ),
+            preferredDefinition = TranscodeResolution.P1080,
+        )
+
+        val source = (playback as AppResult.Success).value
+        assertEquals("https://cdn.example/episode-1.mpd", source.url)
+        assertEquals(0, source.selectedChapterIndex)
+        server.takeRequest()
+        val chapterRequest = server.takeRequest()
+        assertTrue(chapterRequest.body.readUtf8().contains(""""chapter_id":"episode-1""""))
+    }
+
+    @Test
+    fun `direct chapter does not retain previous episode definitions or danmakus`() = runTest {
+        val current = org.kaloscope.tv.core.model.NetworkPlaybackSource(
+            indexerId = 11,
+            resourceId = "series-1",
+            title = "Episode 1",
+            url = "https://cdn.example/episode-1.m3u8",
+            videoType = NetworkVideoType.Hls,
+            danmakus = listOf(
+                org.kaloscope.tv.core.model.DanmakuComment(
+                    id = "old",
+                    text = "Old episode",
+                    mode = "scroll",
+                    color = null,
+                    startMillis = 1_000,
+                ),
+            ),
+            definitions = listOf(
+                org.kaloscope.tv.core.model.NetworkDefinition(
+                    "1080P",
+                    "https://cdn.example/episode-1-1080.m3u8",
+                ),
+            ),
+            chapters = listOf(
+                org.kaloscope.tv.core.model.NetworkChapter(
+                    "ep-1",
+                    null,
+                    "Episode 1",
+                    null,
+                ),
+                org.kaloscope.tv.core.model.NetworkChapter(
+                    null,
+                    "https://cdn.example/episode-2.m3u8",
+                    "Episode 2",
+                    null,
+                ),
+            ),
+            selectedDefinitionIndex = 0,
+            selectedChapterIndex = 0,
+        )
+
+        val result = repository.resolveChapter(
+            session(),
+            current,
+            1,
+            TranscodeResolution.P1080,
+        )
+
+        val next = (result as AppResult.Success).value
+        assertTrue(next.definitions.isEmpty())
+        assertTrue(next.danmakus.isEmpty())
+        assertEquals(1, next.selectedChapterIndex)
     }
 
     private fun session() = Session(

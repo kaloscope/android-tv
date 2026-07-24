@@ -118,6 +118,49 @@ class PlayerCoordinatorTest {
         assertEquals(request, content.request)
         assertEquals(AppError.Offline, content.progressError)
     }
+
+    @Test
+    fun `network chapter failure preserves current playback`() = runTest {
+        val store = PlaybackRequestStore()
+        val request = networkRequest()
+        store.put(request)
+        val coordinator = PlayerCoordinator(store, FakeMediaRepository())
+        coordinator.load(session(), request.requestId)
+
+        coordinator.beginItemSwitch()
+        coordinator.reportItemSwitchFailure(AppError.Offline)
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals(request, content.request)
+        assertEquals(AppError.Offline, content.switchError)
+        assertTrue(!content.switchingItem)
+    }
+
+    @Test
+    fun `network request replacement publishes the new chapter`() = runTest {
+        val store = PlaybackRequestStore()
+        val request = networkRequest()
+        store.put(request)
+        val repository = FakeMediaRepository()
+        val coordinator = PlayerCoordinator(store, repository)
+        coordinator.load(session(), request.requestId)
+        val next = request.copy(
+            title = "Episode 2",
+            source = request.source.copy(
+                title = "Episode 2",
+                url = "https://cdn.example/episode-2.mpd",
+                selectedChapterIndex = 1,
+            ),
+        )
+
+        coordinator.replaceRequest(session(), next)
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals(next, content.request)
+        assertEquals(next, store.get(request.requestId))
+        assertEquals(0, repository.subtitleCalls)
+        assertEquals(0, repository.danmakuCalls)
+    }
 }
 
 private class FakeMediaRepository(
@@ -168,6 +211,25 @@ private fun request() = PlaybackRequest.LocalMedia(
     title = "Episode 1",
     resumePositionSeconds = 42,
     origin = PlaybackOrigin.MediaDetail,
+)
+
+private fun networkRequest() = PlaybackRequest.NetworkVideo(
+    requestId = "network-request",
+    serverId = "server-1",
+    title = "Episode 1",
+    source = org.kaloscope.tv.core.model.NetworkPlaybackSource(
+        indexerId = 11,
+        resourceId = "series-1",
+        title = "Episode 1",
+        url = "https://cdn.example/episode-1.mpd",
+        videoType = org.kaloscope.tv.core.model.NetworkVideoType.Dash,
+        danmakus = emptyList(),
+        chapters = listOf(
+            org.kaloscope.tv.core.model.NetworkChapter("ep-1", null, "Episode 1", null),
+            org.kaloscope.tv.core.model.NetworkChapter("ep-2", null, "Episode 2", null),
+        ),
+        selectedChapterIndex = 0,
+    ),
 )
 
 private fun subtitle() = SubtitleTrack(

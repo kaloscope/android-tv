@@ -74,6 +74,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
+import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.feature.detail.MediaDetailScreen
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
@@ -121,7 +122,10 @@ internal fun MainShell(
     onPlayHistory: (WatchHistoryItem) -> String? = { null },
     onPlayDetail: (MediaDetail, Long?) -> String? = { _, _ -> null },
     onLoadPlayer: (String) -> Unit = {},
-    onPlayerProgress: (Long, Long, ProgressReason) -> Unit = { _, _, _ -> },
+    onPlayerProgress: (PlaybackRequest, Long, Long, ProgressReason) -> Unit =
+        { _, _, _, _ -> },
+    onSelectPlayerDefinition: (Int, Long) -> Unit = { _, _ -> },
+    onSwitchPlayerItem: (Int) -> Unit = {},
     onClosePlayer: (String) -> Unit = {},
 ) {
     val backStack = rememberNavBackStack(HomeRoute)
@@ -324,6 +328,9 @@ internal fun MainShell(
                             state = playerState,
                             controllerFactory = factory,
                             onProgress = onPlayerProgress,
+                            onSelectDefinition = onSelectPlayerDefinition,
+                            onPrevious = { onSwitchPlayerItem(-1) },
+                            onNext = { onSwitchPlayerItem(1) },
                             onBack = ::goBack,
                         )
                     }

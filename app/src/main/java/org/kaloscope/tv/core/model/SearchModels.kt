@@ -33,9 +33,22 @@ data class NetworkSearchPage(
 
 enum class NetworkVideoType {
     Hls,
+    Dash,
     Mp4,
     Unknown,
 }
+
+data class NetworkDefinition(
+    val label: String,
+    val url: String,
+)
+
+data class NetworkChapter(
+    val id: String?,
+    val url: String?,
+    val title: String,
+    val volume: String?,
+)
 
 data class NetworkPlaybackSource(
     val indexerId: Long,
@@ -44,4 +57,11 @@ data class NetworkPlaybackSource(
     val url: String,
     val videoType: NetworkVideoType,
     val danmakus: List<DanmakuComment>,
-)
+    val definitions: List<NetworkDefinition> = emptyList(),
+    val chapters: List<NetworkChapter> = emptyList(),
+    val selectedDefinitionIndex: Int? = null,
+    val selectedChapterIndex: Int? = null,
+) {
+    val selectedDefinition: NetworkDefinition?
+        get() = selectedDefinitionIndex?.let(definitions::getOrNull)
+}

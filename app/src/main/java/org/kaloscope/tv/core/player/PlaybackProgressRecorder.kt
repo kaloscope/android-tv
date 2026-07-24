@@ -41,6 +41,7 @@ enum class ProgressReason {
     Periodic,
     Paused,
     Seeked,
+    ItemChanged,
     Exit,
     Error,
 }

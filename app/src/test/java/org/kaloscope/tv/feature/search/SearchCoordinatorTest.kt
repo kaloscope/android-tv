@@ -20,6 +20,7 @@ import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.player.PlaybackOrigin
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
+import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.search.SearchRepository
 
 class SearchCoordinatorTest {
@@ -173,7 +174,15 @@ private class FakeSearchRepository(
         session: Session,
         indexerId: Long,
         result: NetworkSearchResult,
+        preferredDefinition: TranscodeResolution,
     ): AppResult<NetworkPlaybackSource> = playback
+
+    override suspend fun resolveChapter(
+        session: Session,
+        source: NetworkPlaybackSource,
+        chapterIndex: Int,
+        preferredDefinition: TranscodeResolution,
+    ): AppResult<NetworkPlaybackSource> = error("Not used")
 }
 
 private data class SearchCall(

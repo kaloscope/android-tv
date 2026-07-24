@@ -18,6 +18,7 @@ sealed interface PlaybackRequest {
         override val origin: PlaybackOrigin,
         val playbackMode: PlaybackMode = PlaybackMode.Auto,
         val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
+        val siblings: List<LocalEpisodeRef> = emptyList(),
     ) : PlaybackRequest
 
     data class NetworkVideo(
@@ -26,8 +27,15 @@ sealed interface PlaybackRequest {
         override val title: String,
         override val origin: PlaybackOrigin = PlaybackOrigin.NetworkSearch,
         val source: NetworkPlaybackSource,
+        val resumePositionMillis: Long = 0,
     ) : PlaybackRequest
 }
+
+data class LocalEpisodeRef(
+    val mediaId: Long,
+    val path: String,
+    val title: String,
+)
 
 enum class PlaybackOrigin {
     Home,

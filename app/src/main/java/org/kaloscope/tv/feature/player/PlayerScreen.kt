@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -55,12 +56,14 @@ import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.DanmakuComment
+import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackFailure
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackRequest
+import org.kaloscope.tv.core.player.PlaybackRequestNavigator
 import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -71,27 +74,39 @@ fun PlayerScreen(
     session: Session,
     state: PlayerUiState,
     controllerFactory: PlaybackControllerFactory,
-    onProgress: (Long, Long, ProgressReason) -> Unit,
+    onProgress: (PlaybackRequest, Long, Long, ProgressReason) -> Unit,
+    onSelectDefinition: (Int, Long) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onBack: () -> Unit,
 ) {
-    BackHandler(onBack = onBack)
     when (state) {
-        PlayerUiState.Loading -> PlayerMessage(
-            title = stringResource(R.string.preparing_playback),
-            description = stringResource(R.string.preparing_playback_description),
-        )
+        PlayerUiState.Loading -> {
+            BackHandler(onBack = onBack)
+            PlayerMessage(
+                title = stringResource(R.string.preparing_playback),
+                description = stringResource(R.string.preparing_playback_description),
+            )
+        }
 
-        PlayerUiState.MissingRequest -> PlayerMessage(
-            title = stringResource(R.string.playback_request_missing),
-            description = stringResource(R.string.playback_request_missing_description),
-            onBack = onBack,
-        )
+        PlayerUiState.MissingRequest -> {
+            BackHandler(onBack = onBack)
+            PlayerMessage(
+                title = stringResource(R.string.playback_request_missing),
+                description = stringResource(R.string.playback_request_missing_description),
+                onBack = onBack,
+            )
+        }
 
         is PlayerUiState.Content -> PlayerContent(
             session = session,
             state = state,
             controllerFactory = controllerFactory,
             onProgress = onProgress,
+            onSelectDefinition = onSelectDefinition,
+            onPrevious = onPrevious,
+            onNext = onNext,
+            onBack = onBack,
         )
     }
 }
@@ -102,14 +117,19 @@ private fun PlayerContent(
     session: Session,
     state: PlayerUiState.Content,
     controllerFactory: PlaybackControllerFactory,
-    onProgress: (Long, Long, ProgressReason) -> Unit,
+    onProgress: (PlaybackRequest, Long, Long, ProgressReason) -> Unit,
+    onSelectDefinition: (Int, Long) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onBack: () -> Unit,
 ) {
-    var activeController by remember(state.request.requestId) {
+    val playbackIdentity = state.request.playbackIdentity()
+    var activeController by remember(playbackIdentity) {
         mutableStateOf<PlaybackController?>(null)
     }
     // API 23 may skip onStop, while newer Android versions support multi-window playback.
     if (android.os.Build.VERSION.SDK_INT > 23) {
-        LifecycleStartEffect(state.request.requestId) {
+        LifecycleStartEffect(playbackIdentity) {
             activeController = controllerFactory.create(
                 session = session,
                 request = state.request,
@@ -122,7 +142,7 @@ private fun PlayerContent(
             }
         }
     } else {
-        LifecycleResumeEffect(state.request.requestId) {
+        LifecycleResumeEffect(playbackIdentity) {
             activeController = controllerFactory.create(
                 session = session,
                 request = state.request,
@@ -144,13 +164,29 @@ private fun PlayerContent(
         return
     }
     val status by controller.status.collectAsStateWithLifecycle()
-    var positionMillis by remember { mutableLongStateOf(0) }
+    var positionMillis by remember(playbackIdentity) { mutableLongStateOf(0) }
     var controlsVisible by remember { mutableStateOf(true) }
-    var subtitlesEnabled by remember { mutableStateOf(state.subtitles.isNotEmpty()) }
-    var danmakusEnabled by remember { mutableStateOf(state.danmakus.isNotEmpty()) }
+    var subtitlesEnabled by remember(playbackIdentity) {
+        mutableStateOf(state.subtitles.isNotEmpty())
+    }
+    var danmakusEnabled by remember(playbackIdentity) {
+        mutableStateOf(state.danmakus.isNotEmpty())
+    }
+    var definitionDrawerOpen by remember { mutableStateOf(false) }
+    var restoreDefinitionFocus by remember { mutableStateOf(false) }
     var interactionVersion by remember { mutableLongStateOf(0) }
     val playerFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
+    val definitionFocus = remember { FocusRequester() }
+
+    BackHandler {
+        if (definitionDrawerOpen) {
+            definitionDrawerOpen = false
+            restoreDefinitionFocus = true
+        } else {
+            onBack()
+        }
+    }
 
     LaunchedEffect(controller) {
         while (true) {
@@ -170,7 +206,12 @@ private fun PlayerContent(
         status.failure,
         status.fallbackInProgress,
     ) {
-        if (controlsVisible && status.failure == null && !status.fallbackInProgress) {
+        if (
+            controlsVisible &&
+            !definitionDrawerOpen &&
+            status.failure == null &&
+            !status.fallbackInProgress
+        ) {
             delay(4_000)
             controlsVisible = false
         }
@@ -180,11 +221,23 @@ private fun PlayerContent(
             controlsVisible = true
         }
     }
-    LaunchedEffect(controlsVisible) {
-        if (controlsVisible) {
+    LaunchedEffect(controlsVisible, definitionDrawerOpen) {
+        if (controlsVisible && !definitionDrawerOpen && !restoreDefinitionFocus) {
             playFocus.requestFocus()
-        } else {
+        } else if (!controlsVisible && !definitionDrawerOpen) {
             playerFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(definitionDrawerOpen, restoreDefinitionFocus) {
+        if (!definitionDrawerOpen && restoreDefinitionFocus) {
+            withFrameNanos { }
+            definitionFocus.requestFocus()
+            restoreDefinitionFocus = false
+        }
+    }
+    LaunchedEffect(status.failure) {
+        if (status.failure != null) {
+            definitionDrawerOpen = false
         }
     }
 
@@ -193,12 +246,12 @@ private fun PlayerContent(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(playerFocus)
-            .focusable(enabled = !controlsVisible)
+            .focusable(enabled = !controlsVisible && !definitionDrawerOpen)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) {
                     return@onPreviewKeyEvent false
                 }
-                if (controlsVisible) {
+                if (controlsVisible || definitionDrawerOpen) {
                     interactionVersion += 1
                     return@onPreviewKeyEvent false
                 }
@@ -255,7 +308,12 @@ private fun PlayerContent(
                 positionMillis = positionMillis,
             )
         }
-        if (controlsVisible && status.failure == null) {
+        if (
+            controlsVisible &&
+            status.failure == null &&
+            !definitionDrawerOpen &&
+            !state.switchingItem
+        ) {
             PlayerControls(
                 title = state.request.title,
                 isPlaying = status.isPlaying,
@@ -272,7 +330,20 @@ private fun PlayerContent(
                 transcodeResolution =
                     (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
                 fallbackInProgress = status.fallbackInProgress,
+                hasPrevious = PlaybackRequestNavigator.hasPrevious(state.request),
+                hasNext = PlaybackRequestNavigator.hasNext(state.request),
+                definitions = (state.request as? PlaybackRequest.NetworkVideo)
+                    ?.source
+                    ?.definitions
+                    .orEmpty(),
+                definitionFocus = definitionFocus,
+                switchingItem = state.switchingItem,
                 playFocus = playFocus,
+                onPrevious = {
+                    interactionVersion += 1
+                    controller.recordItemSwitchProgress()
+                    onPrevious()
+                },
                 onRewind = {
                     interactionVersion += 1
                     controller.seekBy(-10_000)
@@ -285,6 +356,11 @@ private fun PlayerContent(
                     interactionVersion += 1
                     controller.seekBy(10_000)
                 },
+                onNext = {
+                    interactionVersion += 1
+                    controller.recordItemSwitchProgress()
+                    onNext()
+                },
                 onToggleSubtitles = {
                     interactionVersion += 1
                     subtitlesEnabled = !subtitlesEnabled
@@ -294,6 +370,40 @@ private fun PlayerContent(
                     interactionVersion += 1
                     danmakusEnabled = !danmakusEnabled
                 },
+                onOpenDefinitions = {
+                    interactionVersion += 1
+                    definitionDrawerOpen = true
+                },
+            )
+        }
+        if (definitionDrawerOpen) {
+            PlayerDefinitionDrawer(
+                definitions = (state.request as? PlaybackRequest.NetworkVideo)
+                    ?.source
+                    ?.definitions
+                    .orEmpty(),
+                selectedIndex = (state.request as? PlaybackRequest.NetworkVideo)
+                    ?.source
+                    ?.selectedDefinitionIndex,
+                onSelect = { index ->
+                    definitionDrawerOpen = false
+                    restoreDefinitionFocus = true
+                    onSelectDefinition(index, controller.player.currentPosition)
+                },
+            )
+        }
+        if (state.switchingItem) {
+            PlayerBusyOverlay(stringResource(R.string.switching_episode))
+        } else if (state.switchError != null) {
+            Text(
+                text = stringResource(R.string.switch_episode_failed),
+                color = Danger,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 34.dp)
+                    .background(Color(0xCC000000), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
         status.failure?.let { failure ->
@@ -311,7 +421,7 @@ private fun PlayerContent(
 }
 
 @Composable
-private fun PlayerControls(
+internal fun PlayerControls(
     title: String,
     isPlaying: Boolean,
     positionMillis: Long,
@@ -326,12 +436,20 @@ private fun PlayerControls(
     sourceKind: PlaybackSourceKind,
     transcodeResolution: TranscodeResolution?,
     fallbackInProgress: Boolean,
+    hasPrevious: Boolean,
+    hasNext: Boolean,
+    definitions: List<NetworkDefinition>,
+    switchingItem: Boolean,
     playFocus: FocusRequester,
+    definitionFocus: FocusRequester,
+    onPrevious: () -> Unit,
     onRewind: () -> Unit,
     onPlayPause: () -> Unit,
     onForward: () -> Unit,
+    onNext: () -> Unit,
     onToggleSubtitles: () -> Unit,
     onToggleDanmakus: () -> Unit,
+    onOpenDefinitions: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -410,6 +528,13 @@ private fun PlayerControls(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (hasPrevious) {
+                PlayerButton(
+                    text = stringResource(R.string.previous_episode),
+                    onClick = onPrevious,
+                    enabled = !switchingItem,
+                )
+            }
             PlayerButton(
                 text = stringResource(R.string.rewind_seconds),
                 onClick = onRewind,
@@ -428,6 +553,13 @@ private fun PlayerControls(
                 text = stringResource(R.string.forward_seconds),
                 onClick = onForward,
             )
+            if (hasNext) {
+                PlayerButton(
+                    text = stringResource(R.string.next_episode),
+                    onClick = onNext,
+                    enabled = !switchingItem,
+                )
+            }
             Spacer(Modifier.weight(1f))
             PlayerButton(
                 text = subtitleButtonText(
@@ -449,7 +581,79 @@ private fun PlayerControls(
                 enabled = danmakusAvailable,
                 active = danmakusEnabled,
             )
+            if (definitions.isNotEmpty()) {
+                PlayerButton(
+                    text = stringResource(R.string.playback_quality),
+                    onClick = onOpenDefinitions,
+                    modifier = Modifier.focusRequester(definitionFocus),
+                )
+            }
         }
+    }
+}
+
+@Composable
+internal fun PlayerDefinitionDrawer(
+    definitions: List<NetworkDefinition>,
+    selectedIndex: Int?,
+    onSelect: (Int) -> Unit,
+) {
+    val initialFocus = remember { FocusRequester() }
+    LaunchedEffect(definitions, selectedIndex) {
+        withFrameNanos { }
+        initialFocus.requestFocus()
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x66000000)),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(390.dp)
+                .background(Color(0xF20D1320))
+                .padding(horizontal = 34.dp, vertical = 46.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.playback_quality),
+                color = OnBackground,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(12.dp))
+            definitions.forEachIndexed { index, definition ->
+                PlayerButton(
+                    text = definition.label,
+                    onClick = { onSelect(index) },
+                    modifier = if (index == selectedIndex || selectedIndex == null && index == 0) {
+                        Modifier.focusRequester(initialFocus)
+                    } else {
+                        Modifier
+                    },
+                    active = index == selectedIndex,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerBusyOverlay(message: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x99000000)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = message,
+            color = OnBackground,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -697,3 +901,10 @@ private fun parseDanmakuColor(rawColor: String?): Color =
     runCatching {
         Color(android.graphics.Color.parseColor(rawColor ?: "#FFFFFF"))
     }.getOrDefault(Color.White)
+
+private fun PlaybackRequest.playbackIdentity(): String =
+    when (this) {
+        is PlaybackRequest.LocalMedia -> "$requestId:local:$mediaId"
+        is PlaybackRequest.NetworkVideo ->
+            "$requestId:network:${source.resourceId}:${source.selectedChapterIndex}:${source.url}"
+    }

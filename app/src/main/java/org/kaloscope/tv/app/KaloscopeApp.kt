@@ -204,22 +204,34 @@ fun KaloscopeApp(
                         playerViewModel.createFromHistory(state.session, item)
                     },
                     onPlayDetail = { detail, resumePosition ->
+                        val siblings = (detailState as? MediaDetailUiState.Content)
+                            ?.parent
+                            ?.children
+                            .orEmpty()
                         playerViewModel.createFromDetail(
                             session = state.session,
                             detail = detail,
+                            siblings = siblings,
                             resumePositionSeconds = resumePosition,
                         )
                     },
                     onLoadPlayer = { requestId ->
                         playerViewModel.load(state.session, requestId)
                     },
-                    onPlayerProgress = { position, duration, reason ->
+                    onPlayerProgress = { request, position, duration, reason ->
                         playerViewModel.recordProgress(
                             session = state.session,
+                            request = request,
                             positionMillis = position,
                             durationMillis = duration,
                             reason = reason,
                         )
+                    },
+                    onSelectPlayerDefinition = { index, position ->
+                        playerViewModel.selectDefinition(state.session, index, position)
+                    },
+                    onSwitchPlayerItem = { offset ->
+                        playerViewModel.switchAdjacent(state.session, offset)
                     },
                     onClosePlayer = playerViewModel::close,
                 )

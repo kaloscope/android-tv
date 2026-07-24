@@ -25,6 +25,8 @@ sealed interface PlayerUiState {
         val danmakus: List<DanmakuComment>,
         val extraFailures: Map<PlayerExtra, AppError>,
         val progressError: AppError? = null,
+        val switchingItem: Boolean = false,
+        val switchError: AppError? = null,
     ) : PlayerUiState {
         val extraErrors: Set<PlayerExtra>
             get() = extraFailures.keys
@@ -88,6 +90,58 @@ class PlayerCoordinator(
             danmakus = (danmakuResult as? AppResult.Success)?.value.orEmpty(),
             extraFailures = failures,
         )
+    }
+
+    fun beginItemSwitch() {
+        val content = mutableState.value as? PlayerUiState.Content ?: return
+        mutableState.value = content.copy(switchingItem = true, switchError = null)
+    }
+
+    suspend fun replaceRequest(
+        session: Session,
+        request: PlaybackRequest,
+    ) {
+        requestStore.put(request)
+        val current = mutableState.value as? PlayerUiState.Content
+        if (request is PlaybackRequest.NetworkVideo) {
+            mutableState.value = PlayerUiState.Content(
+                request = request,
+                subtitles = emptyList(),
+                danmakus = request.source.danmakus,
+                extraFailures = emptyMap(),
+                progressError = current?.progressError,
+            )
+            return
+        }
+        val localRequest = request as PlaybackRequest.LocalMedia
+        val (subtitleResult, danmakuResult) = coroutineScope {
+            val subtitles = async {
+                mediaRepository.getSubtitleTracks(session, localRequest.path)
+            }
+            val danmakus = async {
+                mediaRepository.getDanmakus(session, localRequest.path)
+            }
+            subtitles.await() to danmakus.await()
+        }
+        mutableState.value = PlayerUiState.Content(
+            request = request,
+            subtitles = (subtitleResult as? AppResult.Success)?.value.orEmpty(),
+            danmakus = (danmakuResult as? AppResult.Success)?.value.orEmpty(),
+            extraFailures = buildMap {
+                if (subtitleResult is AppResult.Failure) {
+                    put(PlayerExtra.Subtitles, subtitleResult.error)
+                }
+                if (danmakuResult is AppResult.Failure) {
+                    put(PlayerExtra.Danmakus, danmakuResult.error)
+                }
+            },
+            progressError = current?.progressError,
+        )
+    }
+
+    fun reportItemSwitchFailure(error: AppError) {
+        val content = mutableState.value as? PlayerUiState.Content ?: return
+        mutableState.value = content.copy(switchingItem = false, switchError = error)
     }
 
     fun reportProgressFailure(error: AppError) {

@@ -4,6 +4,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
@@ -11,6 +12,7 @@ import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.core.network.ApiClientFactory
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
@@ -74,16 +76,89 @@ class DefaultSearchRepository @Inject constructor(
         session: Session,
         indexerId: Long,
         result: NetworkSearchResult,
+        preferredDefinition: TranscodeResolution,
     ): AppResult<NetworkPlaybackSource> =
         networkCall(json) {
-            api(session).executeIndexerDetails(
+            val resource = api(session).executeIndexerDetails(
                 authorization = session.authorization(),
                 indexerId = indexerId,
                 body = IndexerDetailsRequestData(resourceId = result.id),
-            ).dataOrThrow()
-                ?.toPlaybackSource(indexerId, result.title)
-                ?: throw SerializationException("Missing playable network source")
+            ).dataOrThrow() ?: throw SerializationException("Missing network details")
+            resource.toPlaybackSource(indexerId, result.title, preferredDefinition)
+                ?: resolveInitialChapter(
+                    session = session,
+                    indexerId = indexerId,
+                    fallbackTitle = result.title,
+                    resource = resource,
+                    preferredDefinition = preferredDefinition,
+                )
         }
+
+    override suspend fun resolveChapter(
+        session: Session,
+        source: NetworkPlaybackSource,
+        chapterIndex: Int,
+        preferredDefinition: TranscodeResolution,
+    ): AppResult<NetworkPlaybackSource> =
+        networkCall(json) {
+            val chapter = source.chapters.getOrNull(chapterIndex)
+                ?: throw SerializationException("Missing network chapter")
+            chapter.url?.let { directUrl ->
+                return@networkCall source.copy(
+                    title = chapter.title,
+                    url = directUrl,
+                    danmakus = emptyList(),
+                    definitions = emptyList(),
+                    selectedDefinitionIndex = null,
+                    selectedChapterIndex = chapterIndex,
+                )
+            }
+            val chapterId = chapter.id
+                ?: throw SerializationException("Missing network chapter source")
+            val resolved = api(session).executeIndexerDetails(
+                authorization = session.authorization(),
+                indexerId = source.indexerId,
+                body = IndexerDetailsRequestData(
+                    resourceId = source.resourceId,
+                    chapterId = JsonPrimitive(chapterId),
+                ),
+            ).dataOrThrow()
+                ?.toPlaybackSource(source.indexerId, chapter.title, preferredDefinition)
+                ?: throw SerializationException("Missing playable network chapter")
+            resolved.copy(
+                chapters = source.chapters,
+                selectedChapterIndex = chapterIndex,
+            )
+        }
+
+    private suspend fun resolveInitialChapter(
+        session: Session,
+        indexerId: Long,
+        fallbackTitle: String,
+        resource: org.kaloscope.tv.data.search.remote.IndexerResourceData,
+        preferredDefinition: TranscodeResolution,
+    ): NetworkPlaybackSource {
+        val firstChapter = resource.chapters.orEmpty().firstOrNull()
+            ?: throw SerializationException("Missing playable network source")
+        // Some indexers expose only chapter IDs until details runs for one chapter.
+        val chapterId = firstChapter.id?.trim()?.takeIf(String::isNotEmpty)
+            ?: throw SerializationException("Missing playable network source")
+        val resolved = api(session).executeIndexerDetails(
+            authorization = session.authorization(),
+            indexerId = indexerId,
+            body = IndexerDetailsRequestData(
+                resourceId = resource.id ?: throw SerializationException("Missing resource id"),
+                chapterId = JsonPrimitive(chapterId),
+            ),
+        ).dataOrThrow()
+            ?.toPlaybackSource(indexerId, firstChapter.title ?: fallbackTitle, preferredDefinition)
+            ?: throw SerializationException("Missing playable network chapter")
+        val chapters = resource.toChapters()
+        return resolved.copy(
+            chapters = chapters,
+            selectedChapterIndex = chapters.indices.firstOrNull(),
+        )
+    }
 
     private fun api(session: Session) = apiClientFactory.create(session.server.origin)
 
