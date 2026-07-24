@@ -20,7 +20,7 @@ sealed interface PlayerUiState {
     data object MissingRequest : PlayerUiState
 
     data class Content(
-        val request: PlaybackRequest.LocalMedia,
+        val request: PlaybackRequest,
         val subtitles: List<SubtitleTrack>,
         val danmakus: List<DanmakuComment>,
         val extraFailures: Map<PlayerExtra, AppError>,
@@ -49,18 +49,28 @@ class PlayerCoordinator(
         requestId: String,
     ) {
         mutableState.value = PlayerUiState.Loading
-        val request = requestStore.get(requestId) as? PlaybackRequest.LocalMedia
+        val request = requestStore.get(requestId)
         if (request == null || request.serverId != session.server.id) {
             mutableState.value = PlayerUiState.MissingRequest
             return
         }
+        if (request is PlaybackRequest.NetworkVideo) {
+            mutableState.value = PlayerUiState.Content(
+                request = request,
+                subtitles = emptyList(),
+                danmakus = request.source.danmakus,
+                extraFailures = emptyMap(),
+            )
+            return
+        }
+        val localRequest = request as PlaybackRequest.LocalMedia
         // Supplementary endpoints run together so neither doubles playback startup latency.
         val (subtitleResult, danmakuResult) = coroutineScope {
             val subtitles = async {
-                mediaRepository.getSubtitleTracks(session, request.path)
+                mediaRepository.getSubtitleTracks(session, localRequest.path)
             }
             val danmakus = async {
-                mediaRepository.getDanmakus(session, request.path)
+                mediaRepository.getDanmakus(session, localRequest.path)
             }
             subtitles.await() to danmakus.await()
         }

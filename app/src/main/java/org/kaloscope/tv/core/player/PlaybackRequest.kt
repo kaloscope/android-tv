@@ -1,5 +1,7 @@
 package org.kaloscope.tv.core.player
 
+import org.kaloscope.tv.core.model.NetworkPlaybackSource
+
 sealed interface PlaybackRequest {
     val requestId: String
     val serverId: String
@@ -17,9 +19,18 @@ sealed interface PlaybackRequest {
         val playbackMode: PlaybackMode = PlaybackMode.Auto,
         val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
     ) : PlaybackRequest
+
+    data class NetworkVideo(
+        override val requestId: String,
+        override val serverId: String,
+        override val title: String,
+        override val origin: PlaybackOrigin = PlaybackOrigin.NetworkSearch,
+        val source: NetworkPlaybackSource,
+    ) : PlaybackRequest
 }
 
 enum class PlaybackOrigin {
     Home,
     MediaDetail,
+    NetworkSearch,
 }

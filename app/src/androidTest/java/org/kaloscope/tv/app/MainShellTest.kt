@@ -5,7 +5,6 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
@@ -96,6 +95,7 @@ class MainShellTest {
             .performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionRight)
+                pressKey(Key.DirectionRight)
             }
 
         composeRule.onNodeWithContentDescription("设置")
@@ -109,7 +109,7 @@ class MainShellTest {
     }
 
     @Test
-    fun libraryIsEnabledWhileSearchRemainsUnavailable() {
+    fun searchAndLibraryAreEnabled() {
         composeRule.setContent {
             KaloscopeTheme {
                 MainShell(
@@ -133,7 +133,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("网络搜索").assertIsNotEnabled()
+        composeRule.onNodeWithText("网络搜索").assertIsEnabled()
         composeRule.onNodeWithText("媒体库").assertIsEnabled()
     }
 

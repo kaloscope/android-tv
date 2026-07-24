@@ -38,11 +38,14 @@ data class PlaybackStatus(
 class PlaybackController internal constructor(
     context: Context,
     private val session: Session,
-    private val request: PlaybackRequest.LocalMedia,
+    private val request: PlaybackRequest,
     private val subtitles: List<SubtitleTrack>,
     private val onProgress: (Long, Long, ProgressReason) -> Unit,
 ) {
-    private var sourceKind = PlaybackSourcePolicy.initialSource(request.playbackMode)
+    private var sourceKind = when (request) {
+        is PlaybackRequest.LocalMedia -> PlaybackSourcePolicy.initialSource(request.playbackMode)
+        is PlaybackRequest.NetworkVideo -> PlaybackSourceKind.Network
+    }
     private var fallbackAttempted = false
     private val mutableStatus = MutableStateFlow(PlaybackStatus(sourceKind = sourceKind))
     private val listener = object : Player.Listener {
@@ -73,8 +76,10 @@ class PlaybackController internal constructor(
                 errorCode = error.errorCode,
                 httpStatus = error.findHttpStatus(),
             )
-            if (PlaybackFallbackPolicy.shouldFallback(
-                    mode = request.playbackMode,
+            val localRequest = request as? PlaybackRequest.LocalMedia
+            if (localRequest != null &&
+                PlaybackFallbackPolicy.shouldFallback(
+                    mode = localRequest.playbackMode,
                     sourceKind = sourceKind,
                     failure = failure,
                     fallbackAttempted = fallbackAttempted,
@@ -117,7 +122,7 @@ class PlaybackController internal constructor(
             .build()
         mediaSession = MediaSession.Builder(context, player).build()
         player.addListener(listener)
-        startSource(sourceKind, request.resumePositionSeconds.orZero() * 1_000)
+        startSource(sourceKind, request.resumePositionMillis())
     }
 
     fun togglePlayPause() {
@@ -170,12 +175,20 @@ class PlaybackController internal constructor(
     }
 
     private fun buildMediaItem(target: PlaybackSourceKind): MediaItem {
-        val source = PlaybackSourceResolver.localMediaSource(
-            session = session,
-            path = request.path,
-            sourceKind = target,
-            resolution = request.transcodeResolution,
-        )
+        val source = when (request) {
+            is PlaybackRequest.LocalMedia -> PlaybackSourceResolver.localMediaSource(
+                session = session,
+                path = request.path,
+                sourceKind = target,
+                resolution = request.transcodeResolution,
+            )
+
+            is PlaybackRequest.NetworkVideo -> PlaybackSourceResolver.networkMediaSource(
+                session = session,
+                rawUrl = request.source.url,
+                videoType = request.source.videoType,
+            )
+        }
         val subtitleConfigurations = subtitles.map { track ->
             MediaItem.SubtitleConfiguration.Builder(
                 Uri.parse(PlaybackSourceResolver.resolveServerResource(session, track.url)),
@@ -188,7 +201,12 @@ class PlaybackController internal constructor(
                 .build()
         }
         return MediaItem.Builder()
-            .setMediaId(request.mediaId.toString())
+            .setMediaId(
+                when (request) {
+                    is PlaybackRequest.LocalMedia -> request.mediaId.toString()
+                    is PlaybackRequest.NetworkVideo -> request.source.resourceId
+                },
+            )
             .setUri(source.url)
             .setMimeType(source.mimeType)
             .setMediaMetadata(
@@ -206,7 +224,7 @@ class PlaybackController internal constructor(
 
     private fun currentPositionMillis(): Long =
         player.currentPosition.takeIf { it >= 0 }
-            ?: request.resumePositionSeconds.orZero() * 1_000
+            ?: request.resumePositionMillis()
 
     private fun Throwable.findHttpStatus(): Int? {
         var current: Throwable? = this
@@ -242,6 +260,12 @@ class PlaybackController internal constructor(
 
     private fun Long?.orZero(): Long = this?.coerceAtLeast(0) ?: 0
 
+    private fun PlaybackRequest.resumePositionMillis(): Long =
+        when (this) {
+            is PlaybackRequest.LocalMedia -> resumePositionSeconds.orZero() * 1_000
+            is PlaybackRequest.NetworkVideo -> 0
+        }
+
     private companion object {
         const val SEEK_INCREMENT_MILLIS = 10_000L
         const val MAX_CAUSE_DEPTH = 8
@@ -253,7 +277,7 @@ class PlaybackControllerFactory @Inject constructor(
 ) {
     fun create(
         session: Session,
-        request: PlaybackRequest.LocalMedia,
+        request: PlaybackRequest,
         subtitles: List<SubtitleTrack>,
         onProgress: (Long, Long, ProgressReason) -> Unit,
     ): PlaybackController = PlaybackController(

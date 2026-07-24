@@ -11,6 +11,7 @@ enum class PlaybackMode {
 enum class PlaybackSourceKind {
     Direct,
     HlsTranscode,
+    Network,
 }
 
 enum class TranscodeResolution(

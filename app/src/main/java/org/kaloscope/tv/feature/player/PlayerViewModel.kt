@@ -81,7 +81,9 @@ class PlayerViewModel @Inject constructor(
         durationMillis: Long,
         reason: ProgressReason,
     ) {
-        val request = (uiState.value as? PlayerUiState.Content)?.request ?: return
+        val request = (uiState.value as? PlayerUiState.Content)?.request
+            as? PlaybackRequest.LocalMedia
+            ?: return
         if (!progressRecorder.shouldRecord(
                 positionMillis = positionMillis,
                 durationMillis = durationMillis,

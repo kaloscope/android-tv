@@ -3,6 +3,7 @@ package org.kaloscope.tv.core.player
 import androidx.media3.common.MimeTypes
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.NetworkVideoType
 
 data class ResolvedPlaybackSource(
     val url: String,
@@ -38,6 +39,20 @@ object PlaybackSourceResolver {
             rawUrl.startsWith("/") -> "${session.server.origin}$rawUrl"
             else -> rawUrl
         }
+
+    fun networkMediaSource(
+        session: Session,
+        rawUrl: String,
+        videoType: NetworkVideoType,
+    ): ResolvedPlaybackSource =
+        ResolvedPlaybackSource(
+            url = resolveServerResource(session, rawUrl),
+            mimeType = when (videoType) {
+                NetworkVideoType.Hls -> MimeTypes.APPLICATION_M3U8
+                NetworkVideoType.Mp4 -> MimeTypes.VIDEO_MP4
+                NetworkVideoType.Unknown -> null
+            },
+        )
 
     private fun streamUrl(
         session: Session,

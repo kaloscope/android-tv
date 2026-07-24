@@ -26,6 +26,8 @@ import org.kaloscope.tv.data.history.DefaultHistoryRepository
 import org.kaloscope.tv.data.history.HistoryRepository
 import org.kaloscope.tv.data.media.DefaultMediaRepository
 import org.kaloscope.tv.data.media.MediaRepository
+import org.kaloscope.tv.data.search.DefaultSearchRepository
+import org.kaloscope.tv.data.search.SearchRepository
 import org.kaloscope.tv.data.server.DefaultServerRepository
 import org.kaloscope.tv.data.server.ServerRepository
 
@@ -56,6 +58,11 @@ abstract class AppBindings {
     abstract fun bindMediaRepository(
         implementation: DefaultMediaRepository,
     ): MediaRepository
+
+    @Binds
+    abstract fun bindSearchRepository(
+        implementation: DefaultSearchRepository,
+    ): SearchRepository
 
     @Binds
     abstract fun bindBootstrapRepository(

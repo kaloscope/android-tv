@@ -17,6 +17,13 @@ import org.kaloscope.tv.data.media.remote.MediaItemData
 import org.kaloscope.tv.data.media.remote.MediaLibraryData
 import org.kaloscope.tv.data.media.remote.MediaPageData
 import org.kaloscope.tv.data.media.remote.SubtitleTrackData
+import org.kaloscope.tv.data.search.remote.IndexerAuthData
+import org.kaloscope.tv.data.search.remote.IndexerConfigData
+import org.kaloscope.tv.data.search.remote.IndexerDetailsRequestData
+import org.kaloscope.tv.data.search.remote.IndexerPageData
+import org.kaloscope.tv.data.search.remote.IndexerResourceData
+import org.kaloscope.tv.data.search.remote.IndexerResourcePageData
+import org.kaloscope.tv.data.search.remote.IndexerSearchRequestData
 
 interface KaloscopeApi {
     @GET("system/version")
@@ -63,6 +70,41 @@ interface KaloscopeApi {
         @Path("mediaId") mediaId: Long,
     ): ApiEnvelope<MediaItemData>
 
+    @GET("flow/graph/list")
+    suspend fun getIndexers(
+        @Header("Authorization") authorization: String,
+        @Query("page_num") pageNumber: Int = 0,
+        @Query("ordering") ordering: String = "name",
+        @Query("category") category: String = "indexer",
+        @Query("states") states: List<String> = listOf("modified", "published"),
+    ): ApiEnvelope<IndexerPageData>
+
+    @GET("flow/indexer/{indexerId}/config")
+    suspend fun getIndexerConfig(
+        @Header("Authorization") authorization: String,
+        @Path("indexerId") indexerId: Long,
+    ): ApiEnvelope<IndexerConfigData>
+
+    @GET("flow/indexer/{indexerId}/auth")
+    suspend fun getIndexerAuth(
+        @Header("Authorization") authorization: String,
+        @Path("indexerId") indexerId: Long,
+    ): NullableApiEnvelope<IndexerAuthData>
+
+    @POST("flow/graph/{indexerId}/execute")
+    suspend fun executeIndexerSearch(
+        @Header("Authorization") authorization: String,
+        @Path("indexerId") indexerId: Long,
+        @Body body: IndexerSearchRequestData,
+    ): ApiEnvelope<IndexerResourcePageData>
+
+    @POST("flow/graph/{indexerId}/execute")
+    suspend fun executeIndexerDetails(
+        @Header("Authorization") authorization: String,
+        @Path("indexerId") indexerId: Long,
+        @Body body: IndexerDetailsRequestData,
+    ): NullableApiEnvelope<IndexerResourceData>
+
     @POST("subtitle/tracks")
     suspend fun getSubtitleTracks(
         @Header("Authorization") authorization: String,
@@ -89,6 +131,15 @@ data class ApiEnvelope<T>(
     val status: Int,
     val message: String = "",
     val data: T,
+)
+
+@Serializable
+data class NullableApiEnvelope<T>(
+    @SerialName("request_id")
+    val requestId: String? = null,
+    val status: Int,
+    val message: String = "",
+    val data: T? = null,
 )
 
 @Serializable
@@ -165,6 +216,13 @@ internal data class ErrorData(
 
 internal fun <T> ApiEnvelope<T>.dataOrThrow(): T {
     // The backend mirrors HTTP status in every successful JSON envelope.
+    if (status != 200) {
+        throw SerializationException("Unexpected envelope status")
+    }
+    return data
+}
+
+internal fun <T> NullableApiEnvelope<T>.dataOrThrow(): T? {
     if (status != 200) {
         throw SerializationException("Unexpected envelope status")
     }

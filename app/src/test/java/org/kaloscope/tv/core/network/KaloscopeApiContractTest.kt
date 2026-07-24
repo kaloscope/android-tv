@@ -10,6 +10,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.kaloscope.tv.data.search.remote.IndexerDetailsRequestData
+import org.kaloscope.tv.data.search.remote.IndexerSearchRequestData
 
 class KaloscopeApiContractTest {
     private lateinit var server: MockWebServer
@@ -162,6 +164,91 @@ class KaloscopeApiContractTest {
         assertEquals("Token fixture-token", request.getHeader("Authorization"))
         assertEquals("群星档案", response.data.title)
         assertEquals(301L, response.data.children.single().id)
+    }
+
+    @Test
+    fun `indexer list requests all searchable published sources`() = runTest {
+        server.enqueue(jsonResponse(fixture("indexer-list-success.json")))
+
+        val response = api.getIndexers("Token fixture-token")
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals(
+            "/_api/flow/graph/list?page_num=0&ordering=name&category=indexer" +
+                "&states=modified&states=published",
+            request.path,
+        )
+        assertEquals("Token fixture-token", request.getHeader("Authorization"))
+        assertEquals(11L, response.data.items.single().id)
+    }
+
+    @Test
+    fun `indexer configuration and nullable auth use their dedicated endpoints`() = runTest {
+        server.enqueue(jsonResponse(fixture("indexer-config-success.json")))
+        server.enqueue(
+            jsonResponse(
+                """{"request_id":"auth","status":200,"message":"","data":null}""",
+            ),
+        )
+
+        val config = api.getIndexerConfig("Token fixture-token", 11)
+        val auth = api.getIndexerAuth("Token fixture-token", 11)
+
+        assertTrue(config.data.search?.keyword?.required == true)
+        assertEquals(null, auth.data)
+        assertEquals("/_api/flow/indexer/11/config", server.takeRequest().path)
+        assertEquals("/_api/flow/indexer/11/auth", server.takeRequest().path)
+    }
+
+    @Test
+    fun `indexer search sends confirmed query and parses video resources`() = runTest {
+        server.enqueue(jsonResponse(fixture("indexer-search-success.json")))
+
+        val response = api.executeIndexerSearch(
+            authorization = "Token fixture-token",
+            indexerId = 11,
+            body = IndexerSearchRequestData(
+                pageNumber = 1,
+                pageSize = 20,
+                keyword = "星际 回声",
+            ),
+        )
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals("/_api/flow/graph/11/execute", request.path)
+        assertEquals(
+            """{"${'$'}start":"search_start","page_num":1,"page_size":20,""" +
+                """"keyword":"星际 回声","mobile":false}""",
+            request.body.readUtf8(),
+        )
+        assertEquals("video-fixture-001", response.data.items.single().id)
+    }
+
+    @Test
+    fun `indexer details sends TV capability data and parses playback source`() = runTest {
+        server.enqueue(jsonResponse(fixture("indexer-details-video-success.json")))
+
+        val response = api.executeIndexerDetails(
+            authorization = "Token fixture-token",
+            indexerId = 11,
+            body = IndexerDetailsRequestData(
+                resourceId = "video-fixture-001",
+            ),
+        )
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals("/_api/flow/graph/11/execute", request.path)
+        assertEquals(
+            """{"${'$'}start":"details_start","id":"video-fixture-001","chapter_id":null,""" +
+                """"dash_supported":true,"ua":{"device":{"type":"smarttv"},""" +
+                """"os":{"name":"Android"},"navigator":{"platform":"Android","maxTouchPoints":0}}}""",
+            request.body.readUtf8(),
+        )
+        assertEquals("hls", response.data?.videoType)
+        assertEquals(2, response.data?.definitions?.size)
     }
 
     @Test

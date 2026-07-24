@@ -53,7 +53,6 @@
     <string name="server_and_account">服务器与账号</string>
     <string name="current_server">当前服务器</string>
     <string name="current_account">当前账号</string>
-    <string name="not_available_yet">该功能将在后续纵向切片中启用。</string>
     <string name="view_detail">查看详情</string>
 
     <string name="loading_libraries">正在加载媒体库</string>
@@ -69,6 +68,25 @@
     <string name="library_load_failed">无法加载媒体库</string>
     <string name="load_more">加载更多</string>
     <string name="loading_more">正在加载…</string>
+
+    <string name="loading_indexers">正在加载网络站点</string>
+    <string name="loading_indexers_description">正在从当前服务器获取可用搜索数据源。</string>
+    <string name="no_indexers">暂无网络站点</string>
+    <string name="no_indexers_description">当前服务器没有可用的网络搜索数据源。</string>
+    <string name="loading_indexer">正在准备站点</string>
+    <string name="loading_indexer_description">正在读取当前站点配置。</string>
+    <string name="indexer_auth_required">需要先在 Web 端登录</string>
+    <string name="indexer_auth_required_description">请在 Kaloscope Web 客户端完成此站点登录，然后返回这里重试。</string>
+    <string name="search_indexer_hint">搜索当前站点</string>
+    <string name="search_indexer_prompt">输入关键词开始搜索</string>
+    <string name="search_indexer_prompt_description">结果会直接来自左侧选中的真实站点。</string>
+    <string name="searching_indexer">正在搜索</string>
+    <string name="searching_indexer_description">正在获取当前站点的搜索结果。</string>
+    <string name="no_search_results">没有找到结果</string>
+    <string name="no_search_results_description">可更换关键词或选择其他站点。</string>
+    <string name="search_load_failed">无法加载网络搜索</string>
+    <string name="resolving_playback">正在获取播放地址…</string>
+    <string name="resolve_playback_failed">无法播放：%1$s</string>
 
     <string name="back">返回</string>
     <string name="loading_detail">正在加载详情</string>
@@ -104,6 +122,8 @@
     <string name="playback_auto_transcode">自动 · HLS 转码 %1$s</string>
     <string name="playback_direct">直连</string>
     <string name="playback_transcode">HLS 转码 %1$s</string>
+    <string name="playback_network">网络资源</string>
+    <string name="network_source_playback_failed">网络资源播放失败</string>
     <string name="switching_to_transcode">正在准备 HLS 转码…</string>
     <string name="resolution_original">原画</string>
     <string name="progress_save_failed">播放继续进行，但进度暂时无法保存</string>

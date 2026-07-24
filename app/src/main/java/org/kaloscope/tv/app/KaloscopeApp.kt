@@ -73,12 +73,17 @@ import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
 import org.kaloscope.tv.feature.player.PlayerViewModel
 import org.kaloscope.tv.feature.player.PlayerUiState
+import org.kaloscope.tv.feature.search.SearchResultsState
+import org.kaloscope.tv.feature.search.SearchSourceState
+import org.kaloscope.tv.feature.search.SearchUiState
+import org.kaloscope.tv.feature.search.SearchViewModel
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 
 @Composable
 fun KaloscopeApp(
     viewModel: KaloscopeViewModel,
     mainViewModel: MainViewModel,
+    searchViewModel: SearchViewModel,
     libraryViewModel: LibraryViewModel,
     detailViewModel: MediaDetailViewModel,
     playerViewModel: PlayerViewModel,
@@ -86,6 +91,7 @@ fun KaloscopeApp(
 ) {
     val bootstrapState by viewModel.bootstrapState.collectAsStateWithLifecycle()
     val homeState by mainViewModel.homeState.collectAsStateWithLifecycle()
+    val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
     val libraryState by libraryViewModel.uiState.collectAsStateWithLifecycle()
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
@@ -123,8 +129,9 @@ fun KaloscopeApp(
                 LaunchedEffect(state.session.server.id, state.session.user.id) {
                     mainViewModel.loadHome(state.session)
                 }
-                LaunchedEffect(homeState, libraryState, detailState, playerState) {
+                LaunchedEffect(homeState, searchState, libraryState, detailState, playerState) {
                     if (homeState.hasUnauthorized() ||
+                        searchState.hasUnauthorized() ||
                         libraryState.hasUnauthorized() ||
                         detailState.hasUnauthorized() ||
                         playerState.hasUnauthorized()
@@ -136,6 +143,7 @@ fun KaloscopeApp(
                 DisposableEffect(state.session.server.id) {
                     onDispose {
                         mainViewModel.reset()
+                        searchViewModel.reset()
                         libraryViewModel.reset()
                         detailViewModel.reset()
                         playerViewModel.clearServer(state.session.server.id)
@@ -144,9 +152,29 @@ fun KaloscopeApp(
                 MainShell(
                     session = state.session,
                     homeState = homeState,
+                    searchState = searchState,
                     libraryState = libraryState,
                     detailState = detailState,
                     onRefresh = { mainViewModel.loadHome(state.session, force = true) },
+                    onOpenSearch = { searchViewModel.load(state.session) },
+                    onSelectIndexer = { indexerId ->
+                        searchViewModel.selectIndexer(state.session, indexerId)
+                    },
+                    onSearchQueryChange = searchViewModel::updateQuery,
+                    onSearchNetwork = { searchViewModel.search(state.session) },
+                    onRetrySearch = {
+                        if (searchState is SearchUiState.Content) {
+                            searchViewModel.retry(state.session)
+                        } else {
+                            searchViewModel.load(state.session, force = true)
+                        }
+                    },
+                    onLoadMoreSearch = { searchViewModel.loadNext(state.session) },
+                    onSearchResultFocused = searchViewModel::rememberFocusedResult,
+                    onPlaySearchResult = { resultId ->
+                        searchViewModel.play(state.session, resultId)
+                    },
+                    onConsumeSearchPlayback = searchViewModel::consumePlaybackRequest,
                     onOpenLibrary = { libraryViewModel.load(state.session) },
                     onSelectLibrary = { libraryId ->
                         libraryViewModel.selectLibrary(state.session, libraryId)
@@ -219,6 +247,27 @@ private fun LibraryUiState.hasUnauthorized(): Boolean =
                 itemState.loadMoreError == AppError.Unauthorized
 
             else -> false
+        }
+
+        else -> false
+    }
+
+private fun SearchUiState.hasUnauthorized(): Boolean =
+    when (this) {
+        is SearchUiState.Error -> error == AppError.Unauthorized
+        is SearchUiState.Content -> {
+            val sourceUnauthorized =
+                (source as? SearchSourceState.Error)?.error == AppError.Unauthorized
+            val resultUnauthorized = when (val resultState = results) {
+                is SearchResultsState.Error -> resultState.error == AppError.Unauthorized
+                is SearchResultsState.Content ->
+                    resultState.loadMoreError == AppError.Unauthorized
+
+                else -> false
+            }
+            sourceUnauthorized ||
+                resultUnauthorized ||
+                playbackError == AppError.Unauthorized
         }
 
         else -> false

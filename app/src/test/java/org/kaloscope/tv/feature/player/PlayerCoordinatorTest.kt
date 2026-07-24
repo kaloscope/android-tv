@@ -63,6 +63,36 @@ class PlayerCoordinatorTest {
     }
 
     @Test
+    fun `network request uses resolved extras without local media endpoints`() = runTest {
+        val store = PlaybackRequestStore()
+        val request = PlaybackRequest.NetworkVideo(
+            requestId = "network-request",
+            serverId = "server-1",
+            title = "Network video",
+            source = org.kaloscope.tv.core.model.NetworkPlaybackSource(
+                indexerId = 11,
+                resourceId = "v1",
+                title = "Network video",
+                url = "/_api/media/proxy?id=1",
+                videoType = org.kaloscope.tv.core.model.NetworkVideoType.Hls,
+                danmakus = listOf(danmaku()),
+            ),
+        )
+        store.put(request)
+        val repository = FakeMediaRepository()
+        val coordinator = PlayerCoordinator(store, repository)
+
+        coordinator.load(session(), request.requestId)
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals(request, content.request)
+        assertTrue(content.subtitles.isEmpty())
+        assertEquals("danmaku-1", content.danmakus.single().id)
+        assertEquals(0, repository.subtitleCalls)
+        assertEquals(0, repository.danmakuCalls)
+    }
+
+    @Test
     fun `missing request produces recoverable state`() = runTest {
         val coordinator = PlayerCoordinator(
             requestStore = PlaybackRequestStore(),
@@ -94,6 +124,9 @@ private class FakeMediaRepository(
     private val subtitles: AppResult<List<SubtitleTrack>> = AppResult.Success(emptyList()),
     private val danmakus: AppResult<List<DanmakuComment>> = AppResult.Success(emptyList()),
 ) : MediaRepository {
+    var subtitleCalls = 0
+    var danmakuCalls = 0
+
     override suspend fun getLibraries(session: Session): AppResult<List<MediaLibrary>> =
         error("Not used")
 
@@ -113,12 +146,18 @@ private class FakeMediaRepository(
     override suspend fun getSubtitleTracks(
         session: Session,
         path: String,
-    ): AppResult<List<SubtitleTrack>> = subtitles
+    ): AppResult<List<SubtitleTrack>> {
+        subtitleCalls += 1
+        return subtitles
+    }
 
     override suspend fun getDanmakus(
         session: Session,
         path: String,
-    ): AppResult<List<DanmakuComment>> = danmakus
+    ): AppResult<List<DanmakuComment>> {
+        danmakuCalls += 1
+        return danmakus
+    }
 }
 
 private fun request() = PlaybackRequest.LocalMedia(

@@ -60,6 +60,7 @@ import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackFailure
 import org.kaloscope.tv.core.player.PlaybackMode
+import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -266,9 +267,10 @@ private fun PlayerContent(
                 danmakusEnabled = danmakusEnabled,
                 extraErrors = state.extraErrors,
                 progressSaveFailed = state.progressError != null,
-                playbackMode = state.request.playbackMode,
+                playbackMode = (state.request as? PlaybackRequest.LocalMedia)?.playbackMode,
                 sourceKind = status.sourceKind,
-                transcodeResolution = state.request.transcodeResolution,
+                transcodeResolution =
+                    (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
                 fallbackInProgress = status.fallbackInProgress,
                 playFocus = playFocus,
                 onRewind = {
@@ -320,9 +322,9 @@ private fun PlayerControls(
     danmakusEnabled: Boolean,
     extraErrors: Set<PlayerExtra>,
     progressSaveFailed: Boolean,
-    playbackMode: PlaybackMode,
+    playbackMode: PlaybackMode?,
     sourceKind: PlaybackSourceKind,
-    transcodeResolution: TranscodeResolution,
+    transcodeResolution: TranscodeResolution?,
     fallbackInProgress: Boolean,
     playFocus: FocusRequester,
     onRewind: () -> Unit,
@@ -564,17 +566,21 @@ private fun PlaybackErrorOverlay(
 
 @Composable
 private fun playbackModeLabel(
-    mode: PlaybackMode,
+    mode: PlaybackMode?,
     sourceKind: PlaybackSourceKind,
-    resolution: TranscodeResolution,
+    resolution: TranscodeResolution?,
 ): String {
     val resolutionLabel = when (resolution) {
         TranscodeResolution.Original -> stringResource(R.string.resolution_original)
         TranscodeResolution.P1080 -> "1080P"
         TranscodeResolution.P720 -> "720P"
         TranscodeResolution.P480 -> "480P"
+        null -> ""
     }
     return when {
+        sourceKind == PlaybackSourceKind.Network ->
+            stringResource(R.string.playback_network)
+
         mode == PlaybackMode.Auto && sourceKind == PlaybackSourceKind.Direct ->
             stringResource(R.string.playback_auto_direct)
 
@@ -599,7 +605,9 @@ private fun playbackErrorText(
         PlaybackFailure.Source,
         PlaybackFailure.Decoder,
         PlaybackFailure.Unknown,
-        -> if (sourceKind == PlaybackSourceKind.HlsTranscode) {
+        -> if (sourceKind == PlaybackSourceKind.Network) {
+            stringResource(R.string.network_source_playback_failed)
+        } else if (sourceKind == PlaybackSourceKind.HlsTranscode) {
             stringResource(R.string.transcode_playback_failed)
         } else {
             stringResource(R.string.direct_playback_failed)

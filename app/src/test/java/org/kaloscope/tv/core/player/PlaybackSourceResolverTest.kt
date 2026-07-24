@@ -5,6 +5,7 @@ import org.junit.Test
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.core.model.NetworkVideoType
 
 class PlaybackSourceResolverTest {
     @Test
@@ -48,6 +49,30 @@ class PlaybackSourceResolverTest {
                 "/_api/subtitle/content?path=fixture",
             ),
         )
+    }
+
+    @Test
+    fun `network HLS resolves same server path without changing its media type`() {
+        val source = PlaybackSourceResolver.networkMediaSource(
+            session = session(),
+            rawUrl = "/_api/media/proxy?id=1",
+            videoType = NetworkVideoType.Hls,
+        )
+
+        assertEquals("http://127.0.0.1:8000/_api/media/proxy?id=1", source.url)
+        assertEquals("application/x-mpegURL", source.mimeType)
+    }
+
+    @Test
+    fun `third party MP4 remains absolute and unaffiliated with server origin`() {
+        val source = PlaybackSourceResolver.networkMediaSource(
+            session = session(),
+            rawUrl = "https://cdn.example/video.mp4",
+            videoType = NetworkVideoType.Mp4,
+        )
+
+        assertEquals("https://cdn.example/video.mp4", source.url)
+        assertEquals("video/mp4", source.mimeType)
     }
 }
 

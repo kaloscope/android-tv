@@ -82,6 +82,8 @@ import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.player.PlayerScreen
 import org.kaloscope.tv.feature.player.PlayerUiState
+import org.kaloscope.tv.feature.search.SearchScreen
+import org.kaloscope.tv.feature.search.SearchUiState
 
 private val ShellDivider = Color(0xFF252D40)
 private val Card = Color(0xFF182132)
@@ -90,9 +92,19 @@ private val Card = Color(0xFF182132)
 internal fun MainShell(
     session: Session,
     homeState: HomeUiState,
+    searchState: SearchUiState = SearchUiState.Loading,
     libraryState: LibraryUiState,
     detailState: MediaDetailUiState,
     onRefresh: () -> Unit,
+    onOpenSearch: () -> Unit = {},
+    onSelectIndexer: (Long) -> Unit = {},
+    onSearchQueryChange: (String) -> Unit = {},
+    onSearchNetwork: () -> Unit = {},
+    onRetrySearch: () -> Unit = {},
+    onLoadMoreSearch: () -> Unit = {},
+    onSearchResultFocused: (String) -> Unit = {},
+    onPlaySearchResult: (String) -> Unit = {},
+    onConsumeSearchPlayback: (String) -> Unit = {},
     onOpenLibrary: () -> Unit,
     onSelectLibrary: (Long) -> Unit,
     onLibraryQueryChange: (String) -> Unit,
@@ -114,6 +126,7 @@ internal fun MainShell(
 ) {
     val backStack = rememberNavBackStack(HomeRoute)
     val homeFocus = remember { FocusRequester() }
+    val searchFocus = remember { FocusRequester() }
     val libraryFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
     var restoreMediaId by remember { mutableStateOf<Long?>(null) }
@@ -163,7 +176,10 @@ internal fun MainShell(
                     restoreMediaId = null
                     selectRoot(HomeRoute)
                 },
-                onSearch = { selectRoot(SearchRoute) },
+                onSearch = {
+                    selectRoot(SearchRoute)
+                    onOpenSearch()
+                },
                 onLibrary = {
                     restoreMediaId = null
                     selectRoot(LibraryRoute)
@@ -174,6 +190,7 @@ internal fun MainShell(
                     currentRoute = SettingsRoute
                 },
                 homeFocus = homeFocus,
+                searchFocus = searchFocus,
                 libraryFocus = libraryFocus,
                 settingsFocus = settingsFocus,
             )
@@ -226,7 +243,28 @@ internal fun MainShell(
                         )
                     }
                     entry<SearchRoute> {
-                        UnavailableDestination(stringResource(R.string.search))
+                        val pendingRequestId = (
+                            searchState as? SearchUiState.Content
+                            )?.pendingPlaybackRequestId
+                        LaunchedEffect(pendingRequestId) {
+                            pendingRequestId?.let { requestId ->
+                                backStack.openPlayer(requestId)
+                                currentRoute = PlayerRoute(requestId)
+                                onLoadPlayer(requestId)
+                                onConsumeSearchPlayback(requestId)
+                            }
+                        }
+                        SearchScreen(
+                            session = session,
+                            state = searchState,
+                            onSelectIndexer = onSelectIndexer,
+                            onQueryChange = onSearchQueryChange,
+                            onSearch = onSearchNetwork,
+                            onRetry = onRetrySearch,
+                            onLoadMore = onLoadMoreSearch,
+                            onResultFocused = onSearchResultFocused,
+                            onPlay = onPlaySearchResult,
+                        )
                     }
                     entry<LibraryRoute> {
                         LibraryScreen(
@@ -303,6 +341,7 @@ private fun MainTopBar(
     onLibrary: () -> Unit,
     onSettings: () -> Unit,
     homeFocus: FocusRequester,
+    searchFocus: FocusRequester,
     libraryFocus: FocusRequester,
     settingsFocus: FocusRequester,
 ) {
@@ -335,16 +374,21 @@ private fun MainTopBar(
                 selected = currentRoute == HomeRoute,
                 enabled = true,
                 onClick = onHome,
-                // Skip the disabled search destination in the top-level focus chain.
                 modifier = Modifier
                     .focusRequester(homeFocus)
-                    .focusProperties { right = libraryFocus },
+                    .focusProperties { right = searchFocus },
             )
             MainNavButton(
                 text = stringResource(R.string.search),
                 selected = currentRoute == SearchRoute,
-                enabled = false,
+                enabled = true,
                 onClick = onSearch,
+                modifier = Modifier
+                    .focusRequester(searchFocus)
+                    .focusProperties {
+                        left = homeFocus
+                        right = libraryFocus
+                    },
             )
             MainNavButton(
                 text = stringResource(R.string.library),
@@ -354,7 +398,7 @@ private fun MainTopBar(
                 modifier = Modifier
                     .focusRequester(libraryFocus)
                     .focusProperties {
-                        left = homeFocus
+                        left = searchFocus
                         right = settingsFocus
                     },
             )
@@ -923,12 +967,4 @@ private fun SettingValue(
             fontSize = 15.sp,
         )
     }
-}
-
-@Composable
-private fun UnavailableDestination(title: String) {
-    StatusPanel(
-        title = title,
-        description = stringResource(R.string.not_available_yet),
-    )
 }
