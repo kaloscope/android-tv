@@ -55,3 +55,25 @@ data class MediaActorData(
     val role: String? = null,
     val thumb: String? = null,
 )
+
+@Serializable
+data class SubtitleTrackData(
+    val id: String = "",
+    val label: String = "",
+    val url: String? = null,
+    val language: String? = null,
+)
+
+@Serializable
+data class DanmakuWrapperData(
+    val comments: List<DanmakuCommentData> = emptyList(),
+)
+
+@Serializable
+data class DanmakuCommentData(
+    val id: String? = null,
+    val text: String = "",
+    val mode: String? = null,
+    val color: String? = null,
+    val start: Long? = null,
+)

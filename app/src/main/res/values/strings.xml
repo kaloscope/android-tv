@@ -77,6 +77,26 @@
     <string name="episodes">分集</string>
     <string name="directors">导演：%1$s</string>
     <string name="cast">演员：%1$s</string>
+    <string name="play">播放</string>
+    <string name="play_from_start">从头播放</string>
+    <string name="resume_playback">继续播放</string>
+    <string name="preparing_playback">正在准备播放</string>
+    <string name="preparing_playback_description">正在加载直连地址、字幕和弹幕。</string>
+    <string name="playback_request_missing">播放请求已失效</string>
+    <string name="playback_request_missing_description">请返回来源页面并重新选择视频。</string>
+    <string name="rewind_seconds">−10 秒</string>
+    <string name="forward_seconds">+10 秒</string>
+    <string name="pause">暂停</string>
+    <string name="subtitles_on">字幕 开</string>
+    <string name="subtitles_off">字幕 关</string>
+    <string name="no_subtitles">无字幕</string>
+    <string name="subtitle_unavailable">字幕不可用</string>
+    <string name="danmaku_on">弹幕 开</string>
+    <string name="danmaku_off">弹幕 关</string>
+    <string name="no_danmaku">无弹幕</string>
+    <string name="danmaku_unavailable">弹幕不可用</string>
+    <string name="direct_playback_failed">直连播放失败</string>
+    <string name="progress_save_failed">播放继续进行，但进度暂时无法保存</string>
 
     <string name="connection_error_eyebrow">连接中断</string>
     <string name="connection_error_title">暂时无法连接</string>

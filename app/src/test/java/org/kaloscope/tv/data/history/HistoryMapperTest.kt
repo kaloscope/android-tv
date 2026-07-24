@@ -20,6 +20,7 @@ class HistoryMapperTest {
         assertEquals(100, mapped.percentage)
         assertEquals(8.5, mapped.rating ?: 0.0, 0.0)
         assertEquals("启程", mapped.title)
+        assertEquals("/media/tv/S01E01.mkv", mapped.path)
     }
 
     @Test
@@ -31,6 +32,7 @@ class HistoryMapperTest {
 private fun historyItem(
     media: HistoryMediaData? = HistoryMediaData(
         id = 301,
+        path = "/media/tv/S01E01.mkv",
         name = "S01E01.mkv",
         title = "启程",
         year = 2026,

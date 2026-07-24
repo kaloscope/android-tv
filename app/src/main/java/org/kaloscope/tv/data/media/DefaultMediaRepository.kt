@@ -5,11 +5,14 @@ import javax.inject.Singleton
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaPage
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.core.network.ApiClientFactory
+import org.kaloscope.tv.core.network.MediaResourceData
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
 
@@ -59,6 +62,62 @@ class DefaultMediaRepository @Inject constructor(
                 .dataOrThrow()
                 .toDetail()
                 ?: throw SerializationException("Invalid media detail")
+        }
+
+    override suspend fun getSubtitleTracks(
+        session: Session,
+        path: String,
+    ): AppResult<List<SubtitleTrack>> =
+        networkCall(json) {
+            apiClientFactory.create(session.server.origin)
+                .getSubtitleTracks(
+                    authorization = session.authorization(),
+                    body = MediaResourceData(path),
+                )
+                .dataOrThrow()
+                .mapNotNull { track ->
+                    val url = track.url?.takeIf(String::isNotBlank) ?: return@mapNotNull null
+                    val label = track.label.trim().ifBlank { track.id.trim() }
+                    if (track.id.isBlank() || label.isBlank()) {
+                        null
+                    } else {
+                        SubtitleTrack(
+                            id = track.id,
+                            label = label,
+                            url = url,
+                            language = track.language?.takeIf(String::isNotBlank),
+                        )
+                    }
+                }
+        }
+
+    override suspend fun getDanmakus(
+        session: Session,
+        path: String,
+    ): AppResult<List<DanmakuComment>> =
+        networkCall(json) {
+            apiClientFactory.create(session.server.origin)
+                .getDanmakus(
+                    authorization = session.authorization(),
+                    body = MediaResourceData(path),
+                )
+                .dataOrThrow()
+                .comments
+                .mapNotNull { comment ->
+                    val text = comment.text.trim()
+                    val start = comment.start
+                    if (text.isBlank() || start == null || start < 0) {
+                        null
+                    } else {
+                        DanmakuComment(
+                            id = comment.id,
+                            text = text,
+                            mode = comment.mode ?: "scroll",
+                            color = comment.color,
+                            startMillis = start,
+                        )
+                    }
+                }
         }
 
     private fun Session.authorization(): String = "Token $token"

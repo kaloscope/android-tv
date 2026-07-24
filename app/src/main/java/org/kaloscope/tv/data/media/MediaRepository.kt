@@ -5,6 +5,8 @@ import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaPage
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.SubtitleTrack
+import org.kaloscope.tv.core.model.DanmakuComment
 
 interface MediaRepository {
     suspend fun getLibraries(session: Session): AppResult<List<MediaLibrary>>
@@ -21,4 +23,14 @@ interface MediaRepository {
         session: Session,
         mediaId: Long,
     ): AppResult<MediaDetail>
+
+    suspend fun getSubtitleTracks(
+        session: Session,
+        path: String,
+    ): AppResult<List<SubtitleTrack>>
+
+    suspend fun getDanmakus(
+        session: Session,
+        path: String,
+    ): AppResult<List<DanmakuComment>>
 }

@@ -20,6 +20,11 @@ data class MediaDetailRoute(
     val mediaId: Long,
 ) : NavKey
 
+@Serializable
+data class PlayerRoute(
+    val requestId: String,
+) : NavKey
+
 fun MutableList<NavKey>.selectRoot(route: NavKey) {
     clear()
     add(route)
@@ -33,6 +38,13 @@ fun MutableList<NavKey>.openSettings() {
 
 fun MutableList<NavKey>.openMediaDetail(mediaId: Long) {
     val route = MediaDetailRoute(mediaId)
+    if (lastOrNull() != route) {
+        add(route)
+    }
+}
+
+fun MutableList<NavKey>.openPlayer(requestId: String) {
+    val route = PlayerRoute(requestId)
     if (lastOrNull() != route) {
         add(route)
     }

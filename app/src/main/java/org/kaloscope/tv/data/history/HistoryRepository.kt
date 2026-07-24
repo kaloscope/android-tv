@@ -8,4 +8,11 @@ interface HistoryRepository {
     suspend fun getRecentVideos(
         session: Session,
     ): AppResult<List<WatchHistoryItem>>
+
+    suspend fun recordVideoProgress(
+        session: Session,
+        mediaId: Long,
+        positionSeconds: Long,
+        percentage: Int,
+    ): AppResult<Unit>
 }

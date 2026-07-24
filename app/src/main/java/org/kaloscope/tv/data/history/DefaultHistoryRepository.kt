@@ -9,6 +9,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.network.ApiClientFactory
 import org.kaloscope.tv.core.network.HistoryItemData
+import org.kaloscope.tv.core.network.HistoryRecordData
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
 
@@ -32,6 +33,28 @@ class DefaultHistoryRepository @Inject constructor(
                 .items
                 .mapNotNull(HistoryItemData::toModel)
         }
+
+    override suspend fun recordVideoProgress(
+        session: Session,
+        mediaId: Long,
+        positionSeconds: Long,
+        percentage: Int,
+    ): AppResult<Unit> =
+        networkCall(json) {
+            val response = apiClientFactory.create(session.server.origin)
+                .recordVideoProgress(
+                    authorization = "Token ${session.token}",
+                    body = HistoryRecordData(
+                        relationType = "video",
+                        relationId = mediaId,
+                        position = positionSeconds.coerceAtLeast(0),
+                        percentage = percentage.coerceIn(0, 100),
+                    ),
+                )
+            if (!response.isSuccessful) {
+                throw retrofit2.HttpException(response)
+            }
+        }
 }
 
 internal fun HistoryItemData.toModel(): WatchHistoryItem? {
@@ -47,6 +70,7 @@ internal fun HistoryItemData.toModel(): WatchHistoryItem? {
         mediaId = source.id,
         title = resolvedTitle,
         fileName = source.name,
+        path = source.path,
         positionSeconds = position.coerceAtLeast(0),
         percentage = percentage.coerceIn(0, 100),
         year = source.year,

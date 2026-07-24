@@ -164,6 +164,58 @@ class KaloscopeApiContractTest {
         assertEquals(301L, response.data.children.single().id)
     }
 
+    @Test
+    fun `subtitle tracks send media path and parse vtt source`() = runTest {
+        server.enqueue(jsonResponse(fixture("subtitle-tracks-success.json")))
+
+        val response = api.getSubtitleTracks(
+            authorization = "Token fixture-token",
+            body = MediaResourceData("/media/video.mkv"),
+        )
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals("/_api/subtitle/tracks", request.path)
+        assertEquals("Token fixture-token", request.getHeader("Authorization"))
+        assertEquals("""{"path":"/media/video.mkv"}""", request.body.readUtf8())
+        assertEquals("zh-CN", response.data.first().language)
+    }
+
+    @Test
+    fun `danmaku match parses millisecond start`() = runTest {
+        server.enqueue(jsonResponse(fixture("danmaku-match-success.json")))
+
+        val response = api.getDanmakus(
+            authorization = "Token fixture-token",
+            body = MediaResourceData("/media/video.mkv"),
+        )
+
+        assertEquals(12_500L, response.data.comments.first().start)
+    }
+
+    @Test
+    fun `history progress sends video relation and accepts empty response`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(204))
+
+        api.recordVideoProgress(
+            authorization = "Token fixture-token",
+            body = HistoryRecordData(
+                relationType = "video",
+                relationId = 301,
+                position = 42,
+                percentage = 35,
+            ),
+        )
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals("/_api/user/history/record", request.path)
+        assertEquals(
+            """{"rel_type":"video","rel_id":301,"position":42,"percentage":35}""",
+            request.body.readUtf8(),
+        )
+    }
+
     private fun fixture(name: String): String =
         checkNotNull(javaClass.classLoader?.getResource("fixtures/api/$name")).readText()
 

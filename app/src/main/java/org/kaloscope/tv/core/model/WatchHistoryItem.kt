@@ -5,6 +5,7 @@ data class WatchHistoryItem(
     val mediaId: Long,
     val title: String,
     val fileName: String,
+    val path: String,
     val positionSeconds: Long,
     val percentage: Int,
     val year: Int?,

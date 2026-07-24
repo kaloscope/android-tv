@@ -55,10 +55,12 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.LibraryRoute
 import org.kaloscope.tv.app.navigation.MediaDetailRoute
+import org.kaloscope.tv.app.navigation.PlayerRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
 import org.kaloscope.tv.app.navigation.handleMainBack
 import org.kaloscope.tv.app.navigation.openMediaDetail
+import org.kaloscope.tv.app.navigation.openPlayer
 import org.kaloscope.tv.app.navigation.openSettings
 import org.kaloscope.tv.app.navigation.selectRoot
 import org.kaloscope.tv.core.common.AppError
@@ -70,11 +72,16 @@ import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
+import org.kaloscope.tv.core.model.MediaDetail
+import org.kaloscope.tv.core.player.PlaybackControllerFactory
+import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.feature.detail.MediaDetailScreen
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
+import org.kaloscope.tv.feature.player.PlayerScreen
+import org.kaloscope.tv.feature.player.PlayerUiState
 
 private val ShellDivider = Color(0xFF252D40)
 private val Card = Color(0xFF182132)
@@ -97,6 +104,13 @@ internal fun MainShell(
     onRetryDetail: () -> Unit,
     onSelectMediaChild: (Long) -> Unit,
     onLogout: () -> Unit,
+    playerState: PlayerUiState = PlayerUiState.Loading,
+    playbackControllerFactory: PlaybackControllerFactory? = null,
+    onPlayHistory: (WatchHistoryItem) -> String? = { null },
+    onPlayDetail: (MediaDetail, Long?) -> String? = { _, _ -> null },
+    onLoadPlayer: (String) -> Unit = {},
+    onPlayerProgress: (Long, Long, ProgressReason) -> Unit = { _, _, _ -> },
+    onClosePlayer: (String) -> Unit = {},
 ) {
     val backStack = rememberNavBackStack(HomeRoute)
     val homeFocus = remember { FocusRequester() }
@@ -126,11 +140,14 @@ internal fun MainShell(
             // Publish the restore target before the previous entry becomes active again.
             restoreMediaId = leavingRoute.mediaId
         }
+        if (leavingRoute is PlayerRoute) {
+            onClosePlayer(leavingRoute.requestId)
+        }
         backStack.handleMainBack()
         currentRoute = backStack.lastOrNull() ?: HomeRoute
     }
 
-    BackHandler(enabled = currentRoute != HomeRoute) {
+    BackHandler(enabled = currentRoute != HomeRoute && currentRoute !is PlayerRoute) {
         goBack()
     }
 
@@ -139,7 +156,7 @@ internal fun MainShell(
             .fillMaxSize()
             .background(Background),
     ) {
-        if (currentRoute !is MediaDetailRoute) {
+        if (currentRoute !is MediaDetailRoute && currentRoute !is PlayerRoute) {
             MainTopBar(
                 currentRoute = currentRoute,
                 onHome = {
@@ -165,7 +182,7 @@ internal fun MainShell(
             modifier = Modifier
                 .fillMaxSize()
                 .then(
-                    if (currentRoute is MediaDetailRoute) {
+                    if (currentRoute is MediaDetailRoute || currentRoute is PlayerRoute) {
                         Modifier
                     } else {
                         Modifier.padding(horizontal = 44.dp, vertical = 24.dp)
@@ -198,6 +215,14 @@ internal fun MainShell(
                                 currentRoute = MediaDetailRoute(mediaId)
                                 onOpenMedia(mediaId)
                             },
+                            onPlayHistory = { item ->
+                                restoreMediaId = item.mediaId
+                                onPlayHistory(item)?.let { requestId ->
+                                    backStack.openPlayer(requestId)
+                                    currentRoute = PlayerRoute(requestId)
+                                    onLoadPlayer(requestId)
+                                }
+                            },
                         )
                     }
                     entry<SearchRoute> {
@@ -229,12 +254,39 @@ internal fun MainShell(
                         )
                     }
                     entry<MediaDetailRoute> {
+                        val displayedId = (detailState as? MediaDetailUiState.Content)?.let {
+                            (it.selectedChild ?: it.parent).id
+                        }
+                        val resumePosition = (homeState as? HomeUiState.Content)
+                            ?.items
+                            ?.firstOrNull { it.mediaId == displayedId }
+                            ?.positionSeconds
                         MediaDetailScreen(
                             session = session,
                             state = detailState,
+                            resumePositionSeconds = resumePosition,
                             onBack = ::goBack,
                             onRetry = onRetryDetail,
                             onSelectChild = onSelectMediaChild,
+                            onPlay = { detail, resume ->
+                                onPlayDetail(detail, resume)?.let { requestId ->
+                                    backStack.openPlayer(requestId)
+                                    currentRoute = PlayerRoute(requestId)
+                                    onLoadPlayer(requestId)
+                                }
+                            },
+                        )
+                    }
+                    entry<PlayerRoute> { route ->
+                        val factory = checkNotNull(playbackControllerFactory) {
+                            "PlaybackControllerFactory is required for PlayerRoute"
+                        }
+                        PlayerScreen(
+                            session = session,
+                            state = playerState,
+                            controllerFactory = factory,
+                            onProgress = onPlayerProgress,
+                            onBack = ::goBack,
                         )
                     }
                 },
@@ -406,6 +458,7 @@ private fun HomeScreen(
     restoreMediaId: Long?,
     onOpenLibrary: () -> Unit,
     onOpenMedia: (Long) -> Unit,
+    onPlayHistory: (WatchHistoryItem) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -456,6 +509,7 @@ private fun HomeScreen(
                 items = state.items,
                 restoreMediaId = restoreMediaId,
                 onOpenMedia = onOpenMedia,
+                onPlayHistory = onPlayHistory,
             )
         }
     }
@@ -466,12 +520,14 @@ private fun HistoryContent(
     items: List<WatchHistoryItem>,
     restoreMediaId: Long?,
     onOpenMedia: (Long) -> Unit,
+    onPlayHistory: (WatchHistoryItem) -> Unit,
 ) {
     val featured = items.first()
     FeaturedHistoryCard(
         item = featured,
         restoreFocus = featured.mediaId == restoreMediaId,
         onOpenMedia = onOpenMedia,
+        onPlayHistory = onPlayHistory,
     )
     if (items.size > 1) {
         Spacer(Modifier.height(22.dp))
@@ -490,7 +546,7 @@ private fun HistoryContent(
                 CompactHistoryCard(
                     item = item,
                     restoreFocus = item.mediaId == restoreMediaId,
-                    onOpenMedia = onOpenMedia,
+                    onPlayHistory = onPlayHistory,
                 )
             }
         }
@@ -502,6 +558,7 @@ private fun FeaturedHistoryCard(
     item: WatchHistoryItem,
     restoreFocus: Boolean,
     onOpenMedia: (Long) -> Unit,
+    onPlayHistory: (WatchHistoryItem) -> Unit,
 ) {
     val detailFocus = remember(item.mediaId) { FocusRequester() }
     LaunchedEffect(restoreFocus) {
@@ -549,12 +606,20 @@ private fun FeaturedHistoryCard(
                 fontSize = 14.sp,
             )
             Spacer(Modifier.height(14.dp))
-            Button(
-                onClick = { onOpenMedia(item.mediaId) },
-                modifier = Modifier.focusRequester(detailFocus),
-                colors = ButtonDefaults.colors(focusedContainerColor = Primary),
-            ) {
-                Text(stringResource(R.string.view_detail))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = { onPlayHistory(item) },
+                    modifier = Modifier.focusRequester(detailFocus),
+                    colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                ) {
+                    Text(stringResource(R.string.resume_playback))
+                }
+                Button(
+                    onClick = { onOpenMedia(item.mediaId) },
+                    colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                ) {
+                    Text(stringResource(R.string.view_detail))
+                }
             }
         }
     }
@@ -564,7 +629,7 @@ private fun FeaturedHistoryCard(
 private fun CompactHistoryCard(
     item: WatchHistoryItem,
     restoreFocus: Boolean,
-    onOpenMedia: (Long) -> Unit,
+    onPlayHistory: (WatchHistoryItem) -> Unit,
 ) {
     val cardFocus = remember(item.mediaId) { FocusRequester() }
     LaunchedEffect(restoreFocus) {
@@ -574,7 +639,7 @@ private fun CompactHistoryCard(
         }
     }
     Surface(
-        onClick = { onOpenMedia(item.mediaId) },
+        onClick = { onPlayHistory(item) },
         modifier = Modifier
             .width(250.dp)
             .focusRequester(cardFocus),

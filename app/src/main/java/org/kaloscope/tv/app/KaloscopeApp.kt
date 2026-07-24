@@ -71,6 +71,9 @@ import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.library.LibraryViewModel
 import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
+import org.kaloscope.tv.feature.player.PlayerViewModel
+import org.kaloscope.tv.feature.player.PlayerUiState
+import org.kaloscope.tv.core.player.PlaybackControllerFactory
 
 @Composable
 fun KaloscopeApp(
@@ -78,11 +81,14 @@ fun KaloscopeApp(
     mainViewModel: MainViewModel,
     libraryViewModel: LibraryViewModel,
     detailViewModel: MediaDetailViewModel,
+    playerViewModel: PlayerViewModel,
+    playbackControllerFactory: PlaybackControllerFactory,
 ) {
     val bootstrapState by viewModel.bootstrapState.collectAsStateWithLifecycle()
     val homeState by mainViewModel.homeState.collectAsStateWithLifecycle()
     val libraryState by libraryViewModel.uiState.collectAsStateWithLifecycle()
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
+    val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
 
     KaloscopeTheme {
         // Exactly one root subtree is composed to prevent hidden screens from retaining focus.
@@ -117,10 +123,11 @@ fun KaloscopeApp(
                 LaunchedEffect(state.session.server.id, state.session.user.id) {
                     mainViewModel.loadHome(state.session)
                 }
-                LaunchedEffect(homeState, libraryState, detailState) {
+                LaunchedEffect(homeState, libraryState, detailState, playerState) {
                     if (homeState.hasUnauthorized() ||
                         libraryState.hasUnauthorized() ||
-                        detailState.hasUnauthorized()
+                        detailState.hasUnauthorized() ||
+                        playerState.hasUnauthorized()
                     ) {
                         viewModel.handleUnauthorized(state.session)
                     }
@@ -131,6 +138,7 @@ fun KaloscopeApp(
                         mainViewModel.reset()
                         libraryViewModel.reset()
                         detailViewModel.reset()
+                        playerViewModel.clearServer(state.session.server.id)
                     }
                 }
                 MainShell(
@@ -162,6 +170,30 @@ fun KaloscopeApp(
                         detailViewModel.selectChild(state.session, childId)
                     },
                     onLogout = viewModel::logout,
+                    playerState = playerState,
+                    playbackControllerFactory = playbackControllerFactory,
+                    onPlayHistory = { item ->
+                        playerViewModel.createFromHistory(state.session, item)
+                    },
+                    onPlayDetail = { detail, resumePosition ->
+                        playerViewModel.createFromDetail(
+                            session = state.session,
+                            detail = detail,
+                            resumePositionSeconds = resumePosition,
+                        )
+                    },
+                    onLoadPlayer = { requestId ->
+                        playerViewModel.load(state.session, requestId)
+                    },
+                    onPlayerProgress = { position, duration, reason ->
+                        playerViewModel.recordProgress(
+                            session = state.session,
+                            positionMillis = position,
+                            durationMillis = duration,
+                            reason = reason,
+                        )
+                    },
+                    onClosePlayer = playerViewModel::close,
                 )
             }
 
@@ -198,6 +230,13 @@ private fun MediaDetailUiState.hasUnauthorized(): Boolean =
         is MediaDetailUiState.Content -> childError == AppError.Unauthorized
         MediaDetailUiState.Loading -> false
     }
+
+private fun PlayerUiState.hasUnauthorized(): Boolean =
+    this is PlayerUiState.Content &&
+        (
+            progressError == AppError.Unauthorized ||
+                extraFailures.values.any { it == AppError.Unauthorized }
+        )
 
 @Composable
 internal fun KaloscopeTheme(content: @Composable () -> Unit) {

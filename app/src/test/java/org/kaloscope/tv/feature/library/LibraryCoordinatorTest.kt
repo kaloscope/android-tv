@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
@@ -15,6 +16,7 @@ import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.data.media.MediaRepository
 
 class LibraryCoordinatorTest {
@@ -154,6 +156,16 @@ private class FakeMediaRepository(
         session: Session,
         mediaId: Long,
     ): AppResult<MediaDetail> = details
+
+    override suspend fun getSubtitleTracks(
+        session: Session,
+        path: String,
+    ): AppResult<List<SubtitleTrack>> = error("Not used")
+
+    override suspend fun getDanmakus(
+        session: Session,
+        path: String,
+    ): AppResult<List<DanmakuComment>> = error("Not used")
 }
 
 private fun libraries() = listOf(

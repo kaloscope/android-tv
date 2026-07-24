@@ -39,6 +39,17 @@ class MainNavigationTest {
     }
 
     @Test
+    fun `player route contains only request id and returns to detail`() {
+        val backStack = mutableListOf<NavKey>(LibraryRoute, MediaDetailRoute(201))
+
+        backStack.openPlayer("request-1")
+        val handled = backStack.handleMainBack()
+
+        assertTrue(handled)
+        assertEquals(listOf(LibraryRoute, MediaDetailRoute(201)), backStack)
+    }
+
+    @Test
     fun `home delegates back to the system`() {
         val backStack = mutableListOf<NavKey>(HomeRoute)
 

@@ -52,9 +52,11 @@ import org.kaloscope.tv.core.model.Session
 fun MediaDetailScreen(
     session: Session,
     state: MediaDetailUiState,
+    resumePositionSeconds: Long?,
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onSelectChild: (Long) -> Unit,
+    onPlay: (MediaDetail, Long?) -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -76,8 +78,10 @@ fun MediaDetailScreen(
             is MediaDetailUiState.Content -> DetailContent(
                 session = session,
                 state = state,
+                resumePositionSeconds = resumePositionSeconds,
                 onBack = onBack,
                 onSelectChild = onSelectChild,
+                onPlay = onPlay,
             )
         }
     }
@@ -87,16 +91,19 @@ fun MediaDetailScreen(
 private fun DetailContent(
     session: Session,
     state: MediaDetailUiState.Content,
+    resumePositionSeconds: Long?,
     onBack: () -> Unit,
     onSelectChild: (Long) -> Unit,
+    onPlay: (MediaDetail, Long?) -> Unit,
 ) {
     val backFocus = remember { FocusRequester() }
+    val playFocus = remember { FocusRequester() }
     val firstChildFocus = remember { FocusRequester() }
     val displayed = state.selectedChild ?: state.parent
 
     LaunchedEffect(state.parent.id) {
         if (state.parent.children.isEmpty()) {
-            backFocus.requestFocus()
+            playFocus.requestFocus()
         } else {
             firstChildFocus.requestFocus()
         }
@@ -132,6 +139,40 @@ private fun DetailContent(
                         fontWeight = FontWeight.Bold,
                     )
                     DetailMetadata(displayed)
+                    if (state.parent.children.isEmpty() || state.selectedChild != null) {
+                        Spacer(Modifier.height(18.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            if (resumePositionSeconds != null && resumePositionSeconds > 0) {
+                                Button(
+                                    onClick = { onPlay(displayed, resumePositionSeconds) },
+                                    modifier = Modifier.focusRequester(playFocus),
+                                    colors = ButtonDefaults.colors(
+                                        focusedContainerColor = Primary,
+                                    ),
+                                ) {
+                                    Text(stringResource(R.string.resume_playback))
+                                }
+                                Button(
+                                    onClick = { onPlay(displayed, null) },
+                                    colors = ButtonDefaults.colors(
+                                        focusedContainerColor = Primary,
+                                    ),
+                                ) {
+                                    Text(stringResource(R.string.play_from_start))
+                                }
+                            } else {
+                                Button(
+                                    onClick = { onPlay(displayed, null) },
+                                    modifier = Modifier.focusRequester(playFocus),
+                                    colors = ButtonDefaults.colors(
+                                        focusedContainerColor = Primary,
+                                    ),
+                                ) {
+                                    Text(stringResource(R.string.play))
+                                }
+                            }
+                        }
+                    }
                     displayed.plot?.takeIf(String::isNotBlank)?.let { plot ->
                         Spacer(Modifier.height(18.dp))
                         Text(

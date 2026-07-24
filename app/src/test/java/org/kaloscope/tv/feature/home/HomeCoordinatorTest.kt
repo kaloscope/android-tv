@@ -53,6 +53,13 @@ private class FakeHistoryRepository(
     override suspend fun getRecentVideos(
         session: Session,
     ): AppResult<List<WatchHistoryItem>> = result
+
+    override suspend fun recordVideoProgress(
+        session: Session,
+        mediaId: Long,
+        positionSeconds: Long,
+        percentage: Int,
+    ): AppResult<Unit> = error("Not used")
 }
 
 private fun historyItem() = WatchHistoryItem(
@@ -60,6 +67,7 @@ private fun historyItem() = WatchHistoryItem(
     mediaId = 301,
     title = "启程",
     fileName = "S01E01.mkv",
+    path = "/media/tv/S01E01.mkv",
     positionSeconds = 1694,
     percentage = 63,
     year = 2026,

@@ -3,16 +3,20 @@ package org.kaloscope.tv.core.network
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import org.kaloscope.tv.data.media.remote.DanmakuWrapperData
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.Response
 import org.kaloscope.tv.data.media.remote.MediaItemData
 import org.kaloscope.tv.data.media.remote.MediaLibraryData
 import org.kaloscope.tv.data.media.remote.MediaPageData
+import org.kaloscope.tv.data.media.remote.SubtitleTrackData
 
 interface KaloscopeApi {
     @GET("system/version")
@@ -58,6 +62,24 @@ interface KaloscopeApi {
         @Header("Authorization") authorization: String,
         @Path("mediaId") mediaId: Long,
     ): ApiEnvelope<MediaItemData>
+
+    @POST("subtitle/tracks")
+    suspend fun getSubtitleTracks(
+        @Header("Authorization") authorization: String,
+        @Body body: MediaResourceData,
+    ): ApiEnvelope<List<SubtitleTrackData>>
+
+    @POST("danmaku/match")
+    suspend fun getDanmakus(
+        @Header("Authorization") authorization: String,
+        @Body body: MediaResourceData,
+    ): ApiEnvelope<DanmakuWrapperData>
+
+    @POST("user/history/record")
+    suspend fun recordVideoProgress(
+        @Header("Authorization") authorization: String,
+        @Body body: HistoryRecordData,
+    ): Response<Unit>
 }
 
 @Serializable
@@ -108,6 +130,7 @@ data class HistoryItemData(
 @Serializable
 data class HistoryMediaData(
     val id: Long,
+    val path: String = "",
     val name: String = "",
     val title: String? = null,
     val year: Int? = null,
@@ -116,6 +139,21 @@ data class HistoryMediaData(
     val poster: String? = null,
     val backdrop: String? = null,
     val rating: String? = null,
+)
+
+@Serializable
+data class MediaResourceData(
+    val path: String,
+)
+
+@Serializable
+data class HistoryRecordData(
+    @SerialName("rel_type")
+    val relationType: String,
+    @SerialName("rel_id")
+    val relationId: Long,
+    val position: Long,
+    val percentage: Int,
 )
 
 @Serializable
