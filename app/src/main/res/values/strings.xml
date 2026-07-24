@@ -81,7 +81,7 @@
     <string name="play_from_start">从头播放</string>
     <string name="resume_playback">继续播放</string>
     <string name="preparing_playback">正在准备播放</string>
-    <string name="preparing_playback_description">正在加载直连地址、字幕和弹幕。</string>
+    <string name="preparing_playback_description">正在加载播放地址、字幕和弹幕。</string>
     <string name="playback_request_missing">播放请求已失效</string>
     <string name="playback_request_missing_description">请返回来源页面并重新选择视频。</string>
     <string name="rewind_seconds">−10 秒</string>
@@ -96,6 +96,16 @@
     <string name="no_danmaku">无弹幕</string>
     <string name="danmaku_unavailable">弹幕不可用</string>
     <string name="direct_playback_failed">直连播放失败</string>
+    <string name="transcode_playback_failed">转码播放失败</string>
+    <string name="playback_network_failed">网络连接中断</string>
+    <string name="playback_unauthorized">播放凭据已失效</string>
+    <string name="playback_media_missing">媒体文件不可用</string>
+    <string name="playback_auto_direct">自动 · 直连</string>
+    <string name="playback_auto_transcode">自动 · HLS 转码 %1$s</string>
+    <string name="playback_direct">直连</string>
+    <string name="playback_transcode">HLS 转码 %1$s</string>
+    <string name="switching_to_transcode">正在准备 HLS 转码…</string>
+    <string name="resolution_original">原画</string>
     <string name="progress_save_failed">播放继续进行，但进度暂时无法保存</string>
 
     <string name="connection_error_eyebrow">连接中断</string>

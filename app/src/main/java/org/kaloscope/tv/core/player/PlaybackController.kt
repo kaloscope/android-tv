@@ -10,11 +10,12 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
-import androidx.media3.common.util.UnstableApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,12 +23,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import okhttp3.OkHttpClient
 import org.kaloscope.tv.core.model.Session
-import org.kaloscope.tv.feature.player.PlayerUiState
+import org.kaloscope.tv.core.model.SubtitleTrack
 
 data class PlaybackStatus(
     val isPlaying: Boolean = false,
     val playbackState: Int = Player.STATE_IDLE,
-    val error: Boolean = false,
+    val sourceKind: PlaybackSourceKind,
+    val fallbackInProgress: Boolean = false,
+    val failure: PlaybackFailure? = null,
     val cues: List<Cue> = emptyList(),
 )
 
@@ -35,10 +38,13 @@ data class PlaybackStatus(
 class PlaybackController internal constructor(
     context: Context,
     private val session: Session,
-    private val content: PlayerUiState.Content,
+    private val request: PlaybackRequest.LocalMedia,
+    private val subtitles: List<SubtitleTrack>,
     private val onProgress: (Long, Long, ProgressReason) -> Unit,
 ) {
-    private val mutableStatus = MutableStateFlow(PlaybackStatus())
+    private var sourceKind = PlaybackSourcePolicy.initialSource(request.playbackMode)
+    private var fallbackAttempted = false
+    private val mutableStatus = MutableStateFlow(PlaybackStatus(sourceKind = sourceKind))
     private val listener = object : Player.Listener {
         override fun onEvents(
             player: Player,
@@ -47,6 +53,8 @@ class PlaybackController internal constructor(
             mutableStatus.value = mutableStatus.value.copy(
                 isPlaying = player.isPlaying,
                 playbackState = player.playbackState,
+                fallbackInProgress = mutableStatus.value.fallbackInProgress &&
+                    player.playbackState != Player.STATE_READY,
             )
             if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) &&
                 player.playbackState == Player.STATE_READY
@@ -60,8 +68,33 @@ class PlaybackController internal constructor(
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            mutableStatus.value = mutableStatus.value.copy(error = true)
             record(ProgressReason.Error)
+            val failure = PlaybackFailureClassifier.classify(
+                errorCode = error.errorCode,
+                httpStatus = error.findHttpStatus(),
+            )
+            if (PlaybackFallbackPolicy.shouldFallback(
+                    mode = request.playbackMode,
+                    sourceKind = sourceKind,
+                    failure = failure,
+                    fallbackAttempted = fallbackAttempted,
+                )
+            ) {
+                // Auto may replace direct playback once while keeping the viewer's position.
+                fallbackAttempted = true
+                sourceKind = PlaybackSourceKind.HlsTranscode
+                mutableStatus.value = mutableStatus.value.copy(
+                    sourceKind = sourceKind,
+                    fallbackInProgress = true,
+                    failure = null,
+                )
+                startSource(sourceKind, currentPositionMillis())
+            } else {
+                mutableStatus.value = mutableStatus.value.copy(
+                    fallbackInProgress = false,
+                    failure = failure,
+                )
+            }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -84,9 +117,7 @@ class PlaybackController internal constructor(
             .build()
         mediaSession = MediaSession.Builder(context, player).build()
         player.addListener(listener)
-        player.setMediaItem(buildMediaItem(), content.request.resumePositionSeconds.orZero() * 1_000)
-        player.prepare()
-        player.playWhenReady = true
+        startSource(sourceKind, request.resumePositionSeconds.orZero() * 1_000)
     }
 
     fun togglePlayPause() {
@@ -111,9 +142,11 @@ class PlaybackController internal constructor(
     }
 
     fun retry() {
-        mutableStatus.value = mutableStatus.value.copy(error = false)
-        player.prepare()
-        player.play()
+        mutableStatus.value = mutableStatus.value.copy(
+            fallbackInProgress = sourceKind == PlaybackSourceKind.HlsTranscode,
+            failure = null,
+        )
+        startSource(sourceKind, currentPositionMillis())
     }
 
     fun recordPeriodicProgress() {
@@ -127,8 +160,23 @@ class PlaybackController internal constructor(
         player.release()
     }
 
-    private fun buildMediaItem(): MediaItem {
-        val subtitles = content.subtitles.map { track ->
+    private fun startSource(
+        target: PlaybackSourceKind,
+        positionMillis: Long,
+    ) {
+        player.setMediaItem(buildMediaItem(target), positionMillis)
+        player.prepare()
+        player.playWhenReady = true
+    }
+
+    private fun buildMediaItem(target: PlaybackSourceKind): MediaItem {
+        val source = PlaybackSourceResolver.localMediaSource(
+            session = session,
+            path = request.path,
+            sourceKind = target,
+            resolution = request.transcodeResolution,
+        )
+        val subtitleConfigurations = subtitles.map { track ->
             MediaItem.SubtitleConfiguration.Builder(
                 Uri.parse(PlaybackSourceResolver.resolveServerResource(session, track.url)),
             )
@@ -140,19 +188,35 @@ class PlaybackController internal constructor(
                 .build()
         }
         return MediaItem.Builder()
-            .setMediaId(content.request.mediaId.toString())
-            .setUri(PlaybackSourceResolver.directStreamUrl(session, content.request.path))
+            .setMediaId(request.mediaId.toString())
+            .setUri(source.url)
+            .setMimeType(source.mimeType)
             .setMediaMetadata(
                 MediaMetadata.Builder()
-                    .setTitle(content.request.title)
+                    .setTitle(request.title)
                     .build(),
             )
-            .setSubtitleConfigurations(subtitles)
+            .setSubtitleConfigurations(subtitleConfigurations)
             .build()
     }
 
     private fun record(reason: ProgressReason) {
         onProgress(player.currentPosition, player.duration, reason)
+    }
+
+    private fun currentPositionMillis(): Long =
+        player.currentPosition.takeIf { it >= 0 }
+            ?: request.resumePositionSeconds.orZero() * 1_000
+
+    private fun Throwable.findHttpStatus(): Int? {
+        var current: Throwable? = this
+        repeat(MAX_CAUSE_DEPTH) {
+            if (current is HttpDataSource.InvalidResponseCodeException) {
+                return current.responseCode
+            }
+            current = current?.cause
+        }
+        return null
     }
 
     private fun authenticatedClient(session: Session): OkHttpClient =
@@ -180,6 +244,7 @@ class PlaybackController internal constructor(
 
     private companion object {
         const val SEEK_INCREMENT_MILLIS = 10_000L
+        const val MAX_CAUSE_DEPTH = 8
     }
 }
 
@@ -188,12 +253,14 @@ class PlaybackControllerFactory @Inject constructor(
 ) {
     fun create(
         session: Session,
-        content: PlayerUiState.Content,
+        request: PlaybackRequest.LocalMedia,
+        subtitles: List<SubtitleTrack>,
         onProgress: (Long, Long, ProgressReason) -> Unit,
     ): PlaybackController = PlaybackController(
         context = context,
         session = session,
-        content = content,
+        request = request,
+        subtitles = subtitles,
         onProgress = onProgress,
     )
 }

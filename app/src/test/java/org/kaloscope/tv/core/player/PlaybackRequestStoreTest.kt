@@ -30,6 +30,14 @@ class PlaybackRequestStoreTest {
         assertNull(store.get("first"))
         assertEquals(second, store.get("second"))
     }
+
+    @Test
+    fun `local playback defaults to auto mode at 1080p transcode resolution`() {
+        val request = localPlaybackRequest()
+
+        assertEquals(PlaybackMode.Auto, request.playbackMode)
+        assertEquals(TranscodeResolution.P1080, request.transcodeResolution)
+    }
 }
 
 private fun localPlaybackRequest(

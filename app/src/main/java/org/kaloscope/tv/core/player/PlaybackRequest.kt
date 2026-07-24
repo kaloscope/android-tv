@@ -14,6 +14,8 @@ sealed interface PlaybackRequest {
         override val title: String,
         val resumePositionSeconds: Long?,
         override val origin: PlaybackOrigin,
+        val playbackMode: PlaybackMode = PlaybackMode.Auto,
+        val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
     ) : PlaybackRequest
 }
 

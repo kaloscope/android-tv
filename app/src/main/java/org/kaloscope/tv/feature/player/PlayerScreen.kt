@@ -58,7 +58,11 @@ import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
+import org.kaloscope.tv.core.player.PlaybackFailure
+import org.kaloscope.tv.core.player.PlaybackMode
+import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.ProgressReason
+import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.core.player.visibleDanmakusAt
 
 @Composable
@@ -105,7 +109,12 @@ private fun PlayerContent(
     // API 23 may skip onStop, while newer Android versions support multi-window playback.
     if (android.os.Build.VERSION.SDK_INT > 23) {
         LifecycleStartEffect(state.request.requestId) {
-            activeController = controllerFactory.create(session, state, onProgress)
+            activeController = controllerFactory.create(
+                session = session,
+                request = state.request,
+                subtitles = state.subtitles,
+                onProgress = onProgress,
+            )
             onStopOrDispose {
                 activeController?.release()
                 activeController = null
@@ -113,7 +122,12 @@ private fun PlayerContent(
         }
     } else {
         LifecycleResumeEffect(state.request.requestId) {
-            activeController = controllerFactory.create(session, state, onProgress)
+            activeController = controllerFactory.create(
+                session = session,
+                request = state.request,
+                subtitles = state.subtitles,
+                onProgress = onProgress,
+            )
             onPauseOrDispose {
                 activeController?.release()
                 activeController = null
@@ -149,10 +163,20 @@ private fun PlayerContent(
             controller.recordPeriodicProgress()
         }
     }
-    LaunchedEffect(controlsVisible, interactionVersion, status.error) {
-        if (controlsVisible && !status.error) {
+    LaunchedEffect(
+        controlsVisible,
+        interactionVersion,
+        status.failure,
+        status.fallbackInProgress,
+    ) {
+        if (controlsVisible && status.failure == null && !status.fallbackInProgress) {
             delay(4_000)
             controlsVisible = false
+        }
+    }
+    LaunchedEffect(status.fallbackInProgress) {
+        if (status.fallbackInProgress) {
+            controlsVisible = true
         }
     }
     LaunchedEffect(controlsVisible) {
@@ -230,7 +254,7 @@ private fun PlayerContent(
                 positionMillis = positionMillis,
             )
         }
-        if (controlsVisible && !status.error) {
+        if (controlsVisible && status.failure == null) {
             PlayerControls(
                 title = state.request.title,
                 isPlaying = status.isPlaying,
@@ -242,6 +266,10 @@ private fun PlayerContent(
                 danmakusEnabled = danmakusEnabled,
                 extraErrors = state.extraErrors,
                 progressSaveFailed = state.progressError != null,
+                playbackMode = state.request.playbackMode,
+                sourceKind = status.sourceKind,
+                transcodeResolution = state.request.transcodeResolution,
+                fallbackInProgress = status.fallbackInProgress,
                 playFocus = playFocus,
                 onRewind = {
                     interactionVersion += 1
@@ -266,8 +294,16 @@ private fun PlayerContent(
                 },
             )
         }
-        if (status.error) {
-            PlaybackErrorOverlay(onRetry = controller::retry)
+        status.failure?.let { failure ->
+            PlaybackErrorOverlay(
+                failure = failure,
+                sourceKind = status.sourceKind,
+                onRetry = {
+                    controlsVisible = true
+                    interactionVersion += 1
+                    controller.retry()
+                },
+            )
         }
     }
 }
@@ -284,6 +320,10 @@ private fun PlayerControls(
     danmakusEnabled: Boolean,
     extraErrors: Set<PlayerExtra>,
     progressSaveFailed: Boolean,
+    playbackMode: PlaybackMode,
+    sourceKind: PlaybackSourceKind,
+    transcodeResolution: TranscodeResolution,
+    fallbackInProgress: Boolean,
     playFocus: FocusRequester,
     onRewind: () -> Unit,
     onPlayPause: () -> Unit,
@@ -301,12 +341,37 @@ private fun PlayerControls(
             )
             .padding(horizontal = 50.dp, vertical = 36.dp),
     ) {
-        Text(
-            text = title,
-            color = OnBackground,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Text(
+                text = title,
+                color = OnBackground,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.weight(1f))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = playbackModeLabel(
+                        mode = playbackMode,
+                        sourceKind = sourceKind,
+                        resolution = transcodeResolution,
+                    ),
+                    color = OnBackground,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (fallbackInProgress) {
+                    Text(
+                        text = stringResource(R.string.switching_to_transcode),
+                        color = Muted,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+        }
         if (progressSaveFailed) {
             Text(
                 text = stringResource(R.string.progress_save_failed),
@@ -463,7 +528,11 @@ private fun DanmakuOverlay(
 }
 
 @Composable
-private fun PlaybackErrorOverlay(onRetry: () -> Unit) {
+private fun PlaybackErrorOverlay(
+    failure: PlaybackFailure,
+    sourceKind: PlaybackSourceKind,
+    onRetry: () -> Unit,
+) {
     val retryFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         retryFocus.requestFocus()
@@ -476,7 +545,7 @@ private fun PlaybackErrorOverlay(onRetry: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = stringResource(R.string.direct_playback_failed),
+                text = playbackErrorText(failure, sourceKind),
                 color = Danger,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
@@ -492,6 +561,50 @@ private fun PlaybackErrorOverlay(onRetry: () -> Unit) {
         }
     }
 }
+
+@Composable
+private fun playbackModeLabel(
+    mode: PlaybackMode,
+    sourceKind: PlaybackSourceKind,
+    resolution: TranscodeResolution,
+): String {
+    val resolutionLabel = when (resolution) {
+        TranscodeResolution.Original -> stringResource(R.string.resolution_original)
+        TranscodeResolution.P1080 -> "1080P"
+        TranscodeResolution.P720 -> "720P"
+        TranscodeResolution.P480 -> "480P"
+    }
+    return when {
+        mode == PlaybackMode.Auto && sourceKind == PlaybackSourceKind.Direct ->
+            stringResource(R.string.playback_auto_direct)
+
+        mode == PlaybackMode.Auto ->
+            stringResource(R.string.playback_auto_transcode, resolutionLabel)
+
+        mode == PlaybackMode.Direct -> stringResource(R.string.playback_direct)
+        else -> stringResource(R.string.playback_transcode, resolutionLabel)
+    }
+}
+
+@Composable
+private fun playbackErrorText(
+    failure: PlaybackFailure,
+    sourceKind: PlaybackSourceKind,
+): String =
+    when (failure) {
+        PlaybackFailure.Network -> stringResource(R.string.playback_network_failed)
+        PlaybackFailure.Unauthorized -> stringResource(R.string.playback_unauthorized)
+        PlaybackFailure.Forbidden -> stringResource(R.string.error_forbidden)
+        PlaybackFailure.MissingMedia -> stringResource(R.string.playback_media_missing)
+        PlaybackFailure.Source,
+        PlaybackFailure.Decoder,
+        PlaybackFailure.Unknown,
+        -> if (sourceKind == PlaybackSourceKind.HlsTranscode) {
+            stringResource(R.string.transcode_playback_failed)
+        } else {
+            stringResource(R.string.direct_playback_failed)
+        }
+    }
 
 @Composable
 private fun PlayerMessage(

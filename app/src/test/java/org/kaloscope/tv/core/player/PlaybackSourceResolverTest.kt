@@ -22,6 +22,24 @@ class PlaybackSourceResolverTest {
     }
 
     @Test
+    fun `transcode stream URL includes the fixed quality and selected resolution`() {
+        val source = PlaybackSourceResolver.localMediaSource(
+            session = session(),
+            path = "/媒体/Season 01/Episode 1.mkv",
+            sourceKind = PlaybackSourceKind.HlsTranscode,
+            resolution = TranscodeResolution.P1080,
+        )
+
+        assertEquals(
+            "http://127.0.0.1:8000/_api/media/stream" +
+                "?path=%2F%E5%AA%92%E4%BD%93%2FSeason%2001%2FEpisode%201.mkv" +
+                "&transcode=true&quality=medium&resolution=1080p",
+            source.url,
+        )
+        assertEquals("application/x-mpegURL", source.mimeType)
+    }
+
+    @Test
     fun `relative subtitle URL resolves against the current server`() {
         assertEquals(
             "http://127.0.0.1:8000/_api/subtitle/content?path=fixture",
