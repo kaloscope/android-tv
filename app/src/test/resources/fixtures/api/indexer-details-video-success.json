@@ -3,7 +3,7 @@
   "status": 200,
   "message": "",
   "data": {
-    "id": "video-fixture-001",
+    "id": 48716677,
     "title": "星际回声",
     "cover": "https://example.invalid/posters/video-fixture-001.webp?proxy=true",
     "uploader": "示例发布者",
@@ -23,7 +23,7 @@
     ],
     "chapters": [
       {
-        "id": "episode-1",
+        "id": 1001,
         "url": null,
         "title": "第 1 集",
         "volume": "第 1 季"
@@ -37,7 +37,7 @@
     ],
     "danmakus": [
       {
-        "id": "comment-1",
+        "id": 287683505,
         "text": "契约测试弹幕",
         "mode": "scroll",
         "color": "#FFFFFF",

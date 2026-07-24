@@ -223,7 +223,7 @@ class KaloscopeApiContractTest {
                 """"keyword":"星际 回声","mobile":false}""",
             request.body.readUtf8(),
         )
-        assertEquals("video-fixture-001", response.data.items.single().id)
+        assertEquals("48716677", response.data.items.single().id)
     }
 
     @Test
@@ -249,6 +249,10 @@ class KaloscopeApiContractTest {
         )
         assertEquals("hls", response.data?.videoType)
         assertEquals(2, response.data?.definitions?.size)
+        assertEquals("48716677", response.data?.id)
+        assertEquals("1001", response.data?.chapters?.first()?.id)
+        assertEquals("episode-2", response.data?.chapters?.last()?.id)
+        assertEquals("287683505", response.data?.danmakus?.single()?.id)
     }
 
     @Test

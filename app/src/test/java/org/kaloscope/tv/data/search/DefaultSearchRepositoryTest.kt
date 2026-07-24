@@ -80,8 +80,11 @@ class DefaultSearchRepositoryTest {
         )
 
         val source = (playback as AppResult.Success).value
-        assertEquals("video-fixture-001", source.resourceId)
+        assertEquals("48716677", source.resourceId)
         assertEquals(NetworkVideoType.Hls, source.videoType)
+        assertEquals("1001", source.chapters.first().id)
+        assertEquals("episode-2", source.chapters.last().id)
+        assertEquals("287683505", source.danmakus.single().id)
         assertEquals(12_500, source.danmakus.single().startMillis)
     }
 
