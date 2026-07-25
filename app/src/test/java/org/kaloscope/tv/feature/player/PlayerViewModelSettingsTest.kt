@@ -18,7 +18,6 @@ import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaPage
-import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
@@ -236,18 +235,16 @@ private fun unusedMediaRepository() = object : MediaRepository {
 }
 
 private fun unusedSearchRepository() = object : SearchRepository {
-    override suspend fun getIndexers(session: Session): AppResult<List<NetworkIndexer>> =
-        error("Not used")
-
-    override suspend fun getProfile(
+    override suspend fun getAvailableProfiles(
         session: Session,
-        indexer: NetworkIndexer,
-    ) = error("Not used")
+    ): AppResult<List<org.kaloscope.tv.core.model.IndexerSourceProfile>> =
+        error("Not used")
 
     override suspend fun search(
         session: Session,
         profile: org.kaloscope.tv.core.model.IndexerSourceProfile,
         keyword: String,
+        filters: Map<String, org.kaloscope.tv.core.model.SearchFilterValue>,
         pageNumber: Int,
     ): AppResult<NetworkSearchPage> = error("Not used")
 

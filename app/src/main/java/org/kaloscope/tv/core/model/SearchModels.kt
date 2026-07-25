@@ -12,8 +12,8 @@ data class IndexerSourceProfile(
     val indexer: NetworkIndexer,
     val pageSize: Int,
     val keywordRequired: Boolean,
-    val webAuthRequired: Boolean,
     val coverRatio: Float = DEFAULT_COVER_ASPECT_RATIO,
+    val filters: List<SearchFilterDefinition> = emptyList(),
 )
 
 data class NetworkSearchResult(

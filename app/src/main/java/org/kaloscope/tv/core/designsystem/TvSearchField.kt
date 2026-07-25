@@ -21,6 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -34,6 +39,7 @@ fun TvSearchField(
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    onMoveRight: (() -> Unit)? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(12.dp)
@@ -49,6 +55,18 @@ fun TvSearchField(
             value = value,
             onValueChange = onValueChange,
             modifier = modifier
+                .onPreviewKeyEvent { event ->
+                    if (
+                        onMoveRight != null &&
+                        event.key == Key.DirectionRight &&
+                        event.type == KeyEventType.KeyDown
+                    ) {
+                        onMoveRight()
+                        true
+                    } else {
+                        false
+                    }
+                }
                 .onFocusChanged { focused = it.isFocused }
                 .background(
                     color = if (focused) {

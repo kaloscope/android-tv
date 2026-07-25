@@ -3,6 +3,7 @@ package org.kaloscope.tv.core.network
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.JsonObject
 import org.kaloscope.tv.data.media.remote.DanmakuWrapperData
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -23,7 +24,6 @@ import org.kaloscope.tv.data.search.remote.IndexerDetailsRequestData
 import org.kaloscope.tv.data.search.remote.IndexerPageData
 import org.kaloscope.tv.data.search.remote.IndexerResourceData
 import org.kaloscope.tv.data.search.remote.IndexerResourcePageData
-import org.kaloscope.tv.data.search.remote.IndexerSearchRequestData
 
 interface KaloscopeApi {
     @GET("system/version")
@@ -95,7 +95,7 @@ interface KaloscopeApi {
     suspend fun executeIndexerSearch(
         @Header("Authorization") authorization: String,
         @Path("indexerId") indexerId: Long,
-        @Body body: IndexerSearchRequestData,
+        @Body body: JsonObject,
     ): ApiEnvelope<IndexerResourcePageData>
 
     @POST("flow/graph/{indexerId}/execute")

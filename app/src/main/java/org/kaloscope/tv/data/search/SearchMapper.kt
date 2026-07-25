@@ -11,15 +11,24 @@ import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.NetworkVideoType
+import org.kaloscope.tv.core.model.SearchFilterDefinition
+import org.kaloscope.tv.core.model.SearchFilterOption
+import org.kaloscope.tv.core.model.SearchFilterType
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.search.remote.IndexerPageData
 import org.kaloscope.tv.data.search.remote.IndexerResourceData
 import org.kaloscope.tv.data.search.remote.IndexerResourcePageData
+import org.kaloscope.tv.data.search.remote.IndexerSearchConfigData
 
 internal fun IndexerPageData.toModels(): List<NetworkIndexer> =
     items.mapNotNull { indexer ->
         val name = indexer.name.clean()
-        if (indexer.id <= 0 || name == null || "search_start" !in indexer.nodeTypes) {
+        if (
+            indexer.id <= 0 ||
+            name == null ||
+            "search_start" !in indexer.nodeTypes ||
+            !indexer.onlyPreview
+        ) {
             null
         } else {
             NetworkIndexer(
@@ -28,6 +37,38 @@ internal fun IndexerPageData.toModels(): List<NetworkIndexer> =
                 iconPath = indexer.icon.clean(),
             )
         }
+    }
+
+internal fun IndexerSearchConfigData.toFilterDefinitions(): List<SearchFilterDefinition> =
+    filters.mapNotNull filter@{ (rawKey, data) ->
+        val key = rawKey.clean() ?: return@filter null
+        if (key in RESERVED_SEARCH_FILTER_KEYS) {
+            return@filter null
+        }
+        val type = when (data.type.clean()?.lowercase()) {
+            "text" -> SearchFilterType.Text
+            "radio" -> SearchFilterType.Radio
+            "checkbox" -> SearchFilterType.Checkbox
+            "select" -> SearchFilterType.Select
+            "datetime" -> SearchFilterType.DateTime
+            else -> return@filter null
+        }
+        val options = data.options.orEmpty().mapNotNull option@{ (rawValue, rawLabel) ->
+            val value = rawValue.clean() ?: return@option null
+            SearchFilterOption(
+                value = value,
+                label = rawLabel.clean() ?: value,
+            )
+        }
+        if (type.requiresOptions() && options.isEmpty()) {
+            return@filter null
+        }
+        SearchFilterDefinition(
+            key = key,
+            label = data.label.clean() ?: key,
+            type = type,
+            options = options,
+        )
     }
 
 internal fun IndexerResourcePageData.toModel(
@@ -164,3 +205,16 @@ private fun String.matches(resolution: TranscodeResolution): Boolean {
         else -> resolution.queryValue.filter(Char::isDigit) in normalized
     }
 }
+
+private fun SearchFilterType.requiresOptions(): Boolean =
+    this == SearchFilterType.Radio ||
+        this == SearchFilterType.Checkbox ||
+        this == SearchFilterType.Select
+
+private val RESERVED_SEARCH_FILTER_KEYS = setOf(
+    "\$start",
+    "page_num",
+    "page_size",
+    "keyword",
+    "mobile",
+)

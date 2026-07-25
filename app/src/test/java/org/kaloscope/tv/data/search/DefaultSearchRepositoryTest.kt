@@ -2,8 +2,10 @@ package org.kaloscope.tv.data.search
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,24 +43,63 @@ class DefaultSearchRepositoryTest {
     }
 
     @Test
-    fun `profile blocks source when required web auth is absent`() = runTest {
-        server.enqueue(
-            jsonResponse(
-                """{"status":200,"message":"","data":{"auth":{"login":{"required":true}},""" +
-                    """"search":{"display":{"page_size":30,"cover_ratio":"16/9"},""" +
-                    """"keyword":{"required":true}}}}""",
+    fun `catalog keeps no-auth and authenticated preview sites and hides missing auth`() = runTest {
+        server.dispatcher = catalogDispatcher(
+            mapOf(
+                11L to CatalogSite(loginRequired = false),
+                12L to CatalogSite(loginRequired = true, authName = "member"),
+                13L to CatalogSite(loginRequired = true),
             ),
         )
-        server.enqueue(jsonResponse("""{"status":200,"message":"","data":null}"""))
 
-        val result = repository.getProfile(session(), indexer())
+        val result = repository.getAvailableProfiles(session())
 
-        val profile = (result as AppResult.Success).value
-        assertEquals(30, profile.pageSize)
-        assertEquals(16f / 9f, profile.coverRatio, 0.001f)
-        assertTrue(profile.webAuthRequired)
-        assertEquals("/_api/flow/indexer/11/config", server.takeRequest().path)
-        assertEquals("/_api/flow/indexer/11/auth", server.takeRequest().path)
+        val profiles = (result as AppResult.Success).value
+        assertEquals(listOf(11L, 12L), profiles.map { it.indexer.id })
+        assertEquals("region", profiles.first().filters.single().key)
+    }
+
+    @Test
+    fun `catalog preserves available sites when another config fails`() = runTest {
+        server.dispatcher = catalogDispatcher(
+            mapOf(
+                11L to CatalogSite(loginRequired = false),
+                12L to CatalogSite(loginRequired = false, failConfig = true),
+            ),
+        )
+
+        val result = repository.getAvailableProfiles(session())
+
+        assertEquals(
+            listOf(11L),
+            (result as AppResult.Success).value.map { it.indexer.id },
+        )
+    }
+
+    @Test
+    fun `catalog fails when no site is available and one profile request fails`() = runTest {
+        server.dispatcher = catalogDispatcher(
+            mapOf(
+                11L to CatalogSite(loginRequired = true),
+                12L to CatalogSite(loginRequired = false, failConfig = true),
+            ),
+        )
+
+        assertTrue(repository.getAvailableProfiles(session()) is AppResult.Failure)
+    }
+
+    @Test
+    fun `catalog returns empty when all candidates are unauthenticated`() = runTest {
+        server.dispatcher = catalogDispatcher(
+            mapOf(
+                11L to CatalogSite(loginRequired = true),
+                12L to CatalogSite(loginRequired = true),
+            ),
+        )
+
+        val result = repository.getAvailableProfiles(session())
+
+        assertTrue((result as AppResult.Success).value.isEmpty())
     }
 
     @Test
@@ -69,10 +110,9 @@ class DefaultSearchRepositoryTest {
             indexer = indexer(),
             pageSize = 20,
             keywordRequired = true,
-            webAuthRequired = false,
         )
 
-        val page = repository.search(session(), profile, "星际", 1)
+        val page = repository.search(session(), profile, "星际", emptyMap(), 1)
         val result = (page as AppResult.Success).value.items.single()
         val playback = repository.resolvePlayback(
             session(),
@@ -202,6 +242,55 @@ class DefaultSearchRepositoryTest {
         .setResponseCode(200)
         .setHeader("Content-Type", "application/json")
         .setBody(body)
+
+    private fun catalogDispatcher(
+        sites: Map<Long, CatalogSite>,
+    ): Dispatcher = object : Dispatcher() {
+        override fun dispatch(request: RecordedRequest): MockResponse {
+            val path = checkNotNull(request.requestUrl).encodedPath
+            if (path == "/_api/flow/graph/list") {
+                val items = sites.keys.joinToString(",") { id ->
+                    """{"id":$id,"name":"Site $id","node_types":["search_start"],""" +
+                        """"only_preview":true}"""
+                }
+                return jsonResponse(
+                    """{"status":200,"message":"","data":{"total":${sites.size},""" +
+                        """"items":[$items]}}""",
+                )
+            }
+            val indexerId = path
+                .substringAfter("/_api/flow/indexer/")
+                .substringBefore("/")
+                .toLongOrNull()
+                ?: return MockResponse().setResponseCode(404)
+            val site = sites[indexerId] ?: return MockResponse().setResponseCode(404)
+            return when {
+                path.endsWith("/config") && site.failConfig ->
+                    MockResponse().setResponseCode(500)
+
+                path.endsWith("/config") -> jsonResponse(
+                    """{"status":200,"message":"","data":{"auth":{"login":{""" +
+                        """"required":${site.loginRequired}}},"search":{""" +
+                        """"display":{"page_size":20,"cover_ratio":"2/3"},""" +
+                        """"keyword":{"required":true},"filters":{"region":{""" +
+                        """"type":"select","label":"地区","options":{"cn":"中国"}}}}}}""",
+                )
+
+                path.endsWith("/auth") -> {
+                    val data = site.authName?.let { """{"name":"$it"}""" } ?: "null"
+                    jsonResponse("""{"status":200,"message":"","data":$data}""")
+                }
+
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+    }
 }
+
+private data class CatalogSite(
+    val loginRequired: Boolean,
+    val authName: String? = null,
+    val failConfig: Boolean = false,
+)
 
 private fun indexer() = NetworkIndexer(11, "星海站", null)

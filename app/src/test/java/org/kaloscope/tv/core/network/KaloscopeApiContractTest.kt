@@ -3,6 +3,10 @@ package org.kaloscope.tv.core.network
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -11,7 +15,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.kaloscope.tv.data.search.remote.IndexerDetailsRequestData
-import org.kaloscope.tv.data.search.remote.IndexerSearchRequestData
 
 class KaloscopeApiContractTest {
     private lateinit var server: MockWebServer
@@ -208,11 +211,18 @@ class KaloscopeApiContractTest {
         val response = api.executeIndexerSearch(
             authorization = "Token fixture-token",
             indexerId = 11,
-            body = IndexerSearchRequestData(
-                pageNumber = 1,
-                pageSize = 20,
-                keyword = "星际 回声",
-            ),
+            body = buildJsonObject {
+                put("\$start", "search_start")
+                put("page_num", 1)
+                put("page_size", 20)
+                put("keyword", "星际 回声")
+                put("mobile", false)
+                put("region", "cn")
+                put(
+                    "genre",
+                    JsonArray(listOf(JsonPrimitive("sci-fi"), JsonPrimitive("drama"))),
+                )
+            },
         )
         val request = server.takeRequest(1, TimeUnit.SECONDS)
 
@@ -220,7 +230,8 @@ class KaloscopeApiContractTest {
         assertEquals("/_api/flow/graph/11/execute", request.path)
         assertEquals(
             """{"${'$'}start":"search_start","page_num":1,"page_size":20,""" +
-                """"keyword":"星际 回声","mobile":false}""",
+                """"keyword":"星际 回声","mobile":false,"region":"cn",""" +
+                """"genre":["sci-fi","drama"]}""",
             request.body.readUtf8(),
         )
         assertEquals("48716677", response.data.items.single().id)

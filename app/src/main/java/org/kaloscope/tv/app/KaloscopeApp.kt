@@ -68,6 +68,7 @@ import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.feature.login.LoginError
 import org.kaloscope.tv.feature.login.LoginState
@@ -82,7 +83,6 @@ import org.kaloscope.tv.feature.server.ServerSetupState
 import org.kaloscope.tv.feature.player.PlayerViewModel
 import org.kaloscope.tv.feature.player.PlayerUiState
 import org.kaloscope.tv.feature.search.SearchResultsState
-import org.kaloscope.tv.feature.search.SearchSourceState
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.search.SearchViewModel
 import org.kaloscope.tv.feature.settings.SettingsUiState
@@ -177,6 +177,9 @@ fun KaloscopeApp(
                     initialRoute = currentSettings.startPage.toRootRoute(),
                     onRefresh = { mainViewModel.loadHome(state.session, force = true) },
                     onOpenSearch = { searchViewModel.load(state.session) },
+                    onRefreshIndexers = {
+                        searchViewModel.load(state.session, force = true)
+                    },
                     onSelectIndexer = { indexerId ->
                         searchViewModel.selectIndexer(state.session, indexerId)
                     },
@@ -197,6 +200,14 @@ fun KaloscopeApp(
                             resultId,
                             currentSettings,
                         )
+                    },
+                    onOpenSearchFilters = searchViewModel::openFilters,
+                    onDismissSearchFilters = searchViewModel::dismissFilters,
+                    onApplySearchFilters = { values: Map<String, SearchFilterValue> ->
+                        searchViewModel.applyFilters(state.session, values)
+                    },
+                    onClearSearchFilters = {
+                        searchViewModel.clearFilters(state.session)
                     },
                     onConsumeSearchPlayback = searchViewModel::consumePlaybackRequest,
                     onOpenLibrary = { libraryViewModel.load(state.session) },
@@ -314,8 +325,6 @@ private fun SearchUiState.hasUnauthorized(): Boolean =
     when (this) {
         is SearchUiState.Error -> error == AppError.Unauthorized
         is SearchUiState.Content -> {
-            val sourceUnauthorized =
-                (source as? SearchSourceState.Error)?.error == AppError.Unauthorized
             val resultUnauthorized = when (val resultState = results) {
                 is SearchResultsState.Error -> resultState.error == AppError.Unauthorized
                 is SearchResultsState.Content ->
@@ -323,8 +332,7 @@ private fun SearchUiState.hasUnauthorized(): Boolean =
 
                 else -> false
             }
-            sourceUnauthorized ||
-                resultUnauthorized ||
+            resultUnauthorized ||
                 playbackError == AppError.Unauthorized
         }
 

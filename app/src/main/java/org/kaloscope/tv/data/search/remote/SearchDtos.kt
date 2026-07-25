@@ -20,6 +20,8 @@ data class IndexerData(
     val icon: String? = null,
     @SerialName("node_types")
     val nodeTypes: List<String> = emptyList(),
+    @SerialName("only_preview")
+    val onlyPreview: Boolean = false,
 )
 
 @Serializable
@@ -43,6 +45,14 @@ data class IndexerLoginConfigData(
 data class IndexerSearchConfigData(
     val display: IndexerDisplayConfigData? = null,
     val keyword: IndexerKeywordConfigData? = null,
+    val filters: Map<String, IndexerFilterData> = emptyMap(),
+)
+
+@Serializable
+data class IndexerFilterData(
+    val type: String? = null,
+    val label: String? = null,
+    val options: Map<String, String>? = null,
 )
 
 @Serializable
@@ -74,21 +84,6 @@ data class IndexerDetailsSpecificData(
 @Serializable
 data class IndexerAuthData(
     val name: String? = null,
-)
-
-@Serializable
-@OptIn(ExperimentalSerializationApi::class)
-data class IndexerSearchRequestData(
-    @SerialName("\$start")
-    @EncodeDefault
-    val start: String = "search_start",
-    @SerialName("page_num")
-    val pageNumber: Int,
-    @SerialName("page_size")
-    val pageSize: Int,
-    val keyword: String,
-    @EncodeDefault
-    val mobile: Boolean = false,
 )
 
 @Serializable

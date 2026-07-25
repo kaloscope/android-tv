@@ -22,12 +22,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
@@ -52,12 +56,14 @@ import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
+import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 
 @Composable
 fun SearchScreen(
     session: Session,
     state: SearchUiState,
+    onRefreshIndexers: () -> Unit,
     onSelectIndexer: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -65,6 +71,10 @@ fun SearchScreen(
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
     onPlay: (String) -> Unit,
+    onOpenFilters: () -> Unit,
+    onDismissFilters: () -> Unit,
+    onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
+    onClearFilters: () -> Unit,
 ) {
     when (state) {
         SearchUiState.Loading -> SearchStatus(
@@ -72,10 +82,7 @@ fun SearchScreen(
             description = stringResource(R.string.loading_indexers_description),
         )
 
-        SearchUiState.EmptyIndexers -> SearchStatus(
-            title = stringResource(R.string.no_indexers),
-            description = stringResource(R.string.no_indexers_description),
-        )
+        SearchUiState.EmptyIndexers -> SearchEmptyIndexers(onRefreshIndexers)
 
         is SearchUiState.Error -> SearchError(state.error, onRetry)
         is SearchUiState.Content -> SearchContent(
@@ -88,6 +95,10 @@ fun SearchScreen(
             onLoadMore = onLoadMore,
             onResultFocused = onResultFocused,
             onPlay = onPlay,
+            onOpenFilters = onOpenFilters,
+            onDismissFilters = onDismissFilters,
+            onApplyFilters = onApplyFilters,
+            onClearFilters = onClearFilters,
         )
     }
 }
@@ -103,11 +114,24 @@ private fun SearchContent(
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
     onPlay: (String) -> Unit,
+    onOpenFilters: () -> Unit,
+    onDismissFilters: () -> Unit,
+    onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
+    onClearFilters: () -> Unit,
 ) {
     val firstIndexerFocus = remember { FocusRequester() }
+    val filterButtonFocus = remember { FocusRequester() }
+    var restoreFilterFocus by remember { mutableStateOf(false) }
     LaunchedEffect(state.selectedIndexerId, state.focusedResultId) {
         if (state.focusedResultId == null) {
             firstIndexerFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(state.filterDrawerOpen) {
+        if (!state.filterDrawerOpen && restoreFilterFocus) {
+            withFrameNanos { }
+            filterButtonFocus.requestFocus()
+            restoreFilterFocus = false
         }
     }
     Row(
@@ -125,37 +149,68 @@ private fun SearchContent(
                 .weight(1f)
                 .testTag("search-content"),
         ) {
-            when (state.source) {
-                SearchSourceState.Loading -> SearchStatus(
-                    title = stringResource(R.string.loading_indexer),
-                    description = stringResource(R.string.loading_indexer_description),
-                )
+            SearchInput(
+                value = state.query,
+                filtersAvailable = state.selectedProfile.filters.isNotEmpty(),
+                filtersActive = state.appliedFilters.isNotEmpty(),
+                filterFocusRequester = filterButtonFocus,
+                onValueChange = onQueryChange,
+                onSearch = onSearch,
+                onOpenFilters = {
+                    restoreFilterFocus = true
+                    onOpenFilters()
+                },
+            )
+            Spacer(Modifier.height(22.dp))
+            SearchResults(
+                session = session,
+                state = state,
+                coverRatio = state.selectedProfile.coverRatio,
+                onRetry = onRetry,
+                onLoadMore = onLoadMore,
+                onResultFocused = onResultFocused,
+                onPlay = onPlay,
+            )
+        }
+    }
+    if (state.filterDrawerOpen) {
+        SearchFilterDrawer(
+            definitions = state.selectedProfile.filters,
+            appliedValues = state.appliedFilters,
+            onApply = onApplyFilters,
+            onClear = onClearFilters,
+            onDismiss = onDismissFilters,
+        )
+    }
+}
 
-                SearchSourceState.WebAuthRequired -> SearchAuthRequired(
-                    title = stringResource(R.string.indexer_auth_required),
-                    description = stringResource(R.string.indexer_auth_required_description),
-                    onRetry = onRetry,
-                )
-
-                is SearchSourceState.Error -> SearchError(state.source.error, onRetry)
-                is SearchSourceState.Ready -> {
-                    SearchInput(
-                        value = state.query,
-                        onValueChange = onQueryChange,
-                        onSearch = onSearch,
-                    )
-                    Spacer(Modifier.height(22.dp))
-                    SearchResults(
-                        session = session,
-                        state = state,
-                        coverRatio = state.source.profile.coverRatio,
-                        onRetry = onRetry,
-                        onLoadMore = onLoadMore,
-                        onResultFocused = onResultFocused,
-                        onPlay = onPlay,
-                    )
-                }
-            }
+@Composable
+private fun SearchEmptyIndexers(onRefresh: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Panel, RoundedCornerShape(18.dp))
+            .padding(28.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.no_indexers),
+            color = OnBackground,
+            fontSize = 25.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.no_indexers_description),
+            color = Muted,
+            fontSize = 16.sp,
+        )
+        Spacer(Modifier.height(18.dp))
+        Button(
+            onClick = onRefresh,
+            modifier = Modifier.testTag("refresh-indexers"),
+            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+        ) {
+            Text(stringResource(R.string.refresh_indexers))
         }
     }
 }
@@ -222,9 +277,14 @@ private fun IndexerSidebar(
 @Composable
 private fun SearchInput(
     value: String,
+    filtersAvailable: Boolean,
+    filtersActive: Boolean,
+    filterFocusRequester: FocusRequester,
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
+    onOpenFilters: () -> Unit,
 ) {
+    val searchActionFocus = remember { FocusRequester() }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -235,16 +295,50 @@ private fun SearchInput(
             hint = stringResource(R.string.search_indexer_hint),
             onValueChange = onValueChange,
             onSearch = onSearch,
+            onMoveRight = searchActionFocus::requestFocus,
             modifier = Modifier
                 .weight(1f)
                 .height(52.dp)
+                .focusProperties { right = searchActionFocus }
                 .testTag("network-search-input"),
         )
         Button(
             onClick = onSearch,
+            modifier = Modifier
+                .focusRequester(searchActionFocus)
+                .focusProperties {
+                    right = if (filtersAvailable) {
+                        filterFocusRequester
+                    } else {
+                        FocusRequester.Cancel
+                    }
+                }
+                .testTag("search-action-button"),
             colors = ButtonDefaults.colors(focusedContainerColor = Primary),
         ) {
             Text(stringResource(R.string.search_action))
+        }
+        if (filtersAvailable) {
+            Button(
+                onClick = onOpenFilters,
+                modifier = Modifier
+                    .focusRequester(filterFocusRequester)
+                    .testTag("search-filter-button"),
+                colors = ButtonDefaults.colors(
+                    containerColor = if (filtersActive) Primary else PanelElevated,
+                    focusedContainerColor = Primary,
+                ),
+            ) {
+                Text(
+                    stringResource(
+                        if (filtersActive) {
+                            R.string.search_filters_active
+                        } else {
+                            R.string.search_filters
+                        },
+                    ),
+                )
+            }
         }
     }
 }
@@ -425,32 +519,6 @@ private fun SearchStatus(
             Text(title, color = OnBackground, fontSize = 25.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             Text(description, color = Muted, fontSize = 16.sp)
-        }
-    }
-}
-
-@Composable
-private fun SearchAuthRequired(
-    title: String,
-    description: String,
-    onRetry: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Panel, RoundedCornerShape(18.dp))
-            .padding(28.dp),
-    ) {
-        Text(title, color = OnBackground, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        Text(description, color = Muted, fontSize = 16.sp)
-        Spacer(Modifier.height(18.dp))
-        Button(
-            onClick = onRetry,
-            modifier = Modifier.testTag("indexer-auth-retry"),
-            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
-        ) {
-            Text(stringResource(R.string.retry))
         }
     }
 }

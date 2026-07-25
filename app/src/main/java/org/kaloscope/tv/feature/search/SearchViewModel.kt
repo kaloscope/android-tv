@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.data.search.SearchRepository
@@ -46,6 +47,18 @@ class SearchViewModel @Inject constructor(
     fun retry(session: Session) = startRequest { coordinator.retry(session) }
 
     fun loadNext(session: Session) = startRequest { coordinator.loadNext(session) }
+
+    fun openFilters() = coordinator.openFilters()
+
+    fun dismissFilters() = coordinator.dismissFilters()
+
+    fun applyFilters(
+        session: Session,
+        values: Map<String, SearchFilterValue>,
+    ) = startRequest { coordinator.applyFilters(session, values) }
+
+    fun clearFilters(session: Session) =
+        startRequest { coordinator.clearFilters(session) }
 
     fun rememberFocusedResult(resultId: String) =
         coordinator.rememberFocusedResult(resultId)

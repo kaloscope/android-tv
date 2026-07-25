@@ -21,7 +21,20 @@
         "global": false,
         "required": true
       },
-      "filters": {}
+      "filters": {
+        "region": {
+          "type": "select",
+          "label": "地区",
+          "options": {
+            "cn": "中国",
+            "jp": "日本"
+          }
+        },
+        "release_at": {
+          "type": "datetime",
+          "label": "发布时间"
+        }
+      }
     },
     "board": null,
     "details": {

@@ -6,24 +6,49 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.kaloscope.tv.core.model.SearchFilterType
 import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.search.remote.IndexerChapterData
 import org.kaloscope.tv.data.search.remote.IndexerDanmakuData
 import org.kaloscope.tv.data.search.remote.IndexerData
 import org.kaloscope.tv.data.search.remote.IndexerDefinitionData
+import org.kaloscope.tv.data.search.remote.IndexerFilterData
 import org.kaloscope.tv.data.search.remote.IndexerPageData
 import org.kaloscope.tv.data.search.remote.IndexerResourceData
 import org.kaloscope.tv.data.search.remote.IndexerResourcePageData
+import org.kaloscope.tv.data.search.remote.IndexerSearchConfigData
 
 class SearchMapperTest {
     @Test
-    fun `indexers keep only real searchable sources`() {
+    fun `indexers keep only real preview searchable sources`() {
         val page = IndexerPageData(
             items = listOf(
-                IndexerData(11, "  星海站  ", "/icon.png", listOf("search_start")),
-                IndexerData(12, "无搜索", null, listOf("details_start")),
-                IndexerData(0, "无效", null, listOf("search_start")),
+                IndexerData(
+                    id = 11,
+                    name = "  星海站  ",
+                    icon = "/icon.png",
+                    nodeTypes = listOf("search_start"),
+                    onlyPreview = true,
+                ),
+                IndexerData(
+                    id = 12,
+                    name = "下载站",
+                    nodeTypes = listOf("search_start"),
+                    onlyPreview = false,
+                ),
+                IndexerData(
+                    id = 13,
+                    name = "无搜索",
+                    nodeTypes = listOf("details_start"),
+                    onlyPreview = true,
+                ),
+                IndexerData(
+                    id = 0,
+                    name = "无效",
+                    nodeTypes = listOf("search_start"),
+                    onlyPreview = true,
+                ),
             ),
         )
 
@@ -32,6 +57,47 @@ class SearchMapperTest {
         assertEquals(1, indexers.size)
         assertEquals(11L, indexers.single().id)
         assertEquals("星海站", indexers.single().name)
+    }
+
+    @Test
+    fun `filter mapper accepts declared types and rejects invalid definitions`() {
+        val filters = IndexerSearchConfigData(
+            filters = linkedMapOf(
+                "alias" to IndexerFilterData(type = "text", label = "别名"),
+                "mode" to IndexerFilterData(
+                    type = "radio",
+                    options = linkedMapOf("movie" to "电影"),
+                ),
+                "region" to IndexerFilterData(
+                    type = "checkbox",
+                    options = linkedMapOf("cn" to "中国", "jp" to "日本"),
+                ),
+                "source" to IndexerFilterData(
+                    type = "select",
+                    options = linkedMapOf("web" to "网络"),
+                ),
+                "release_at" to IndexerFilterData(type = "datetime"),
+                "page_num" to IndexerFilterData(type = "text"),
+                "unknown" to IndexerFilterData(type = "range"),
+                "empty_options" to IndexerFilterData(type = "select"),
+            ),
+        ).toFilterDefinitions()
+
+        assertEquals(
+            listOf("alias", "mode", "region", "source", "release_at"),
+            filters.map { it.key },
+        )
+        assertEquals(
+            listOf(
+                SearchFilterType.Text,
+                SearchFilterType.Radio,
+                SearchFilterType.Checkbox,
+                SearchFilterType.Select,
+                SearchFilterType.DateTime,
+            ),
+            filters.map { it.type },
+        )
+        assertEquals(listOf("cn", "jp"), filters[2].options.map { it.value })
     }
 
     @Test

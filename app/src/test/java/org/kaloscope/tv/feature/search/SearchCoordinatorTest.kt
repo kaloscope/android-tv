@@ -2,6 +2,7 @@ package org.kaloscope.tv.feature.search
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,6 +18,9 @@ import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.core.model.SearchFilterDefinition
+import org.kaloscope.tv.core.model.SearchFilterType
+import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.player.PlaybackOrigin
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
@@ -35,39 +39,93 @@ class SearchCoordinatorTest {
         val state = coordinator.state.value as SearchUiState.Content
         assertEquals(11L, state.selectedIndexerId)
         assertEquals(SearchResultsState.AwaitingQuery, state.results)
-        assertTrue(state.source is SearchSourceState.Ready)
         assertTrue(repository.searchCalls.isEmpty())
     }
 
     @Test
-    fun `required web authentication blocks search`() = runTest {
+    fun `initial load consumes complete available profile catalog`() = runTest {
         val repository = FakeSearchRepository(
-            profile = AppResult.Success(profile(webAuthRequired = true)),
+            availableProfiles = AppResult.Success(
+                listOf(profile(indexerId = 11), profile(indexerId = 12)),
+            ),
         )
         val coordinator = coordinator(repository)
 
         coordinator.load(session())
 
         val state = coordinator.state.value as SearchUiState.Content
-        assertEquals(SearchSourceState.WebAuthRequired, state.source)
-        assertEquals(SearchResultsState.AwaitingQuery, state.results)
+        assertEquals(listOf(11L, 12L), state.profiles.map { it.indexer.id })
+        assertEquals(11L, state.selectedIndexerId)
     }
 
     @Test
-    fun `retry after web authentication reloads source profile`() = runTest {
+    fun `switching site clears query filters results and focus`() = runTest {
         val repository = FakeSearchRepository(
-            profiles = mutableListOf(
-                AppResult.Success(profile(webAuthRequired = true)),
-                AppResult.Success(profile(webAuthRequired = false)),
+            availableProfiles = AppResult.Success(
+                listOf(
+                    profile(indexerId = 11, filters = listOf(regionFilter())),
+                    profile(indexerId = 12),
+                ),
+            ),
+            pages = mutableListOf(AppResult.Success(page("v1"))),
+        )
+        val coordinator = coordinator(repository)
+        coordinator.load(session())
+        coordinator.updateQuery("星际")
+        coordinator.applyFilters(
+            session(),
+            mapOf("region" to SearchFilterValue.Scalar("cn")),
+        )
+        coordinator.rememberFocusedResult("v1")
+
+        coordinator.selectIndexer(session(), 12)
+
+        val state = coordinator.state.value as SearchUiState.Content
+        assertEquals("", state.query)
+        assertTrue(state.appliedFilters.isEmpty())
+        assertEquals(SearchResultsState.AwaitingQuery, state.results)
+        assertNull(state.focusedResultId)
+    }
+
+    @Test
+    fun `paging reuses committed filters`() = runTest {
+        val repository = FakeSearchRepository(
+            availableProfiles = AppResult.Success(
+                listOf(profile(filters = listOf(regionFilter()))),
+            ),
+            pages = mutableListOf(
+                AppResult.Success(page("v1", pageNumber = 1, hasNext = true)),
+                AppResult.Success(page("v2", pageNumber = 2, hasNext = false)),
             ),
         )
         val coordinator = coordinator(repository)
         coordinator.load(session())
+        coordinator.updateQuery("星际")
+        coordinator.applyFilters(
+            session(),
+            mapOf("region" to SearchFilterValue.Scalar("cn")),
+        )
 
-        coordinator.retry(session())
+        coordinator.loadNext(session())
+
+        assertEquals(2, repository.searchFilters.size)
+        assertEquals(repository.searchFilters[0], repository.searchFilters[1])
+    }
+
+    @Test
+    fun `dismissing filters closes drawer without searching`() = runTest {
+        val repository = FakeSearchRepository(
+            availableProfiles = AppResult.Success(listOf(profile())),
+        )
+        val coordinator = coordinator(repository)
+        coordinator.load(session())
+
+        coordinator.openFilters()
+        coordinator.dismissFilters()
 
         val state = coordinator.state.value as SearchUiState.Content
-        assertTrue(state.source is SearchSourceState.Ready)
+        assertFalse(state.filterDrawerOpen)
+        assertTrue(repository.searchCalls.isEmpty())
     }
 
     @Test
@@ -168,30 +226,43 @@ private class FakeSearchRepository(
         AppResult.Success(listOf(indexer())),
     private val profile: AppResult<IndexerSourceProfile> =
         AppResult.Success(profile()),
-    private val profiles: MutableList<AppResult<IndexerSourceProfile>> = mutableListOf(),
     private val pages: MutableList<AppResult<NetworkSearchPage>> = mutableListOf(),
     private val playback: AppResult<NetworkPlaybackSource> =
         AppResult.Failure(AppError.NotFound),
+    private val availableProfiles: AppResult<List<IndexerSourceProfile>>? = null,
 ) : SearchRepository {
     val searchCalls = mutableListOf<SearchCall>()
+    val searchFilters = mutableListOf<Map<String, SearchFilterValue>>()
     var preferredDefinition: TranscodeResolution? = null
 
-    override suspend fun getIndexers(session: Session): AppResult<List<NetworkIndexer>> =
-        indexers
-
-    override suspend fun getProfile(
+    override suspend fun getAvailableProfiles(
         session: Session,
-        indexer: NetworkIndexer,
-    ): AppResult<IndexerSourceProfile> =
-        if (profiles.isEmpty()) profile else profiles.removeAt(0)
+    ): AppResult<List<IndexerSourceProfile>> {
+        availableProfiles?.let { return it }
+        val loadedIndexers = when (indexers) {
+            is AppResult.Failure -> return indexers
+            is AppResult.Success -> indexers.value
+        }
+        val loadedProfile = when (profile) {
+            is AppResult.Failure -> return profile
+            is AppResult.Success -> profile.value
+        }
+        return AppResult.Success(
+            loadedIndexers.map { indexer ->
+                loadedProfile.copy(indexer = indexer)
+            },
+        )
+    }
 
     override suspend fun search(
         session: Session,
         profile: IndexerSourceProfile,
         keyword: String,
+        filters: Map<String, SearchFilterValue>,
         pageNumber: Int,
     ): AppResult<NetworkSearchPage> {
-        searchCalls += SearchCall(keyword, pageNumber)
+        searchCalls += SearchCall(keyword, filters, pageNumber)
+        searchFilters += filters
         return pages.removeAt(0)
     }
 
@@ -215,6 +286,7 @@ private class FakeSearchRepository(
 
 private data class SearchCall(
     val keyword: String,
+    val filters: Map<String, SearchFilterValue>,
     val pageNumber: Int,
 )
 
@@ -223,11 +295,20 @@ private fun coordinator(repository: SearchRepository) =
 
 private fun indexer() = NetworkIndexer(11, "星海站", null)
 
-private fun profile(webAuthRequired: Boolean = false) = IndexerSourceProfile(
-    indexer = indexer(),
+private fun profile(
+    indexerId: Long = 11,
+    filters: List<SearchFilterDefinition> = emptyList(),
+) = IndexerSourceProfile(
+    indexer = NetworkIndexer(indexerId, "站点$indexerId", null),
     pageSize = 20,
     keywordRequired = true,
-    webAuthRequired = webAuthRequired,
+    filters = filters,
+)
+
+private fun regionFilter() = SearchFilterDefinition(
+    key = "region",
+    label = "地区",
+    type = SearchFilterType.Select,
 )
 
 private fun page(

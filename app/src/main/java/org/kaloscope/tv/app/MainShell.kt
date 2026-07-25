@@ -81,6 +81,7 @@ import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.model.MediaDetail
@@ -114,6 +115,7 @@ internal fun MainShell(
     detailState: MediaDetailUiState,
     onRefresh: () -> Unit,
     onOpenSearch: () -> Unit = {},
+    onRefreshIndexers: () -> Unit = {},
     onSelectIndexer: (Long) -> Unit = {},
     onSearchQueryChange: (String) -> Unit = {},
     onSearchNetwork: () -> Unit = {},
@@ -121,6 +123,10 @@ internal fun MainShell(
     onLoadMoreSearch: () -> Unit = {},
     onSearchResultFocused: (String) -> Unit = {},
     onPlaySearchResult: (String) -> Unit = {},
+    onOpenSearchFilters: () -> Unit = {},
+    onDismissSearchFilters: () -> Unit = {},
+    onApplySearchFilters: (Map<String, SearchFilterValue>) -> Unit = {},
+    onClearSearchFilters: () -> Unit = {},
     onConsumeSearchPlayback: (String) -> Unit = {},
     onOpenLibrary: () -> Unit,
     onSelectLibrary: (Long) -> Unit,
@@ -301,6 +307,7 @@ internal fun MainShell(
                         SearchScreen(
                             session = session,
                             state = searchState,
+                            onRefreshIndexers = onRefreshIndexers,
                             onSelectIndexer = onSelectIndexer,
                             onQueryChange = onSearchQueryChange,
                             onSearch = onSearchNetwork,
@@ -308,6 +315,10 @@ internal fun MainShell(
                             onLoadMore = onLoadMoreSearch,
                             onResultFocused = onSearchResultFocused,
                             onPlay = onPlaySearchResult,
+                            onOpenFilters = onOpenSearchFilters,
+                            onDismissFilters = onDismissSearchFilters,
+                            onApplyFilters = onApplySearchFilters,
+                            onClearFilters = onClearSearchFilters,
                         )
                     }
                     entry<LibraryRoute> {
