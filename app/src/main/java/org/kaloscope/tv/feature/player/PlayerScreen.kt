@@ -6,11 +6,9 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -27,14 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,6 +60,7 @@ import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
+import org.kaloscope.tv.core.player.PlaybackBufferingPolicy
 import org.kaloscope.tv.core.player.PlaybackFailure
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackRequest
@@ -192,14 +188,28 @@ private fun PlayerContent(
     val hasNext = PlaybackRequestNavigator.hasNext(state.request)
 
     BackHandler {
-        if (definitionDrawerOpen) {
-            definitionDrawerOpen = false
-            restoreDefinitionFocus = true
-        } else if (danmakuDrawerOpen) {
-            danmakuDrawerOpen = false
-            restoreDanmakuSettingsFocus = true
-        } else {
-            onBack()
+        val context = when {
+            danmakuDrawerOpen -> PlayerBackContext.DanmakuDrawer
+            definitionDrawerOpen -> PlayerBackContext.DefinitionDrawer
+            controlsVisible && status.failure == null && !state.switchingItem ->
+                PlayerBackContext.Controls
+
+            else -> PlayerBackContext.Player
+        }
+        when (PlayerControlKeyPolicy.backCommand(context)) {
+            PlayerControlCommand.CloseDanmakuDrawer -> {
+                danmakuDrawerOpen = false
+                restoreDanmakuSettingsFocus = true
+            }
+
+            PlayerControlCommand.CloseDefinitionDrawer -> {
+                definitionDrawerOpen = false
+                restoreDefinitionFocus = true
+            }
+
+            PlayerControlCommand.HideControls -> controlsVisible = false
+            PlayerControlCommand.ExitPlayer -> onBack()
+            else -> Unit
         }
     }
 
@@ -223,6 +233,8 @@ private fun PlayerContent(
         interactionVersion,
         status.failure,
         status.fallbackInProgress,
+        definitionDrawerOpen,
+        danmakuDrawerOpen,
     ) {
         if (
             controlsVisible &&
@@ -295,34 +307,36 @@ private fun PlayerContent(
                 enabled = !controlsVisible && !definitionDrawerOpen && !danmakuDrawerOpen,
             )
             .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) {
-                    return@onPreviewKeyEvent false
-                }
                 if (controlsVisible || definitionDrawerOpen || danmakuDrawerOpen) {
-                    interactionVersion += 1
+                    if (event.type == KeyEventType.KeyDown) {
+                        interactionVersion += 1
+                    }
                     return@onPreviewKeyEvent false
                 }
                 // Hidden controls reserve D-pad playback shortcuts at the page root.
-                when (event.key) {
-                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                val command = PlayerControlKeyPolicy.command(
+                    context = PlayerControlContext.HiddenControls,
+                    key = event.key.toPlayerRemoteKey() ?: return@onPreviewKeyEvent false,
+                    phase = when (event.type) {
+                        KeyEventType.KeyDown -> PlayerKeyPhase.Down
+                        KeyEventType.KeyUp -> PlayerKeyPhase.Up
+                        else -> return@onPreviewKeyEvent false
+                    },
+                ) ?: return@onPreviewKeyEvent false
+                when (command) {
+                    PlayerControlCommand.TogglePlaybackAndShowControls -> {
                         controller.togglePlayPause()
                         controlsVisible = true
                         true
                     }
 
-                    Key.DirectionLeft -> {
-                        controller.seekBy(-10_000)
+                    is PlayerControlCommand.SeekAndShowControls -> {
+                        controller.seekBy(command.offsetMillis)
                         controlsVisible = true
                         true
                     }
 
-                    Key.DirectionRight -> {
-                        controller.seekBy(10_000)
-                        controlsVisible = true
-                        true
-                    }
-
-                    Key.DirectionUp, Key.DirectionDown -> {
+                    PlayerControlCommand.ShowControls -> {
                         controlsVisible = true
                         true
                     }
@@ -364,32 +378,53 @@ private fun PlayerContent(
             !danmakuDrawerOpen &&
             !state.switchingItem
         ) {
+            val definitions = (state.request as? PlaybackRequest.NetworkVideo)
+                ?.source
+                ?.definitions
+                .orEmpty()
+            val subtitlesFailed = PlayerExtra.Subtitles in state.extraErrors
+            val danmakusFailed = PlayerExtra.Danmakus in state.extraErrors
+            val danmakusAvailable =
+                state.danmakus.isNotEmpty() && danmakuRuntimeAvailable && !danmakusFailed
             PlayerControls(
-                title = state.request.title,
-                isPlaying = status.isPlaying,
-                positionMillis = positionMillis,
-                durationMillis = controller.player.duration,
-                subtitlesAvailable = state.subtitles.isNotEmpty(),
-                subtitlesEnabled = subtitlesEnabled,
-                danmakusAvailable =
-                    state.danmakus.isNotEmpty() && danmakuRuntimeAvailable,
-                danmakusEnabled = sessionDanmakuSettings.enabled,
-                extraErrors = state.extraErrors,
-                progressSaveFailed = state.progressError != null,
-                playbackMode = (state.request as? PlaybackRequest.LocalMedia)?.playbackMode,
-                sourceKind = status.sourceKind,
-                transcodeResolution =
-                    (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
-                fallbackInProgress = status.fallbackInProgress,
-                hasPrevious = PlaybackRequestNavigator.hasPrevious(state.request),
-                hasNext = hasNext,
-                definitions = (state.request as? PlaybackRequest.NetworkVideo)
-                    ?.source
-                    ?.definitions
-                    .orEmpty(),
+                state = PlayerControlsUiState(
+                    title = state.request.title,
+                    isPlaying = status.isPlaying,
+                    positionMillis = positionMillis,
+                    durationMillis = controller.player.duration,
+                    playbackModeLabel = playbackModeLabel(
+                        mode = (state.request as? PlaybackRequest.LocalMedia)?.playbackMode,
+                        sourceKind = status.sourceKind,
+                        resolution =
+                            (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
+                    ),
+                    fallbackInProgress = status.fallbackInProgress,
+                    progressSaveFailed = state.progressError != null,
+                    previousEnabled =
+                        PlaybackRequestNavigator.hasPrevious(state.request) &&
+                            !state.switchingItem,
+                    nextEnabled = hasNext && !state.switchingItem,
+                    subtitles = PlayerActionUiState(
+                        enabled = state.subtitles.isNotEmpty() && !subtitlesFailed,
+                        active =
+                            state.subtitles.isNotEmpty() &&
+                                !subtitlesFailed &&
+                                subtitlesEnabled,
+                        error = subtitlesFailed,
+                    ),
+                    danmakus = PlayerActionUiState(
+                        enabled = danmakusAvailable,
+                        active = danmakusAvailable && sessionDanmakuSettings.enabled,
+                        error = danmakusFailed,
+                    ),
+                    danmakuSettings = PlayerActionUiState(
+                        enabled = danmakusAvailable,
+                        error = danmakusFailed,
+                    ),
+                    quality = PlayerActionUiState(enabled = definitions.size > 1),
+                ),
                 definitionFocus = definitionFocus,
                 danmakuSettingsFocus = danmakuSettingsFocus,
-                switchingItem = state.switchingItem,
                 playFocus = playFocus,
                 onPrevious = {
                     interactionVersion += 1
@@ -434,8 +469,27 @@ private fun PlayerContent(
                     definitionDrawerOpen = true
                     danmakuDrawerOpen = false
                 },
+                onSeekTo = { position ->
+                    interactionVersion += 1
+                    controller.seekTo(position)
+                },
+                onHideControls = {
+                    controlsVisible = false
+                },
+                onInteraction = {
+                    interactionVersion += 1
+                },
             )
         }
+        PlayerBufferingIndicator(
+            isRebuffering =
+                status.failure == null &&
+                    !status.fallbackInProgress &&
+                    PlaybackBufferingPolicy.isRebuffering(
+                        hasBeenReady = status.hasBeenReady,
+                        playbackState = status.playbackState,
+                    ),
+        )
         if (definitionDrawerOpen) {
             PlayerDefinitionDrawer(
                 definitions = (state.request as? PlaybackRequest.NetworkVideo)
@@ -486,187 +540,6 @@ private fun PlayerContent(
                     controller.retry()
                 },
             )
-        }
-    }
-}
-
-@Composable
-internal fun PlayerControls(
-    title: String,
-    isPlaying: Boolean,
-    positionMillis: Long,
-    durationMillis: Long,
-    subtitlesAvailable: Boolean,
-    subtitlesEnabled: Boolean,
-    danmakusAvailable: Boolean,
-    danmakusEnabled: Boolean,
-    extraErrors: Set<PlayerExtra>,
-    progressSaveFailed: Boolean,
-    playbackMode: PlaybackMode?,
-    sourceKind: PlaybackSourceKind,
-    transcodeResolution: TranscodeResolution?,
-    fallbackInProgress: Boolean,
-    hasPrevious: Boolean,
-    hasNext: Boolean,
-    definitions: List<NetworkDefinition>,
-    switchingItem: Boolean,
-    playFocus: FocusRequester,
-    definitionFocus: FocusRequester,
-    danmakuSettingsFocus: FocusRequester,
-    onPrevious: () -> Unit,
-    onRewind: () -> Unit,
-    onPlayPause: () -> Unit,
-    onForward: () -> Unit,
-    onNext: () -> Unit,
-    onToggleSubtitles: () -> Unit,
-    onToggleDanmakus: () -> Unit,
-    onOpenDanmakuSettings: () -> Unit,
-    onOpenDefinitions: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xA6000000), Color.Transparent, Color(0xF0050810)),
-                ),
-            )
-            .testTag("player-control-layer")
-            .padding(horizontal = 50.dp, vertical = 36.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Text(
-                text = title,
-                color = OnBackground,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = playbackModeLabel(
-                        mode = playbackMode,
-                        sourceKind = sourceKind,
-                        resolution = transcodeResolution,
-                    ),
-                    color = OnBackground,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                if (fallbackInProgress) {
-                    Text(
-                        text = stringResource(R.string.switching_to_transcode),
-                        color = Muted,
-                        fontSize = 12.sp,
-                    )
-                }
-            }
-        }
-        if (progressSaveFailed) {
-            Text(
-                text = stringResource(R.string.progress_save_failed),
-                color = Danger,
-                fontSize = 13.sp,
-            )
-        }
-        Spacer(Modifier.weight(1f))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = formatDuration(positionMillis),
-                color = OnBackground,
-                fontSize = 14.sp,
-            )
-            Spacer(Modifier.width(14.dp))
-            PlayerProgress(
-                positionMillis = positionMillis,
-                durationMillis = durationMillis,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(14.dp))
-            Text(
-                text = formatDuration(durationMillis),
-                color = OnBackground,
-                fontSize = 14.sp,
-            )
-        }
-        Spacer(Modifier.height(20.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (hasPrevious) {
-                PlayerButton(
-                    text = stringResource(R.string.previous_episode),
-                    onClick = onPrevious,
-                    enabled = !switchingItem,
-                )
-            }
-            PlayerButton(
-                text = stringResource(R.string.rewind_seconds),
-                onClick = onRewind,
-            )
-            PlayerButton(
-                text = if (isPlaying) {
-                    stringResource(R.string.pause)
-                } else {
-                    stringResource(R.string.play)
-                },
-                onClick = onPlayPause,
-                modifier = Modifier.focusRequester(playFocus),
-                primary = true,
-            )
-            PlayerButton(
-                text = stringResource(R.string.forward_seconds),
-                onClick = onForward,
-            )
-            if (hasNext) {
-                PlayerButton(
-                    text = stringResource(R.string.next_episode),
-                    onClick = onNext,
-                    enabled = !switchingItem,
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            PlayerButton(
-                text = subtitleButtonText(
-                    available = subtitlesAvailable,
-                    enabled = subtitlesEnabled,
-                    failed = PlayerExtra.Subtitles in extraErrors,
-                ),
-                onClick = onToggleSubtitles,
-                enabled = subtitlesAvailable,
-                active = subtitlesEnabled,
-            )
-            PlayerButton(
-                text = danmakuButtonText(
-                    available = danmakusAvailable,
-                    enabled = danmakusEnabled,
-                    failed = PlayerExtra.Danmakus in extraErrors,
-                ),
-                onClick = onToggleDanmakus,
-                enabled = danmakusAvailable,
-                active = danmakusEnabled,
-            )
-            PlayerButton(
-                text = stringResource(R.string.player_danmaku_settings_button),
-                onClick = onOpenDanmakuSettings,
-                modifier = Modifier.focusRequester(danmakuSettingsFocus),
-                enabled = danmakusAvailable,
-            )
-            if (definitions.isNotEmpty()) {
-                PlayerButton(
-                    text = stringResource(R.string.playback_quality),
-                    onClick = onOpenDefinitions,
-                    modifier = Modifier.focusRequester(definitionFocus),
-                )
-            }
         }
     }
 }
@@ -757,31 +630,6 @@ private fun PlayerButton(
         ),
     ) {
         Text(text)
-    }
-}
-
-@Composable
-private fun PlayerProgress(
-    positionMillis: Long,
-    durationMillis: Long,
-    modifier: Modifier = Modifier,
-) {
-    val progress = if (durationMillis > 0) {
-        (positionMillis.toFloat() / durationMillis).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    Box(
-        modifier = modifier
-            .height(6.dp)
-            .background(Color(0xFF4A5060), RoundedCornerShape(6.dp)),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(progress)
-                .fillMaxHeight()
-                .background(Primary, RoundedCornerShape(6.dp)),
-        )
     }
 }
 
@@ -905,47 +753,6 @@ private fun PlayerMessage(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun subtitleButtonText(
-    available: Boolean,
-    enabled: Boolean,
-    failed: Boolean,
-): String =
-    when {
-        failed -> stringResource(R.string.subtitle_unavailable)
-        !available -> stringResource(R.string.no_subtitles)
-        enabled -> stringResource(R.string.subtitles_on)
-        else -> stringResource(R.string.subtitles_off)
-    }
-
-@Composable
-private fun danmakuButtonText(
-    available: Boolean,
-    enabled: Boolean,
-    failed: Boolean,
-): String =
-    when {
-        failed -> stringResource(R.string.danmaku_unavailable)
-        !available -> stringResource(R.string.no_danmaku)
-        enabled -> stringResource(R.string.danmaku_on)
-        else -> stringResource(R.string.danmaku_off)
-    }
-
-private fun formatDuration(milliseconds: Long): String {
-    if (milliseconds <= 0) {
-        return "00:00"
-    }
-    val totalSeconds = milliseconds / 1_000
-    val hours = totalSeconds / 3_600
-    val minutes = (totalSeconds % 3_600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%02d:%02d".format(minutes, seconds)
     }
 }
 

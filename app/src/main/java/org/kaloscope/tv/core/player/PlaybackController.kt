@@ -11,8 +11,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -29,6 +29,7 @@ import org.kaloscope.tv.core.model.SubtitleTrack
 data class PlaybackStatus(
     val isPlaying: Boolean = false,
     val playbackState: Int = Player.STATE_IDLE,
+    val hasBeenReady: Boolean = false,
     val sourceKind: PlaybackSourceKind,
     val fallbackInProgress: Boolean = false,
     val failure: PlaybackFailure? = null,
@@ -54,10 +55,15 @@ class PlaybackController internal constructor(
             player: Player,
             events: Player.Events,
         ) {
-            mutableStatus.value = mutableStatus.value.copy(
+            val currentStatus = mutableStatus.value
+            mutableStatus.value = currentStatus.copy(
                 isPlaying = player.isPlaying,
                 playbackState = player.playbackState,
-                fallbackInProgress = mutableStatus.value.fallbackInProgress &&
+                hasBeenReady = PlaybackBufferingPolicy.hasBeenReady(
+                    previouslyReady = currentStatus.hasBeenReady,
+                    playbackState = player.playbackState,
+                ),
+                fallbackInProgress = currentStatus.fallbackInProgress &&
                     player.playbackState != Player.STATE_READY,
             )
             if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) &&
@@ -139,7 +145,12 @@ class PlaybackController internal constructor(
 
     fun seekBy(offsetMillis: Long) {
         val duration = player.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
-        player.seekTo((player.currentPosition + offsetMillis).coerceIn(0, duration))
+        seekTo((player.currentPosition + offsetMillis).coerceIn(0, duration))
+    }
+
+    fun seekTo(positionMillis: Long) {
+        val duration = player.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
+        player.seekTo(positionMillis.coerceIn(0, duration))
         record(ProgressReason.Seeked)
     }
 
