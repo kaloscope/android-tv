@@ -27,10 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -40,14 +40,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.NetworkIndexer
@@ -120,7 +122,11 @@ private fun SearchContent(
             firstIndexerFocus = firstIndexerFocus,
             onSelectIndexer = onSelectIndexer,
         )
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .testTag("search-content"),
+        ) {
             when (state.source) {
                 SearchSourceState.Loading -> SearchStatus(
                     title = stringResource(R.string.loading_indexer),
@@ -166,14 +172,17 @@ private fun IndexerSidebar(
         modifier = Modifier
             .width(250.dp)
             .fillMaxHeight()
-            .background(Panel, RoundedCornerShape(18.dp))
+            .background(Panel.copy(alpha = 0.78f), RoundedCornerShape(18.dp))
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(indexers, key = NetworkIndexer::id) { indexer ->
-            Surface(
-                selected = indexer.id == selectedIndexerId,
+            KaloscopeFocusSurface(
                 onClick = { onSelectIndexer(indexer.id) },
+                selected = indexer.id == selectedIndexerId,
+                shape = RoundedCornerShape(12.dp),
+                focusedContainerColor = PanelElevated,
+                focusScale = 1.02f,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp)
@@ -228,8 +237,8 @@ private fun SearchInput(
             modifier = Modifier
                 .weight(1f)
                 .height(52.dp)
-                .background(Color(0xFF111725), RoundedCornerShape(12.dp))
-                .border(1.dp, Color(0xFF343D54), RoundedCornerShape(12.dp))
+                .background(Panel.copy(alpha = 0.88f), RoundedCornerShape(12.dp))
+                .border(1.dp, Outline, RoundedCornerShape(12.dp))
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             textStyle = TextStyle(color = OnBackground, fontSize = 16.sp),
             singleLine = true,
@@ -350,9 +359,13 @@ private fun NetworkResultCard(
             requester.requestFocus()
         }
     }
-    Surface(
+    KaloscopeFocusSurface(
         onClick = onClick,
         enabled = enabled,
+        shape = RoundedCornerShape(15.dp),
+        containerColor = Panel.copy(alpha = 0.65f),
+        focusedContainerColor = PanelElevated,
+        focusScale = 1.04f,
         modifier = Modifier
             .fillMaxWidth()
             .testTag("network-result-${result.id}")
@@ -372,7 +385,8 @@ private fun NetworkResultCard(
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(2f / 3f),
+                    .aspectRatio(2f / 3f)
+                    .clip(RoundedCornerShape(11.dp)),
             )
             Spacer(Modifier.height(9.dp))
             Text(

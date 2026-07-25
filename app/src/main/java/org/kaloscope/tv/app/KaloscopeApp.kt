@@ -36,6 +36,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -54,10 +55,15 @@ import org.kaloscope.tv.app.bootstrap.BootstrapState
 import org.kaloscope.tv.app.navigation.toRootRoute
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.BackgroundRaised
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeBackground
+import org.kaloscope.tv.core.designsystem.KaloscopeBrand
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.model.SavedServer
@@ -342,7 +348,8 @@ internal fun KaloscopeTheme(content: @Composable () -> Unit) {
             primary = Primary,
             background = Background,
             surface = Panel,
-            onPrimary = Color.White,
+            surfaceVariant = PanelElevated,
+            onPrimary = Background,
             onBackground = OnBackground,
             onSurface = OnBackground,
         ),
@@ -579,31 +586,21 @@ private fun ConnectionErrorScreen(
 
 @Composable
 private fun AppFrame(content: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .padding(horizontal = 72.dp, vertical = 48.dp),
-    ) {
-        Column {
-            Text(
-                text = stringResource(R.string.app_name),
-                color = OnBackground,
-                fontSize = 25.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(R.string.tv_experience),
-                color = Primary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-            )
-        }
+    KaloscopeBackground {
         Box(
-            modifier = Modifier.align(Alignment.CenterStart),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 72.dp, vertical = 48.dp),
         ) {
-            content()
+            KaloscopeBrand(
+                name = stringResource(R.string.app_name),
+                caption = stringResource(R.string.tv_experience),
+            )
+            Box(
+                modifier = Modifier.align(Alignment.CenterStart),
+            ) {
+                content()
+            }
         }
     }
 }
@@ -646,9 +643,11 @@ private fun FormPanel(
             modifier = Modifier
                 .width(520.dp)
                 .heightIn(max = 720.dp)
-                .background(Panel, RoundedCornerShape(18.dp))
+                .background(Panel.copy(alpha = 0.86f), RoundedCornerShape(22.dp))
+                .border(1.dp, Outline, RoundedCornerShape(22.dp))
+                .testTag("onboarding-panel")
                 .verticalScroll(rememberScrollState())
-                .padding(28.dp),
+                .padding(32.dp),
             content = content,
         )
     }
@@ -706,11 +705,11 @@ private fun AppTextField(
                     }
                 }
                 .onFocusChanged { focused = it.isFocused }
-                .background(Color(0xFF0D1220), RoundedCornerShape(10.dp))
+                .background(BackgroundRaised, RoundedCornerShape(12.dp))
                 .border(
-                    width = if (focused) 3.dp else 1.dp,
-                    color = if (focused) Primary else Color(0xFF30384C),
-                    shape = RoundedCornerShape(10.dp),
+                    width = if (focused) 2.dp else 1.dp,
+                    color = if (focused) OnBackground else Outline,
+                    shape = RoundedCornerShape(12.dp),
                 )
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             decorationBox = { innerTextField ->

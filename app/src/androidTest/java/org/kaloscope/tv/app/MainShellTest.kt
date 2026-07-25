@@ -24,6 +24,7 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.TvSettings
+import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.model.MediaActor
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
@@ -66,6 +67,35 @@ class MainShellTest {
         }
 
         composeRule.onNode(hasText("首页") and hasClickAction()).assertIsFocused()
+    }
+
+    @Test
+    fun homeHistoryUsesBrandedBackgroundAndCinematicHero() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MainShell(
+                    session = session(),
+                    homeState = HomeUiState.Content(listOf(history())),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    onRefresh = {},
+                    onOpenLibrary = {},
+                    onSelectLibrary = {},
+                    onLibraryQueryChange = {},
+                    onSearchLibrary = {},
+                    onRetryLibrary = {},
+                    onLoadMoreMedia = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                    onRetryDetail = {},
+                    onSelectMediaChild = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("kaloscope-background").assertExists()
+        composeRule.onNodeWithTag("home-hero").assertExists()
     }
 
     @Test
@@ -218,6 +248,23 @@ private fun summary() = MediaSummary(
     rating = 8.8,
     season = null,
     episode = null,
+)
+
+private fun history() = WatchHistoryItem(
+    historyId = 1,
+    mediaId = 201,
+    title = "群星档案",
+    fileName = "episode-1.mkv",
+    path = "/media/episode-1.mkv",
+    positionSeconds = 1_200,
+    percentage = 42,
+    year = 2026,
+    season = 1,
+    episode = 1,
+    posterPath = "/poster.jpg",
+    backdropPath = "/backdrop.jpg",
+    rating = 8.8,
+    updatedAt = "2026-07-25T00:00:00Z",
 )
 
 private fun detail() = MediaDetail(

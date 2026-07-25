@@ -24,7 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -33,14 +36,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
-import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeBackground
+import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.ServerImage
@@ -58,31 +62,32 @@ fun MediaDetailScreen(
     onSelectChild: (Long) -> Unit,
     onPlay: (MediaDetail, Long?) -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .padding(horizontal = 44.dp, vertical = 30.dp),
-    ) {
-        when (state) {
-            MediaDetailUiState.Loading -> DetailStatus(
-                title = stringResource(R.string.loading_detail),
-                description = stringResource(R.string.loading_detail_description),
-            )
+    KaloscopeBackground {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 44.dp, vertical = 30.dp),
+        ) {
+            when (state) {
+                MediaDetailUiState.Loading -> DetailStatus(
+                    title = stringResource(R.string.loading_detail),
+                    description = stringResource(R.string.loading_detail_description),
+                )
 
-            is MediaDetailUiState.Error -> DetailError(
-                error = state.error,
-                onRetry = onRetry,
-            )
+                is MediaDetailUiState.Error -> DetailError(
+                    error = state.error,
+                    onRetry = onRetry,
+                )
 
-            is MediaDetailUiState.Content -> DetailContent(
-                session = session,
-                state = state,
-                resumePositionSeconds = resumePositionSeconds,
-                onBack = onBack,
-                onSelectChild = onSelectChild,
-                onPlay = onPlay,
-            )
+                is MediaDetailUiState.Content -> DetailContent(
+                    session = session,
+                    state = state,
+                    resumePositionSeconds = resumePositionSeconds,
+                    onBack = onBack,
+                    onSelectChild = onSelectChild,
+                    onPlay = onPlay,
+                )
+            }
         }
     }
 }
@@ -109,7 +114,31 @@ private fun DetailContent(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("detail-cinematic-surface"),
+    ) {
+        ServerImage(
+            session = session,
+            rawValue = displayed.backdropPath ?: displayed.posterPath,
+            fallbackText = displayed.title,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        0f to Color(0xFA060912),
+                        0.62f to Color(0xE6060912),
+                        1f to Color(0x99060912),
+                    ),
+                ),
+        )
+        Column(modifier = Modifier.fillMaxSize()) {
         DetailBackButton(
             onBack = onBack,
             modifier = Modifier.focusRequester(backFocus),
@@ -222,6 +251,7 @@ private fun DetailContent(
                 }
             }
         }
+        }
     }
 }
 
@@ -231,8 +261,12 @@ private fun DetailBackButton(
     modifier: Modifier = Modifier,
 ) {
     val label = stringResource(R.string.back)
-    Surface(
+    KaloscopeFocusSurface(
         onClick = onBack,
+        shape = RoundedCornerShape(14.dp),
+        containerColor = Panel.copy(alpha = 0.72f),
+        focusedContainerColor = PanelElevated,
+        focusScale = 1.02f,
         modifier = modifier
             .width(54.dp)
             .height(46.dp)
@@ -315,10 +349,14 @@ private fun ChildButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        selected = selected,
+    KaloscopeFocusSurface(
         onClick = onClick,
+        selected = selected,
         enabled = !loading,
+        shape = RoundedCornerShape(14.dp),
+        containerColor = Panel.copy(alpha = 0.74f),
+        focusedContainerColor = PanelElevated,
+        focusScale = 1.03f,
         modifier = modifier.width(190.dp),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp)) {

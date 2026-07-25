@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,8 @@ import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.PanelElevated
+import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.model.Session
@@ -159,7 +162,7 @@ private fun SettingsContent(
                     enabled = controlsEnabled,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .widthIn(max = 650.dp),
+                        .widthIn(max = 720.dp),
                     onOpenChoice = { focus, requestedChoice ->
                         restoreFocus = focus
                         choice = requestedChoice
@@ -198,9 +201,9 @@ private fun SettingsMenu(
 ) {
     Column(
         modifier = Modifier
-            .width(180.dp)
+            .width(210.dp)
             .fillMaxHeight()
-            .background(Panel, RoundedCornerShape(18.dp))
+            .background(Panel.copy(alpha = 0.78f), RoundedCornerShape(18.dp))
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -219,7 +222,7 @@ private fun SettingsMenu(
                     ),
                 colors = ButtonDefaults.colors(
                     containerColor = if (selected == section) {
-                        Color(0xFF343259)
+                        PanelSelected
                     } else {
                         Color.Transparent
                     },
@@ -252,8 +255,9 @@ private fun SettingsPanel(
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(Panel, RoundedCornerShape(18.dp))
-            .padding(horizontal = 24.dp, vertical = 22.dp),
+            .background(Panel.copy(alpha = 0.82f), RoundedCornerShape(22.dp))
+            .testTag("settings-panel")
+            .padding(horizontal = 28.dp, vertical = 26.dp),
     ) {
         Text(
             text = sectionTitle(state.section),
@@ -581,7 +585,7 @@ private fun SettingsChoiceDialog(
         Column(
             modifier = Modifier
                 .width(420.dp)
-                .background(Panel, RoundedCornerShape(20.dp))
+                .background(PanelElevated, RoundedCornerShape(22.dp))
                 .padding(28.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -616,9 +620,9 @@ private fun SettingsChoiceDialog(
                         ),
                     colors = ButtonDefaults.colors(
                         containerColor = if (option.selected) {
-                            Color(0xFF343259)
+                            PanelSelected
                         } else {
-                            Color(0xFF202738)
+                            Panel
                         },
                         focusedContainerColor = Primary,
                     ),
@@ -663,7 +667,7 @@ private fun SettingsStatus(
 
 @Composable
 private fun settingRowColors() = ButtonDefaults.colors(
-    containerColor = Color(0xFF202738),
+    containerColor = PanelElevated,
     focusedContainerColor = Primary,
 )
 

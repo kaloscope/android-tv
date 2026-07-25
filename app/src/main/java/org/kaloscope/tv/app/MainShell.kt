@@ -29,10 +29,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -45,7 +49,6 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -64,12 +67,17 @@ import org.kaloscope.tv.app.navigation.openPlayer
 import org.kaloscope.tv.app.navigation.openSettings
 import org.kaloscope.tv.app.navigation.selectRoot
 import org.kaloscope.tv.core.common.AppError
-import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.BackgroundRaised
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeBackground
+import org.kaloscope.tv.core.designsystem.KaloscopeBrand
+import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.TvSettings
@@ -201,11 +209,8 @@ internal fun MainShell(
         goBack()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
-    ) {
+    KaloscopeBackground {
+        Column(modifier = Modifier.fillMaxSize()) {
         if (currentRoute !is MediaDetailRoute && currentRoute !is PlayerRoute) {
             MainTopBar(
                 currentRoute = currentRoute,
@@ -255,6 +260,7 @@ internal fun MainShell(
                 entryProvider = entryProvider {
                     entry<HomeRoute> {
                         HomeScreen(
+                            session = session,
                             state = homeState,
                             onRefresh = onRefresh,
                             restoreMediaId = restoreMediaId,
@@ -382,6 +388,7 @@ internal fun MainShell(
             )
         }
     }
+    }
 }
 
 @Composable
@@ -399,27 +406,23 @@ private fun MainTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(82.dp)
-            .background(Color(0xFF0B101C))
+            .height(76.dp)
+            .background(BackgroundRaised.copy(alpha = 0.88f))
             .padding(horizontal = 44.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.width(230.dp)) {
-            Text(
-                text = stringResource(R.string.app_name),
-                color = OnBackground,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(R.string.tv_experience),
-                color = Primary,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.8.sp,
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        KaloscopeBrand(
+            name = stringResource(R.string.app_name),
+            caption = stringResource(R.string.tv_experience),
+            compact = true,
+            modifier = Modifier.width(230.dp),
+        )
+        Row(
+            modifier = Modifier
+                .background(Panel.copy(alpha = 0.82f), RoundedCornerShape(14.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             MainNavButton(
                 text = stringResource(R.string.home),
                 selected = currentRoute == HomeRoute,
@@ -475,11 +478,14 @@ private fun MainNavButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        selected = selected,
+    KaloscopeFocusSurface(
         onClick = onClick,
+        selected = selected,
         enabled = enabled,
-        modifier = modifier.height(46.dp),
+        modifier = modifier.height(42.dp),
+        shape = RoundedCornerShape(11.dp),
+        focusedContainerColor = PanelElevated,
+        focusScale = 1.02f,
     ) {
         Box(
             modifier = Modifier
@@ -504,11 +510,14 @@ private fun SettingsButton(
     modifier: Modifier = Modifier,
 ) {
     val label = stringResource(R.string.settings)
-    Surface(
-        selected = selected,
+    KaloscopeFocusSurface(
         onClick = onClick,
+        selected = selected,
+        shape = RoundedCornerShape(14.dp),
+        focusedContainerColor = PanelElevated,
+        focusScale = 1.02f,
         modifier = modifier
-            .size(52.dp)
+            .size(46.dp)
             .semantics {
                 contentDescription = label
             },
@@ -548,6 +557,7 @@ private fun formatCurrentTime(): String =
 
 @Composable
 private fun HomeScreen(
+    session: Session,
     state: HomeUiState,
     onRefresh: () -> Unit,
     restoreMediaId: Long?,
@@ -601,6 +611,7 @@ private fun HomeScreen(
             )
 
             is HomeUiState.Content -> HistoryContent(
+                session = session,
                 items = state.items,
                 restoreMediaId = restoreMediaId,
                 onOpenMedia = onOpenMedia,
@@ -612,6 +623,7 @@ private fun HomeScreen(
 
 @Composable
 private fun HistoryContent(
+    session: Session,
     items: List<WatchHistoryItem>,
     restoreMediaId: Long?,
     onOpenMedia: (Long) -> Unit,
@@ -619,6 +631,7 @@ private fun HistoryContent(
 ) {
     val featured = items.first()
     FeaturedHistoryCard(
+        session = session,
         item = featured,
         restoreFocus = featured.mediaId == restoreMediaId,
         onOpenMedia = onOpenMedia,
@@ -639,6 +652,7 @@ private fun HistoryContent(
                 key = WatchHistoryItem::historyId,
             ) { item ->
                 CompactHistoryCard(
+                    session = session,
                     item = item,
                     restoreFocus = item.mediaId == restoreMediaId,
                     onPlayHistory = onPlayHistory,
@@ -650,6 +664,7 @@ private fun HistoryContent(
 
 @Composable
 private fun FeaturedHistoryCard(
+    session: Session,
     item: WatchHistoryItem,
     restoreFocus: Boolean,
     onOpenMedia: (Long) -> Unit,
@@ -662,22 +677,40 @@ private fun FeaturedHistoryCard(
             detailFocus.requestFocus()
         }
     }
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(260.dp)
-            .background(Card, RoundedCornerShape(20.dp))
-            .padding(30.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .height(300.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(Card)
+            .testTag("home-hero"),
     ) {
-        HistoryArtwork(
-            item = item,
-            modifier = Modifier
-                .width(290.dp)
-                .fillMaxHeight(),
+        ServerImage(
+            session = session,
+            rawValue = item.backdropPath ?: item.posterPath,
+            fallbackText = item.title,
+            contentDescription = item.title,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
         )
-        Spacer(Modifier.width(30.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        0f to Color(0xFA070B14),
+                        0.53f to Color(0xCC070B14),
+                        1f to Color(0x26070B14),
+                    ),
+                ),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(0.66f)
+                .padding(horizontal = 34.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(
                 text = stringResource(R.string.continue_watching),
                 color = Primary,
@@ -722,6 +755,7 @@ private fun FeaturedHistoryCard(
 
 @Composable
 private fun CompactHistoryCard(
+    session: Session,
     item: WatchHistoryItem,
     restoreFocus: Boolean,
     onPlayHistory: (WatchHistoryItem) -> Unit,
@@ -733,22 +767,27 @@ private fun CompactHistoryCard(
             cardFocus.requestFocus()
         }
     }
-    Surface(
+    KaloscopeFocusSurface(
         onClick = { onPlayHistory(item) },
+        shape = RoundedCornerShape(16.dp),
+        containerColor = Panel.copy(alpha = 0.72f),
+        focusedContainerColor = PanelElevated,
+        focusScale = 1.04f,
         modifier = Modifier
-            .width(250.dp)
+            .width(258.dp)
             .focusRequester(cardFocus),
     ) {
-        Column(
-            modifier = Modifier
-                .background(Card, RoundedCornerShape(16.dp))
-                .padding(16.dp),
-        ) {
-            HistoryArtwork(
-                item = item,
+        Column(modifier = Modifier.padding(10.dp)) {
+            ServerImage(
+                session = session,
+                rawValue = item.backdropPath ?: item.posterPath,
+                fallbackText = item.title,
+                contentDescription = item.title,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(112.dp),
+                    .height(128.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
             )
             Spacer(Modifier.height(12.dp))
             Text(
@@ -795,27 +834,6 @@ private fun HomeEmpty(
         ) {
             Text(stringResource(R.string.open_library))
         }
-    }
-}
-
-@Composable
-private fun HistoryArtwork(
-    item: WatchHistoryItem,
-    modifier: Modifier,
-) {
-    Box(
-        modifier = modifier.background(
-            color = Color(0xFF25334D),
-            shape = RoundedCornerShape(14.dp),
-        ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = item.title.take(1).ifBlank { "K" },
-            color = Color(0xFFBAC6E8),
-            fontSize = 58.sp,
-            fontWeight = FontWeight.Light,
-        )
     }
 }
 

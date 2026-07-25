@@ -27,12 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,8 +54,12 @@ import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.PanelElevated
+import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.NetworkDefinition
@@ -472,10 +478,11 @@ internal fun PlayerControls(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(Color(0x99000000), Color.Transparent, Color(0xD9000000)),
+                Brush.verticalGradient(
+                    listOf(Color(0xA6000000), Color.Transparent, Color(0xF0050810)),
                 ),
             )
+            .testTag("player-control-layer")
             .padding(horizontal = 50.dp, vertical = 36.dp),
     ) {
         Row(
@@ -630,7 +637,7 @@ internal fun PlayerDefinitionDrawer(
             modifier = Modifier
                 .fillMaxHeight()
                 .width(390.dp)
-                .background(Color(0xF20D1320))
+                .background(Panel.copy(alpha = 0.96f))
                 .padding(horizontal = 34.dp, vertical = 46.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -688,7 +695,7 @@ private fun PlayerButton(
         enabled = enabled,
         modifier = modifier.height(if (primary) 58.dp else 48.dp),
         colors = ButtonDefaults.colors(
-            containerColor = if (active) Color(0xFF514A88) else Color(0xFF242938),
+            containerColor = if (active) PanelSelected else PanelElevated,
             focusedContainerColor = if (primary) Color.White else Primary,
             contentColor = OnBackground,
             focusedContentColor = if (primary) Background else Color.White,
@@ -841,32 +848,32 @@ private fun PlayerMessage(
     description: String,
     onBack: (() -> Unit)? = null,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = title,
-                color = OnBackground,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = description,
-                color = Muted,
-                fontSize = 16.sp,
-            )
-            onBack?.let {
-                Spacer(Modifier.height(18.dp))
-                Button(
-                    onClick = it,
-                    colors = ButtonDefaults.colors(focusedContainerColor = Primary),
-                ) {
-                    Text(stringResource(R.string.back))
+    KaloscopeBackground {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = title,
+                    color = OnBackground,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = description,
+                    color = Muted,
+                    fontSize = 16.sp,
+                )
+                onBack?.let {
+                    Spacer(Modifier.height(18.dp))
+                    Button(
+                        onClick = it,
+                        colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                    ) {
+                        Text(stringResource(R.string.back))
+                    }
                 }
             }
         }
