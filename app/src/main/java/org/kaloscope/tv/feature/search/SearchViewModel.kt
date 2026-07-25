@@ -7,6 +7,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.TvSettings
@@ -62,6 +63,9 @@ class SearchViewModel @Inject constructor(
 
     fun rememberFocusedResult(resultId: String) =
         coordinator.rememberFocusedResult(resultId)
+
+    fun rememberGridViewport(snapshot: GridViewportSnapshot) =
+        coordinator.rememberGridViewport(snapshot)
 
     fun play(
         session: Session,

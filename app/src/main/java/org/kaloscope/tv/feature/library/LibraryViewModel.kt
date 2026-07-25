@@ -7,6 +7,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.data.media.MediaRepository
 
@@ -54,6 +55,9 @@ class LibraryViewModel @Inject constructor(
 
     fun rememberFocusedMedia(mediaId: Long) =
         coordinator.rememberFocusedMedia(mediaId)
+
+    fun rememberGridViewport(snapshot: GridViewportSnapshot) =
+        coordinator.rememberGridViewport(snapshot)
 
     fun reset() {
         requestJob?.cancel()

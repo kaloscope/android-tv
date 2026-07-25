@@ -1,11 +1,13 @@
 package org.kaloscope.tv.feature.search
 
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.SearchFilterValue
@@ -32,6 +34,7 @@ sealed interface SearchUiState {
         val filterDrawerOpen: Boolean = false,
         val results: SearchResultsState = SearchResultsState.AwaitingQuery,
         val focusedResultId: String? = null,
+        val gridViewport: GridViewportSnapshot = GridViewportSnapshot.Top,
         val resolvingResultId: String? = null,
         val playbackError: AppError? = null,
         val pendingPlaybackRequestId: String? = null,
@@ -134,6 +137,7 @@ class SearchCoordinator(
             filterDrawerOpen = false,
             results = SearchResultsState.AwaitingQuery,
             focusedResultId = null,
+            gridViewport = GridViewportSnapshot.Top,
             playbackError = null,
         )
         if (!profile.keywordRequired) {
@@ -149,6 +153,8 @@ class SearchCoordinator(
             mutableState.value = content.copy(
                 submittedKeyword = "",
                 results = SearchResultsState.AwaitingQuery,
+                focusedResultId = null,
+                gridViewport = GridViewportSnapshot.Top,
             )
             return
         }
@@ -156,6 +162,7 @@ class SearchCoordinator(
             submittedKeyword = keyword,
             results = SearchResultsState.Loading,
             focusedResultId = null,
+            gridViewport = GridViewportSnapshot.Top,
             playbackError = null,
         )
         loadFirstPage(session, profile, keyword, content.appliedFilters)
@@ -183,30 +190,50 @@ class SearchCoordinator(
         mutableState.value = content.copy(
             results = current.copy(isLoadingMore = true, loadMoreError = null),
         )
-        when (
-            val result = repository.search(
-                session,
-                content.selectedProfile,
-                content.submittedKeyword,
-                content.appliedFilters,
-                current.pageNumber + 1,
-            )
-        ) {
-            is AppResult.Failure -> updateContent {
-                copy(results = current.copy(isLoadingMore = false, loadMoreError = result.error))
-            }
-
-            is AppResult.Success -> updateContent {
-                copy(
-                    results = SearchResultsState.Content(
-                        items = (current.items + result.value.items)
-                            .distinctBy(NetworkSearchResult::id),
-                        total = result.value.total,
-                        pageNumber = result.value.pageNumber,
-                        hasNext = result.value.hasNext,
-                    ),
+        try {
+            when (
+                val result = repository.search(
+                    session,
+                    content.selectedProfile,
+                    content.submittedKeyword,
+                    content.appliedFilters,
+                    current.pageNumber + 1,
                 )
+            ) {
+                is AppResult.Failure -> updateContent {
+                    copy(
+                        results = current.copy(
+                            isLoadingMore = false,
+                            loadMoreError = result.error,
+                        ),
+                    )
+                }
+
+                is AppResult.Success -> updateContent {
+                    copy(
+                        results = SearchResultsState.Content(
+                            items = (current.items + result.value.items)
+                                .distinctBy(NetworkSearchResult::id),
+                            total = result.value.total,
+                            pageNumber = result.value.pageNumber,
+                            hasNext = result.value.hasNext,
+                        ),
+                    )
+                }
             }
+        } catch (error: CancellationException) {
+            updateContent {
+                val latest = results as? SearchResultsState.Content
+                if (
+                    latest?.isLoadingMore == true &&
+                    latest.pageNumber == current.pageNumber
+                ) {
+                    copy(results = latest.copy(isLoadingMore = false))
+                } else {
+                    this
+                }
+            }
+            throw error
         }
     }
 
@@ -228,6 +255,7 @@ class SearchCoordinator(
             appliedFilters = values.filterKeys(allowedKeys::contains),
             filterDrawerOpen = false,
             focusedResultId = null,
+            gridViewport = GridViewportSnapshot.Top,
         )
         search(session)
     }
@@ -238,6 +266,7 @@ class SearchCoordinator(
             appliedFilters = emptyMap(),
             filterDrawerOpen = false,
             focusedResultId = null,
+            gridViewport = GridViewportSnapshot.Top,
         )
         search(session)
     }
@@ -246,6 +275,13 @@ class SearchCoordinator(
         val content = mutableState.value as? SearchUiState.Content ?: return
         if (content.results.items.any { it.id == resultId }) {
             mutableState.value = content.copy(focusedResultId = resultId)
+        }
+    }
+
+    fun rememberGridViewport(snapshot: GridViewportSnapshot) {
+        val content = mutableState.value as? SearchUiState.Content ?: return
+        if (content.gridViewport != snapshot) {
+            mutableState.value = content.copy(gridViewport = snapshot)
         }
     }
 

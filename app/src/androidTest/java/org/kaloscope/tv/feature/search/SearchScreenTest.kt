@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
@@ -19,6 +20,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
@@ -293,11 +296,161 @@ class SearchScreenTest {
             .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
     }
+
+    @Test
+    fun deepViewportRestoresFocusedResult() {
+        val results = (1..30).map { result("v$it") }
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = results,
+                        focusedResultId = "v25",
+                        gridViewport = GridViewportSnapshot(24, 0),
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onGridViewportChanged = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
+    }
+
+    @Test
+    fun prefetchZoneRequestsOneNextPage() {
+        var loads = 0
+        val results = (1..20).map { result("v$it") }
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(results = results, hasNext = true),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = { loads += 1 },
+                    onResultFocused = {},
+                    onGridViewportChanged = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(19)
+        composeRule.onNodeWithTag("network-result-v20")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        composeRule.runOnIdle {
+            assertEquals(1, loads)
+        }
+    }
+
+    @Test
+    fun finalPageDoesNotPrefetchOrRenderPagingFooter() {
+        var loads = 0
+        val results = (1..20).map { result("v$it") }
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(results = results, hasNext = false),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = { loads += 1 },
+                    onResultFocused = {},
+                    onGridViewportChanged = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(19)
+        composeRule.onNodeWithTag("network-result-v20")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("search-load-more-loading").assertDoesNotExist()
+        composeRule.onNodeWithTag("search-load-more-retry").assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(0, loads)
+        }
+    }
+
+    @Test
+    fun loadMoreFailureKeepsResultsAndOffersFocusableRetry() {
+        var loads = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = (1..20).map { result("v$it") },
+                        hasNext = true,
+                        loadMoreError = AppError.Offline,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = { loads += 1 },
+                    onResultFocused = {},
+                    onGridViewportChanged = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(20)
+        composeRule.onNodeWithTag("network-result-v20").assertExists()
+        composeRule.onNodeWithTag("search-load-more-retry")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(1, loads)
+        }
+    }
 }
 
 private fun state(
     filters: List<SearchFilterDefinition> = emptyList(),
     filterDrawerOpen: Boolean = false,
+    results: List<NetworkSearchResult> = listOf(result("v1")),
+    focusedResultId: String? = null,
+    gridViewport: GridViewportSnapshot = GridViewportSnapshot.Top,
+    hasNext: Boolean = false,
+    isLoadingMore: Boolean = false,
+    loadMoreError: AppError? = null,
 ): SearchUiState {
     val profile = IndexerSourceProfile(
         indexer = indexer(),
@@ -311,24 +464,28 @@ private fun state(
         query = "星际",
         submittedKeyword = "星际",
         filterDrawerOpen = filterDrawerOpen,
+        focusedResultId = focusedResultId,
+        gridViewport = gridViewport,
         results = SearchResultsState.Content(
-            items = listOf(
-                NetworkSearchResult(
-                    id = "v1",
-                    title = "星际回声",
-                    coverPath = null,
-                    rating = 8.6,
-                    category = "科幻",
-                    uploader = null,
-                    uploadedAt = null,
-                ),
-            ),
-            total = 1,
+            items = results,
+            total = results.size,
             pageNumber = 1,
-            hasNext = false,
+            hasNext = hasNext,
+            isLoadingMore = isLoadingMore,
+            loadMoreError = loadMoreError,
         ),
     )
 }
+
+private fun result(id: String) = NetworkSearchResult(
+    id = id,
+    title = "视频$id",
+    coverPath = null,
+    rating = 8.6,
+    category = "科幻",
+    uploader = null,
+    uploadedAt = null,
+)
 
 private fun regionFilter() = SearchFilterDefinition(
     key = "region",

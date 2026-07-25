@@ -16,13 +16,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,8 +45,10 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
@@ -50,6 +58,7 @@ import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
@@ -66,6 +75,7 @@ fun LibraryScreen(
     onLoadMore: () -> Unit,
     onMediaFocused: (Long) -> Unit,
     onOpenMedia: (Long) -> Unit,
+    onGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
 ) {
     when (state) {
         LibraryUiState.Loading -> LibraryStatus(
@@ -93,6 +103,7 @@ fun LibraryScreen(
             onRetry = onRetry,
             onLoadMore = onLoadMore,
             onMediaFocused = onMediaFocused,
+            onGridViewportChanged = onGridViewportChanged,
             onOpenMedia = onOpenMedia,
         )
     }
@@ -109,13 +120,15 @@ private fun LibraryContent(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onMediaFocused: (Long) -> Unit,
+    onGridViewportChanged: (GridViewportSnapshot) -> Unit,
     onOpenMedia: (Long) -> Unit,
 ) {
     val firstLibraryFocus = remember { FocusRequester() }
+    val restoreTargetId = restoreMediaId ?: state.focusedMediaId
 
     // Entering the root starts at the first source; returning from detail restores its card.
-    LaunchedEffect(state.selectedLibraryId, restoreMediaId) {
-        if (restoreMediaId == null) {
+    LaunchedEffect(state.selectedLibraryId, restoreTargetId) {
+        if (restoreTargetId == null) {
             firstLibraryFocus.requestFocus()
         }
     }
@@ -144,10 +157,12 @@ private fun LibraryContent(
             LibraryItems(
                 session = session,
                 state = state.items,
-                restoreMediaId = restoreMediaId,
+                restoreMediaId = restoreTargetId,
+                gridViewport = state.gridViewport,
                 onRetry = onRetry,
                 onLoadMore = onLoadMore,
                 onMediaFocused = onMediaFocused,
+                onGridViewportChanged = onGridViewportChanged,
                 onOpenMedia = onOpenMedia,
             )
         }
@@ -250,9 +265,11 @@ private fun LibraryItems(
     session: Session,
     state: LibraryItemsState,
     restoreMediaId: Long?,
+    gridViewport: GridViewportSnapshot,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onMediaFocused: (Long) -> Unit,
+    onGridViewportChanged: (GridViewportSnapshot) -> Unit,
     onOpenMedia: (Long) -> Unit,
 ) {
     when (state) {
@@ -271,54 +288,116 @@ private fun LibraryItems(
             onRetry = onRetry,
         )
 
-        is LibraryItemsState.Content -> Column(modifier = Modifier.fillMaxSize()) {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 172.dp),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(
-                    start = 8.dp,
-                    top = 8.dp,
-                    end = 8.dp,
-                    bottom = 24.dp,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-            ) {
-                items(
-                    items = state.items,
-                    key = MediaSummary::id,
-                ) { media ->
-                    MediaCard(
-                        session = session,
-                        media = media,
-                        restoreFocus = media.id == restoreMediaId,
-                        onFocused = { onMediaFocused(media.id) },
-                        onClick = { onOpenMedia(media.id) },
-                    )
-                }
+        is LibraryItemsState.Content -> {
+            val restoreIndex = gridViewport.firstVisibleItemIndex
+                .coerceIn(0, state.items.lastIndex.coerceAtLeast(0))
+            val resolvedRestoreMediaId = restoreMediaId?.let { focusedId ->
+                focusedId.takeIf { id -> state.items.any { it.id == id } }
+                    ?: state.items.getOrNull(restoreIndex)?.id
             }
-            if (state.hasNext || state.isLoadingMore || state.loadMoreError != null) {
-                Spacer(Modifier.height(12.dp))
-                state.loadMoreError?.let { error ->
-                    Text(
-                        text = libraryErrorText(error),
-                        color = Danger,
-                        fontSize = 14.sp,
+            val gridState = rememberLazyGridState(
+                initialFirstVisibleItemIndex = restoreIndex,
+                initialFirstVisibleItemScrollOffset =
+                    gridViewport.firstVisibleItemScrollOffset,
+            )
+            var lastPrefetchedPage by remember { mutableIntStateOf(-1) }
+            LaunchedEffect(gridState, state.items.size) {
+                snapshotFlow {
+                    GridViewportSnapshot(
+                        firstVisibleItemIndex = gridState.firstVisibleItemIndex
+                            .coerceAtMost(state.items.lastIndex.coerceAtLeast(0)),
+                        firstVisibleItemScrollOffset =
+                            gridState.firstVisibleItemScrollOffset.coerceAtLeast(0),
                     )
-                    Spacer(Modifier.height(8.dp))
-                }
-                Button(
-                    onClick = onLoadMore,
-                    enabled = !state.isLoadingMore,
-                    colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                }.distinctUntilChanged().collect(onGridViewportChanged)
+            }
+            Column(modifier = Modifier.fillMaxSize()) {
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Adaptive(minSize = 172.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("library-results-grid"),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        top = 8.dp,
+                        end = 8.dp,
+                        bottom = 24.dp,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
-                    Text(
-                        if (state.isLoadingMore) {
-                            stringResource(R.string.loading_more)
-                        } else {
-                            stringResource(R.string.load_more)
-                        },
-                    )
+                    itemsIndexed(
+                        items = state.items,
+                        key = { _, media -> media.id },
+                    ) { mediaIndex, media ->
+                        MediaCard(
+                            session = session,
+                            media = media,
+                            restoreFocus = media.id == resolvedRestoreMediaId,
+                            onFocused = {
+                                onMediaFocused(media.id)
+                                if (
+                                    lastPrefetchedPage != state.pageNumber &&
+                                    shouldPrefetchGridItem(
+                                        focusedItemIndex = mediaIndex,
+                                        itemCount = state.items.size,
+                                        columnCount = gridState.layoutInfo.maxSpan,
+                                        hasNext = state.hasNext,
+                                        isLoadingMore = state.isLoadingMore,
+                                        hasLoadMoreError = state.loadMoreError != null,
+                                    )
+                                ) {
+                                    lastPrefetchedPage = state.pageNumber
+                                    onLoadMore()
+                                }
+                            },
+                            onClick = { onOpenMedia(media.id) },
+                        )
+                    }
+                    if (state.hasNext && state.isLoadingMore) {
+                        item(
+                            key = "library-load-more-loading",
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.loading_more),
+                                color = Muted,
+                                fontSize = 14.sp,
+                                modifier = Modifier.testTag("library-load-more-loading"),
+                            )
+                        }
+                    }
+                    if (
+                        state.hasNext &&
+                        !state.isLoadingMore &&
+                        state.loadMoreError != null
+                    ) {
+                        item(
+                            key = "library-load-more-retry",
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) {
+                            Column {
+                                Text(
+                                    text = libraryErrorText(state.loadMoreError),
+                                    color = Danger,
+                                    fontSize = 14.sp,
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = onLoadMore,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("library-load-more-retry"),
+                                    colors = ButtonDefaults.colors(
+                                        focusedContainerColor = Primary,
+                                    ),
+                                ) {
+                                    Text(stringResource(R.string.retry))
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

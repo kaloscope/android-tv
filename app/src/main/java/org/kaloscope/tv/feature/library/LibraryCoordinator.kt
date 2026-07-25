@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
@@ -26,6 +27,7 @@ sealed interface LibraryUiState {
         val submittedKeyword: String = "",
         val items: LibraryItemsState = LibraryItemsState.Loading,
         val focusedMediaId: Long? = null,
+        val gridViewport: GridViewportSnapshot = GridViewportSnapshot.Top,
     ) : LibraryUiState {
         val selectedLibrary: MediaLibrary
             get() = checkNotNull(libraries.firstOrNull { it.id == selectedLibraryId })
@@ -104,6 +106,7 @@ class LibraryCoordinator(
             submittedKeyword = content.query.trim(),
             items = LibraryItemsState.Loading,
             focusedMediaId = null,
+            gridViewport = GridViewportSnapshot.Top,
         )
         loadFirstPage(session)
     }
@@ -124,6 +127,7 @@ class LibraryCoordinator(
             submittedKeyword = "",
             items = LibraryItemsState.Loading,
             focusedMediaId = null,
+            gridViewport = GridViewportSnapshot.Top,
         )
         loadFirstPage(session)
     }
@@ -187,6 +191,13 @@ class LibraryCoordinator(
             return
         }
         mutableState.value = content.copy(focusedMediaId = mediaId)
+    }
+
+    fun rememberGridViewport(snapshot: GridViewportSnapshot) {
+        val content = mutableState.value as? LibraryUiState.Content ?: return
+        if (content.gridViewport != snapshot) {
+            mutableState.value = content.copy(gridViewport = snapshot)
+        }
     }
 
     private suspend fun loadFirstPage(session: Session) {

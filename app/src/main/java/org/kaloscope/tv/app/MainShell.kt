@@ -79,6 +79,7 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SearchFilterValue
@@ -122,6 +123,7 @@ internal fun MainShell(
     onRetrySearch: () -> Unit = {},
     onLoadMoreSearch: () -> Unit = {},
     onSearchResultFocused: (String) -> Unit = {},
+    onSearchGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
     onPlaySearchResult: (String) -> Unit = {},
     onOpenSearchFilters: () -> Unit = {},
     onDismissSearchFilters: () -> Unit = {},
@@ -135,6 +137,7 @@ internal fun MainShell(
     onRetryLibrary: () -> Unit,
     onLoadMoreMedia: () -> Unit,
     onMediaFocused: (Long) -> Unit,
+    onLibraryGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
     onOpenMedia: (Long) -> Unit,
     onRetryDetail: () -> Unit,
     onSelectMediaChild: (Long) -> Unit,
@@ -314,6 +317,7 @@ internal fun MainShell(
                             onRetry = onRetrySearch,
                             onLoadMore = onLoadMoreSearch,
                             onResultFocused = onSearchResultFocused,
+                            onGridViewportChanged = onSearchGridViewportChanged,
                             onPlay = onPlaySearchResult,
                             onOpenFilters = onOpenSearchFilters,
                             onDismissFilters = onDismissSearchFilters,
@@ -332,6 +336,7 @@ internal fun MainShell(
                             onRetry = onRetryLibrary,
                             onLoadMore = onLoadMoreMedia,
                             onMediaFocused = onMediaFocused,
+                            onGridViewportChanged = onLibraryGridViewportChanged,
                             onOpenMedia = { mediaId ->
                                 restoreMediaId = null
                                 backStack.openMediaDetail(mediaId)

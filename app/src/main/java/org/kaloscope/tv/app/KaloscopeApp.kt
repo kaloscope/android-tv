@@ -194,6 +194,7 @@ fun KaloscopeApp(
                     },
                     onLoadMoreSearch = { searchViewModel.loadNext(state.session) },
                     onSearchResultFocused = searchViewModel::rememberFocusedResult,
+                    onSearchGridViewportChanged = searchViewModel::rememberGridViewport,
                     onPlaySearchResult = { resultId ->
                         searchViewModel.play(
                             state.session,
@@ -225,6 +226,7 @@ fun KaloscopeApp(
                     },
                     onLoadMoreMedia = { libraryViewModel.loadNext(state.session) },
                     onMediaFocused = libraryViewModel::rememberFocusedMedia,
+                    onLibraryGridViewportChanged = libraryViewModel::rememberGridViewport,
                     onOpenMedia = { mediaId ->
                         detailViewModel.load(state.session, mediaId)
                     },

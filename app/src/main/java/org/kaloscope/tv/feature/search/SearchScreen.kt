@@ -16,15 +16,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -43,9 +47,11 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
@@ -54,6 +60,7 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.SearchFilterValue
@@ -75,6 +82,7 @@ fun SearchScreen(
     onDismissFilters: () -> Unit,
     onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
     onClearFilters: () -> Unit,
+    onGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
 ) {
     when (state) {
         SearchUiState.Loading -> SearchStatus(
@@ -94,6 +102,7 @@ fun SearchScreen(
             onRetry = onRetry,
             onLoadMore = onLoadMore,
             onResultFocused = onResultFocused,
+            onGridViewportChanged = onGridViewportChanged,
             onPlay = onPlay,
             onOpenFilters = onOpenFilters,
             onDismissFilters = onDismissFilters,
@@ -113,6 +122,7 @@ private fun SearchContent(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
+    onGridViewportChanged: (GridViewportSnapshot) -> Unit,
     onPlay: (String) -> Unit,
     onOpenFilters: () -> Unit,
     onDismissFilters: () -> Unit,
@@ -169,6 +179,7 @@ private fun SearchContent(
                 onRetry = onRetry,
                 onLoadMore = onLoadMore,
                 onResultFocused = onResultFocused,
+                onGridViewportChanged = onGridViewportChanged,
                 onPlay = onPlay,
             )
         }
@@ -351,6 +362,7 @@ private fun SearchResults(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
+    onGridViewportChanged: (GridViewportSnapshot) -> Unit,
     onPlay: (String) -> Unit,
 ) {
     when (val results = state.results) {
@@ -370,61 +382,138 @@ private fun SearchResults(
         )
 
         is SearchResultsState.Error -> SearchError(results.error, onRetry)
-        is SearchResultsState.Content -> Column(modifier = Modifier.fillMaxSize()) {
-            state.playbackError?.let { error ->
-                Text(
-                    text = stringResource(
-                        R.string.resolve_playback_failed,
-                        searchErrorText(error),
-                    ),
-                    color = Danger,
-                    fontSize = 14.sp,
-                )
-                Spacer(Modifier.height(10.dp))
+        is SearchResultsState.Content -> {
+            val restoreIndex = state.gridViewport.firstVisibleItemIndex
+                .coerceIn(0, results.items.lastIndex.coerceAtLeast(0))
+            val restoreResultId = state.focusedResultId?.let { focusedId ->
+                focusedId.takeIf { id -> results.items.any { it.id == id } }
+                    ?: results.items.getOrNull(restoreIndex)?.id
             }
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(
-                    minSize = if (coverRatio >= 1f) 238.dp else 172.dp,
-                ),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(
-                    start = 8.dp,
-                    top = 8.dp,
-                    end = 8.dp,
-                    bottom = 24.dp,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+            val gridState = rememberLazyGridState(
+                initialFirstVisibleItemIndex = restoreIndex,
+                initialFirstVisibleItemScrollOffset =
+                    state.gridViewport.firstVisibleItemScrollOffset,
+            )
+            var lastPrefetchedPage by remember(
+                state.selectedIndexerId,
+                state.submittedKeyword,
+                state.appliedFilters,
             ) {
-                items(results.items, key = NetworkSearchResult::id) { result ->
-                    NetworkResultCard(
-                        session = session,
-                        result = result,
-                        coverRatio = coverRatio,
-                        restoreFocus = result.id == state.focusedResultId,
-                        enabled = state.resolvingResultId == null,
-                        resolving = result.id == state.resolvingResultId,
-                        onFocused = { onResultFocused(result.id) },
-                        onClick = { onPlay(result.id) },
-                    )
-                }
+                mutableIntStateOf(-1)
             }
-            if (results.hasNext || results.isLoadingMore || results.loadMoreError != null) {
-                results.loadMoreError?.let {
-                    Text(searchErrorText(it), color = Danger, fontSize = 14.sp)
-                }
-                Button(
-                    onClick = onLoadMore,
-                    enabled = !results.isLoadingMore,
-                    colors = ButtonDefaults.colors(focusedContainerColor = Primary),
-                ) {
-                    Text(
-                        if (results.isLoadingMore) {
-                            stringResource(R.string.loading_more)
-                        } else {
-                            stringResource(R.string.load_more)
-                        },
+            LaunchedEffect(gridState, results.items.size) {
+                snapshotFlow {
+                    GridViewportSnapshot(
+                        firstVisibleItemIndex = gridState.firstVisibleItemIndex
+                            .coerceAtMost(results.items.lastIndex.coerceAtLeast(0)),
+                        firstVisibleItemScrollOffset =
+                            gridState.firstVisibleItemScrollOffset.coerceAtLeast(0),
                     )
+                }.distinctUntilChanged().collect(onGridViewportChanged)
+            }
+            Column(modifier = Modifier.fillMaxSize()) {
+                state.playbackError?.let { error ->
+                    Text(
+                        text = stringResource(
+                            R.string.resolve_playback_failed,
+                            searchErrorText(error),
+                        ),
+                        color = Danger,
+                        fontSize = 14.sp,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Adaptive(
+                        minSize = if (coverRatio >= 1f) 238.dp else 172.dp,
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("search-results-grid"),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        top = 8.dp,
+                        end = 8.dp,
+                        bottom = 24.dp,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                ) {
+                    itemsIndexed(
+                        items = results.items,
+                        key = { _, result -> result.id },
+                    ) { resultIndex, result ->
+                        NetworkResultCard(
+                            session = session,
+                            result = result,
+                            coverRatio = coverRatio,
+                            restoreFocus = result.id == restoreResultId,
+                            enabled = state.resolvingResultId == null,
+                            resolving = result.id == state.resolvingResultId,
+                            onFocused = {
+                                onResultFocused(result.id)
+                                if (
+                                    lastPrefetchedPage != results.pageNumber &&
+                                    shouldPrefetchGridItem(
+                                        focusedItemIndex = resultIndex,
+                                        itemCount = results.items.size,
+                                        columnCount = gridState.layoutInfo.maxSpan,
+                                        hasNext = results.hasNext,
+                                        isLoadingMore = results.isLoadingMore,
+                                        hasLoadMoreError = results.loadMoreError != null,
+                                    )
+                                ) {
+                                    lastPrefetchedPage = results.pageNumber
+                                    onLoadMore()
+                                }
+                            },
+                            onClick = { onPlay(result.id) },
+                        )
+                    }
+                    if (results.hasNext && results.isLoadingMore) {
+                        item(
+                            key = "search-load-more-loading",
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.loading_more),
+                                color = Muted,
+                                fontSize = 14.sp,
+                                modifier = Modifier.testTag("search-load-more-loading"),
+                            )
+                        }
+                    }
+                    if (
+                        results.hasNext &&
+                        !results.isLoadingMore &&
+                        results.loadMoreError != null
+                    ) {
+                        item(
+                            key = "search-load-more-retry",
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) {
+                            Column {
+                                Text(
+                                    text = searchErrorText(results.loadMoreError),
+                                    color = Danger,
+                                    fontSize = 14.sp,
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = onLoadMore,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("search-load-more-retry"),
+                                    colors = ButtonDefaults.colors(
+                                        focusedContainerColor = Primary,
+                                    ),
+                                ) {
+                                    Text(stringResource(R.string.retry))
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

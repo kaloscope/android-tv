@@ -1,5 +1,8 @@
 package org.kaloscope.tv.feature.search
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +12,7 @@ import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DanmakuComment
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
@@ -29,6 +33,23 @@ import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.data.search.SearchRepository
 
 class SearchCoordinatorTest {
+    @Test
+    fun `viewport is remembered for the current search dataset`() = runTest {
+        val coordinator = coordinator(
+            FakeSearchRepository(
+                pages = mutableListOf(AppResult.Success(page("v1"))),
+            ),
+        )
+        coordinator.load(session())
+        coordinator.updateQuery("星际")
+        coordinator.search(session())
+
+        coordinator.rememberGridViewport(GridViewportSnapshot(18, 24))
+
+        val state = coordinator.state.value as SearchUiState.Content
+        assertEquals(GridViewportSnapshot(18, 24), state.gridViewport)
+    }
+
     @Test
     fun `initial load selects first real indexer and awaits required keyword`() = runTest {
         val repository = FakeSearchRepository()
@@ -77,6 +98,7 @@ class SearchCoordinatorTest {
             mapOf("region" to SearchFilterValue.Scalar("cn")),
         )
         coordinator.rememberFocusedResult("v1")
+        coordinator.rememberGridViewport(GridViewportSnapshot(8, 12))
 
         coordinator.selectIndexer(session(), 12)
 
@@ -85,6 +107,32 @@ class SearchCoordinatorTest {
         assertTrue(state.appliedFilters.isEmpty())
         assertEquals(SearchResultsState.AwaitingQuery, state.results)
         assertNull(state.focusedResultId)
+        assertEquals(GridViewportSnapshot.Top, state.gridViewport)
+    }
+
+    @Test
+    fun `submitting a new search clears viewport and focus`() = runTest {
+        val coordinator = coordinator(
+            FakeSearchRepository(
+                pages = mutableListOf(
+                    AppResult.Success(page("v1")),
+                    AppResult.Success(page("v2")),
+                ),
+            ),
+        )
+        coordinator.load(session())
+        coordinator.updateQuery("旧关键词")
+        coordinator.search(session())
+        coordinator.rememberFocusedResult("v1")
+        coordinator.rememberGridViewport(GridViewportSnapshot(9, 16))
+
+        coordinator.updateQuery("新关键词")
+        coordinator.search(session())
+
+        val state = coordinator.state.value as SearchUiState.Content
+        assertEquals(GridViewportSnapshot.Top, state.gridViewport)
+        assertNull(state.focusedResultId)
+        assertEquals(listOf("v2"), state.results.items.map { it.id })
     }
 
     @Test
@@ -155,6 +203,78 @@ class SearchCoordinatorTest {
         assertEquals("星际", state.submittedKeyword)
         assertEquals(listOf("v1", "v2"), state.results.items.map { it.id })
         assertEquals(listOf("星际", "星际"), repository.searchCalls.map { it.keyword })
+    }
+
+    @Test
+    fun `load more failure preserves content and retries the same page`() = runTest {
+        val repository = FakeSearchRepository(
+            pages = mutableListOf(
+                AppResult.Success(page("v1", pageNumber = 1, hasNext = true)),
+                AppResult.Failure(AppError.Offline),
+                AppResult.Success(page("v2", pageNumber = 2, hasNext = false)),
+            ),
+        )
+        val coordinator = coordinator(repository)
+        coordinator.load(session())
+        coordinator.updateQuery("星际")
+        coordinator.search(session())
+
+        coordinator.loadNext(session())
+
+        val failed = coordinator.state.value as SearchUiState.Content
+        val failedResults = failed.results as SearchResultsState.Content
+        assertEquals(listOf("v1"), failedResults.items.map { it.id })
+        assertEquals(1, failedResults.pageNumber)
+        assertEquals(AppError.Offline, failedResults.loadMoreError)
+
+        coordinator.loadNext(session())
+
+        val recovered = coordinator.state.value as SearchUiState.Content
+        val recoveredResults = recovered.results as SearchResultsState.Content
+        assertEquals(listOf("v1", "v2"), recoveredResults.items.map { it.id })
+        assertEquals(listOf(2, 2), repository.searchCalls.drop(1).map { it.pageNumber })
+    }
+
+    @Test
+    fun `final search page ignores load more`() = runTest {
+        val repository = FakeSearchRepository(
+            pages = mutableListOf(AppResult.Success(page("v1", hasNext = false))),
+        )
+        val coordinator = coordinator(repository)
+        coordinator.load(session())
+        coordinator.updateQuery("星际")
+        coordinator.search(session())
+
+        coordinator.loadNext(session())
+
+        assertEquals(listOf(1), repository.searchCalls.map { it.pageNumber })
+    }
+
+    @Test
+    fun `cancelled load more clears transient loading state`() = runTest {
+        val pagingStarted = CompletableDeferred<Unit>()
+        val pagingResult = CompletableDeferred<AppResult<NetworkSearchPage>>()
+        val repository = FakeSearchRepository(
+            pages = mutableListOf(
+                AppResult.Success(page("v1", pageNumber = 1, hasNext = true)),
+            ),
+            pagingStarted = pagingStarted,
+            pagingResult = pagingResult,
+        )
+        val coordinator = coordinator(repository)
+        coordinator.load(session())
+        coordinator.updateQuery("星际")
+        coordinator.search(session())
+
+        val pagingJob = launch { coordinator.loadNext(session()) }
+        pagingStarted.await()
+        val loading = coordinator.state.value as SearchUiState.Content
+        assertTrue((loading.results as SearchResultsState.Content).isLoadingMore)
+
+        pagingJob.cancelAndJoin()
+
+        val cancelled = coordinator.state.value as SearchUiState.Content
+        assertFalse((cancelled.results as SearchResultsState.Content).isLoadingMore)
     }
 
     @Test
@@ -230,6 +350,8 @@ private class FakeSearchRepository(
     private val playback: AppResult<NetworkPlaybackSource> =
         AppResult.Failure(AppError.NotFound),
     private val availableProfiles: AppResult<List<IndexerSourceProfile>>? = null,
+    private val pagingStarted: CompletableDeferred<Unit>? = null,
+    private val pagingResult: CompletableDeferred<AppResult<NetworkSearchPage>>? = null,
 ) : SearchRepository {
     val searchCalls = mutableListOf<SearchCall>()
     val searchFilters = mutableListOf<Map<String, SearchFilterValue>>()
@@ -263,6 +385,10 @@ private class FakeSearchRepository(
     ): AppResult<NetworkSearchPage> {
         searchCalls += SearchCall(keyword, filters, pageNumber)
         searchFilters += filters
+        if (pageNumber > 1 && pagingResult != null) {
+            pagingStarted?.complete(Unit)
+            return pagingResult.await()
+        }
         return pages.removeAt(0)
     }
 

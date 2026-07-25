@@ -21,6 +21,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.core.model.SavedServer
+import org.kaloscope.tv.core.model.GridViewportSnapshot
+import org.kaloscope.tv.core.model.IndexerSourceProfile
+import org.kaloscope.tv.core.model.NetworkIndexer
+import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.TvSettings
@@ -34,6 +38,8 @@ import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryUiState
+import org.kaloscope.tv.feature.search.SearchResultsState
+import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.settings.SettingsSection
 import org.kaloscope.tv.feature.settings.SettingsUiState
 
@@ -218,6 +224,87 @@ class MainShellTest {
         }
         composeRule.onNodeWithTag("media-card-201").assertIsFocused()
     }
+
+    @Test
+    fun topLevelRoundTripRestoresDeepLibraryCard() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = deepLibraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    onRefresh = {},
+                    onOpenLibrary = {},
+                    onSelectLibrary = {},
+                    onLibraryQueryChange = {},
+                    onSearchLibrary = {},
+                    onRetryLibrary = {},
+                    onLoadMoreMedia = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                    onRetryDetail = {},
+                    onSelectMediaChild = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("media-card-25").assertIsFocused()
+
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("media-card-25").assertIsFocused()
+    }
+
+    @Test
+    fun topLevelRoundTripRestoresDeepSearchResult() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState(),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    onRefresh = {},
+                    onOpenLibrary = {},
+                    onSelectLibrary = {},
+                    onLibraryQueryChange = {},
+                    onSearchLibrary = {},
+                    onRetryLibrary = {},
+                    onLoadMoreMedia = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                    onRetryDetail = {},
+                    onSelectMediaChild = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
+
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
+    }
 }
 
 private fun session() = Session(
@@ -235,7 +322,57 @@ private fun libraryState() = LibraryUiState.Content(
         pageNumber = 1,
         hasNext = false,
     ),
-    focusedMediaId = 201,
+    focusedMediaId = null,
+)
+
+private fun deepLibraryState() = LibraryUiState.Content(
+    libraries = listOf(MediaLibrary(21, "剧集库", MediaLibraryType.TvShow)),
+    selectedLibraryId = 21,
+    items = LibraryItemsState.Content(
+        items = (1..30).map { id ->
+            summary().copy(
+                id = id.toLong(),
+                title = "媒体$id",
+                path = "/media/$id",
+            )
+        },
+        total = 30,
+        pageNumber = 2,
+        hasNext = false,
+    ),
+    focusedMediaId = 25,
+    gridViewport = GridViewportSnapshot(24, 0),
+)
+
+private fun deepSearchState() = SearchUiState.Content(
+    profiles = listOf(
+        IndexerSourceProfile(
+            indexer = NetworkIndexer(11, "星海站", null),
+            pageSize = 20,
+            keywordRequired = true,
+        ),
+    ),
+    selectedIndexerId = 11,
+    query = "星际",
+    submittedKeyword = "星际",
+    results = SearchResultsState.Content(
+        items = (1..30).map { id ->
+            NetworkSearchResult(
+                id = "v$id",
+                title = "视频$id",
+                coverPath = null,
+                rating = null,
+                category = null,
+                uploader = null,
+                uploadedAt = null,
+            )
+        },
+        total = 30,
+        pageNumber = 2,
+        hasNext = false,
+    ),
+    focusedResultId = "v25",
+    gridViewport = GridViewportSnapshot(24, 0),
 )
 
 private fun summary() = MediaSummary(

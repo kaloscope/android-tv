@@ -8,6 +8,7 @@ import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DanmakuComment
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
@@ -20,6 +21,22 @@ import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.data.media.MediaRepository
 
 class LibraryCoordinatorTest {
+    @Test
+    fun `viewport is remembered for the current library dataset`() = runBlocking {
+        val coordinator = LibraryCoordinator(
+            FakeMediaRepository(
+                libraries = AppResult.Success(libraries()),
+                pages = mutableListOf(AppResult.Success(page(1, total = 1))),
+            ),
+        )
+        coordinator.load(session())
+
+        coordinator.rememberGridViewport(GridViewportSnapshot(15, 32))
+
+        val state = coordinator.state.value as LibraryUiState.Content
+        assertEquals(GridViewportSnapshot(15, 32), state.gridViewport)
+    }
+
     @Test
     fun `initial load selects first real library and first page`() = runBlocking {
         val repository = FakeMediaRepository(
@@ -112,6 +129,8 @@ class LibraryCoordinatorTest {
         val coordinator = LibraryCoordinator(repository)
         coordinator.load(session())
         coordinator.updateQuery("旧关键词")
+        coordinator.rememberFocusedMedia(201)
+        coordinator.rememberGridViewport(GridViewportSnapshot(7, 20))
 
         coordinator.selectLibrary(session(), 22)
 
@@ -120,7 +139,92 @@ class LibraryCoordinatorTest {
         assertEquals("", state.query)
         assertEquals("", state.submittedKeyword)
         assertEquals(listOf(501L), state.items.items.map { it.id })
+        assertEquals(null, state.focusedMediaId)
+        assertEquals(GridViewportSnapshot.Top, state.gridViewport)
         assertEquals(PageCall(22, 1, 20, null), repository.pageCalls.last())
+    }
+
+    @Test
+    fun `submitting a new library search clears viewport and focus`() = runBlocking {
+        val coordinator = LibraryCoordinator(
+            FakeMediaRepository(
+                libraries = AppResult.Success(libraries()),
+                pages = mutableListOf(
+                    AppResult.Success(page(1, total = 1)),
+                    AppResult.Success(
+                        MediaPage(
+                            items = listOf(summary(501)),
+                            total = 1,
+                            pageNumber = 1,
+                            pageSize = 20,
+                            hasNext = false,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        coordinator.load(session())
+        coordinator.rememberFocusedMedia(201)
+        coordinator.rememberGridViewport(GridViewportSnapshot(5, 14))
+
+        coordinator.updateQuery("新关键词")
+        coordinator.search(session())
+
+        val state = coordinator.state.value as LibraryUiState.Content
+        assertEquals(null, state.focusedMediaId)
+        assertEquals(GridViewportSnapshot.Top, state.gridViewport)
+        assertEquals(listOf(501L), state.items.items.map { it.id })
+    }
+
+    @Test
+    fun `load more failure preserves content and retries the same page`() = runBlocking {
+        val repository = FakeMediaRepository(
+            libraries = AppResult.Success(libraries()),
+            pages = mutableListOf(
+                AppResult.Success(page(1, total = 21)),
+                AppResult.Failure(AppError.Offline),
+                AppResult.Success(
+                    MediaPage(
+                        items = listOf(summary(202)),
+                        total = 21,
+                        pageNumber = 2,
+                        pageSize = 20,
+                        hasNext = false,
+                    ),
+                ),
+            ),
+        )
+        val coordinator = LibraryCoordinator(repository)
+        coordinator.load(session())
+
+        coordinator.loadNext(session())
+
+        val failed = coordinator.state.value as LibraryUiState.Content
+        val failedItems = failed.items as LibraryItemsState.Content
+        assertEquals(listOf(201L), failedItems.items.map { it.id })
+        assertEquals(1, failedItems.pageNumber)
+        assertEquals(AppError.Offline, failedItems.loadMoreError)
+
+        coordinator.loadNext(session())
+
+        val recovered = coordinator.state.value as LibraryUiState.Content
+        val recoveredItems = recovered.items as LibraryItemsState.Content
+        assertEquals(listOf(201L, 202L), recoveredItems.items.map { it.id })
+        assertEquals(listOf(2, 2), repository.pageCalls.drop(1).map { it.pageNumber })
+    }
+
+    @Test
+    fun `final library page ignores load more`() = runBlocking {
+        val repository = FakeMediaRepository(
+            libraries = AppResult.Success(libraries()),
+            pages = mutableListOf(AppResult.Success(page(1, total = 1))),
+        )
+        val coordinator = LibraryCoordinator(repository)
+        coordinator.load(session())
+
+        coordinator.loadNext(session())
+
+        assertEquals(listOf(1), repository.pageCalls.map { it.pageNumber })
     }
 }
 
