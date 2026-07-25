@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +47,10 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.Success
+import org.kaloscope.tv.core.model.DanmakuDisplayMode
+import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.DanmakuSpeed
+import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.player.PlaybackMode
@@ -60,7 +65,7 @@ fun SettingsScreen(
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
-    onDanmakuEnabled: (Boolean) -> Unit,
+    onDanmakuSettings: (DanmakuSettings) -> Unit,
     onSubtitleEnabled: (Boolean) -> Unit,
     onStartPage: (StartPage) -> Unit,
     onTestConnection: () -> Unit,
@@ -86,7 +91,7 @@ fun SettingsScreen(
             onPlaybackMode = onPlaybackMode,
             onTranscodeResolution = onTranscodeResolution,
             onAutoplayNext = onAutoplayNext,
-            onDanmakuEnabled = onDanmakuEnabled,
+            onDanmakuSettings = onDanmakuSettings,
             onSubtitleEnabled = onSubtitleEnabled,
             onStartPage = onStartPage,
             onTestConnection = onTestConnection,
@@ -104,7 +109,7 @@ private fun SettingsContent(
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
-    onDanmakuEnabled: (Boolean) -> Unit,
+    onDanmakuSettings: (DanmakuSettings) -> Unit,
     onSubtitleEnabled: (Boolean) -> Unit,
     onStartPage: (StartPage) -> Unit,
     onTestConnection: () -> Unit,
@@ -168,7 +173,7 @@ private fun SettingsContent(
                         choice = requestedChoice
                     },
                     onAutoplayNext = onAutoplayNext,
-                    onDanmakuEnabled = onDanmakuEnabled,
+                    onDanmakuSettings = onDanmakuSettings,
                     onSubtitleEnabled = onSubtitleEnabled,
                     onTestConnection = onTestConnection,
                     onManageServers = onManageServers,
@@ -243,7 +248,7 @@ private fun SettingsPanel(
     modifier: Modifier,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
-    onDanmakuEnabled: (Boolean) -> Unit,
+    onDanmakuSettings: (DanmakuSettings) -> Unit,
     onSubtitleEnabled: (Boolean) -> Unit,
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
@@ -281,12 +286,12 @@ private fun SettingsPanel(
                 onAutoplayNext = onAutoplayNext,
             )
 
-            SettingsSection.Danmaku -> ToggleSettingRow(
-                title = stringResource(R.string.default_danmaku),
-                description = stringResource(R.string.default_danmaku_description),
-                checked = state.settings.danmakuEnabled,
+            SettingsSection.Danmaku -> DanmakuDefaultSettings(
+                settings = state.settings.danmaku,
                 enabled = enabled,
-                onToggle = { onDanmakuEnabled(!state.settings.danmakuEnabled) },
+                onOpenChoice = onOpenChoice,
+                onChange = onDanmakuSettings,
+                modifier = Modifier.weight(1f),
             )
 
             SettingsSection.Subtitle -> ToggleSettingRow(
@@ -379,6 +384,144 @@ private fun PlaybackSettings(
         checked = state.settings.autoplayNext,
         enabled = enabled,
         onToggle = { onAutoplayNext(!state.settings.autoplayNext) },
+    )
+}
+
+@Composable
+private fun DanmakuDefaultSettings(
+    settings: DanmakuSettings,
+    enabled: Boolean,
+    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
+    onChange: (DanmakuSettings) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val percentages = listOf(25, 50, 75, 100)
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            ToggleSettingRow(
+                title = stringResource(R.string.default_danmaku),
+                description = stringResource(R.string.default_danmaku_description),
+                checked = settings.enabled,
+                enabled = enabled,
+                onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
+            )
+        }
+        item {
+            ChoiceSettingRow(
+                title = stringResource(R.string.danmaku_text_size),
+                description = stringResource(R.string.danmaku_text_size_description),
+                value = danmakuTextSizeLabel(settings.textSize),
+                enabled = enabled,
+                createChoice = {
+                    SettingsChoice(
+                        title = stringResource(R.string.danmaku_text_size),
+                        options = DanmakuTextSize.entries.map { size ->
+                            SettingsChoiceOption(
+                                label = danmakuTextSizeLabel(size),
+                                selected = size == settings.textSize,
+                                onSelect = { onChange(settings.copy(textSize = size)) },
+                            )
+                        },
+                    )
+                },
+                onOpenChoice = onOpenChoice,
+            )
+        }
+        item {
+            ChoiceSettingRow(
+                title = stringResource(R.string.danmaku_speed),
+                description = stringResource(R.string.danmaku_speed_description),
+                value = danmakuSpeedLabel(settings.speed),
+                enabled = enabled,
+                createChoice = {
+                    SettingsChoice(
+                        title = stringResource(R.string.danmaku_speed),
+                        options = DanmakuSpeed.entries.map { speed ->
+                            SettingsChoiceOption(
+                                label = danmakuSpeedLabel(speed),
+                                selected = speed == settings.speed,
+                                onSelect = { onChange(settings.copy(speed = speed)) },
+                            )
+                        },
+                    )
+                },
+                onOpenChoice = onOpenChoice,
+            )
+        }
+        item {
+            DanmakuPercentageSetting(
+                title = stringResource(R.string.danmaku_opacity),
+                description = stringResource(R.string.danmaku_opacity_description),
+                value = settings.opacityPercent,
+                percentages = percentages,
+                enabled = enabled,
+                onOpenChoice = onOpenChoice,
+                onSelect = { onChange(settings.copy(opacityPercent = it)) },
+            )
+        }
+        item {
+            DanmakuPercentageSetting(
+                title = stringResource(R.string.danmaku_display_area),
+                description = stringResource(R.string.danmaku_display_area_description),
+                value = settings.displayAreaPercent,
+                percentages = percentages,
+                enabled = enabled,
+                onOpenChoice = onOpenChoice,
+                onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
+            )
+        }
+        DanmakuDisplayMode.entries.forEach { mode ->
+            item {
+                ToggleSettingRow(
+                    title = danmakuModeLabel(mode),
+                    description = danmakuModeDescription(mode),
+                    checked = mode in settings.visibleModes,
+                    enabled = enabled,
+                    onToggle = {
+                        val visibleModes = if (mode in settings.visibleModes) {
+                            settings.visibleModes - mode
+                        } else {
+                            settings.visibleModes + mode
+                        }
+                        onChange(settings.copy(visibleModes = visibleModes))
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DanmakuPercentageSetting(
+    title: String,
+    description: String,
+    value: Int,
+    percentages: List<Int>,
+    enabled: Boolean,
+    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
+    onSelect: (Int) -> Unit,
+) {
+    ChoiceSettingRow(
+        title = title,
+        description = description,
+        value = stringResource(R.string.percentage_value, value),
+        enabled = enabled,
+        createChoice = {
+            SettingsChoice(
+                title = title,
+                options = percentages.map { percentage ->
+                    SettingsChoiceOption(
+                        label = stringResource(R.string.percentage_value, percentage),
+                        selected = percentage == value,
+                        onSelect = { onSelect(percentage) },
+                    )
+                },
+            )
+        },
+        onOpenChoice = onOpenChoice,
     )
 }
 
@@ -716,6 +859,44 @@ private fun resolutionLabel(resolution: TranscodeResolution): String =
         TranscodeResolution.P1080 -> stringResource(R.string.resolution_1080p)
         TranscodeResolution.P720 -> stringResource(R.string.resolution_720p)
         TranscodeResolution.P480 -> stringResource(R.string.resolution_480p)
+    }
+
+@Composable
+private fun danmakuTextSizeLabel(size: DanmakuTextSize): String =
+    when (size) {
+        DanmakuTextSize.Small -> stringResource(R.string.danmaku_size_small)
+        DanmakuTextSize.Medium -> stringResource(R.string.danmaku_size_medium)
+        DanmakuTextSize.Large -> stringResource(R.string.danmaku_size_large)
+        DanmakuTextSize.ExtraLarge -> stringResource(R.string.danmaku_size_extra_large)
+    }
+
+@Composable
+private fun danmakuSpeedLabel(speed: DanmakuSpeed): String =
+    when (speed) {
+        DanmakuSpeed.Slow -> stringResource(R.string.danmaku_speed_slow)
+        DanmakuSpeed.Standard -> stringResource(R.string.danmaku_speed_standard)
+        DanmakuSpeed.Fast -> stringResource(R.string.danmaku_speed_fast)
+    }
+
+@Composable
+private fun danmakuModeLabel(mode: DanmakuDisplayMode): String =
+    when (mode) {
+        DanmakuDisplayMode.Scroll -> stringResource(R.string.danmaku_mode_scroll)
+        DanmakuDisplayMode.Top -> stringResource(R.string.danmaku_mode_top)
+        DanmakuDisplayMode.Bottom -> stringResource(R.string.danmaku_mode_bottom)
+    }
+
+@Composable
+private fun danmakuModeDescription(mode: DanmakuDisplayMode): String =
+    when (mode) {
+        DanmakuDisplayMode.Scroll ->
+            stringResource(R.string.danmaku_mode_scroll_description)
+
+        DanmakuDisplayMode.Top ->
+            stringResource(R.string.danmaku_mode_top_description)
+
+        DanmakuDisplayMode.Bottom ->
+            stringResource(R.string.danmaku_mode_bottom_description)
     }
 
 @Composable

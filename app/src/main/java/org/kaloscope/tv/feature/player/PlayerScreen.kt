@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,40 +12,31 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -71,12 +61,8 @@ import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
-import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.Session
-import org.kaloscope.tv.core.player.DanmakuFrame
-import org.kaloscope.tv.core.player.DanmakuMode
-import org.kaloscope.tv.core.player.DanmakuTimeline
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackFailure
@@ -87,7 +73,6 @@ import org.kaloscope.tv.core.player.PlaybackSettingsPolicy
 import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.TranscodeResolution
-import kotlin.math.roundToInt
 
 @Composable
 fun PlayerScreen(
@@ -189,21 +174,30 @@ private fun PlayerContent(
     var subtitlesEnabled by remember(state.request.requestId) {
         mutableStateOf(state.request.subtitleEnabled)
     }
-    var danmakusEnabled by remember(state.request.requestId) {
-        mutableStateOf(state.request.danmakuEnabled)
+    var sessionDanmakuSettings by remember(state.request.requestId) {
+        mutableStateOf(state.request.danmakuSettings)
+    }
+    var danmakuRuntimeAvailable by remember(playbackIdentity) {
+        mutableStateOf(true)
     }
     var definitionDrawerOpen by remember { mutableStateOf(false) }
     var restoreDefinitionFocus by remember { mutableStateOf(false) }
+    var danmakuDrawerOpen by remember { mutableStateOf(false) }
+    var restoreDanmakuSettingsFocus by remember { mutableStateOf(false) }
     var interactionVersion by remember { mutableLongStateOf(0) }
     val playerFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
     val definitionFocus = remember { FocusRequester() }
+    val danmakuSettingsFocus = remember { FocusRequester() }
     val hasNext = PlaybackRequestNavigator.hasNext(state.request)
 
     BackHandler {
         if (definitionDrawerOpen) {
             definitionDrawerOpen = false
             restoreDefinitionFocus = true
+        } else if (danmakuDrawerOpen) {
+            danmakuDrawerOpen = false
+            restoreDanmakuSettingsFocus = true
         } else {
             onBack()
         }
@@ -233,6 +227,7 @@ private fun PlayerContent(
         if (
             controlsVisible &&
             !definitionDrawerOpen &&
+            !danmakuDrawerOpen &&
             status.failure == null &&
             !status.fallbackInProgress
         ) {
@@ -245,10 +240,16 @@ private fun PlayerContent(
             controlsVisible = true
         }
     }
-    LaunchedEffect(controlsVisible, definitionDrawerOpen) {
-        if (controlsVisible && !definitionDrawerOpen && !restoreDefinitionFocus) {
+    LaunchedEffect(controlsVisible, definitionDrawerOpen, danmakuDrawerOpen) {
+        if (
+            controlsVisible &&
+            !definitionDrawerOpen &&
+            !danmakuDrawerOpen &&
+            !restoreDefinitionFocus &&
+            !restoreDanmakuSettingsFocus
+        ) {
             playFocus.requestFocus()
-        } else if (!controlsVisible && !definitionDrawerOpen) {
+        } else if (!controlsVisible && !definitionDrawerOpen && !danmakuDrawerOpen) {
             playerFocus.requestFocus()
         }
     }
@@ -259,9 +260,17 @@ private fun PlayerContent(
             restoreDefinitionFocus = false
         }
     }
+    LaunchedEffect(danmakuDrawerOpen, restoreDanmakuSettingsFocus) {
+        if (!danmakuDrawerOpen && restoreDanmakuSettingsFocus) {
+            withFrameNanos { }
+            danmakuSettingsFocus.requestFocus()
+            restoreDanmakuSettingsFocus = false
+        }
+    }
     LaunchedEffect(status.failure) {
         if (status.failure != null) {
             definitionDrawerOpen = false
+            danmakuDrawerOpen = false
         }
     }
     LaunchedEffect(playbackIdentity, status.playbackState) {
@@ -282,12 +291,14 @@ private fun PlayerContent(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(playerFocus)
-            .focusable(enabled = !controlsVisible && !definitionDrawerOpen)
+            .focusable(
+                enabled = !controlsVisible && !definitionDrawerOpen && !danmakuDrawerOpen,
+            )
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) {
                     return@onPreviewKeyEvent false
                 }
-                if (controlsVisible || definitionDrawerOpen) {
+                if (controlsVisible || definitionDrawerOpen || danmakuDrawerOpen) {
                     interactionVersion += 1
                     return@onPreviewKeyEvent false
                 }
@@ -338,17 +349,19 @@ private fun PlayerContent(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        if (danmakusEnabled) {
-            DanmakuOverlay(
+        if (state.danmakus.isNotEmpty()) {
+            AkDanmakuOverlay(
+                player = controller.player,
                 comments = state.danmakus,
-                positionMillis = positionMillis,
-                isPlaying = status.isPlaying,
+                settings = sessionDanmakuSettings,
+                onRuntimeAvailable = { danmakuRuntimeAvailable = it },
             )
         }
         if (
             controlsVisible &&
             status.failure == null &&
             !definitionDrawerOpen &&
+            !danmakuDrawerOpen &&
             !state.switchingItem
         ) {
             PlayerControls(
@@ -358,8 +371,9 @@ private fun PlayerContent(
                 durationMillis = controller.player.duration,
                 subtitlesAvailable = state.subtitles.isNotEmpty(),
                 subtitlesEnabled = subtitlesEnabled,
-                danmakusAvailable = state.danmakus.isNotEmpty(),
-                danmakusEnabled = danmakusEnabled,
+                danmakusAvailable =
+                    state.danmakus.isNotEmpty() && danmakuRuntimeAvailable,
+                danmakusEnabled = sessionDanmakuSettings.enabled,
                 extraErrors = state.extraErrors,
                 progressSaveFailed = state.progressError != null,
                 playbackMode = (state.request as? PlaybackRequest.LocalMedia)?.playbackMode,
@@ -374,6 +388,7 @@ private fun PlayerContent(
                     ?.definitions
                     .orEmpty(),
                 definitionFocus = definitionFocus,
+                danmakuSettingsFocus = danmakuSettingsFocus,
                 switchingItem = state.switchingItem,
                 playFocus = playFocus,
                 onPrevious = {
@@ -405,11 +420,19 @@ private fun PlayerContent(
                 },
                 onToggleDanmakus = {
                     interactionVersion += 1
-                    danmakusEnabled = !danmakusEnabled
+                    sessionDanmakuSettings = sessionDanmakuSettings.copy(
+                        enabled = !sessionDanmakuSettings.enabled,
+                    )
+                },
+                onOpenDanmakuSettings = {
+                    interactionVersion += 1
+                    danmakuDrawerOpen = true
+                    definitionDrawerOpen = false
                 },
                 onOpenDefinitions = {
                     interactionVersion += 1
                     definitionDrawerOpen = true
+                    danmakuDrawerOpen = false
                 },
             )
         }
@@ -426,6 +449,16 @@ private fun PlayerContent(
                     definitionDrawerOpen = false
                     restoreDefinitionFocus = true
                     onSelectDefinition(index, controller.player.currentPosition)
+                },
+            )
+        }
+        if (danmakuDrawerOpen) {
+            PlayerDanmakuSettingsDrawer(
+                settings = sessionDanmakuSettings,
+                onChange = { sessionDanmakuSettings = it },
+                onDismiss = {
+                    danmakuDrawerOpen = false
+                    restoreDanmakuSettingsFocus = true
                 },
             )
         }
@@ -479,6 +512,7 @@ internal fun PlayerControls(
     switchingItem: Boolean,
     playFocus: FocusRequester,
     definitionFocus: FocusRequester,
+    danmakuSettingsFocus: FocusRequester,
     onPrevious: () -> Unit,
     onRewind: () -> Unit,
     onPlayPause: () -> Unit,
@@ -486,6 +520,7 @@ internal fun PlayerControls(
     onNext: () -> Unit,
     onToggleSubtitles: () -> Unit,
     onToggleDanmakus: () -> Unit,
+    onOpenDanmakuSettings: () -> Unit,
     onOpenDefinitions: () -> Unit,
 ) {
     Column(
@@ -619,6 +654,12 @@ internal fun PlayerControls(
                 enabled = danmakusAvailable,
                 active = danmakusEnabled,
             )
+            PlayerButton(
+                text = stringResource(R.string.player_danmaku_settings_button),
+                onClick = onOpenDanmakuSettings,
+                modifier = Modifier.focusRequester(danmakuSettingsFocus),
+                enabled = danmakusAvailable,
+            )
             if (definitions.isNotEmpty()) {
                 PlayerButton(
                     text = stringResource(R.string.playback_quality),
@@ -742,118 +783,6 @@ private fun PlayerProgress(
                 .background(Primary, RoundedCornerShape(6.dp)),
         )
     }
-}
-
-@Composable
-internal fun DanmakuOverlay(
-    comments: List<DanmakuComment>,
-    positionMillis: Long,
-    isPlaying: Boolean,
-) {
-    val timeline = remember(comments) {
-        DanmakuTimeline.create(comments)
-    }
-    var renderPositionMillis by remember(timeline) {
-        mutableLongStateOf(positionMillis)
-    }
-    LaunchedEffect(timeline, positionMillis, isPlaying) {
-        renderPositionMillis = positionMillis
-        if (!isPlaying) {
-            return@LaunchedEffect
-        }
-        val anchorNanos = withFrameNanos { it }
-        while (true) {
-            withFrameNanos { frameNanos ->
-                renderPositionMillis = positionMillis +
-                    ((frameNanos - anchorNanos) / 1_000_000)
-            }
-        }
-    }
-    val frames = timeline.framesAt(renderPositionMillis)
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 48.dp, bottom = 128.dp)
-            .clipToBounds(),
-    ) {
-        val containerWidthPixels = constraints.maxWidth
-        frames.forEach { frame ->
-            key(
-                frame.comment.id,
-                frame.comment.startMillis,
-                frame.mode,
-                frame.lane,
-            ) {
-                DanmakuText(
-                    frame = frame,
-                    containerWidthPixels = containerWidthPixels,
-                    modifier = Modifier.align(
-                        when (frame.mode) {
-                            DanmakuMode.Scroll, DanmakuMode.Top -> Alignment.TopStart
-                            DanmakuMode.Bottom -> Alignment.BottomStart
-                        },
-                    ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DanmakuText(
-    frame: DanmakuFrame,
-    containerWidthPixels: Int,
-    modifier: Modifier = Modifier,
-) {
-    var textWidthPixels by remember(
-        frame.comment.id,
-        frame.comment.startMillis,
-        frame.mode,
-        frame.lane,
-    ) {
-        mutableIntStateOf(0)
-    }
-    val laneOffset = 36.dp * frame.lane
-    val horizontalOffset = when (frame.mode) {
-        DanmakuMode.Scroll -> (
-            containerWidthPixels -
-                (containerWidthPixels + textWidthPixels) * frame.progress
-            ).roundToInt()
-
-        DanmakuMode.Top, DanmakuMode.Bottom ->
-            ((containerWidthPixels - textWidthPixels) / 2).coerceAtLeast(0)
-    }
-    val verticalOffset = when (frame.mode) {
-        DanmakuMode.Scroll -> laneOffset + 76.dp
-        DanmakuMode.Top -> laneOffset
-        DanmakuMode.Bottom -> -laneOffset
-    }
-    Text(
-        text = frame.comment.text,
-        color = parseDanmakuColor(frame.comment.color),
-        maxLines = 1,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.SemiBold,
-        style = TextStyle(
-            shadow = Shadow(
-                color = Color.Black,
-                offset = Offset(1.5f, 1.5f),
-                blurRadius = 3f,
-            ),
-        ),
-        modifier = modifier
-            .offset {
-                IntOffset(
-                    x = horizontalOffset,
-                    y = verticalOffset.roundToPx(),
-                )
-            }
-            .onSizeChanged { textWidthPixels = it.width }
-            .testTag(
-                "danmaku-comment-" +
-                    (frame.comment.id ?: frame.comment.startMillis.toString()),
-            ),
-    )
 }
 
 @Composable
@@ -1019,11 +948,6 @@ private fun formatDuration(milliseconds: Long): String {
         "%02d:%02d".format(minutes, seconds)
     }
 }
-
-private fun parseDanmakuColor(rawColor: String?): Color =
-    runCatching {
-        Color(android.graphics.Color.parseColor(rawColor ?: "#FFFFFF"))
-    }.getOrDefault(Color.White)
 
 private fun PlaybackRequest.playbackIdentity(): String =
     when (this) {

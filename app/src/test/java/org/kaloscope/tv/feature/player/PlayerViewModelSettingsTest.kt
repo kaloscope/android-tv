@@ -13,6 +13,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DanmakuComment
+import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaPage
@@ -45,11 +47,16 @@ class PlayerViewModelSettingsTest {
             historyRepository = unusedHistoryRepository(),
             searchRepository = unusedSearchRepository(),
         )
+        val expectedDanmaku = DanmakuSettings(
+            enabled = false,
+            speed = DanmakuSpeed.Fast,
+            opacityPercent = 50,
+        )
         val settings = TvSettings(
             playbackMode = PlaybackMode.Transcode,
             transcodeResolution = TranscodeResolution.P720,
             autoplayNext = false,
-            danmakuEnabled = false,
+            danmaku = expectedDanmaku,
             subtitleEnabled = false,
         )
 
@@ -59,7 +66,7 @@ class PlayerViewModelSettingsTest {
         assertEquals(PlaybackMode.Transcode, request.playbackMode)
         assertEquals(TranscodeResolution.P720, request.transcodeResolution)
         assertFalse(request.autoplayNext)
-        assertFalse(request.danmakuEnabled)
+        assertEquals(expectedDanmaku, request.danmakuSettings)
         assertFalse(request.subtitleEnabled)
     }
 

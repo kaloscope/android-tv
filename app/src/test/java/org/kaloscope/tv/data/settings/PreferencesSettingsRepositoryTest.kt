@@ -3,12 +3,19 @@ package org.kaloscope.tv.data.settings
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import java.io.File
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.DanmakuDisplayMode
+import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.DanmakuSpeed
+import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
@@ -22,6 +29,17 @@ class PreferencesSettingsRepositoryTest {
         val result = repository.getSettings()
 
         assertEquals(TvSettings(), (result as AppResult.Success).value)
+        assertEquals(
+            DanmakuSettings(
+                enabled = true,
+                textSize = DanmakuTextSize.Medium,
+                speed = DanmakuSpeed.Standard,
+                opacityPercent = 100,
+                displayAreaPercent = 75,
+                visibleModes = DanmakuDisplayMode.entries.toSet(),
+            ),
+            result.value.danmaku,
+        )
     }
 
     @Test
@@ -33,7 +51,7 @@ class PreferencesSettingsRepositoryTest {
             playbackMode = PlaybackMode.Transcode,
             transcodeResolution = TranscodeResolution.P720,
             autoplayNext = false,
-            danmakuEnabled = false,
+            danmaku = DanmakuSettings(enabled = false),
             subtitleEnabled = false,
         )
 
@@ -41,6 +59,48 @@ class PreferencesSettingsRepositoryTest {
         val restored = PreferencesSettingsRepository(dataStore).getSettings()
 
         assertEquals(expected, (restored as AppResult.Success).value)
+    }
+
+    @Test
+    fun `danmaku settings survive repository recreation`() = runTest {
+        val store = dataStore(this)
+        val expected = DanmakuSettings(
+            enabled = false,
+            textSize = DanmakuTextSize.ExtraLarge,
+            speed = DanmakuSpeed.Fast,
+            opacityPercent = 50,
+            displayAreaPercent = 25,
+            visibleModes = setOf(
+                DanmakuDisplayMode.Scroll,
+                DanmakuDisplayMode.Top,
+            ),
+        )
+
+        PreferencesSettingsRepository(store).saveSettings(
+            TvSettings(danmaku = expected),
+        )
+        val restored = PreferencesSettingsRepository(store).getSettings()
+
+        assertEquals(expected, (restored as AppResult.Success).value.danmaku)
+    }
+
+    @Test
+    fun `invalid danmaku values fall back independently`() = runTest {
+        val store = dataStore(this)
+        store.edit { preferences ->
+            preferences[stringPreferencesKey("danmaku_text_size")] = "small"
+            preferences[stringPreferencesKey("danmaku_speed")] = "warp"
+            preferences[intPreferencesKey("danmaku_opacity")] = 41
+            preferences[intPreferencesKey("danmaku_display_area")] = 0
+        }
+
+        val result = PreferencesSettingsRepository(store).getSettings()
+        val danmaku = (result as AppResult.Success).value.danmaku
+
+        assertEquals(DanmakuTextSize.Small, danmaku.textSize)
+        assertEquals(DanmakuSpeed.Standard, danmaku.speed)
+        assertEquals(100, danmaku.opacityPercent)
+        assertEquals(75, danmaku.displayAreaPercent)
     }
 
     private fun repository(

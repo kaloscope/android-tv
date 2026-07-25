@@ -8,7 +8,7 @@ data class TvSettings(
     val playbackMode: PlaybackMode = PlaybackMode.Auto,
     val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
     val autoplayNext: Boolean = true,
-    val danmakuEnabled: Boolean = true,
+    val danmaku: DanmakuSettings = DanmakuSettings(),
     val subtitleEnabled: Boolean = true,
 )
 

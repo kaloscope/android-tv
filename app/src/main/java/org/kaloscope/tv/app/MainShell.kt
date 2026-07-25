@@ -78,6 +78,7 @@ import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
+import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.TvSettings
@@ -139,7 +140,7 @@ internal fun MainShell(
     onPlaybackModeSetting: (PlaybackMode) -> Unit = {},
     onTranscodeResolutionSetting: (TranscodeResolution) -> Unit = {},
     onAutoplayNextSetting: (Boolean) -> Unit = {},
-    onDanmakuEnabledSetting: (Boolean) -> Unit = {},
+    onDanmakuSettings: (DanmakuSettings) -> Unit = {},
     onSubtitleEnabledSetting: (Boolean) -> Unit = {},
     onStartPageSetting: (StartPage) -> Unit = {},
     onTestConnection: () -> Unit = {},
@@ -337,7 +338,7 @@ internal fun MainShell(
                             onPlaybackMode = onPlaybackModeSetting,
                             onTranscodeResolution = onTranscodeResolutionSetting,
                             onAutoplayNext = onAutoplayNextSetting,
-                            onDanmakuEnabled = onDanmakuEnabledSetting,
+                            onDanmakuSettings = onDanmakuSettings,
                             onSubtitleEnabled = onSubtitleEnabledSetting,
                             onStartPage = onStartPageSetting,
                             onTestConnection = onTestConnection,

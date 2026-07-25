@@ -1,6 +1,7 @@
 package org.kaloscope.tv.core.player
 
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
+import org.kaloscope.tv.core.model.DanmakuSettings
 
 sealed interface PlaybackRequest {
     val requestId: String
@@ -8,7 +9,7 @@ sealed interface PlaybackRequest {
     val title: String
     val origin: PlaybackOrigin
     val autoplayNext: Boolean
-    val danmakuEnabled: Boolean
+    val danmakuSettings: DanmakuSettings
     val subtitleEnabled: Boolean
 
     data class LocalMedia(
@@ -23,7 +24,7 @@ sealed interface PlaybackRequest {
         val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
         val siblings: List<LocalEpisodeRef> = emptyList(),
         override val autoplayNext: Boolean = true,
-        override val danmakuEnabled: Boolean = true,
+        override val danmakuSettings: DanmakuSettings = DanmakuSettings(),
         override val subtitleEnabled: Boolean = true,
     ) : PlaybackRequest
 
@@ -36,7 +37,7 @@ sealed interface PlaybackRequest {
         val resumePositionMillis: Long = 0,
         val preferredDefinition: TranscodeResolution = TranscodeResolution.P1080,
         override val autoplayNext: Boolean = true,
-        override val danmakuEnabled: Boolean = true,
+        override val danmakuSettings: DanmakuSettings = DanmakuSettings(),
         override val subtitleEnabled: Boolean = true,
     ) : PlaybackRequest
 }

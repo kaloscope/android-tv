@@ -15,6 +15,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
@@ -38,7 +39,7 @@ class SettingsScreenTest {
                     onPlaybackMode = { selectedMode = it },
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
-                    onDanmakuEnabled = {},
+                    onDanmakuSettings = {},
                     onSubtitleEnabled = {},
                     onStartPage = {},
                     onTestConnection = {},
@@ -82,7 +83,7 @@ class SettingsScreenTest {
                     onPlaybackMode = {},
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
-                    onDanmakuEnabled = {},
+                    onDanmakuSettings = {},
                     onSubtitleEnabled = {},
                     onStartPage = {},
                     onTestConnection = { tests += 1 },
@@ -120,7 +121,7 @@ class SettingsScreenTest {
                     onPlaybackMode = {},
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
-                    onDanmakuEnabled = {},
+                    onDanmakuSettings = {},
                     onSubtitleEnabled = {},
                     onStartPage = {},
                     onTestConnection = {},
@@ -151,7 +152,7 @@ class SettingsScreenTest {
                     onPlaybackMode = {},
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
-                    onDanmakuEnabled = {},
+                    onDanmakuSettings = {},
                     onSubtitleEnabled = {},
                     onStartPage = {},
                     onTestConnection = {},
@@ -168,6 +169,44 @@ class SettingsScreenTest {
 
         assertTrue(settingRow.left >= viewport.left)
         assertTrue(settingRow.right <= viewport.right)
+    }
+
+    @Test
+    fun danmakuCategoryShowsDefaultsAndUpdatesTheWholeModel() {
+        var updatedSettings: DanmakuSettings? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Danmaku,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = { updatedSettings = it },
+                    onSubtitleEnabled = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("默认开启弹幕").assertExists()
+        composeRule.onNodeWithText("弹幕字号").assertExists()
+        composeRule.onNodeWithText("滚动速度").assertExists()
+        composeRule.onNodeWithText("默认开启弹幕")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(false, updatedSettings?.enabled)
+        }
     }
 }
 

@@ -2,59 +2,59 @@ package org.kaloscope.tv.feature.player
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
-import org.junit.Assert.assertTrue
+import androidx.media3.exoplayer.ExoPlayer
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.core.model.DanmakuComment
+import org.kaloscope.tv.core.model.DanmakuSettings
 
 class DanmakuOverlayTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    private var player: ExoPlayer? = null
+
+    @After
+    fun tearDown() {
+        composeRule.runOnIdle {
+            player?.release()
+            player = null
+        }
+    }
+
     @Test
-    fun scrollingCommentMovesLeftAsPlaybackAdvances() {
-        var positionMillis by mutableLongStateOf(3_000)
+    fun akDanmakuHostIsDisplayed() {
         composeRule.setContent {
             Box(Modifier.fillMaxSize()) {
-                DanmakuOverlay(
+                val context = LocalContext.current
+                val exoPlayer = remember {
+                    ExoPlayer.Builder(context).build().also {
+                        player = it
+                    }
+                }
+                AkDanmakuOverlay(
+                    player = exoPlayer,
                     comments = listOf(
                         DanmakuComment(
-                            id = "moving",
-                            text = "Moving comment",
+                            id = "comment",
+                            text = "AkDanmaku comment",
                             mode = "scroll",
                             color = null,
                             startMillis = 1_000,
                         ),
                     ),
-                    positionMillis = positionMillis,
-                    isPlaying = false,
+                    settings = DanmakuSettings(),
                 )
             }
         }
-        val initialLeft = composeRule
-            .onNodeWithTag("danmaku-comment-moving")
-            .fetchSemanticsNode()
-            .boundsInRoot
-            .left
 
-        composeRule.runOnIdle {
-            positionMillis = 5_000
-        }
-
-        val laterLeft = composeRule
-            .onNodeWithTag("danmaku-comment-moving")
-            .fetchSemanticsNode()
-            .boundsInRoot
-            .left
-        assertTrue(
-            "Expected comment to move left: initial=$initialLeft later=$laterLeft",
-            laterLeft < initialLeft,
-        )
+        composeRule.onNodeWithTag("ak-danmaku-overlay").assertIsDisplayed()
     }
 }

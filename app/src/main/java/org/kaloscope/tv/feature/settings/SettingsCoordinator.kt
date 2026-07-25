@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.TvSettings
@@ -74,8 +75,8 @@ class SettingsCoordinator(
     suspend fun setAutoplayNext(value: Boolean) =
         update { copy(autoplayNext = value) }
 
-    suspend fun setDanmakuEnabled(value: Boolean) =
-        update { copy(danmakuEnabled = value) }
+    suspend fun setDanmakuSettings(value: DanmakuSettings) =
+        update { copy(danmaku = value) }
 
     suspend fun setSubtitleEnabled(value: Boolean) =
         update { copy(subtitleEnabled = value) }

@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.NetworkChapter
 import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
@@ -22,6 +24,8 @@ class PlaybackRequestNavigatorTest {
         assertEquals(302, next.mediaId)
         assertEquals("/episode-2.mkv", next.path)
         assertEquals(0L, next.resumePositionSeconds)
+        assertEquals(request.requestId, next.requestId)
+        assertEquals(request.danmakuSettings, next.danmakuSettings)
     }
 
     @Test
@@ -42,8 +46,9 @@ class PlaybackRequestNavigatorTest {
 
     @Test
     fun `network definition selection keeps current playback position`() {
+        val request = networkRequest()
         val selected = PlaybackRequestNavigator.selectDefinition(
-            request = networkRequest(),
+            request = request,
             definitionIndex = 1,
             positionMillis = 48_500,
         )
@@ -52,6 +57,8 @@ class PlaybackRequestNavigatorTest {
         assertEquals("https://cdn.example/720.m3u8", selected.source.url)
         assertEquals(1, selected.source.selectedDefinitionIndex)
         assertEquals(48_500, selected.resumePositionMillis)
+        assertEquals(request.requestId, selected.requestId)
+        assertEquals(request.danmakuSettings, selected.danmakuSettings)
     }
 }
 
@@ -63,6 +70,7 @@ private fun localRequest() = PlaybackRequest.LocalMedia(
     title = "Episode 1",
     resumePositionSeconds = 20,
     origin = PlaybackOrigin.MediaDetail,
+    danmakuSettings = DanmakuSettings(speed = DanmakuSpeed.Fast),
     siblings = listOf(
         LocalEpisodeRef(301, "/episode-1.mkv", "Episode 1"),
         LocalEpisodeRef(302, "/episode-2.mkv", "Episode 2"),
@@ -73,6 +81,7 @@ private fun networkRequest() = PlaybackRequest.NetworkVideo(
     requestId = "request-2",
     serverId = "server-1",
     title = "Episode 1",
+    danmakuSettings = DanmakuSettings(speed = DanmakuSpeed.Slow),
     source = NetworkPlaybackSource(
         indexerId = 11,
         resourceId = "series-1",

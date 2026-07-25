@@ -255,7 +255,7 @@ class SearchCoordinator(
                     source = playback.value,
                     preferredDefinition = settings.transcodeResolution,
                     autoplayNext = settings.autoplayNext,
-                    danmakuEnabled = settings.danmakuEnabled,
+                    danmakuSettings = settings.danmaku,
                     subtitleEnabled = settings.subtitleEnabled,
                 )
                 requestStore.put(request)

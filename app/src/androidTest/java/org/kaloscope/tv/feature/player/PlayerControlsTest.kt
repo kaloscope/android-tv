@@ -50,6 +50,7 @@ class PlayerControlsTest {
                     switchingItem = false,
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
                     onPrevious = {},
                     onRewind = {},
                     onPlayPause = {},
@@ -57,6 +58,7 @@ class PlayerControlsTest {
                     onNext = { nextClicks += 1 },
                     onToggleSubtitles = {},
                     onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
                     onOpenDefinitions = { qualityClicks += 1 },
                 )
             }

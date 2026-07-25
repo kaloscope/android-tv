@@ -7,6 +7,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
@@ -47,16 +49,21 @@ class SettingsCoordinatorTest {
     }
 
     @Test
-    fun `toggle persists the new value`() = runTest {
+    fun `danmaku settings persist as one value`() = runTest {
         val repository = FakeSettingsRepository(TvSettings())
         val coordinator = SettingsCoordinator(repository, FakeServerRepository())
         coordinator.load()
+        val expected = DanmakuSettings(
+            enabled = false,
+            speed = DanmakuSpeed.Fast,
+            opacityPercent = 50,
+        )
 
-        coordinator.setDanmakuEnabled(false)
+        coordinator.setDanmakuSettings(expected)
 
         val state = coordinator.state.value as SettingsUiState.Content
-        assertFalse(state.settings.danmakuEnabled)
-        assertEquals(false, repository.saved?.danmakuEnabled)
+        assertEquals(expected, state.settings.danmaku)
+        assertEquals(expected, repository.saved?.danmaku)
     }
 
     @Test

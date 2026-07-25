@@ -254,7 +254,7 @@ class PlayerViewModel @Inject constructor(
                 ).takeIf { it.mediaId > 0 && it.path.isNotBlank() && it.title.isNotBlank() }
             },
             autoplayNext = settings.autoplayNext,
-            danmakuEnabled = settings.danmakuEnabled,
+            danmakuSettings = settings.danmaku,
             subtitleEnabled = settings.subtitleEnabled,
         )
         requestStore.put(request)

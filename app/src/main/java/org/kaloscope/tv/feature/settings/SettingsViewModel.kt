@@ -7,6 +7,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.player.PlaybackMode
@@ -42,8 +43,8 @@ class SettingsViewModel @Inject constructor(
     fun setAutoplayNext(value: Boolean) =
         launchSettingsOperation { coordinator.setAutoplayNext(value) }
 
-    fun setDanmakuEnabled(value: Boolean) =
-        launchSettingsOperation { coordinator.setDanmakuEnabled(value) }
+    fun setDanmakuSettings(value: DanmakuSettings) =
+        launchSettingsOperation { coordinator.setDanmakuSettings(value) }
 
     fun setSubtitleEnabled(value: Boolean) =
         launchSettingsOperation { coordinator.setSubtitleEnabled(value) }
