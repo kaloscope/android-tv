@@ -24,9 +24,9 @@ class PlaybackProgressRecorderTest {
     }
 
     @Test
-    fun `invalid duration is never recorded`() {
+    fun `unknown duration still records changed position`() {
         val recorder = PlaybackProgressRecorder()
 
-        assertFalse(recorder.shouldRecord(10_000, 0, 20_000, ProgressReason.Exit))
+        assertTrue(recorder.shouldRecord(10_000, -1, 20_000, ProgressReason.Exit))
     }
 }

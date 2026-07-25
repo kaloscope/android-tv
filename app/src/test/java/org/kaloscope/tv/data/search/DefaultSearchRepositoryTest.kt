@@ -45,7 +45,8 @@ class DefaultSearchRepositoryTest {
         server.enqueue(
             jsonResponse(
                 """{"status":200,"message":"","data":{"auth":{"login":{"required":true}},""" +
-                    """"search":{"display":{"page_size":30},"keyword":{"required":true}}}}""",
+                    """"search":{"display":{"page_size":30,"cover_ratio":"16/9"},""" +
+                    """"keyword":{"required":true}}}}""",
             ),
         )
         server.enqueue(jsonResponse("""{"status":200,"message":"","data":null}"""))
@@ -54,6 +55,7 @@ class DefaultSearchRepositoryTest {
 
         val profile = (result as AppResult.Success).value
         assertEquals(30, profile.pageSize)
+        assertEquals(16f / 9f, profile.coverRatio, 0.001f)
         assertTrue(profile.webAuthRequired)
         assertEquals("/_api/flow/indexer/11/config", server.takeRequest().path)
         assertEquals("/_api/flow/indexer/11/auth", server.takeRequest().path)

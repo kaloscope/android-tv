@@ -1,10 +1,10 @@
 package org.kaloscope.tv.feature.library
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -34,7 +33,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,12 +44,12 @@ import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.ServerImage
+import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
@@ -124,7 +122,7 @@ private fun LibraryContent(
 
     Row(
         modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(28.dp),
+        horizontalArrangement = Arrangement.spacedBy(22.dp),
     ) {
         LibrarySidebar(
             libraries = state.libraries,
@@ -165,7 +163,7 @@ private fun LibrarySidebar(
 ) {
     LazyColumn(
         modifier = Modifier
-            .width(250.dp)
+            .width(220.dp)
             .fillMaxHeight()
             .background(Panel.copy(alpha = 0.78f), RoundedCornerShape(18.dp))
             .padding(10.dp),
@@ -228,32 +226,15 @@ private fun LibrarySearch(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BasicTextField(
+        TvSearchField(
             value = value,
+            hint = stringResource(R.string.search_library_hint),
             onValueChange = onValueChange,
+            onSearch = onSearch,
             modifier = Modifier
                 .weight(1f)
                 .height(52.dp)
-                .background(Panel.copy(alpha = 0.88f), RoundedCornerShape(12.dp))
-                .border(1.dp, Outline, RoundedCornerShape(12.dp))
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            textStyle = TextStyle(
-                color = OnBackground,
-                fontSize = 16.sp,
-            ),
-            singleLine = true,
-            decorationBox = { innerField ->
-                Box(contentAlignment = Alignment.CenterStart) {
-                    if (value.isBlank()) {
-                        Text(
-                            text = stringResource(R.string.search_library_hint),
-                            color = Muted,
-                            fontSize = 16.sp,
-                        )
-                    }
-                    innerField()
-                }
-            },
+                .testTag("library-search-input"),
         )
         Button(
             onClick = onSearch,
@@ -292,8 +273,14 @@ private fun LibraryItems(
 
         is LibraryItemsState.Content -> Column(modifier = Modifier.fillMaxSize()) {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(5),
+                columns = GridCells.Adaptive(minSize = 172.dp),
                 modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(
+                    start = 8.dp,
+                    top = 8.dp,
+                    end = 8.dp,
+                    bottom = 24.dp,
+                ),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {

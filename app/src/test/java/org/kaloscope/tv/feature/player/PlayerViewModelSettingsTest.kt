@@ -1,5 +1,13 @@
 package org.kaloscope.tv.feature.player
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -19,6 +27,7 @@ import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.player.PlaybackMode
+import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -52,6 +61,129 @@ class PlayerViewModelSettingsTest {
         assertFalse(request.autoplayNext)
         assertFalse(request.danmakuEnabled)
         assertFalse(request.subtitleEnabled)
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `unknown duration still records local playback position`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val store = PlaybackRequestStore()
+            val historyRepository = RecordingHistoryRepository()
+            val viewModel = PlayerViewModel(
+                requestStore = store,
+                mediaRepository = unusedMediaRepository(),
+                historyRepository = historyRepository,
+                searchRepository = unusedSearchRepository(),
+            )
+            val requestId = checkNotNull(
+                viewModel.createFromHistory(session(), history()),
+            )
+            val request = store.get(requestId) as PlaybackRequest.LocalMedia
+            var savedCallbacks = 0
+
+            viewModel.recordProgress(
+                session = session(),
+                request = request,
+                positionMillis = 12_500,
+                durationMillis = -1,
+                reason = ProgressReason.Exit,
+                nowMillis = 20_000,
+                onSaved = { savedCallbacks += 1 },
+            )
+            advanceUntilIdle()
+
+            assertEquals(12L, historyRepository.positionSeconds)
+            assertEquals(0, historyRepository.percentage)
+            assertEquals(1, savedCallbacks)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `progress writes for one media complete in playback order`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val store = PlaybackRequestStore()
+            val historyRepository = SequencedHistoryRepository()
+            val viewModel = PlayerViewModel(
+                requestStore = store,
+                mediaRepository = unusedMediaRepository(),
+                historyRepository = historyRepository,
+                searchRepository = unusedSearchRepository(),
+            )
+            val requestId = checkNotNull(
+                viewModel.createFromHistory(session(), history()),
+            )
+            val request = store.get(requestId) as PlaybackRequest.LocalMedia
+
+            viewModel.recordProgress(
+                session(),
+                request,
+                positionMillis = 10_000,
+                durationMillis = 60_000,
+                reason = ProgressReason.Started,
+                nowMillis = 0,
+            )
+            viewModel.recordProgress(
+                session(),
+                request,
+                positionMillis = 20_000,
+                durationMillis = 60_000,
+                reason = ProgressReason.Seeked,
+                nowMillis = 1_000,
+            )
+            advanceUntilIdle()
+
+            assertEquals(listOf(10L, 20L), historyRepository.completedPositions)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+}
+
+private class RecordingHistoryRepository : HistoryRepository {
+    var positionSeconds: Long? = null
+    var percentage: Int? = null
+
+    override suspend fun getRecentVideos(
+        session: Session,
+    ): AppResult<List<WatchHistoryItem>> = error("Not used")
+
+    override suspend fun recordVideoProgress(
+        session: Session,
+        mediaId: Long,
+        positionSeconds: Long,
+        percentage: Int,
+    ): AppResult<Unit> {
+        this.positionSeconds = positionSeconds
+        this.percentage = percentage
+        return AppResult.Success(Unit)
+    }
+}
+
+private class SequencedHistoryRepository : HistoryRepository {
+    val completedPositions = mutableListOf<Long>()
+
+    override suspend fun getRecentVideos(
+        session: Session,
+    ): AppResult<List<WatchHistoryItem>> = error("Not used")
+
+    override suspend fun recordVideoProgress(
+        session: Session,
+        mediaId: Long,
+        positionSeconds: Long,
+        percentage: Int,
+    ): AppResult<Unit> {
+        if (positionSeconds == 10L) {
+            delay(100)
+        }
+        completedPositions += positionSeconds
+        return AppResult.Success(Unit)
     }
 }
 

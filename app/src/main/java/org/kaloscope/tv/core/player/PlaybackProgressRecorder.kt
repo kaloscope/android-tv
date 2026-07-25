@@ -13,12 +13,19 @@ class PlaybackProgressRecorder(
         nowMillis: Long,
         reason: ProgressReason,
     ): Boolean {
-        if (durationMillis <= 0 || positionMillis < 0) {
+        if (positionMillis < 0) {
             return false
         }
-        val safePosition = positionMillis.coerceAtMost(durationMillis)
+        // HLS duration may remain unknown while the current position is already valid.
+        val safePosition = if (durationMillis > 0) {
+            positionMillis.coerceAtMost(durationMillis)
+        } else {
+            positionMillis
+        }
         val positionSeconds = safePosition / 1_000
-        val percentage = ((safePosition * 100) / durationMillis).toInt().coerceIn(0, 100)
+        val percentage = durationMillis
+            .takeIf { it > 0 }
+            ?.let { ((safePosition * 100) / it).toInt().coerceIn(0, 100) }
         val changed = positionSeconds != lastPositionSeconds || percentage != lastPercentage
         if (!changed) {
             return false

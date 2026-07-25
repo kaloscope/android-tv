@@ -1,5 +1,7 @@
 package org.kaloscope.tv.core.model
 
+const val DEFAULT_COVER_ASPECT_RATIO = 2f / 3f
+
 data class NetworkIndexer(
     val id: Long,
     val name: String,
@@ -11,6 +13,7 @@ data class IndexerSourceProfile(
     val pageSize: Int,
     val keywordRequired: Boolean,
     val webAuthRequired: Boolean,
+    val coverRatio: Float = DEFAULT_COVER_ASPECT_RATIO,
 )
 
 data class NetworkSearchResult(

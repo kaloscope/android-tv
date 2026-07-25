@@ -36,6 +36,7 @@ class PlayerViewModel @Inject constructor(
     private var currentRequestId: String? = null
     private var loadJob: Job? = null
     private val progressRecorders = mutableMapOf<Long, PlaybackProgressRecorder>()
+    private val progressJobs = mutableMapOf<Long, Job>()
 
     val uiState: StateFlow<PlayerUiState> = coordinator.state
 
@@ -92,6 +93,8 @@ class PlayerViewModel @Inject constructor(
         positionMillis: Long,
         durationMillis: Long,
         reason: ProgressReason,
+        nowMillis: Long = android.os.SystemClock.elapsedRealtime(),
+        onSaved: () -> Unit = {},
     ) {
         // A retiring controller must not write its position to the newly selected episode.
         val localRequest = request as? PlaybackRequest.LocalMedia ?: return
@@ -101,24 +104,37 @@ class PlayerViewModel @Inject constructor(
         if (!recorder.shouldRecord(
                 positionMillis = positionMillis,
                 durationMillis = durationMillis,
-                nowMillis = android.os.SystemClock.elapsedRealtime(),
+                nowMillis = nowMillis,
                 reason = reason,
             )
         ) {
             return
         }
-        val safePosition = positionMillis.coerceIn(0, durationMillis)
+        // Preserve elapsed time when a stream has not exposed its duration yet.
+        val safePosition = if (durationMillis > 0) {
+            positionMillis.coerceIn(0, durationMillis)
+        } else {
+            positionMillis.coerceAtLeast(0)
+        }
         val positionSeconds = safePosition / 1_000
-        val percentage = ((safePosition * 100) / durationMillis).toInt().coerceIn(0, 100)
-        viewModelScope.launch {
+        val percentage = if (durationMillis > 0) {
+            ((safePosition * 100) / durationMillis).toInt().coerceIn(0, 100)
+        } else {
+            0
+        }
+        val previousWrite = progressJobs[localRequest.mediaId]
+        progressJobs[localRequest.mediaId] = viewModelScope.launch {
+            // Preserve playback order so a slow older request cannot overwrite newer progress.
+            previousWrite?.join()
             val result = historyRepository.recordVideoProgress(
                 session = session,
                 mediaId = localRequest.mediaId,
                 positionSeconds = positionSeconds,
                 percentage = percentage,
             )
-            if (result is AppResult.Failure) {
-                coordinator.reportProgressFailure(result.error)
+            when (result) {
+                is AppResult.Failure -> coordinator.reportProgressFailure(result.error)
+                is AppResult.Success -> onSaved()
             }
         }
     }
@@ -193,6 +209,7 @@ class PlayerViewModel @Inject constructor(
             loadJob = null
             currentRequestId = null
             progressRecorders.clear()
+            progressJobs.entries.removeAll { it.value.isCompleted }
         }
     }
 
@@ -201,6 +218,8 @@ class PlayerViewModel @Inject constructor(
         loadJob = null
         currentRequestId = null
         progressRecorders.clear()
+        progressJobs.values.forEach(Job::cancel)
+        progressJobs.clear()
         requestStore.clearServer(serverId)
     }
 

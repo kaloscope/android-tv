@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,31 +13,40 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -64,6 +74,9 @@ import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.player.DanmakuFrame
+import org.kaloscope.tv.core.player.DanmakuMode
+import org.kaloscope.tv.core.player.DanmakuTimeline
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackFailure
@@ -74,7 +87,7 @@ import org.kaloscope.tv.core.player.PlaybackSettingsPolicy
 import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.TranscodeResolution
-import org.kaloscope.tv.core.player.visibleDanmakusAt
+import kotlin.math.roundToInt
 
 @Composable
 fun PlayerScreen(
@@ -329,6 +342,7 @@ private fun PlayerContent(
             DanmakuOverlay(
                 comments = state.danmakus,
                 positionMillis = positionMillis,
+                isPlaying = status.isPlaying,
             )
         }
         if (
@@ -731,30 +745,115 @@ private fun PlayerProgress(
 }
 
 @Composable
-private fun DanmakuOverlay(
+internal fun DanmakuOverlay(
     comments: List<DanmakuComment>,
     positionMillis: Long,
+    isPlaying: Boolean,
 ) {
-    val visible = visibleDanmakusAt(comments, positionMillis)
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 90.dp, start = 80.dp, end = 80.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.End,
-    ) {
-        visible.forEach { comment ->
-            Text(
-                text = comment.text,
-                color = parseDanmakuColor(comment.color),
-                fontSize = 19.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .background(Color(0x66000000), RoundedCornerShape(7.dp))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            )
+    val timeline = remember(comments) {
+        DanmakuTimeline.create(comments)
+    }
+    var renderPositionMillis by remember(timeline) {
+        mutableLongStateOf(positionMillis)
+    }
+    LaunchedEffect(timeline, positionMillis, isPlaying) {
+        renderPositionMillis = positionMillis
+        if (!isPlaying) {
+            return@LaunchedEffect
+        }
+        val anchorNanos = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { frameNanos ->
+                renderPositionMillis = positionMillis +
+                    ((frameNanos - anchorNanos) / 1_000_000)
+            }
         }
     }
+    val frames = timeline.framesAt(renderPositionMillis)
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 48.dp, bottom = 128.dp)
+            .clipToBounds(),
+    ) {
+        val containerWidthPixels = constraints.maxWidth
+        frames.forEach { frame ->
+            key(
+                frame.comment.id,
+                frame.comment.startMillis,
+                frame.mode,
+                frame.lane,
+            ) {
+                DanmakuText(
+                    frame = frame,
+                    containerWidthPixels = containerWidthPixels,
+                    modifier = Modifier.align(
+                        when (frame.mode) {
+                            DanmakuMode.Scroll, DanmakuMode.Top -> Alignment.TopStart
+                            DanmakuMode.Bottom -> Alignment.BottomStart
+                        },
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DanmakuText(
+    frame: DanmakuFrame,
+    containerWidthPixels: Int,
+    modifier: Modifier = Modifier,
+) {
+    var textWidthPixels by remember(
+        frame.comment.id,
+        frame.comment.startMillis,
+        frame.mode,
+        frame.lane,
+    ) {
+        mutableIntStateOf(0)
+    }
+    val laneOffset = 36.dp * frame.lane
+    val horizontalOffset = when (frame.mode) {
+        DanmakuMode.Scroll -> (
+            containerWidthPixels -
+                (containerWidthPixels + textWidthPixels) * frame.progress
+            ).roundToInt()
+
+        DanmakuMode.Top, DanmakuMode.Bottom ->
+            ((containerWidthPixels - textWidthPixels) / 2).coerceAtLeast(0)
+    }
+    val verticalOffset = when (frame.mode) {
+        DanmakuMode.Scroll -> laneOffset + 76.dp
+        DanmakuMode.Top -> laneOffset
+        DanmakuMode.Bottom -> -laneOffset
+    }
+    Text(
+        text = frame.comment.text,
+        color = parseDanmakuColor(frame.comment.color),
+        maxLines = 1,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.SemiBold,
+        style = TextStyle(
+            shadow = Shadow(
+                color = Color.Black,
+                offset = Offset(1.5f, 1.5f),
+                blurRadius = 3f,
+            ),
+        ),
+        modifier = modifier
+            .offset {
+                IntOffset(
+                    x = horizontalOffset,
+                    y = verticalOffset.roundToPx(),
+                )
+            }
+            .onSizeChanged { textWidthPixels = it.width }
+            .testTag(
+                "danmaku-comment-" +
+                    (frame.comment.id ?: frame.comment.startMillis.toString()),
+            ),
+    )
 }
 
 @Composable

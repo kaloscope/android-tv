@@ -267,6 +267,10 @@ fun KaloscopeApp(
                             positionMillis = position,
                             durationMillis = duration,
                             reason = reason,
+                            // Refresh only after persistence completes to avoid an exit race.
+                            onSaved = {
+                                mainViewModel.loadHome(state.session, force = true)
+                            },
                         )
                     },
                     onSelectPlayerDefinition = { index, position ->

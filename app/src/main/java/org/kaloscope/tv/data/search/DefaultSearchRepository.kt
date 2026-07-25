@@ -6,6 +6,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.DEFAULT_COVER_ASPECT_RATIO
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
@@ -51,6 +52,7 @@ class DefaultSearchRepository @Inject constructor(
                     ?: DEFAULT_PAGE_SIZE,
                 keywordRequired = config.search?.keyword?.required ?: true,
                 webAuthRequired = webAuthRequired,
+                coverRatio = config.search?.display?.coverRatio.toCoverAspectRatio(),
             )
         }
 
@@ -167,4 +169,17 @@ class DefaultSearchRepository @Inject constructor(
     private companion object {
         const val DEFAULT_PAGE_SIZE = 20
     }
+}
+
+internal fun String?.toCoverAspectRatio(): Float {
+    val raw = this?.trim()?.lowercase()
+    // Auto cannot provide stable TV grid geometry before the image is loaded.
+    if (raw.isNullOrEmpty() || raw == "auto") {
+        return DEFAULT_COVER_ASPECT_RATIO
+    }
+    val parts = raw.split('/', limit = 2)
+    val width = parts.firstOrNull()?.toFloatOrNull()
+    val height = parts.getOrNull(1)?.toFloatOrNull() ?: 1f
+    val ratio = if (width != null && height != 0f) width / height else Float.NaN
+    return ratio.takeIf { it.isFinite() && it > 0f } ?: DEFAULT_COVER_ASPECT_RATIO
 }

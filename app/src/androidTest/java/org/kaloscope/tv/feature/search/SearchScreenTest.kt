@@ -4,6 +4,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
@@ -100,6 +102,32 @@ class SearchScreenTest {
 
         composeRule.runOnIdle {
             assertEquals(1, retries)
+        }
+    }
+
+    @Test
+    fun searchImeActionSubmitsTheCurrentQuery() {
+        var searches = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(),
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = { searches += 1 },
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("星际").performImeAction()
+
+        composeRule.runOnIdle {
+            assertEquals(1, searches)
         }
     }
 }
