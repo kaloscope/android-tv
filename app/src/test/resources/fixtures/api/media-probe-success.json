@@ -1,0 +1,22 @@
+{
+  "request_id": "probe-fixture",
+  "status": 200,
+  "message": "",
+  "data": {
+    "duration": 1440.5,
+    "chapters": [
+      {
+        "id": "opening",
+        "title": "片头",
+        "start": 0.0,
+        "end": 90.0
+      },
+      {
+        "id": "chapter-1",
+        "title": "第一章",
+        "start": 90.0,
+        "end": 720.0
+      }
+    ]
+  }
+}

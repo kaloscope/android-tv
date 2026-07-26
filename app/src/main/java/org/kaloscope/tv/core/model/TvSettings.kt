@@ -9,7 +9,7 @@ data class TvSettings(
     val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
     val autoplayNext: Boolean = true,
     val danmaku: DanmakuSettings = DanmakuSettings(),
-    val subtitleEnabled: Boolean = true,
+    val subtitle: SubtitleSettings = SubtitleSettings(),
 )
 
 enum class StartPage {

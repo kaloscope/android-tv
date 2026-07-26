@@ -66,6 +66,8 @@ import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.model.MediaChapter
+import org.kaloscope.tv.core.player.ChapterTimelinePolicy
 import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.Muted
@@ -86,6 +88,7 @@ internal data class PlayerControlsUiState(
     val positionMillis: Long,
     val durationMillis: Long,
     val playbackModeLabel: String,
+    val playbackSpeed: Float,
     val fallbackInProgress: Boolean,
     val progressSaveFailed: Boolean,
     val previousEnabled: Boolean,
@@ -94,6 +97,8 @@ internal data class PlayerControlsUiState(
     val danmakus: PlayerActionUiState,
     val danmakuSettings: PlayerActionUiState,
     val quality: PlayerActionUiState,
+    val subtitleLabel: String? = null,
+    val chapters: List<MediaChapter> = emptyList(),
 )
 
 @Composable
@@ -102,12 +107,15 @@ internal fun PlayerControls(
     playFocus: FocusRequester,
     definitionFocus: FocusRequester,
     danmakuSettingsFocus: FocusRequester,
+    subtitleFocus: FocusRequester,
+    speedFocus: FocusRequester,
     onPrevious: () -> Unit,
     onRewind: () -> Unit,
     onPlayPause: () -> Unit,
     onForward: () -> Unit,
     onNext: () -> Unit,
-    onToggleSubtitles: () -> Unit,
+    onOpenSubtitles: () -> Unit,
+    onOpenSpeed: () -> Unit,
     onToggleDanmakus: () -> Unit,
     onOpenDanmakuSettings: () -> Unit,
     onOpenDefinitions: () -> Unit,
@@ -116,6 +124,10 @@ internal fun PlayerControls(
     onInteraction: () -> Unit,
 ) {
     val progressFocus = remember { FocusRequester() }
+    val forwardFocus = remember { FocusRequester() }
+    val nextFocus = remember { FocusRequester() }
+    val episodeGroupEndFocus = if (state.nextEnabled) nextFocus else forwardFocus
+    val supplementaryGroupStartFocus = if (state.subtitles.enabled) subtitleFocus else speedFocus
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -175,6 +187,7 @@ internal fun PlayerControls(
             SeekablePlayerProgress(
                 positionMillis = state.positionMillis,
                 durationMillis = state.durationMillis,
+                chapters = state.chapters,
                 progressFocus = progressFocus,
                 playFocus = playFocus,
                 onSeekTo = onSeekTo,
@@ -230,22 +243,37 @@ internal fun PlayerControls(
                 iconRes = R.drawable.ic_player_forward_10,
                 action = PlayerActionUiState(enabled = true),
                 onClick = onForward,
+                modifier = Modifier.focusRequester(forwardFocus),
                 upFocus = progressFocus,
+                rightFocus = if (state.nextEnabled) nextFocus else supplementaryGroupStartFocus,
             )
             PlayerIconButton(
                 label = stringResource(R.string.next_episode),
                 iconRes = R.drawable.ic_player_next,
                 action = PlayerActionUiState(enabled = state.nextEnabled),
                 onClick = onNext,
+                modifier = Modifier.focusRequester(nextFocus),
                 upFocus = progressFocus,
+                rightFocus = supplementaryGroupStartFocus,
             )
             Spacer(Modifier.weight(1f))
             PlayerIconButton(
-                label = subtitleButtonLabel(state.subtitles),
+                label = subtitleButtonLabel(state.subtitles, state.subtitleLabel),
                 iconRes = R.drawable.ic_player_subtitles,
                 action = state.subtitles,
-                onClick = onToggleSubtitles,
+                onClick = onOpenSubtitles,
+                modifier = Modifier.focusRequester(subtitleFocus),
                 upFocus = progressFocus,
+                leftFocus = episodeGroupEndFocus,
+            )
+            PlayerIconButton(
+                label = formatPlaybackSpeed(state.playbackSpeed),
+                iconRes = R.drawable.ic_player_speed,
+                action = PlayerActionUiState(enabled = true),
+                onClick = onOpenSpeed,
+                modifier = Modifier.focusRequester(speedFocus),
+                upFocus = progressFocus,
+                leftFocus = if (state.subtitles.enabled) subtitleFocus else episodeGroupEndFocus,
             )
             PlayerIconButton(
                 label = danmakuButtonLabel(state.danmakus),
@@ -283,6 +311,8 @@ private fun PlayerIconButton(
     modifier: Modifier = Modifier,
     primary: Boolean = false,
     upFocus: FocusRequester,
+    leftFocus: FocusRequester? = null,
+    rightFocus: FocusRequester? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
 
@@ -296,7 +326,11 @@ private fun PlayerIconButton(
                 enabled = action.enabled,
                 modifier = modifier
                     .size(if (primary) 54.dp else 50.dp)
-                    .focusProperties { up = upFocus }
+                    .focusProperties {
+                        up = upFocus
+                        leftFocus?.let { left = it }
+                        rightFocus?.let { right = it }
+                    }
                     .onFocusChanged { focused = it.isFocused }
                     .semantics {
                         contentDescription = label
@@ -352,10 +386,14 @@ private fun PlayerIconButton(
 }
 
 @Composable
-private fun subtitleButtonLabel(action: PlayerActionUiState): String =
+private fun subtitleButtonLabel(
+    action: PlayerActionUiState,
+    selectedLabel: String?,
+): String =
     when {
         action.error -> stringResource(R.string.subtitle_unavailable)
         !action.enabled -> stringResource(R.string.no_subtitles)
+        action.active && !selectedLabel.isNullOrBlank() -> selectedLabel
         action.active -> stringResource(R.string.subtitles_on)
         else -> stringResource(R.string.subtitles_off)
     }
@@ -373,6 +411,7 @@ private fun danmakuButtonLabel(action: PlayerActionUiState): String =
 private fun SeekablePlayerProgress(
     positionMillis: Long,
     durationMillis: Long,
+    chapters: List<MediaChapter>,
     progressFocus: FocusRequester,
     playFocus: FocusRequester,
     onSeekTo: (Long) -> Unit,
@@ -390,6 +429,8 @@ private fun SeekablePlayerProgress(
     } else {
         0f
     }
+    val chapterMarkers = ChapterTimelinePolicy.markers(chapters, durationMillis)
+    val currentChapterTitle = ChapterTimelinePolicy.currentTitle(chapters, displayPosition)
 
     LaunchedEffect(positionMillis, durationMillis, focused) {
         if (!focused) {
@@ -399,7 +440,7 @@ private fun SeekablePlayerProgress(
 
     BoxWithConstraints(
         modifier = modifier
-            .height(34.dp)
+            .height(50.dp)
             .focusRequester(progressFocus)
             .focusProperties { down = playFocus }
             .onFocusChanged { focused = it.isFocused }
@@ -444,8 +485,10 @@ private fun SeekablePlayerProgress(
             .testTag("player-progress"),
         contentAlignment = Alignment.BottomStart,
     ) {
+        val progressWidth = maxWidth
         Box(
             modifier = Modifier
+                .align(Alignment.BottomStart)
                 .fillMaxWidth()
                 .height(if (focused) 9.dp else 6.dp)
                 .background(Color(0xFF4A5060), RoundedCornerShape(9.dp)),
@@ -456,8 +499,40 @@ private fun SeekablePlayerProgress(
                     .fillMaxHeight()
                     .background(Primary, RoundedCornerShape(9.dp)),
             )
+            if (chapterMarkers.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("player-chapter-markers"),
+                ) {
+                    chapterMarkers.forEach { marker ->
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .offset(
+                                    x = (progressWidth * marker - 1.dp)
+                                        .coerceIn(0.dp, progressWidth - 2.dp),
+                                )
+                                .width(2.dp)
+                                .fillMaxHeight()
+                                .background(Color.White.copy(alpha = 0.8f)),
+                        )
+                    }
+                }
+            }
         }
         if (focused) {
+            currentChapterTitle?.let { title ->
+                Text(
+                    text = title,
+                    color = OnBackground,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .testTag("player-current-chapter"),
+                )
+            }
             val targetWidth = 54.dp
             val targetOffset =
                 (maxWidth * progress - targetWidth / 2)
@@ -469,7 +544,7 @@ private fun SeekablePlayerProgress(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .width(targetWidth)
-                    .offset(x = targetOffset),
+                    .offset(x = targetOffset, y = 18.dp),
             )
             Box(
                 modifier = Modifier

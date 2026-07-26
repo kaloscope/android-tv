@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.compose.ContentFrame
 import androidx.tv.material3.Button
@@ -58,16 +60,19 @@ import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.SubtitleDisplayMode
+import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
-import org.kaloscope.tv.core.player.PlaybackBufferingPolicy
-import org.kaloscope.tv.core.player.PlaybackFailure
+import org.kaloscope.tv.core.player.PlaybackFeedback
+import org.kaloscope.tv.core.player.PlaybackFeedbackPolicy
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestNavigator
 import org.kaloscope.tv.core.player.PlaybackSettingsPolicy
 import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.ProgressReason
+import org.kaloscope.tv.core.player.SubtitleSelectionPolicy
 import org.kaloscope.tv.core.player.TranscodeResolution
 
 @Composable
@@ -135,6 +140,7 @@ private fun PlayerContent(
                 session = session,
                 request = state.request,
                 subtitles = state.subtitles,
+                probeDurationMillis = state.mediaProbe?.durationMillis ?: 0L,
                 onProgress = onProgress,
             )
             onStopOrDispose {
@@ -148,6 +154,7 @@ private fun PlayerContent(
                 session = session,
                 request = state.request,
                 subtitles = state.subtitles,
+                probeDurationMillis = state.mediaProbe?.durationMillis ?: 0L,
                 onProgress = onProgress,
             )
             onPauseOrDispose {
@@ -165,10 +172,28 @@ private fun PlayerContent(
         return
     }
     val status by controller.status.collectAsStateWithLifecycle()
+    val feedback = PlaybackFeedbackPolicy.resolve(
+        playbackState = status.playbackState,
+        hasBeenReady = status.hasBeenReady,
+        fallbackInProgress = status.fallbackInProgress,
+        switchingItem = state.switchingItem,
+        failure = status.failure,
+    )
     var positionMillis by remember(playbackIdentity) { mutableLongStateOf(0) }
     var controlsVisible by remember { mutableStateOf(true) }
-    var subtitlesEnabled by remember(state.request.requestId) {
-        mutableStateOf(state.request.subtitleEnabled)
+    var sessionSubtitleSettings by remember(state.request.requestId) {
+        mutableStateOf(state.request.subtitleSettings)
+    }
+    var selectedSubtitleTrackId by remember(state.request.requestId) {
+        mutableStateOf(
+            SubtitleSelectionPolicy.preferredTrackId(
+                state.subtitles,
+                state.request.subtitleSettings,
+            ),
+        )
+    }
+    var playbackSpeed by remember(state.request.requestId) {
+        mutableFloatStateOf(1f)
     }
     var sessionDanmakuSettings by remember(state.request.requestId) {
         mutableStateOf(state.request.danmakuSettings)
@@ -180,23 +205,46 @@ private fun PlayerContent(
     var restoreDefinitionFocus by remember { mutableStateOf(false) }
     var danmakuDrawerOpen by remember { mutableStateOf(false) }
     var restoreDanmakuSettingsFocus by remember { mutableStateOf(false) }
+    var subtitleDrawerOpen by remember { mutableStateOf(false) }
+    var restoreSubtitleFocus by remember { mutableStateOf(false) }
+    var speedDrawerOpen by remember { mutableStateOf(false) }
+    var restoreSpeedFocus by remember { mutableStateOf(false) }
     var interactionVersion by remember { mutableLongStateOf(0) }
     val playerFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
     val definitionFocus = remember { FocusRequester() }
     val danmakuSettingsFocus = remember { FocusRequester() }
+    val subtitleFocus = remember { FocusRequester() }
+    val speedFocus = remember { FocusRequester() }
     val hasNext = PlaybackRequestNavigator.hasNext(state.request)
 
     BackHandler {
         val context = when {
+            subtitleDrawerOpen -> PlayerBackContext.SubtitleDrawer
+            speedDrawerOpen -> PlayerBackContext.SpeedDrawer
             danmakuDrawerOpen -> PlayerBackContext.DanmakuDrawer
             definitionDrawerOpen -> PlayerBackContext.DefinitionDrawer
-            controlsVisible && status.failure == null && !state.switchingItem ->
+            controlsVisible &&
+                feedback in setOf(
+                    PlaybackFeedback.Ready,
+                    PlaybackFeedback.Rebuffering,
+                    PlaybackFeedback.FallingBack,
+                ) ->
                 PlayerBackContext.Controls
 
             else -> PlayerBackContext.Player
         }
         when (PlayerControlKeyPolicy.backCommand(context)) {
+            PlayerControlCommand.CloseSubtitleDrawer -> {
+                subtitleDrawerOpen = false
+                restoreSubtitleFocus = true
+            }
+
+            PlayerControlCommand.CloseSpeedDrawer -> {
+                speedDrawerOpen = false
+                restoreSpeedFocus = true
+            }
+
             PlayerControlCommand.CloseDanmakuDrawer -> {
                 danmakuDrawerOpen = false
                 restoreDanmakuSettingsFocus = true
@@ -213,8 +261,26 @@ private fun PlayerContent(
         }
     }
 
-    LaunchedEffect(controller) {
-        controller.setSubtitlesEnabled(subtitlesEnabled)
+    LaunchedEffect(playbackIdentity, state.subtitles) {
+        selectedSubtitleTrackId = if (!sessionSubtitleSettings.enabled) {
+            null
+        } else {
+            selectedSubtitleTrackId
+                ?.takeIf { selected -> state.subtitles.any { it.id == selected } }
+                ?: SubtitleSelectionPolicy.preferredTrackId(
+                    state.subtitles,
+                    sessionSubtitleSettings,
+                )
+        }
+    }
+    LaunchedEffect(controller, selectedSubtitleTrackId) {
+        controller.selectSubtitle(selectedSubtitleTrackId)
+    }
+    LaunchedEffect(controller, sessionSubtitleSettings.timeOffsetSeconds) {
+        controller.setSubtitleTimeOffset(sessionSubtitleSettings.timeOffsetSeconds)
+    }
+    LaunchedEffect(controller, playbackSpeed) {
+        controller.setPlaybackSpeed(playbackSpeed)
     }
     LaunchedEffect(controller) {
         while (true) {
@@ -235,13 +301,17 @@ private fun PlayerContent(
         status.fallbackInProgress,
         definitionDrawerOpen,
         danmakuDrawerOpen,
+        subtitleDrawerOpen,
+        speedDrawerOpen,
+        feedback,
     ) {
         if (
             controlsVisible &&
             !definitionDrawerOpen &&
             !danmakuDrawerOpen &&
-            status.failure == null &&
-            !status.fallbackInProgress
+            !subtitleDrawerOpen &&
+            !speedDrawerOpen &&
+            feedback == PlaybackFeedback.Ready
         ) {
             delay(4_000)
             controlsVisible = false
@@ -252,16 +322,38 @@ private fun PlayerContent(
             controlsVisible = true
         }
     }
-    LaunchedEffect(controlsVisible, definitionDrawerOpen, danmakuDrawerOpen) {
+    LaunchedEffect(
+        controlsVisible,
+        definitionDrawerOpen,
+        danmakuDrawerOpen,
+        subtitleDrawerOpen,
+        speedDrawerOpen,
+        feedback,
+    ) {
         if (
             controlsVisible &&
+            feedback in setOf(
+                PlaybackFeedback.Ready,
+                PlaybackFeedback.Rebuffering,
+                PlaybackFeedback.FallingBack,
+            ) &&
             !definitionDrawerOpen &&
             !danmakuDrawerOpen &&
+            !subtitleDrawerOpen &&
+            !speedDrawerOpen &&
             !restoreDefinitionFocus &&
-            !restoreDanmakuSettingsFocus
+            !restoreDanmakuSettingsFocus &&
+            !restoreSubtitleFocus &&
+            !restoreSpeedFocus
         ) {
             playFocus.requestFocus()
-        } else if (!controlsVisible && !definitionDrawerOpen && !danmakuDrawerOpen) {
+        } else if (
+            !controlsVisible &&
+            !definitionDrawerOpen &&
+            !danmakuDrawerOpen &&
+            !subtitleDrawerOpen &&
+            !speedDrawerOpen
+        ) {
             playerFocus.requestFocus()
         }
     }
@@ -279,10 +371,26 @@ private fun PlayerContent(
             restoreDanmakuSettingsFocus = false
         }
     }
+    LaunchedEffect(subtitleDrawerOpen, restoreSubtitleFocus) {
+        if (!subtitleDrawerOpen && restoreSubtitleFocus) {
+            withFrameNanos { }
+            subtitleFocus.requestFocus()
+            restoreSubtitleFocus = false
+        }
+    }
+    LaunchedEffect(speedDrawerOpen, restoreSpeedFocus) {
+        if (!speedDrawerOpen && restoreSpeedFocus) {
+            withFrameNanos { }
+            speedFocus.requestFocus()
+            restoreSpeedFocus = false
+        }
+    }
     LaunchedEffect(status.failure) {
         if (status.failure != null) {
             definitionDrawerOpen = false
             danmakuDrawerOpen = false
+            subtitleDrawerOpen = false
+            speedDrawerOpen = false
         }
     }
     LaunchedEffect(playbackIdentity, status.playbackState) {
@@ -304,10 +412,21 @@ private fun PlayerContent(
             .background(Color.Black)
             .focusRequester(playerFocus)
             .focusable(
-                enabled = !controlsVisible && !definitionDrawerOpen && !danmakuDrawerOpen,
+                enabled =
+                    !controlsVisible &&
+                        !definitionDrawerOpen &&
+                        !danmakuDrawerOpen &&
+                        !subtitleDrawerOpen &&
+                        !speedDrawerOpen,
             )
             .onPreviewKeyEvent { event ->
-                if (controlsVisible || definitionDrawerOpen || danmakuDrawerOpen) {
+                if (
+                    controlsVisible ||
+                    definitionDrawerOpen ||
+                    danmakuDrawerOpen ||
+                    subtitleDrawerOpen ||
+                    speedDrawerOpen
+                ) {
                     if (event.type == KeyEventType.KeyDown) {
                         interactionVersion += 1
                     }
@@ -349,15 +468,15 @@ private fun PlayerContent(
             player = controller.player,
             modifier = Modifier.fillMaxSize(),
         )
-        if (subtitlesEnabled && status.cues.isNotEmpty()) {
+        if (selectedSubtitleTrackId != null && status.cues.isNotEmpty()) {
             AndroidView(
                 factory = { context ->
                     SubtitleView(context).apply {
-                        setUserDefaultStyle()
-                        setUserDefaultTextSize()
+                        applySubtitleStyle(sessionSubtitleSettings)
                     }
                 },
                 update = { subtitleView ->
+                    subtitleView.applySubtitleStyle(sessionSubtitleSettings)
                     subtitleView.setCues(status.cues)
                 },
                 modifier = Modifier.fillMaxSize(),
@@ -373,9 +492,15 @@ private fun PlayerContent(
         }
         if (
             controlsVisible &&
-            status.failure == null &&
+            feedback in setOf(
+                PlaybackFeedback.Ready,
+                PlaybackFeedback.Rebuffering,
+                PlaybackFeedback.FallingBack,
+            ) &&
             !definitionDrawerOpen &&
             !danmakuDrawerOpen &&
+            !subtitleDrawerOpen &&
+            !speedDrawerOpen &&
             !state.switchingItem
         ) {
             val definitions = (state.request as? PlaybackRequest.NetworkVideo)
@@ -391,13 +516,14 @@ private fun PlayerContent(
                     title = state.request.title,
                     isPlaying = status.isPlaying,
                     positionMillis = positionMillis,
-                    durationMillis = controller.player.duration,
+                    durationMillis = status.effectiveDurationMillis,
                     playbackModeLabel = playbackModeLabel(
                         mode = (state.request as? PlaybackRequest.LocalMedia)?.playbackMode,
                         sourceKind = status.sourceKind,
                         resolution =
                             (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
                     ),
+                    playbackSpeed = playbackSpeed,
                     fallbackInProgress = status.fallbackInProgress,
                     progressSaveFailed = state.progressError != null,
                     previousEnabled =
@@ -409,7 +535,7 @@ private fun PlayerContent(
                         active =
                             state.subtitles.isNotEmpty() &&
                                 !subtitlesFailed &&
-                                subtitlesEnabled,
+                                selectedSubtitleTrackId != null,
                         error = subtitlesFailed,
                     ),
                     danmakus = PlayerActionUiState(
@@ -422,9 +548,15 @@ private fun PlayerContent(
                         error = danmakusFailed,
                     ),
                     quality = PlayerActionUiState(enabled = definitions.size > 1),
+                    subtitleLabel = state.subtitles
+                        .firstOrNull { it.id == selectedSubtitleTrackId }
+                        ?.label,
+                    chapters = state.mediaProbe?.chapters.orEmpty(),
                 ),
                 definitionFocus = definitionFocus,
                 danmakuSettingsFocus = danmakuSettingsFocus,
+                subtitleFocus = subtitleFocus,
+                speedFocus = speedFocus,
                 playFocus = playFocus,
                 onPrevious = {
                     interactionVersion += 1
@@ -448,10 +580,19 @@ private fun PlayerContent(
                     controller.recordItemSwitchProgress()
                     onNext()
                 },
-                onToggleSubtitles = {
+                onOpenSubtitles = {
                     interactionVersion += 1
-                    subtitlesEnabled = !subtitlesEnabled
-                    controller.setSubtitlesEnabled(subtitlesEnabled)
+                    subtitleDrawerOpen = true
+                    speedDrawerOpen = false
+                    definitionDrawerOpen = false
+                    danmakuDrawerOpen = false
+                },
+                onOpenSpeed = {
+                    interactionVersion += 1
+                    speedDrawerOpen = true
+                    subtitleDrawerOpen = false
+                    definitionDrawerOpen = false
+                    danmakuDrawerOpen = false
                 },
                 onToggleDanmakus = {
                     interactionVersion += 1
@@ -463,11 +604,15 @@ private fun PlayerContent(
                     interactionVersion += 1
                     danmakuDrawerOpen = true
                     definitionDrawerOpen = false
+                    subtitleDrawerOpen = false
+                    speedDrawerOpen = false
                 },
                 onOpenDefinitions = {
                     interactionVersion += 1
                     definitionDrawerOpen = true
                     danmakuDrawerOpen = false
+                    subtitleDrawerOpen = false
+                    speedDrawerOpen = false
                 },
                 onSeekTo = { position ->
                     interactionVersion += 1
@@ -481,15 +626,6 @@ private fun PlayerContent(
                 },
             )
         }
-        PlayerBufferingIndicator(
-            isRebuffering =
-                status.failure == null &&
-                    !status.fallbackInProgress &&
-                    PlaybackBufferingPolicy.isRebuffering(
-                        hasBeenReady = status.hasBeenReady,
-                        playbackState = status.playbackState,
-                    ),
-        )
         if (definitionDrawerOpen) {
             PlayerDefinitionDrawer(
                 definitions = (state.request as? PlaybackRequest.NetworkVideo)
@@ -516,9 +652,39 @@ private fun PlayerContent(
                 },
             )
         }
-        if (state.switchingItem) {
-            PlayerBusyOverlay(stringResource(R.string.switching_episode))
-        } else if (state.switchError != null) {
+        if (subtitleDrawerOpen) {
+            PlayerSubtitleSettingsDrawer(
+                tracks = state.subtitles,
+                selectedTrackId = selectedSubtitleTrackId,
+                settings = sessionSubtitleSettings,
+                onSelectTrack = { trackId ->
+                    selectedSubtitleTrackId = trackId
+                    sessionSubtitleSettings = sessionSubtitleSettings.copy(
+                        enabled = trackId != null,
+                    )
+                },
+                onChangeSettings = { sessionSubtitleSettings = it },
+                onDismiss = {
+                    subtitleDrawerOpen = false
+                    restoreSubtitleFocus = true
+                },
+            )
+        }
+        if (speedDrawerOpen) {
+            PlayerSpeedDrawer(
+                speed = playbackSpeed,
+                onSelect = { selectedSpeed ->
+                    playbackSpeed = selectedSpeed
+                    speedDrawerOpen = false
+                    restoreSpeedFocus = true
+                },
+                onDismiss = {
+                    speedDrawerOpen = false
+                    restoreSpeedFocus = true
+                },
+            )
+        }
+        if (!state.switchingItem && state.switchError != null) {
             Text(
                 text = stringResource(R.string.switch_episode_failed),
                 color = Danger,
@@ -530,17 +696,16 @@ private fun PlayerContent(
                     .padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
-        status.failure?.let { failure ->
-            PlaybackErrorOverlay(
-                failure = failure,
-                sourceKind = status.sourceKind,
-                onRetry = {
-                    controlsVisible = true
-                    interactionVersion += 1
-                    controller.retry()
-                },
-            )
-        }
+        PlayerFeedbackOverlay(
+            feedback = feedback,
+            failure = status.failure,
+            sourceKind = status.sourceKind,
+            onRetry = {
+                controlsVisible = true
+                interactionVersion += 1
+                controller.retry()
+            },
+        )
     }
 }
 
@@ -593,23 +758,6 @@ internal fun PlayerDefinitionDrawer(
 }
 
 @Composable
-private fun PlayerBusyOverlay(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x99000000)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = message,
-            color = OnBackground,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-@Composable
 private fun PlayerButton(
     text: String,
     onClick: () -> Unit,
@@ -630,41 +778,6 @@ private fun PlayerButton(
         ),
     ) {
         Text(text)
-    }
-}
-
-@Composable
-private fun PlaybackErrorOverlay(
-    failure: PlaybackFailure,
-    sourceKind: PlaybackSourceKind,
-    onRetry: () -> Unit,
-) {
-    val retryFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        retryFocus.requestFocus()
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xCC000000)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = playbackErrorText(failure, sourceKind),
-                color = Danger,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = onRetry,
-                modifier = Modifier.focusRequester(retryFocus),
-                colors = ButtonDefaults.colors(focusedContainerColor = Primary),
-            ) {
-                Text(stringResource(R.string.retry))
-            }
-        }
     }
 }
 
@@ -695,28 +808,6 @@ private fun playbackModeLabel(
         else -> stringResource(R.string.playback_transcode, resolutionLabel)
     }
 }
-
-@Composable
-private fun playbackErrorText(
-    failure: PlaybackFailure,
-    sourceKind: PlaybackSourceKind,
-): String =
-    when (failure) {
-        PlaybackFailure.Network -> stringResource(R.string.playback_network_failed)
-        PlaybackFailure.Unauthorized -> stringResource(R.string.playback_unauthorized)
-        PlaybackFailure.Forbidden -> stringResource(R.string.error_forbidden)
-        PlaybackFailure.MissingMedia -> stringResource(R.string.playback_media_missing)
-        PlaybackFailure.Source,
-        PlaybackFailure.Decoder,
-        PlaybackFailure.Unknown,
-        -> if (sourceKind == PlaybackSourceKind.Network) {
-            stringResource(R.string.network_source_playback_failed)
-        } else if (sourceKind == PlaybackSourceKind.HlsTranscode) {
-            stringResource(R.string.transcode_playback_failed)
-        } else {
-            stringResource(R.string.direct_playback_failed)
-        }
-    }
 
 @Composable
 private fun PlayerMessage(
@@ -762,3 +853,34 @@ private fun PlaybackRequest.playbackIdentity(): String =
         is PlaybackRequest.NetworkVideo ->
             "$requestId:network:${source.resourceId}:${source.selectedChapterIndex}:${source.url}"
     }
+
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun SubtitleView.applySubtitleStyle(settings: SubtitleSettings) {
+    setApplyEmbeddedStyles(false)
+    setApplyEmbeddedFontSizes(false)
+    setFractionalTextSize(
+        SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * settings.fontScalePercent / 100f,
+    )
+    setBottomPaddingFraction(settings.verticalPositionPercent / 100f)
+    setStyle(
+        when (settings.displayMode) {
+            SubtitleDisplayMode.Stroke -> CaptionStyleCompat(
+                android.graphics.Color.WHITE,
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+                CaptionStyleCompat.EDGE_TYPE_OUTLINE,
+                android.graphics.Color.BLACK,
+                null,
+            )
+
+            SubtitleDisplayMode.Background -> CaptionStyleCompat(
+                android.graphics.Color.WHITE,
+                0xB3000000.toInt(),
+                android.graphics.Color.TRANSPARENT,
+                CaptionStyleCompat.EDGE_TYPE_NONE,
+                android.graphics.Color.TRANSPARENT,
+                null,
+            )
+        },
+    )
+}

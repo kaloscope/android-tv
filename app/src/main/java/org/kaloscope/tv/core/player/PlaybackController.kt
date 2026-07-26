@@ -8,6 +8,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
@@ -34,6 +35,9 @@ data class PlaybackStatus(
     val fallbackInProgress: Boolean = false,
     val failure: PlaybackFailure? = null,
     val cues: List<Cue> = emptyList(),
+    val selectedSubtitleTrackId: String? = null,
+    val playbackSpeed: Float = 1f,
+    val effectiveDurationMillis: Long = 0L,
 )
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -42,6 +46,7 @@ class PlaybackController internal constructor(
     private val session: Session,
     private val request: PlaybackRequest,
     private val subtitles: List<SubtitleTrack>,
+    private val probeDurationMillis: Long,
     private val onProgress: (PlaybackRequest, Long, Long, ProgressReason) -> Unit,
 ) {
     private var sourceKind = when (request) {
@@ -49,7 +54,18 @@ class PlaybackController internal constructor(
         is PlaybackRequest.NetworkVideo -> PlaybackSourceKind.Network
     }
     private var fallbackAttempted = false
-    private val mutableStatus = MutableStateFlow(PlaybackStatus(sourceKind = sourceKind))
+    private val subtitleClock = SubtitleClock()
+    private var selectedSubtitleTrackId = SubtitleSelectionPolicy.preferredTrackId(
+        subtitles,
+        request.subtitleSettings,
+    )
+    private val mutableStatus = MutableStateFlow(
+        PlaybackStatus(
+            sourceKind = sourceKind,
+            selectedSubtitleTrackId = selectedSubtitleTrackId,
+            effectiveDurationMillis = probeDurationMillis.coerceAtLeast(0L),
+        ),
+    )
     private val listener = object : Player.Listener {
         override fun onEvents(
             player: Player,
@@ -65,11 +81,17 @@ class PlaybackController internal constructor(
                 ),
                 fallbackInProgress = currentStatus.fallbackInProgress &&
                     player.playbackState != Player.STATE_READY,
+                effectiveDurationMillis = player.duration
+                    .takeIf { it > 0 }
+                    ?: probeDurationMillis.coerceAtLeast(0L),
             )
             if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) &&
                 player.playbackState == Player.STATE_READY
             ) {
                 record(ProgressReason.Started)
+            }
+            if (events.contains(Player.EVENT_TRACKS_CHANGED)) {
+                applySubtitleSelection()
             }
         }
 
@@ -126,12 +148,18 @@ class PlaybackController internal constructor(
             OkHttpDataSource.Factory(authenticatedClient(session)),
         )
         player = ExoPlayer.Builder(context)
+            .setRenderersFactory(PlaybackRenderersFactory(context, subtitleClock))
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .setSeekBackIncrementMs(SEEK_INCREMENT_MILLIS)
             .setSeekForwardIncrementMs(SEEK_INCREMENT_MILLIS)
             .build()
         mediaSession = MediaSession.Builder(context, player).build()
         player.addListener(listener)
+        player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, selectedSubtitleTrackId == null)
+            .build()
+        subtitleClock.setOffsetSeconds(request.subtitleSettings.timeOffsetSeconds)
         startSource(sourceKind, request.resumePositionMillis())
     }
 
@@ -155,10 +183,61 @@ class PlaybackController internal constructor(
     }
 
     fun setSubtitlesEnabled(enabled: Boolean) {
-        player.trackSelectionParameters = player.trackSelectionParameters
+        selectSubtitle(
+            if (enabled) {
+                selectedSubtitleTrackId ?: subtitles.firstOrNull()?.id
+            } else {
+                null
+            },
+        )
+    }
+
+    fun selectSubtitle(trackId: String?) {
+        selectedSubtitleTrackId = trackId
+        mutableStatus.value = mutableStatus.value.copy(selectedSubtitleTrackId = trackId)
+        applySubtitleSelection()
+    }
+
+    private fun applySubtitleSelection() {
+        val parameters = player.trackSelectionParameters
             .buildUpon()
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+        val trackId = selectedSubtitleTrackId
+        if (trackId == null) {
+            player.trackSelectionParameters = parameters
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .build()
+            return
+        }
+        val selection = player.currentTracks.groups.firstNotNullOfOrNull { group ->
+            if (group.type != C.TRACK_TYPE_TEXT) {
+                return@firstNotNullOfOrNull null
+            }
+            val trackIndex = (0 until group.length)
+                .firstOrNull { index -> group.getTrackFormat(index).id == trackId }
+                ?: return@firstNotNullOfOrNull null
+            TrackSelectionOverride(group.mediaTrackGroup, trackIndex)
+        }
+        if (selection == null) {
+            player.trackSelectionParameters = parameters
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                .build()
+            return
+        }
+        player.trackSelectionParameters = parameters
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .setOverrideForType(selection)
             .build()
+    }
+
+    fun setSubtitleTimeOffset(seconds: Float) {
+        subtitleClock.setOffsetSeconds(seconds)
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        val safeSpeed = SUPPORTED_PLAYBACK_SPEEDS.firstOrNull { it == speed } ?: 1f
+        player.setPlaybackSpeed(safeSpeed)
+        mutableStatus.value = mutableStatus.value.copy(playbackSpeed = safeSpeed)
     }
 
     fun retry() {
@@ -216,7 +295,12 @@ class PlaybackController internal constructor(
                 .setLabel(track.label)
                 .setLanguage(track.language)
                 .setMimeType(MimeTypes.TEXT_VTT)
-                .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                .setSelectionFlags(
+                    SubtitleSelectionPolicy.selectionFlags(
+                        track.id,
+                        selectedSubtitleTrackId,
+                    ),
+                )
                 .build()
         }
         return MediaItem.Builder()
@@ -288,6 +372,7 @@ class PlaybackController internal constructor(
     private companion object {
         const val SEEK_INCREMENT_MILLIS = 10_000L
         const val MAX_CAUSE_DEPTH = 8
+        val SUPPORTED_PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
     }
 }
 
@@ -298,12 +383,14 @@ class PlaybackControllerFactory @Inject constructor(
         session: Session,
         request: PlaybackRequest,
         subtitles: List<SubtitleTrack>,
+        probeDurationMillis: Long = 0L,
         onProgress: (PlaybackRequest, Long, Long, ProgressReason) -> Unit,
     ): PlaybackController = PlaybackController(
         context = context,
         session = session,
         request = request,
         subtitles = subtitles,
+        probeDurationMillis = probeDurationMillis,
         onProgress = onProgress,
     )
 }

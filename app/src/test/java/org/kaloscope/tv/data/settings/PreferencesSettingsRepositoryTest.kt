@@ -17,6 +17,8 @@ import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.StartPage
+import org.kaloscope.tv.core.model.SubtitleDisplayMode
+import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -52,7 +54,14 @@ class PreferencesSettingsRepositoryTest {
             transcodeResolution = TranscodeResolution.P720,
             autoplayNext = false,
             danmaku = DanmakuSettings(enabled = false),
-            subtitleEnabled = false,
+            subtitle = SubtitleSettings(
+                enabled = false,
+                languagePreference = "chs|zh-CN",
+                displayMode = SubtitleDisplayMode.Background,
+                timeOffsetSeconds = -0.5f,
+                fontScalePercent = 125,
+                verticalPositionPercent = 8,
+            ),
         )
 
         assertEquals(AppResult.Success(expected), first.saveSettings(expected))

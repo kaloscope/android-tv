@@ -284,6 +284,26 @@ class KaloscopeApiContractTest {
     }
 
     @Test
+    fun `media probe sends path and parses embedded chapters`() = runTest {
+        server.enqueue(jsonResponse(fixture("media-probe-success.json")))
+
+        val response = api.getMediaProbe(
+            authorization = "Token fixture-token",
+            path = "/media/剧集 01.mkv",
+        )
+        val request = server.takeRequest(1, TimeUnit.SECONDS)
+
+        checkNotNull(request)
+        assertEquals(
+            "/_api/media/probe?path=%2Fmedia%2F%E5%89%A7%E9%9B%86%2001.mkv",
+            request.path,
+        )
+        assertEquals("Token fixture-token", request.getHeader("Authorization"))
+        assertEquals(1_440.5, response.data.duration, 0.0)
+        assertEquals("opening", response.data.chapters.first().id)
+    }
+
+    @Test
     fun `danmaku match parses millisecond start`() = runTest {
         server.enqueue(jsonResponse(fixture("danmaku-match-success.json")))
 

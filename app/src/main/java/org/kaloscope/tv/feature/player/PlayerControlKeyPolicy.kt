@@ -20,6 +20,8 @@ internal enum class PlayerControlContext {
 }
 
 internal enum class PlayerBackContext {
+    SubtitleDrawer,
+    SpeedDrawer,
     DanmakuDrawer,
     DefinitionDrawer,
     Controls,
@@ -48,6 +50,10 @@ internal sealed interface PlayerControlCommand {
     data object CloseDanmakuDrawer : PlayerControlCommand
 
     data object CloseDefinitionDrawer : PlayerControlCommand
+
+    data object CloseSubtitleDrawer : PlayerControlCommand
+
+    data object CloseSpeedDrawer : PlayerControlCommand
 
     data object ExitPlayer : PlayerControlCommand
 }
@@ -78,6 +84,8 @@ internal object PlayerControlKeyPolicy {
 
     fun backCommand(context: PlayerBackContext): PlayerControlCommand =
         when (context) {
+            PlayerBackContext.SubtitleDrawer -> PlayerControlCommand.CloseSubtitleDrawer
+            PlayerBackContext.SpeedDrawer -> PlayerControlCommand.CloseSpeedDrawer
             PlayerBackContext.DanmakuDrawer -> PlayerControlCommand.CloseDanmakuDrawer
             PlayerBackContext.DefinitionDrawer -> PlayerControlCommand.CloseDefinitionDrawer
             PlayerBackContext.Controls -> PlayerControlCommand.HideControls

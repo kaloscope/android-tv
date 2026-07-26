@@ -1,17 +1,21 @@
 package org.kaloscope.tv.data.media
 
+import kotlin.math.roundToLong
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import org.kaloscope.tv.core.model.MediaActor
+import org.kaloscope.tv.core.model.MediaChapter
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
 import org.kaloscope.tv.core.model.MediaPage
+import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.data.media.remote.MediaItemData
 import org.kaloscope.tv.data.media.remote.MediaLibraryData
 import org.kaloscope.tv.data.media.remote.MediaPageData
+import org.kaloscope.tv.data.media.remote.MediaProbeData
 
 internal fun MediaLibraryData.toModel(): MediaLibrary =
     MediaLibrary(
@@ -37,6 +41,32 @@ internal fun MediaPageData.toModel(
         pageNumber = pageNumber,
         pageSize = pageSize,
         hasNext = pageNumber * pageSize < total,
+    )
+}
+
+internal fun MediaProbeData.toModel(): MediaProbe {
+    val validChapters = chapters
+        .filter { chapter ->
+            chapter.start.isFinite() &&
+                chapter.end.isFinite() &&
+                chapter.start >= 0.0 &&
+                chapter.end > chapter.start
+        }
+        .sortedBy { it.start }
+        .mapIndexed { index, chapter ->
+            MediaChapter(
+                id = chapter.id.trim().ifBlank { (index + 1).toString() },
+                title = chapter.title.trim().ifBlank { "章节 ${index + 1}" },
+                startMillis = chapter.start.toMillis(),
+                endMillis = chapter.end.toMillis(),
+            )
+        }
+    return MediaProbe(
+        durationMillis = duration
+            .takeIf { it.isFinite() && it >= 0.0 }
+            ?.toMillis()
+            ?: 0L,
+        chapters = validChapters,
     )
 }
 
@@ -118,3 +148,6 @@ private fun String?.nonBlankOrNull(): String? =
 
 private fun List<String>?.cleanValues(): List<String> =
     orEmpty().mapNotNull(String?::nonBlankOrNull)
+
+private fun Double.toMillis(): Long =
+    (coerceAtMost(Long.MAX_VALUE / 1_000.0) * 1_000.0).roundToLong()

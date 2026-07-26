@@ -17,6 +17,7 @@ import retrofit2.Response
 import org.kaloscope.tv.data.media.remote.MediaItemData
 import org.kaloscope.tv.data.media.remote.MediaLibraryData
 import org.kaloscope.tv.data.media.remote.MediaPageData
+import org.kaloscope.tv.data.media.remote.MediaProbeData
 import org.kaloscope.tv.data.media.remote.SubtitleTrackData
 import org.kaloscope.tv.data.search.remote.IndexerAuthData
 import org.kaloscope.tv.data.search.remote.IndexerConfigData
@@ -69,6 +70,12 @@ interface KaloscopeApi {
         @Header("Authorization") authorization: String,
         @Path("mediaId") mediaId: Long,
     ): ApiEnvelope<MediaItemData>
+
+    @GET("media/probe")
+    suspend fun getMediaProbe(
+        @Header("Authorization") authorization: String,
+        @Query("path") path: String,
+    ): ApiEnvelope<MediaProbeData>
 
     @GET("flow/graph/list")
     suspend fun getIndexers(

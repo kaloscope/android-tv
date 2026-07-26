@@ -17,6 +17,9 @@ import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.StartPage
+import org.kaloscope.tv.core.model.SubtitleDisplayMode
+import org.kaloscope.tv.core.model.SubtitleSettings
+import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -48,7 +51,14 @@ class PreferencesSettingsRepository @Inject constructor(
                     DanmakuDisplayMode.Top in settings.danmaku.visibleModes
                 preferences[DANMAKU_BOTTOM_VISIBLE] =
                     DanmakuDisplayMode.Bottom in settings.danmaku.visibleModes
-                preferences[SUBTITLE_ENABLED] = settings.subtitleEnabled
+                val subtitle = SubtitleSettingsPolicy.sanitize(settings.subtitle)
+                preferences[SUBTITLE_ENABLED] = subtitle.enabled
+                preferences[SUBTITLE_LANGUAGE_PREFERENCE] = subtitle.languagePreference
+                preferences[SUBTITLE_DISPLAY_MODE] = subtitle.displayMode.storedValue
+                preferences[SUBTITLE_TIME_OFFSET_TENTHS] =
+                    (subtitle.timeOffsetSeconds * 10).toInt()
+                preferences[SUBTITLE_FONT_SCALE] = subtitle.fontScalePercent
+                preferences[SUBTITLE_VERTICAL_POSITION] = subtitle.verticalPositionPercent
             }
             settings
         }
@@ -89,7 +99,19 @@ class PreferencesSettingsRepository @Inject constructor(
                     }
                 },
             ),
-            subtitleEnabled = this[SUBTITLE_ENABLED] ?: true,
+            subtitle = SubtitleSettingsPolicy.sanitize(
+                SubtitleSettings(
+                    enabled = this[SUBTITLE_ENABLED] ?: true,
+                    languagePreference = this[SUBTITLE_LANGUAGE_PREFERENCE].orEmpty(),
+                    displayMode = enumValue(
+                        stored = this[SUBTITLE_DISPLAY_MODE],
+                        fallback = SubtitleDisplayMode.Stroke,
+                    ),
+                    timeOffsetSeconds = (this[SUBTITLE_TIME_OFFSET_TENTHS] ?: 0) / 10f,
+                    fontScalePercent = this[SUBTITLE_FONT_SCALE] ?: 100,
+                    verticalPositionPercent = this[SUBTITLE_VERTICAL_POSITION] ?: 2,
+                ),
+            ),
         )
 
     private suspend fun <T> localCall(
@@ -116,6 +138,9 @@ class PreferencesSettingsRepository @Inject constructor(
     private val DanmakuSpeed.storedValue: String
         get() = name.lowercase()
 
+    private val SubtitleDisplayMode.storedValue: String
+        get() = name.lowercase()
+
     private inline fun <reified T : Enum<T>> enumValue(
         stored: String?,
         fallback: T,
@@ -140,5 +165,13 @@ class PreferencesSettingsRepository @Inject constructor(
         val DANMAKU_TOP_VISIBLE = booleanPreferencesKey("danmaku_top_visible")
         val DANMAKU_BOTTOM_VISIBLE = booleanPreferencesKey("danmaku_bottom_visible")
         val SUBTITLE_ENABLED = booleanPreferencesKey("subtitle_enabled")
+        val SUBTITLE_LANGUAGE_PREFERENCE =
+            stringPreferencesKey("subtitle_language_preference")
+        val SUBTITLE_DISPLAY_MODE = stringPreferencesKey("subtitle_display_mode")
+        val SUBTITLE_TIME_OFFSET_TENTHS =
+            intPreferencesKey("subtitle_time_offset_tenths")
+        val SUBTITLE_FONT_SCALE = intPreferencesKey("subtitle_font_scale")
+        val SUBTITLE_VERTICAL_POSITION =
+            intPreferencesKey("subtitle_vertical_position")
     }
 }

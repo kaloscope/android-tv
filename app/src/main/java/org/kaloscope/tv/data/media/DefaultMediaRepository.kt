@@ -9,6 +9,7 @@ import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaPage
+import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.core.network.ApiClientFactory
@@ -62,6 +63,20 @@ class DefaultMediaRepository @Inject constructor(
                 .dataOrThrow()
                 .toDetail()
                 ?: throw SerializationException("Invalid media detail")
+        }
+
+    override suspend fun getMediaProbe(
+        session: Session,
+        path: String,
+    ): AppResult<MediaProbe> =
+        networkCall(json) {
+            apiClientFactory.create(session.server.origin)
+                .getMediaProbe(
+                    authorization = session.authorization(),
+                    path = path,
+                )
+                .dataOrThrow()
+                .toModel()
         }
 
     override suspend fun getSubtitleTracks(

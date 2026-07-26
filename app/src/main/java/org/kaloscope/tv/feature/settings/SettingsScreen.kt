@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,14 +30,21 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
+import java.util.Locale
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
@@ -53,6 +61,9 @@ import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
+import org.kaloscope.tv.core.model.SubtitleDisplayMode
+import org.kaloscope.tv.core.model.SubtitleSettings
+import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
 
@@ -66,7 +77,7 @@ fun SettingsScreen(
     onTranscodeResolution: (TranscodeResolution) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
     onDanmakuSettings: (DanmakuSettings) -> Unit,
-    onSubtitleEnabled: (Boolean) -> Unit,
+    onSubtitleSettings: (SubtitleSettings) -> Unit,
     onStartPage: (StartPage) -> Unit,
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
@@ -92,7 +103,7 @@ fun SettingsScreen(
             onTranscodeResolution = onTranscodeResolution,
             onAutoplayNext = onAutoplayNext,
             onDanmakuSettings = onDanmakuSettings,
-            onSubtitleEnabled = onSubtitleEnabled,
+            onSubtitleSettings = onSubtitleSettings,
             onStartPage = onStartPage,
             onTestConnection = onTestConnection,
             onManageServers = onManageServers,
@@ -110,22 +121,23 @@ private fun SettingsContent(
     onTranscodeResolution: (TranscodeResolution) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
     onDanmakuSettings: (DanmakuSettings) -> Unit,
-    onSubtitleEnabled: (Boolean) -> Unit,
+    onSubtitleSettings: (SubtitleSettings) -> Unit,
     onStartPage: (StartPage) -> Unit,
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
     onLogout: () -> Unit,
 ) {
     var choice by remember { mutableStateOf<SettingsChoice?>(null) }
+    var languageEditorOpen by remember { mutableStateOf(false) }
     var restoreFocus by remember { mutableStateOf<FocusRequester?>(null) }
     val selectedSectionFocus = remember { FocusRequester() }
-    val controlsEnabled = choice == null && !state.isSaving
+    val controlsEnabled = choice == null && !languageEditorOpen && !state.isSaving
 
     LaunchedEffect(Unit) {
         selectedSectionFocus.requestFocus()
     }
-    LaunchedEffect(choice, restoreFocus) {
-        if (choice == null) {
+    LaunchedEffect(choice, languageEditorOpen, restoreFocus) {
+        if (choice == null && !languageEditorOpen) {
             restoreFocus?.let { requester ->
                 withFrameNanos { }
                 requester.requestFocus()
@@ -135,6 +147,9 @@ private fun SettingsContent(
     }
     BackHandler(enabled = choice != null) {
         choice = null
+    }
+    BackHandler(enabled = languageEditorOpen) {
+        languageEditorOpen = false
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -174,7 +189,11 @@ private fun SettingsContent(
                     },
                     onAutoplayNext = onAutoplayNext,
                     onDanmakuSettings = onDanmakuSettings,
-                    onSubtitleEnabled = onSubtitleEnabled,
+                    onSubtitleSettings = onSubtitleSettings,
+                    onOpenSubtitleLanguage = { focus ->
+                        restoreFocus = focus
+                        languageEditorOpen = true
+                    },
                     onTestConnection = onTestConnection,
                     onManageServers = onManageServers,
                     onLogout = onLogout,
@@ -191,6 +210,20 @@ private fun SettingsContent(
                 onSelect = { option ->
                     choice = null
                     option.onSelect()
+                },
+            )
+        }
+        if (languageEditorOpen) {
+            SubtitleLanguageDialog(
+                initialValue = state.settings.subtitle.languagePreference,
+                onDismiss = { languageEditorOpen = false },
+                onSave = { language ->
+                    languageEditorOpen = false
+                    onSubtitleSettings(
+                        state.settings.subtitle.copy(
+                            languagePreference = language.trim(),
+                        ),
+                    )
                 },
             )
         }
@@ -249,7 +282,8 @@ private fun SettingsPanel(
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
     onDanmakuSettings: (DanmakuSettings) -> Unit,
-    onSubtitleEnabled: (Boolean) -> Unit,
+    onSubtitleSettings: (SubtitleSettings) -> Unit,
+    onOpenSubtitleLanguage: (FocusRequester) -> Unit,
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
     onLogout: () -> Unit,
@@ -294,12 +328,13 @@ private fun SettingsPanel(
                 modifier = Modifier.weight(1f),
             )
 
-            SettingsSection.Subtitle -> ToggleSettingRow(
-                title = stringResource(R.string.default_subtitle),
-                description = stringResource(R.string.default_subtitle_description),
-                checked = state.settings.subtitleEnabled,
+            SettingsSection.Subtitle -> SubtitleDefaultSettings(
+                settings = state.settings.subtitle,
                 enabled = enabled,
-                onToggle = { onSubtitleEnabled(!state.settings.subtitleEnabled) },
+                onOpenChoice = onOpenChoice,
+                onOpenLanguage = onOpenSubtitleLanguage,
+                onChange = onSubtitleSettings,
+                modifier = Modifier.weight(1f),
             )
 
             SettingsSection.Behavior -> BehaviorSettings(
@@ -385,6 +420,173 @@ private fun PlaybackSettings(
         enabled = enabled,
         onToggle = { onAutoplayNext(!state.settings.autoplayNext) },
     )
+}
+
+@Composable
+private fun SubtitleDefaultSettings(
+    settings: SubtitleSettings,
+    enabled: Boolean,
+    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
+    onOpenLanguage: (FocusRequester) -> Unit,
+    onChange: (SubtitleSettings) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("subtitle-default-settings"),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            ToggleSettingRow(
+                title = stringResource(R.string.default_subtitle),
+                description = stringResource(R.string.default_subtitle_description),
+                checked = settings.enabled,
+                enabled = enabled,
+                onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
+            )
+        }
+        item {
+            SubtitleLanguageSettingRow(
+                value = settings.languagePreference,
+                enabled = enabled,
+                onOpen = onOpenLanguage,
+            )
+        }
+        item {
+            ChoiceSettingRow(
+                title = stringResource(R.string.subtitle_display_mode),
+                description = stringResource(R.string.subtitle_display_mode_description),
+                value = subtitleDisplayModeLabel(settings.displayMode),
+                enabled = enabled,
+                createChoice = {
+                    SettingsChoice(
+                        title = stringResource(R.string.subtitle_display_mode),
+                        options = SubtitleDisplayMode.entries.map { mode ->
+                            SettingsChoiceOption(
+                                label = subtitleDisplayModeLabel(mode),
+                                selected = mode == settings.displayMode,
+                                onSelect = { onChange(settings.copy(displayMode = mode)) },
+                            )
+                        },
+                    )
+                },
+                onOpenChoice = onOpenChoice,
+            )
+        }
+        item {
+            AdjustableSettingRow(
+                title = stringResource(R.string.subtitle_font_scale),
+                description = stringResource(R.string.subtitle_font_scale_description),
+                value = stringResource(R.string.percentage_value, settings.fontScalePercent),
+                enabled = enabled,
+                onDecrease = {
+                    onChange(SubtitleSettingsPolicy.adjustFontScale(settings, -1))
+                },
+                onIncrease = {
+                    onChange(SubtitleSettingsPolicy.adjustFontScale(settings, 1))
+                },
+            )
+        }
+        item {
+            AdjustableSettingRow(
+                title = stringResource(R.string.subtitle_vertical_position),
+                description = stringResource(R.string.subtitle_vertical_position_description),
+                value = stringResource(
+                    R.string.percentage_value,
+                    settings.verticalPositionPercent,
+                ),
+                enabled = enabled,
+                onDecrease = {
+                    onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, -1))
+                },
+                onIncrease = {
+                    onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, 1))
+                },
+            )
+        }
+        item {
+            AdjustableSettingRow(
+                title = stringResource(R.string.subtitle_time_offset),
+                description = stringResource(R.string.subtitle_time_offset_description),
+                value = formatSubtitleOffset(settings.timeOffsetSeconds),
+                enabled = enabled,
+                onDecrease = {
+                    onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, -1))
+                },
+                onIncrease = {
+                    onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, 1))
+                },
+                onClick = {
+                    onChange(settings.copy(timeOffsetSeconds = 0f))
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubtitleLanguageSettingRow(
+    value: String,
+    enabled: Boolean,
+    onOpen: (FocusRequester) -> Unit,
+) {
+    val focus = remember { FocusRequester() }
+    Button(
+        onClick = { onOpen(focus) },
+        enabled = enabled,
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(focus),
+        colors = settingRowColors(),
+    ) {
+        SettingRowContent(
+            title = stringResource(R.string.subtitle_language_preference),
+            description = stringResource(R.string.subtitle_language_preference_description),
+            value = value.ifBlank {
+                stringResource(R.string.subtitle_language_preference_any)
+            } + "  ›",
+        )
+    }
+}
+
+@Composable
+private fun AdjustableSettingRow(
+    title: String,
+    description: String,
+    value: String,
+    enabled: Boolean,
+    onDecrease: () -> Unit,
+    onIncrease: () -> Unit,
+    onClick: () -> Unit = {},
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                }
+                when (event.key) {
+                    Key.DirectionLeft -> {
+                        onDecrease()
+                        true
+                    }
+
+                    Key.DirectionRight -> {
+                        onIncrease()
+                        true
+                    }
+
+                    else -> false
+                }
+            },
+        colors = settingRowColors(),
+    ) {
+        SettingRowContent(title, description, "‹  $value  ›")
+    }
 }
 
 @Composable
@@ -708,6 +910,72 @@ private fun SettingValue(
 }
 
 @Composable
+private fun SubtitleLanguageDialog(
+    initialValue: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var value by remember(initialValue) { mutableStateOf(initialValue) }
+    val textFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        textFocus.requestFocus()
+    }
+    BackHandler(onBack = onDismiss)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xCC050812)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .width(520.dp)
+                .background(PanelElevated, RoundedCornerShape(22.dp))
+                .padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.subtitle_language_preference),
+                color = OnBackground,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = stringResource(R.string.subtitle_language_editor_hint),
+                color = Muted,
+                fontSize = 14.sp,
+            )
+            BasicTextField(
+                value = value,
+                onValueChange = { value = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(textFocus)
+                    .background(Color(0xFF202738), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                textStyle = TextStyle(
+                    color = OnBackground,
+                    fontSize = 18.sp,
+                ),
+                singleLine = true,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+            ) {
+                Button(onClick = onDismiss) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(onClick = { onSave(value) }) {
+                    Text(stringResource(R.string.save))
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SettingsChoiceDialog(
     choice: SettingsChoice,
     onDismiss: () -> Unit,
@@ -859,6 +1127,21 @@ private fun resolutionLabel(resolution: TranscodeResolution): String =
         TranscodeResolution.P1080 -> stringResource(R.string.resolution_1080p)
         TranscodeResolution.P720 -> stringResource(R.string.resolution_720p)
         TranscodeResolution.P480 -> stringResource(R.string.resolution_480p)
+    }
+
+@Composable
+private fun subtitleDisplayModeLabel(mode: SubtitleDisplayMode): String =
+    when (mode) {
+        SubtitleDisplayMode.Stroke -> stringResource(R.string.subtitle_display_mode_stroke)
+        SubtitleDisplayMode.Background ->
+            stringResource(R.string.subtitle_display_mode_background)
+    }
+
+private fun formatSubtitleOffset(value: Float): String =
+    if (value == 0f) {
+        "0.0s"
+    } else {
+        String.format(Locale.US, "%+.1fs", value)
     }
 
 @Composable

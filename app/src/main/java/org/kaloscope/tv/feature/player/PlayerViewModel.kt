@@ -255,7 +255,7 @@ class PlayerViewModel @Inject constructor(
             },
             autoplayNext = settings.autoplayNext,
             danmakuSettings = settings.danmaku,
-            subtitleEnabled = settings.subtitleEnabled,
+            subtitleSettings = settings.subtitle,
         )
         requestStore.put(request)
         return request.requestId

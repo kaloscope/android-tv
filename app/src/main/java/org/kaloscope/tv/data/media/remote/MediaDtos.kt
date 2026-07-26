@@ -77,3 +77,17 @@ data class DanmakuCommentData(
     val color: String? = null,
     val start: Long? = null,
 )
+
+@Serializable
+data class MediaProbeData(
+    val duration: Double = 0.0,
+    val chapters: List<MediaChapterData> = emptyList(),
+)
+
+@Serializable
+data class MediaChapterData(
+    val id: String = "",
+    val title: String = "",
+    val start: Double = 0.0,
+    val end: Double = 0.0,
+)

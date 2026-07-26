@@ -81,6 +81,7 @@ import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.StartPage
+import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.TvSettings
@@ -150,7 +151,7 @@ internal fun MainShell(
     onTranscodeResolutionSetting: (TranscodeResolution) -> Unit = {},
     onAutoplayNextSetting: (Boolean) -> Unit = {},
     onDanmakuSettings: (DanmakuSettings) -> Unit = {},
-    onSubtitleEnabledSetting: (Boolean) -> Unit = {},
+    onSubtitleSettings: (SubtitleSettings) -> Unit = {},
     onStartPageSetting: (StartPage) -> Unit = {},
     onTestConnection: () -> Unit = {},
     onManageServers: () -> Unit = {},
@@ -355,7 +356,7 @@ internal fun MainShell(
                             onTranscodeResolution = onTranscodeResolutionSetting,
                             onAutoplayNext = onAutoplayNextSetting,
                             onDanmakuSettings = onDanmakuSettings,
-                            onSubtitleEnabled = onSubtitleEnabledSetting,
+                            onSubtitleSettings = onSubtitleSettings,
                             onStartPage = onStartPageSetting,
                             onTestConnection = onTestConnection,
                             onManageServers = onManageServers,

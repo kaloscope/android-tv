@@ -4,6 +4,7 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaPage
+import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.core.model.DanmakuComment
@@ -23,6 +24,11 @@ interface MediaRepository {
         session: Session,
         mediaId: Long,
     ): AppResult<MediaDetail>
+
+    suspend fun getMediaProbe(
+        session: Session,
+        path: String,
+    ): AppResult<MediaProbe>
 
     suspend fun getSubtitleTracks(
         session: Session,

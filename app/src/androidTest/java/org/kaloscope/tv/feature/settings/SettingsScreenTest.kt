@@ -4,8 +4,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
@@ -19,6 +21,7 @@ import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 
@@ -40,7 +43,7 @@ class SettingsScreenTest {
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
-                    onSubtitleEnabled = {},
+                    onSubtitleSettings = {},
                     onStartPage = {},
                     onTestConnection = {},
                     onManageServers = {},
@@ -84,7 +87,7 @@ class SettingsScreenTest {
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
-                    onSubtitleEnabled = {},
+                    onSubtitleSettings = {},
                     onStartPage = {},
                     onTestConnection = { tests += 1 },
                     onManageServers = { manages += 1 },
@@ -122,7 +125,7 @@ class SettingsScreenTest {
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
-                    onSubtitleEnabled = {},
+                    onSubtitleSettings = {},
                     onStartPage = {},
                     onTestConnection = {},
                     onManageServers = {},
@@ -153,7 +156,7 @@ class SettingsScreenTest {
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
-                    onSubtitleEnabled = {},
+                    onSubtitleSettings = {},
                     onStartPage = {},
                     onTestConnection = {},
                     onManageServers = {},
@@ -188,7 +191,7 @@ class SettingsScreenTest {
                     onTranscodeResolution = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = { updatedSettings = it },
-                    onSubtitleEnabled = {},
+                    onSubtitleSettings = {},
                     onStartPage = {},
                     onTestConnection = {},
                     onManageServers = {},
@@ -203,6 +206,48 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("默认开启弹幕")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(false, updatedSettings?.enabled)
+        }
+    }
+
+    @Test
+    fun subtitleCategoryShowsDefaultsAndUpdatesTheWholeModel() {
+        var updatedSettings: SubtitleSettings? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Subtitle,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = { updatedSettings = it },
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("默认开启字幕").assertExists()
+        composeRule.onNodeWithText("首选语言").assertExists()
+        composeRule.onNodeWithText("显示样式").assertExists()
+        composeRule.onNodeWithText("字幕字号").assertExists()
+        composeRule.onNodeWithText("垂直位置").assertExists()
+        composeRule.onNodeWithText("默认开启字幕")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("subtitle-default-settings").performScrollToIndex(5)
+        composeRule.onNodeWithText("时间偏移").assertExists()
 
         composeRule.runOnIdle {
             assertEquals(false, updatedSettings?.enabled)

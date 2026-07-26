@@ -10,6 +10,7 @@ import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaPage
+import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.SubtitleTrack
@@ -24,12 +25,14 @@ class PlayerCoordinatorTest {
         val store = PlaybackRequestStore()
         val request = request()
         store.put(request)
+        val repository = FakeMediaRepository(
+            subtitles = AppResult.Success(listOf(subtitle())),
+            danmakus = AppResult.Success(listOf(danmaku())),
+            probe = AppResult.Success(probe()),
+        )
         val coordinator = PlayerCoordinator(
             requestStore = store,
-            mediaRepository = FakeMediaRepository(
-                subtitles = AppResult.Success(listOf(subtitle())),
-                danmakus = AppResult.Success(listOf(danmaku())),
-            ),
+            mediaRepository = repository,
         )
 
         coordinator.load(session(), request.requestId)
@@ -38,6 +41,8 @@ class PlayerCoordinatorTest {
         assertEquals(request, content.request)
         assertEquals("subtitle-1", content.subtitles.single().id)
         assertEquals(12_500, content.danmakus.single().startMillis)
+        assertEquals(90_000L, content.mediaProbe?.durationMillis)
+        assertEquals(1, repository.probeCalls)
         assertTrue(content.extraErrors.isEmpty())
     }
 
@@ -60,6 +65,29 @@ class PlayerCoordinatorTest {
         assertTrue(content.subtitles.isEmpty())
         assertTrue(content.danmakus.isEmpty())
         assertEquals(setOf(PlayerExtra.Subtitles, PlayerExtra.Danmakus), content.extraErrors)
+    }
+
+    @Test
+    fun `probe failure preserves playable content and other extras`() = runTest {
+        val store = PlaybackRequestStore()
+        val request = request()
+        store.put(request)
+        val coordinator = PlayerCoordinator(
+            requestStore = store,
+            mediaRepository = FakeMediaRepository(
+                subtitles = AppResult.Success(listOf(subtitle())),
+                danmakus = AppResult.Success(listOf(danmaku())),
+                probe = AppResult.Failure(AppError.Offline),
+            ),
+        )
+
+        coordinator.load(session(), request.requestId)
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals(null, content.mediaProbe)
+        assertEquals(setOf(PlayerExtra.MediaProbe), content.extraErrors)
+        assertEquals("subtitle-1", content.subtitles.single().id)
+        assertEquals("danmaku-1", content.danmakus.single().id)
     }
 
     @Test
@@ -90,6 +118,7 @@ class PlayerCoordinatorTest {
         assertEquals("danmaku-1", content.danmakus.single().id)
         assertEquals(0, repository.subtitleCalls)
         assertEquals(0, repository.danmakuCalls)
+        assertEquals(0, repository.probeCalls)
     }
 
     @Test
@@ -160,15 +189,36 @@ class PlayerCoordinatorTest {
         assertEquals(next, store.get(request.requestId))
         assertEquals(0, repository.subtitleCalls)
         assertEquals(0, repository.danmakuCalls)
+        assertEquals(0, repository.probeCalls)
+    }
+
+    @Test
+    fun `local request replacement reloads extras for the new path`() = runTest {
+        val store = PlaybackRequestStore()
+        val request = request()
+        store.put(request)
+        val repository = FakeMediaRepository(probe = AppResult.Success(probe()))
+        val coordinator = PlayerCoordinator(store, repository)
+        coordinator.load(session(), request.requestId)
+        val next = request.copy(path = "/media/video-2.mkv", mediaId = 302)
+
+        coordinator.replaceRequest(session(), next)
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals(next, content.request)
+        assertEquals(listOf("/media/video.mkv", "/media/video-2.mkv"), repository.probePaths)
     }
 }
 
 private class FakeMediaRepository(
     private val subtitles: AppResult<List<SubtitleTrack>> = AppResult.Success(emptyList()),
     private val danmakus: AppResult<List<DanmakuComment>> = AppResult.Success(emptyList()),
+    private val probe: AppResult<MediaProbe> = AppResult.Success(MediaProbe(0, emptyList())),
 ) : MediaRepository {
     var subtitleCalls = 0
     var danmakuCalls = 0
+    var probeCalls = 0
+    val probePaths = mutableListOf<String>()
 
     override suspend fun getLibraries(session: Session): AppResult<List<MediaLibrary>> =
         error("Not used")
@@ -185,6 +235,15 @@ private class FakeMediaRepository(
         session: Session,
         mediaId: Long,
     ): AppResult<MediaDetail> = error("Not used")
+
+    override suspend fun getMediaProbe(
+        session: Session,
+        path: String,
+    ): AppResult<MediaProbe> {
+        probeCalls += 1
+        probePaths += path
+        return probe
+    }
 
     override suspend fun getSubtitleTracks(
         session: Session,
@@ -211,6 +270,11 @@ private fun request() = PlaybackRequest.LocalMedia(
     title = "Episode 1",
     resumePositionSeconds = 42,
     origin = PlaybackOrigin.MediaDetail,
+)
+
+private fun probe() = MediaProbe(
+    durationMillis = 90_000,
+    chapters = emptyList(),
 )
 
 private fun networkRequest() = PlaybackRequest.NetworkVideo(

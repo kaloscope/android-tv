@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DanmakuComment
+import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.core.player.PlaybackRequest
@@ -23,6 +24,7 @@ sealed interface PlayerUiState {
         val request: PlaybackRequest,
         val subtitles: List<SubtitleTrack>,
         val danmakus: List<DanmakuComment>,
+        val mediaProbe: MediaProbe? = null,
         val extraFailures: Map<PlayerExtra, AppError>,
         val progressError: AppError? = null,
         val switchingItem: Boolean = false,
@@ -36,6 +38,7 @@ sealed interface PlayerUiState {
 enum class PlayerExtra {
     Subtitles,
     Danmakus,
+    MediaProbe,
 }
 
 class PlayerCoordinator(
@@ -66,29 +69,13 @@ class PlayerCoordinator(
             return
         }
         val localRequest = request as PlaybackRequest.LocalMedia
-        // Supplementary endpoints run together so neither doubles playback startup latency.
-        val (subtitleResult, danmakuResult) = coroutineScope {
-            val subtitles = async {
-                mediaRepository.getSubtitleTracks(session, localRequest.path)
-            }
-            val danmakus = async {
-                mediaRepository.getDanmakus(session, localRequest.path)
-            }
-            subtitles.await() to danmakus.await()
-        }
-        val failures = buildMap {
-            if (subtitleResult is AppResult.Failure) {
-                put(PlayerExtra.Subtitles, subtitleResult.error)
-            }
-            if (danmakuResult is AppResult.Failure) {
-                put(PlayerExtra.Danmakus, danmakuResult.error)
-            }
-        }
+        val extras = loadLocalExtras(session, localRequest.path)
         mutableState.value = PlayerUiState.Content(
             request = request,
-            subtitles = (subtitleResult as? AppResult.Success)?.value.orEmpty(),
-            danmakus = (danmakuResult as? AppResult.Success)?.value.orEmpty(),
-            extraFailures = failures,
+            subtitles = extras.subtitles,
+            danmakus = extras.danmakus,
+            mediaProbe = extras.mediaProbe,
+            extraFailures = extras.failures,
         )
     }
 
@@ -114,28 +101,43 @@ class PlayerCoordinator(
             return
         }
         val localRequest = request as PlaybackRequest.LocalMedia
-        val (subtitleResult, danmakuResult) = coroutineScope {
-            val subtitles = async {
-                mediaRepository.getSubtitleTracks(session, localRequest.path)
-            }
-            val danmakus = async {
-                mediaRepository.getDanmakus(session, localRequest.path)
-            }
-            subtitles.await() to danmakus.await()
-        }
+        val extras = loadLocalExtras(session, localRequest.path)
         mutableState.value = PlayerUiState.Content(
             request = request,
+            subtitles = extras.subtitles,
+            danmakus = extras.danmakus,
+            mediaProbe = extras.mediaProbe,
+            extraFailures = extras.failures,
+            progressError = current?.progressError,
+        )
+    }
+
+    private suspend fun loadLocalExtras(
+        session: Session,
+        path: String,
+    ): LocalExtras {
+        // Independent supplementary requests share startup latency and degrade separately.
+        val (subtitleResult, danmakuResult, probeResult) = coroutineScope {
+            val subtitles = async { mediaRepository.getSubtitleTracks(session, path) }
+            val danmakus = async { mediaRepository.getDanmakus(session, path) }
+            val probe = async { mediaRepository.getMediaProbe(session, path) }
+            Triple(subtitles.await(), danmakus.await(), probe.await())
+        }
+        return LocalExtras(
             subtitles = (subtitleResult as? AppResult.Success)?.value.orEmpty(),
             danmakus = (danmakuResult as? AppResult.Success)?.value.orEmpty(),
-            extraFailures = buildMap {
+            mediaProbe = (probeResult as? AppResult.Success)?.value,
+            failures = buildMap {
                 if (subtitleResult is AppResult.Failure) {
                     put(PlayerExtra.Subtitles, subtitleResult.error)
                 }
                 if (danmakuResult is AppResult.Failure) {
                     put(PlayerExtra.Danmakus, danmakuResult.error)
                 }
+                if (probeResult is AppResult.Failure) {
+                    put(PlayerExtra.MediaProbe, probeResult.error)
+                }
             },
-            progressError = current?.progressError,
         )
     }
 
@@ -149,3 +151,10 @@ class PlayerCoordinator(
         mutableState.value = content.copy(progressError = error)
     }
 }
+
+private data class LocalExtras(
+    val subtitles: List<SubtitleTrack>,
+    val danmakus: List<DanmakuComment>,
+    val mediaProbe: MediaProbe?,
+    val failures: Map<PlayerExtra, AppError>,
+)

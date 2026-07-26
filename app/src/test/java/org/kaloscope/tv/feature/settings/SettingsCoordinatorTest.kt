@@ -13,6 +13,8 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.StartPage
+import org.kaloscope.tv.core.model.SubtitleDisplayMode
+import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.data.server.ServerRepository
@@ -64,6 +66,27 @@ class SettingsCoordinatorTest {
         val state = coordinator.state.value as SettingsUiState.Content
         assertEquals(expected, state.settings.danmaku)
         assertEquals(expected, repository.saved?.danmaku)
+    }
+
+    @Test
+    fun `subtitle defaults persist as one value`() = runTest {
+        val repository = FakeSettingsRepository(TvSettings())
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+        val expected = SubtitleSettings(
+            enabled = false,
+            languagePreference = "chs|zh-CN",
+            displayMode = SubtitleDisplayMode.Background,
+            timeOffsetSeconds = 0.5f,
+            fontScalePercent = 120,
+            verticalPositionPercent = 5,
+        )
+
+        coordinator.setSubtitleSettings(expected)
+
+        val state = coordinator.state.value as SettingsUiState.Content
+        assertEquals(expected, state.settings.subtitle)
+        assertEquals(expected, repository.saved?.subtitle)
     }
 
     @Test

@@ -241,7 +241,7 @@ fun KaloscopeApp(
                         settingsViewModel::setTranscodeResolution,
                     onAutoplayNextSetting = settingsViewModel::setAutoplayNext,
                     onDanmakuSettings = settingsViewModel::setDanmakuSettings,
-                    onSubtitleEnabledSetting = settingsViewModel::setSubtitleEnabled,
+                    onSubtitleSettings = settingsViewModel::setSubtitleSettings,
                     onStartPageSetting = settingsViewModel::setStartPage,
                     onTestConnection = {
                         settingsViewModel.testConnection(state.session)

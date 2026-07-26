@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
+import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.server.ServerRepository
@@ -46,8 +47,8 @@ class SettingsViewModel @Inject constructor(
     fun setDanmakuSettings(value: DanmakuSettings) =
         launchSettingsOperation { coordinator.setDanmakuSettings(value) }
 
-    fun setSubtitleEnabled(value: Boolean) =
-        launchSettingsOperation { coordinator.setSubtitleEnabled(value) }
+    fun setSubtitleSettings(value: SubtitleSettings) =
+        launchSettingsOperation { coordinator.setSubtitleSettings(value) }
 
     fun setStartPage(value: StartPage) =
         launchSettingsOperation { coordinator.setStartPage(value) }

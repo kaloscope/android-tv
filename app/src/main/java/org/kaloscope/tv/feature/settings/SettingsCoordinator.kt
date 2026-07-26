@@ -8,6 +8,8 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
+import org.kaloscope.tv.core.model.SubtitleSettings
+import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -78,8 +80,8 @@ class SettingsCoordinator(
     suspend fun setDanmakuSettings(value: DanmakuSettings) =
         update { copy(danmaku = value) }
 
-    suspend fun setSubtitleEnabled(value: Boolean) =
-        update { copy(subtitleEnabled = value) }
+    suspend fun setSubtitleSettings(value: SubtitleSettings) =
+        update { copy(subtitle = SubtitleSettingsPolicy.sanitize(value)) }
 
     suspend fun setStartPage(value: StartPage) =
         update { copy(startPage = value) }

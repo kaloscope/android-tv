@@ -320,7 +320,7 @@ class SearchCoordinator(
                     preferredDefinition = settings.transcodeResolution,
                     autoplayNext = settings.autoplayNext,
                     danmakuSettings = settings.danmaku,
-                    subtitleEnabled = settings.subtitleEnabled,
+                    subtitleSettings = settings.subtitle,
                 )
                 requestStore.put(request)
                 updateContent {

@@ -111,6 +111,11 @@ private class DetailFakeRepository(
         return details.removeAt(0)
     }
 
+    override suspend fun getMediaProbe(
+        session: Session,
+        path: String,
+    ): AppResult<org.kaloscope.tv.core.model.MediaProbe> = error("Not used")
+
     override suspend fun getSubtitleTracks(
         session: Session,
         path: String,

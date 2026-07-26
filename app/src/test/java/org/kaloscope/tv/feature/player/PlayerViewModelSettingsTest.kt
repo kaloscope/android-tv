@@ -25,6 +25,7 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.SubtitleTrack
+import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.player.PlaybackMode
@@ -56,7 +57,7 @@ class PlayerViewModelSettingsTest {
             transcodeResolution = TranscodeResolution.P720,
             autoplayNext = false,
             danmaku = expectedDanmaku,
-            subtitleEnabled = false,
+            subtitle = SubtitleSettings(enabled = false),
         )
 
         val requestId = viewModel.createFromHistory(session(), history(), settings)
@@ -66,7 +67,7 @@ class PlayerViewModelSettingsTest {
         assertEquals(TranscodeResolution.P720, request.transcodeResolution)
         assertFalse(request.autoplayNext)
         assertEquals(expectedDanmaku, request.danmakuSettings)
-        assertFalse(request.subtitleEnabled)
+        assertFalse(request.subtitleSettings.enabled)
     }
 
     @Test
@@ -222,6 +223,11 @@ private fun unusedMediaRepository() = object : MediaRepository {
         session: Session,
         mediaId: Long,
     ): AppResult<MediaDetail> = error("Not used")
+
+    override suspend fun getMediaProbe(
+        session: Session,
+        path: String,
+    ): AppResult<org.kaloscope.tv.core.model.MediaProbe> = error("Not used")
 
     override suspend fun getSubtitleTracks(
         session: Session,
