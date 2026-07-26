@@ -214,8 +214,15 @@ class PlayerViewModel @Inject constructor(
             return
         }
         extraRetryJobs.remove(extra)?.cancel()
-        extraRetryJobs[extra] = viewModelScope.launch {
+        val retryJob = viewModelScope.launch {
             coordinator.retryExtra(session, extra)
+        }
+        extraRetryJobs[extra] = retryJob
+        retryJob.invokeOnCompletion {
+            // A completed older retry must not remove a newer retry for the same resource.
+            if (extraRetryJobs[extra] === retryJob) {
+                extraRetryJobs.remove(extra)
+            }
         }
     }
 

@@ -3,15 +3,9 @@ package org.kaloscope.tv.feature.player
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,7 +26,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -41,39 +34,22 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.compose.ContentFrame
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
-import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
-import org.kaloscope.tv.core.designsystem.KaloscopeBackground
-import org.kaloscope.tv.core.designsystem.Muted
-import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.PanelSelected
-import org.kaloscope.tv.core.designsystem.Primary
-import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.Session
-import org.kaloscope.tv.core.model.SubtitleDisplayMode
-import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackFeedback
 import org.kaloscope.tv.core.player.PlaybackFeedbackPolicy
-import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestNavigator
 import org.kaloscope.tv.core.player.PlaybackSettingsPolicy
-import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.SubtitleSelectionPolicy
-import org.kaloscope.tv.core.player.TranscodeResolution
 
 @Composable
 fun PlayerScreen(
@@ -718,180 +694,4 @@ private fun PlayerContent(
             },
         )
     }
-}
-
-@Composable
-internal fun PlayerDefinitionDrawer(
-    definitions: List<NetworkDefinition>,
-    selectedIndex: Int?,
-    onSelect: (Int) -> Unit,
-) {
-    val initialFocus = remember { FocusRequester() }
-    LaunchedEffect(definitions, selectedIndex) {
-        withFrameNanos { }
-        initialFocus.requestFocus()
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x66000000)),
-        contentAlignment = Alignment.CenterEnd,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(390.dp)
-                .background(Panel.copy(alpha = 0.96f))
-                .padding(horizontal = 34.dp, vertical = 46.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.playback_quality),
-                color = OnBackground,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(12.dp))
-            definitions.forEachIndexed { index, definition ->
-                PlayerButton(
-                    text = definition.label,
-                    onClick = { onSelect(index) },
-                    modifier = if (index == selectedIndex || selectedIndex == null && index == 0) {
-                        Modifier.focusRequester(initialFocus)
-                    } else {
-                        Modifier
-                    },
-                    active = index == selectedIndex,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlayerButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    primary: Boolean = false,
-    active: Boolean = false,
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(if (primary) 58.dp else 48.dp),
-        colors = ButtonDefaults.colors(
-            containerColor = if (active) PanelSelected else PanelElevated,
-            focusedContainerColor = if (primary) Color.White else Primary,
-            contentColor = OnBackground,
-            focusedContentColor = if (primary) Background else Color.White,
-        ),
-    ) {
-        Text(text)
-    }
-}
-
-@Composable
-private fun playbackModeLabel(
-    mode: PlaybackMode?,
-    sourceKind: PlaybackSourceKind,
-    resolution: TranscodeResolution?,
-): String {
-    val resolutionLabel = when (resolution) {
-        TranscodeResolution.Original -> stringResource(R.string.resolution_original)
-        TranscodeResolution.P1080 -> "1080P"
-        TranscodeResolution.P720 -> "720P"
-        TranscodeResolution.P480 -> "480P"
-        null -> ""
-    }
-    return when {
-        sourceKind == PlaybackSourceKind.Network ->
-            stringResource(R.string.playback_network)
-
-        mode == PlaybackMode.Auto && sourceKind == PlaybackSourceKind.Direct ->
-            stringResource(R.string.playback_auto_direct)
-
-        mode == PlaybackMode.Auto ->
-            stringResource(R.string.playback_auto_transcode, resolutionLabel)
-
-        mode == PlaybackMode.Direct -> stringResource(R.string.playback_direct)
-        else -> stringResource(R.string.playback_transcode, resolutionLabel)
-    }
-}
-
-@Composable
-private fun PlayerMessage(
-    title: String,
-    description: String,
-    onBack: (() -> Unit)? = null,
-) {
-    KaloscopeBackground {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = title,
-                    color = OnBackground,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = description,
-                    color = Muted,
-                    fontSize = 16.sp,
-                )
-                onBack?.let {
-                    Spacer(Modifier.height(18.dp))
-                    Button(
-                        onClick = it,
-                        colors = ButtonDefaults.colors(focusedContainerColor = Primary),
-                    ) {
-                        Text(stringResource(R.string.back))
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun PlaybackRequest.playbackIdentity(): String =
-    when (this) {
-        is PlaybackRequest.LocalMedia -> "$requestId:local:$mediaId"
-        is PlaybackRequest.NetworkVideo ->
-            "$requestId:network:${source.resourceId}:${source.selectedChapterIndex}:${source.url}"
-    }
-
-@androidx.annotation.OptIn(UnstableApi::class)
-private fun SubtitleView.applySubtitleStyle(settings: SubtitleSettings) {
-    setApplyEmbeddedStyles(false)
-    setApplyEmbeddedFontSizes(false)
-    setFractionalTextSize(
-        SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * settings.fontScalePercent / 100f,
-    )
-    setBottomPaddingFraction(settings.verticalPositionPercent / 100f)
-    setStyle(
-        when (settings.displayMode) {
-            SubtitleDisplayMode.Stroke -> CaptionStyleCompat(
-                android.graphics.Color.WHITE,
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT,
-                CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-                android.graphics.Color.BLACK,
-                null,
-            )
-
-            SubtitleDisplayMode.Background -> CaptionStyleCompat(
-                android.graphics.Color.WHITE,
-                0xB3000000.toInt(),
-                android.graphics.Color.TRANSPARENT,
-                CaptionStyleCompat.EDGE_TYPE_NONE,
-                android.graphics.Color.TRANSPARENT,
-                null,
-            )
-        },
-    )
 }

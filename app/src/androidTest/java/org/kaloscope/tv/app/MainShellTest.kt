@@ -1,6 +1,7 @@
 package org.kaloscope.tv.app
 
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
@@ -51,23 +52,11 @@ class MainShellTest {
     fun homeNavigationReceivesInitialFocus() {
         composeRule.setContent {
             KaloscopeTheme {
-                MainShell(
+                TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
-                    onRefresh = {},
-                    onOpenLibrary = {},
-                    onSelectLibrary = {},
-                    onLibraryQueryChange = {},
-                    onSearchLibrary = {},
-                    onRetryLibrary = {},
-                    onLoadMoreMedia = {},
-                    onMediaFocused = {},
-                    onOpenMedia = {},
-                    onRetryDetail = {},
-                    onSelectMediaChild = {},
-                    onLogout = {},
                 )
             }
         }
@@ -79,23 +68,11 @@ class MainShellTest {
     fun homeHistoryUsesBrandedBackgroundAndCinematicHero() {
         composeRule.setContent {
             KaloscopeTheme {
-                MainShell(
+                TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Content(listOf(history())),
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
-                    onRefresh = {},
-                    onOpenLibrary = {},
-                    onSelectLibrary = {},
-                    onLibraryQueryChange = {},
-                    onSearchLibrary = {},
-                    onRetryLibrary = {},
-                    onLoadMoreMedia = {},
-                    onMediaFocused = {},
-                    onOpenMedia = {},
-                    onRetryDetail = {},
-                    onSelectMediaChild = {},
-                    onLogout = {},
                 )
             }
         }
@@ -108,7 +85,7 @@ class MainShellTest {
     fun settingsGearStaysSelectedAndShowsCurrentAccount() {
         composeRule.setContent {
             KaloscopeTheme {
-                MainShell(
+                TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
                     libraryState = libraryState(),
@@ -117,18 +94,6 @@ class MainShellTest {
                         settings = TvSettings(),
                         section = SettingsSection.ServerAccount,
                     ),
-                    onRefresh = {},
-                    onOpenLibrary = {},
-                    onSelectLibrary = {},
-                    onLibraryQueryChange = {},
-                    onSearchLibrary = {},
-                    onRetryLibrary = {},
-                    onLoadMoreMedia = {},
-                    onMediaFocused = {},
-                    onOpenMedia = {},
-                    onRetryDetail = {},
-                    onSelectMediaChild = {},
-                    onLogout = {},
                 )
             }
         }
@@ -154,23 +119,11 @@ class MainShellTest {
     fun searchAndLibraryAreEnabled() {
         composeRule.setContent {
             KaloscopeTheme {
-                MainShell(
+                TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
-                    onRefresh = {},
-                    onOpenLibrary = {},
-                    onSelectLibrary = {},
-                    onLibraryQueryChange = {},
-                    onSearchLibrary = {},
-                    onRetryLibrary = {},
-                    onLoadMoreMedia = {},
-                    onMediaFocused = {},
-                    onOpenMedia = {},
-                    onRetryDetail = {},
-                    onSelectMediaChild = {},
-                    onLogout = {},
                 )
             }
         }
@@ -191,23 +144,11 @@ class MainShellTest {
         )
         composeRule.setContent {
             KaloscopeTheme {
-                MainShell(
+                TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
                     libraryState = libraryState(items = libraryItems),
                     detailState = MediaDetailUiState.Content(detail()),
-                    onRefresh = {},
-                    onOpenLibrary = {},
-                    onSelectLibrary = {},
-                    onLibraryQueryChange = {},
-                    onSearchLibrary = {},
-                    onRetryLibrary = {},
-                    onLoadMoreMedia = {},
-                    onMediaFocused = {},
-                    onOpenMedia = {},
-                    onRetryDetail = {},
-                    onSelectMediaChild = {},
-                    onLogout = {},
                 )
             }
         }
@@ -241,23 +182,11 @@ class MainShellTest {
     fun topLevelRoundTripRestoresDeepLibraryCard() {
         composeRule.setContent {
             KaloscopeTheme {
-                MainShell(
+                TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
                     libraryState = deepLibraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
-                    onRefresh = {},
-                    onOpenLibrary = {},
-                    onSelectLibrary = {},
-                    onLibraryQueryChange = {},
-                    onSearchLibrary = {},
-                    onRetryLibrary = {},
-                    onLoadMoreMedia = {},
-                    onMediaFocused = {},
-                    onOpenMedia = {},
-                    onRetryDetail = {},
-                    onSelectMediaChild = {},
-                    onLogout = {},
                 )
             }
         }
@@ -281,24 +210,12 @@ class MainShellTest {
     fun topLevelRoundTripRestoresDeepSearchResult() {
         composeRule.setContent {
             KaloscopeTheme {
-                MainShell(
+                TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
                     searchState = deepSearchState(),
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
-                    onRefresh = {},
-                    onOpenLibrary = {},
-                    onSelectLibrary = {},
-                    onLibraryQueryChange = {},
-                    onSearchLibrary = {},
-                    onRetryLibrary = {},
-                    onLoadMoreMedia = {},
-                    onMediaFocused = {},
-                    onOpenMedia = {},
-                    onRetryDetail = {},
-                    onSelectMediaChild = {},
-                    onLogout = {},
                 )
             }
         }
@@ -317,6 +234,31 @@ class MainShellTest {
 
         composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
     }
+}
+
+@Composable
+private fun TestMainShell(
+    session: Session,
+    homeState: HomeUiState,
+    searchState: SearchUiState = SearchUiState.Loading,
+    libraryState: LibraryUiState,
+    detailState: MediaDetailUiState,
+    settingsState: SettingsUiState = SettingsUiState.Content(TvSettings()),
+) {
+    MainShell(
+        session = session,
+        homeState = homeState,
+        searchState = searchState,
+        libraryState = libraryState,
+        detailState = detailState,
+        homeActions = HomeActions(),
+        searchActions = SearchActions(),
+        libraryActions = LibraryActions(),
+        detailActions = DetailActions(),
+        settingsState = settingsState,
+        settingsActions = SettingsActions(),
+        playerActions = PlayerActions(),
+    )
 }
 
 private fun session() = Session(

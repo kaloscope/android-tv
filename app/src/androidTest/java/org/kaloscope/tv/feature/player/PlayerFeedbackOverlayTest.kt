@@ -16,7 +16,7 @@ class PlayerFeedbackOverlayTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun preparingAndSwitchingUseBlockingCenterMessages() {
+    fun switchingUsesBlockingCenterMessage() {
         composeRule.setContent {
             KaloscopeTheme {
                 PlayerFeedbackOverlay(
