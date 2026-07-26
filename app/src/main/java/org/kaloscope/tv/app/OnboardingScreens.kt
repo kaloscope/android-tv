@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,8 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -33,14 +36,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreInterceptKeyBeforeSoftKeyboard
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
@@ -89,7 +95,7 @@ internal fun ServerSetupScreen(
     val nameFocus = remember { FocusRequester() }
     val urlFocus = remember { FocusRequester() }
     val testFocus = remember { FocusRequester() }
-    // Existing servers take focus priority; new installations start in the name field.
+    // Existing servers take focus priority; new installations start in navigation mode.
     LaunchedEffect(savedServers.isEmpty()) {
         if (savedServers.isEmpty()) {
             nameFocus.requestFocus()
@@ -99,11 +105,17 @@ internal fun ServerSetupScreen(
     }
 
     AppFrame {
-        FormPanel(
-            eyebrow = stringResource(R.string.setup_eyebrow),
+        SetupWizardPanel(
             title = stringResource(R.string.setup_title),
             description = stringResource(R.string.setup_description),
         ) {
+            Text(
+                text = stringResource(R.string.setup_form_title),
+                color = Muted,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(20.dp))
             if (savedServers.isNotEmpty()) {
                 Text(
                     text = stringResource(R.string.saved_servers),
@@ -134,28 +146,32 @@ internal fun ServerSetupScreen(
                 )
                 Spacer(Modifier.height(14.dp))
             }
-            AppTextField(
+            ServerTextField(
                 value = state.name,
                 onValueChange = onNameChange,
                 label = stringResource(R.string.server_name),
                 placeholder = stringResource(R.string.server_name_hint),
-                modifier = Modifier.focusRequester(nameFocus),
+                focusRequester = nameFocus,
+                selectorTestTag = "server-name-selector",
+                editorTestTag = "server-name-editor",
                 onMoveDown = { urlFocus.requestFocus() },
             )
-            Spacer(Modifier.height(18.dp))
-            AppTextField(
+            Spacer(Modifier.height(12.dp))
+            ServerTextField(
                 value = state.url,
                 onValueChange = onUrlChange,
                 label = stringResource(R.string.server_url),
                 placeholder = stringResource(R.string.server_url_hint),
-                modifier = Modifier.focusRequester(urlFocus),
+                focusRequester = urlFocus,
+                selectorTestTag = "server-url-selector",
+                editorTestTag = "server-url-editor",
                 onMoveUp = { nameFocus.requestFocus() },
                 onMoveDown = { testFocus.requestFocus() },
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             state.error?.let {
                 ErrorText(serverErrorText(it))
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
             }
             state.verifiedOrigin?.let {
                 Text(
@@ -166,7 +182,7 @@ internal fun ServerSetupScreen(
                     color = Success,
                     fontSize = 16.sp,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 PrimaryButton(
@@ -177,7 +193,9 @@ internal fun ServerSetupScreen(
                     },
                     enabled = !state.isTesting && !state.isSaving,
                     onClick = onTest,
-                    modifier = Modifier.focusRequester(testFocus),
+                    modifier = Modifier
+                        .focusRequester(testFocus)
+                        .weight(1f),
                 )
                 if (state.verifiedOrigin != null) {
                     PrimaryButton(
@@ -188,6 +206,7 @@ internal fun ServerSetupScreen(
                         },
                         enabled = state.canSave,
                         onClick = onSave,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -292,6 +311,111 @@ internal fun ConnectionErrorScreen(
 }
 
 @Composable
+private fun SetupWizardPanel(
+    title: String,
+    description: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(40.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(0.86f)) {
+            SetupProgress()
+            Spacer(Modifier.height(22.dp))
+            Text(
+                text = title,
+                color = OnBackground,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = description,
+                color = Muted,
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1.14f)
+                .heightIn(max = 390.dp)
+                .background(Panel.copy(alpha = 0.9f), RoundedCornerShape(22.dp))
+                .border(1.dp, Outline, RoundedCornerShape(22.dp))
+                .testTag("onboarding-panel")
+                .verticalScroll(rememberScrollState())
+                .padding(26.dp),
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun SetupProgress() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SetupStep(
+            number = "1",
+            label = stringResource(R.string.setup_step_server),
+            active = true,
+        )
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 10.dp)
+                .width(24.dp)
+                .height(1.dp)
+                .background(Outline),
+        )
+        SetupStep(
+            number = "2",
+            label = stringResource(R.string.setup_step_login),
+            active = false,
+        )
+    }
+}
+
+@Composable
+private fun SetupStep(
+    number: String,
+    label: String,
+    active: Boolean,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .background(
+                    color = if (active) Primary else BackgroundRaised,
+                    shape = CircleShape,
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (active) Primary else Outline,
+                    shape = CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = number,
+                color = if (active) Color.White else Muted,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Text(
+            text = label,
+            color = if (active) OnBackground else Muted,
+            fontSize = 14.sp,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+        )
+    }
+}
+
+@Composable
 private fun AppFrame(content: @Composable () -> Unit) {
     KaloscopeBackground {
         Box(
@@ -355,6 +479,171 @@ private fun FormPanel(
                 .padding(32.dp),
             content = content,
         )
+    }
+}
+
+@Composable
+private fun ServerTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    focusRequester: FocusRequester,
+    selectorTestTag: String,
+    editorTestTag: String,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
+) {
+    var editing by remember { mutableStateOf(false) }
+    var restoreSelectorFocus by remember { mutableStateOf(false) }
+    var selectorFocused by remember { mutableStateOf(false) }
+    val editorFocus = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val exitEditing = {
+        keyboardController?.hide()
+        restoreSelectorFocus = true
+        editing = false
+    }
+
+    LaunchedEffect(editing, restoreSelectorFocus) {
+        if (editing) {
+            editorFocus.requestFocus()
+            keyboardController?.show()
+        } else if (restoreSelectorFocus) {
+            restoreSelectorFocus = false
+            focusRequester.requestFocus()
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            color = OnBackground,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(7.dp))
+        if (editing) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(color = OnBackground, fontSize = 17.sp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(editorFocus)
+                    .testTag(editorTestTag)
+                    .onPreInterceptKeyBeforeSoftKeyboard { event ->
+                        if (event.key == Key.Back) {
+                            if (event.type == KeyEventType.KeyDown) {
+                                exitEditing()
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    .onPreviewKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) {
+                            false
+                        } else {
+                            when (event.key) {
+                                Key.Back -> {
+                                    exitEditing()
+                                    true
+                                }
+
+                                Key.DirectionUp -> onMoveUp?.let { moveFocus ->
+                                    keyboardController?.hide()
+                                    editing = false
+                                    moveFocus()
+                                    true
+                                } ?: false
+
+                                Key.DirectionDown -> onMoveDown?.let { moveFocus ->
+                                    keyboardController?.hide()
+                                    editing = false
+                                    moveFocus()
+                                    true
+                                } ?: false
+
+                                else -> false
+                            }
+                        }
+                    }
+                    .background(BackgroundRaised, RoundedCornerShape(12.dp))
+                    .border(2.dp, Primary, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                decorationBox = { innerTextField ->
+                    Box {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = placeholder,
+                                color = Muted,
+                                fontSize = 17.sp,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
+        } else {
+            Button(
+                onClick = { editing = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .testTag(selectorTestTag)
+                    .onFocusChanged { selectorFocused = it.isFocused }
+                    .onPreviewKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) {
+                            false
+                        } else {
+                            when (event.key) {
+                                Key.DirectionCenter,
+                                Key.Enter,
+                                Key.NumPadEnter,
+                                -> {
+                                    editing = true
+                                    true
+                                }
+
+                                Key.DirectionUp -> onMoveUp?.let {
+                                    it()
+                                    true
+                                } ?: false
+
+                                Key.DirectionDown -> onMoveDown?.let {
+                                    it()
+                                    true
+                                } ?: false
+
+                                else -> false
+                            }
+                        }
+                    }
+                    .border(
+                        width = if (selectorFocused) 2.dp else 1.dp,
+                        color = if (selectorFocused) OnBackground else Outline,
+                        shape = RoundedCornerShape(12.dp),
+                    ),
+                shape = ButtonDefaults.shape(shape = RoundedCornerShape(12.dp)),
+                colors = ButtonDefaults.colors(
+                    containerColor = BackgroundRaised,
+                    contentColor = if (value.isEmpty()) Muted else OnBackground,
+                    focusedContainerColor = BackgroundRaised,
+                    focusedContentColor = OnBackground,
+                ),
+                scale = ButtonDefaults.scale(focusedScale = 1f),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                Text(
+                    text = value.ifEmpty { placeholder },
+                    fontSize = 17.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
 }
 
@@ -450,12 +739,16 @@ private fun PrimaryButton(
             focusedContainerColor = Primary,
             focusedContentColor = Color.White,
         ),
+        scale = ButtonDefaults.scale(focusedScale = 1.03f),
     ) {
         Text(
             text = text,
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 3.dp),
         )
     }
 }

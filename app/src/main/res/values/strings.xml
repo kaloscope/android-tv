@@ -6,7 +6,10 @@
 
     <string name="setup_eyebrow">第一步</string>
     <string name="setup_title">添加服务器</string>
-    <string name="setup_description">输入你的 Kaloscope 服务器地址。测试成功后，服务器会安全地保存在这台设备上。</string>
+    <string name="setup_description">添加你的 Kaloscope 服务器，连接信息只会保存在这台设备上。</string>
+    <string name="setup_step_server">配置服务器</string>
+    <string name="setup_step_login">登录账户</string>
+    <string name="setup_form_title">连接到你的服务器</string>
     <string name="server_name">服务器名称</string>
     <string name="server_name_hint">例如：家庭服务器</string>
     <string name="server_url">服务器地址</string>
@@ -15,7 +18,7 @@
     <string name="testing">正在测试…</string>
     <string name="save_continue">保存并继续</string>
     <string name="saving">正在保存…</string>
-    <string name="connection_success">连接成功  %1$s</string>
+    <string name="connection_success">连接成功  v%1$s</string>
     <string name="saved_servers">已保存服务器</string>
     <string name="add_another_server">添加新服务器</string>
 
