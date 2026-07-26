@@ -84,6 +84,7 @@ fun PlayerScreen(
     onSelectDefinition: (Int, Long) -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onRetryExtra: (PlayerExtra) -> Unit,
     onBack: () -> Unit,
 ) {
     when (state) {
@@ -112,6 +113,7 @@ fun PlayerScreen(
             onSelectDefinition = onSelectDefinition,
             onPrevious = onPrevious,
             onNext = onNext,
+            onRetryExtra = onRetryExtra,
             onBack = onBack,
         )
     }
@@ -127,6 +129,7 @@ private fun PlayerContent(
     onSelectDefinition: (Int, Long) -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onRetryExtra: (PlayerExtra) -> Unit,
     onBack: () -> Unit,
 ) {
     val playbackIdentity = state.request.playbackIdentity()
@@ -531,7 +534,7 @@ private fun PlayerContent(
                             !state.switchingItem,
                     nextEnabled = hasNext && !state.switchingItem,
                     subtitles = PlayerActionUiState(
-                        enabled = state.subtitles.isNotEmpty() && !subtitlesFailed,
+                        enabled = subtitlesFailed || state.subtitles.isNotEmpty(),
                         active =
                             state.subtitles.isNotEmpty() &&
                                 !subtitlesFailed &&
@@ -539,7 +542,7 @@ private fun PlayerContent(
                         error = subtitlesFailed,
                     ),
                     danmakus = PlayerActionUiState(
-                        enabled = danmakusAvailable,
+                        enabled = danmakusFailed || danmakusAvailable,
                         active = danmakusAvailable && sessionDanmakuSettings.enabled,
                         error = danmakusFailed,
                     ),
@@ -623,6 +626,14 @@ private fun PlayerContent(
                 },
                 onInteraction = {
                     interactionVersion += 1
+                },
+                onRetrySubtitles = {
+                    interactionVersion += 1
+                    onRetryExtra(PlayerExtra.Subtitles)
+                },
+                onRetryDanmakus = {
+                    interactionVersion += 1
+                    onRetryExtra(PlayerExtra.Danmakus)
                 },
             )
         }

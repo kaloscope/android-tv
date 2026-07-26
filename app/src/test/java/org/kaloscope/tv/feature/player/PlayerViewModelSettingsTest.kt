@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
+import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.DanmakuSettings
@@ -18,6 +19,8 @@ import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaPage
+import org.kaloscope.tv.core.model.MediaProbe
+import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
@@ -151,6 +154,102 @@ class PlayerViewModelSettingsTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `adjacent local playback starts at zero and reloads its extras`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val store = PlaybackRequestStore()
+            val mediaRepository = PlaybackExtrasRepository()
+            val viewModel = PlayerViewModel(
+                requestStore = store,
+                mediaRepository = mediaRepository,
+                historyRepository = unusedHistoryRepository(),
+                searchRepository = unusedSearchRepository(),
+            )
+            val episodes = listOf(
+                mediaSummary(301, "/episode-1.mkv", "Episode 1"),
+                mediaSummary(302, "/episode-2.mkv", "Episode 2"),
+            )
+            val requestId = checkNotNull(
+                viewModel.createFromDetail(
+                    session = session(),
+                    detail = mediaDetail(episodes.first()),
+                    siblings = episodes,
+                    resumePositionSeconds = 42,
+                ),
+            )
+            viewModel.load(session(), requestId)
+            advanceUntilIdle()
+
+            viewModel.switchAdjacent(session(), offset = 1)
+            advanceUntilIdle()
+
+            val selected = store.get(requestId) as PlaybackRequest.LocalMedia
+            assertEquals(302L, selected.mediaId)
+            assertEquals("/episode-2.mkv", selected.path)
+            assertEquals(0L, selected.resumePositionSeconds)
+            assertEquals(
+                listOf("/episode-1.mkv", "/episode-2.mkv"),
+                mediaRepository.probePaths,
+            )
+            val content = viewModel.uiState.value as PlayerUiState.Content
+            assertEquals(selected, content.request)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `subtitle retry publishes recovered tracks`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val store = PlaybackRequestStore()
+            val mediaRepository = PlaybackExtrasRepository(
+                subtitleResult = AppResult.Failure(AppError.Offline),
+            )
+            val viewModel = PlayerViewModel(
+                requestStore = store,
+                mediaRepository = mediaRepository,
+                historyRepository = unusedHistoryRepository(),
+                searchRepository = unusedSearchRepository(),
+            )
+            val episode = mediaSummary(301, "/episode-1.mkv", "Episode 1")
+            val requestId = checkNotNull(
+                viewModel.createFromDetail(
+                    session = session(),
+                    detail = mediaDetail(episode),
+                    siblings = listOf(episode),
+                    resumePositionSeconds = null,
+                ),
+            )
+            viewModel.load(session(), requestId)
+            advanceUntilIdle()
+            mediaRepository.subtitleResult = AppResult.Success(
+                listOf(
+                    SubtitleTrack(
+                        id = "subtitle-1",
+                        label = "English",
+                        url = "/_api/subtitle/content?id=1",
+                        language = "en",
+                    ),
+                ),
+            )
+
+            viewModel.retryExtra(session(), PlayerExtra.Subtitles)
+            advanceUntilIdle()
+
+            val content = viewModel.uiState.value as PlayerUiState.Content
+            assertEquals("subtitle-1", content.subtitles.single().id)
+            assertFalse(PlayerExtra.Subtitles in content.extraErrors)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
 
 private class RecordingHistoryRepository : HistoryRepository {
@@ -192,6 +291,52 @@ private class SequencedHistoryRepository : HistoryRepository {
         completedPositions += positionSeconds
         return AppResult.Success(Unit)
     }
+}
+
+private class PlaybackExtrasRepository(
+    var subtitleResult: AppResult<List<SubtitleTrack>> = AppResult.Success(emptyList()),
+    var danmakuResult: AppResult<List<DanmakuComment>> = AppResult.Success(emptyList()),
+) : MediaRepository {
+    val probePaths = mutableListOf<String>()
+
+    override suspend fun getLibraries(session: Session): AppResult<List<MediaLibrary>> =
+        error("Not used")
+
+    override suspend fun getMediaPage(
+        session: Session,
+        libraryId: Long,
+        pageNumber: Int,
+        pageSize: Int,
+        keyword: String?,
+    ): AppResult<MediaPage> = error("Not used")
+
+    override suspend fun getMediaDetail(
+        session: Session,
+        mediaId: Long,
+    ): AppResult<MediaDetail> = error("Not used")
+
+    override suspend fun getMediaProbe(
+        session: Session,
+        path: String,
+    ): AppResult<MediaProbe> {
+        probePaths += path
+        return AppResult.Success(
+            MediaProbe(
+                durationMillis = 90_000,
+                chapters = emptyList(),
+            ),
+        )
+    }
+
+    override suspend fun getSubtitleTracks(
+        session: Session,
+        path: String,
+    ): AppResult<List<SubtitleTrack>> = subtitleResult
+
+    override suspend fun getDanmakus(
+        session: Session,
+        path: String,
+    ): AppResult<List<DanmakuComment>> = danmakuResult
 }
 
 private fun unusedHistoryRepository() = object : HistoryRepository {
@@ -290,4 +435,41 @@ private fun history() = WatchHistoryItem(
     percentage = 20,
     rating = null,
     updatedAt = null,
+)
+
+private fun mediaSummary(
+    id: Long,
+    path: String,
+    title: String,
+) = MediaSummary(
+    id = id,
+    title = title,
+    path = path,
+    posterPath = null,
+    backdropPath = null,
+    year = null,
+    rating = null,
+    season = 1,
+    episode = id.toInt() - 300,
+)
+
+private fun mediaDetail(summary: MediaSummary) = MediaDetail(
+    id = summary.id,
+    library = null,
+    title = summary.title,
+    path = summary.path,
+    posterPath = null,
+    backdropPath = null,
+    year = null,
+    rating = null,
+    season = summary.season,
+    episode = summary.episode,
+    aired = null,
+    plot = null,
+    genres = emptyList(),
+    directors = emptyList(),
+    writers = emptyList(),
+    studios = emptyList(),
+    actors = emptyList(),
+    children = emptyList(),
 )

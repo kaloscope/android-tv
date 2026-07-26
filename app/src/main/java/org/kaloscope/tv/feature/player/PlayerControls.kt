@@ -122,6 +122,8 @@ internal fun PlayerControls(
     onSeekTo: (Long) -> Unit,
     onHideControls: () -> Unit,
     onInteraction: () -> Unit,
+    onRetrySubtitles: () -> Unit = {},
+    onRetryDanmakus: () -> Unit = {},
 ) {
     val progressFocus = remember { FocusRequester() }
     val forwardFocus = remember { FocusRequester() }
@@ -261,7 +263,11 @@ internal fun PlayerControls(
                 label = subtitleButtonLabel(state.subtitles, state.subtitleLabel),
                 iconRes = R.drawable.ic_player_subtitles,
                 action = state.subtitles,
-                onClick = onOpenSubtitles,
+                onClick = if (state.subtitles.error) {
+                    onRetrySubtitles
+                } else {
+                    onOpenSubtitles
+                },
                 modifier = Modifier.focusRequester(subtitleFocus),
                 upFocus = progressFocus,
                 leftFocus = episodeGroupEndFocus,
@@ -279,7 +285,11 @@ internal fun PlayerControls(
                 label = danmakuButtonLabel(state.danmakus),
                 iconRes = R.drawable.ic_player_danmaku,
                 action = state.danmakus,
-                onClick = onToggleDanmakus,
+                onClick = if (state.danmakus.error) {
+                    onRetryDanmakus
+                } else {
+                    onToggleDanmakus
+                },
                 upFocus = progressFocus,
             )
             PlayerIconButton(
@@ -391,7 +401,7 @@ private fun subtitleButtonLabel(
     selectedLabel: String?,
 ): String =
     when {
-        action.error -> stringResource(R.string.subtitle_unavailable)
+        action.error -> stringResource(R.string.retry_subtitles)
         !action.enabled -> stringResource(R.string.no_subtitles)
         action.active && !selectedLabel.isNullOrBlank() -> selectedLabel
         action.active -> stringResource(R.string.subtitles_on)
@@ -401,7 +411,7 @@ private fun subtitleButtonLabel(
 @Composable
 private fun danmakuButtonLabel(action: PlayerActionUiState): String =
     when {
-        action.error -> stringResource(R.string.danmaku_unavailable)
+        action.error -> stringResource(R.string.retry_danmakus)
         !action.enabled -> stringResource(R.string.no_danmaku)
         action.active -> stringResource(R.string.danmaku_on)
         else -> stringResource(R.string.danmaku_off)

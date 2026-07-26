@@ -13,7 +13,7 @@ private val Context.sessionDataStore by preferencesDataStore(name = "kaloscope_s
 
 @Singleton
 class SecureSessionStore @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val cipher: TokenCipher,
 ) : SessionStore {
     override suspend fun getToken(serverId: String): String? {

@@ -141,12 +141,13 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun failedSupplementaryControlExposesErrorSemantics() {
+    fun failedSupplementaryControlIsFocusableAndRetries() {
+        var subtitleRetries = 0
         composeRule.setContent {
             MaterialTheme {
                 PlayerControls(
                     state = controlsState(
-                        subtitles = PlayerActionUiState(enabled = false, error = true),
+                        subtitles = PlayerActionUiState(enabled = true, error = true),
                     ),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
@@ -166,18 +167,24 @@ class PlayerControlsTest {
                     onSeekTo = {},
                     onHideControls = {},
                     onInteraction = {},
+                    onRetrySubtitles = { subtitleRetries += 1 },
                 )
             }
         }
 
-        composeRule.onNodeWithContentDescription("字幕不可用")
-            .assertIsNotEnabled()
+        composeRule.onNodeWithContentDescription("重试字幕")
+            .assertIsEnabled()
             .assert(
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.Error,
-                    "字幕不可用",
+                    "重试字幕",
                 ),
             )
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, subtitleRetries)
+        }
     }
 
     @Test

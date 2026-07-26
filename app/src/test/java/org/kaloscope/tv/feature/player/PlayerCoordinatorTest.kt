@@ -208,12 +208,60 @@ class PlayerCoordinatorTest {
         assertEquals(next, content.request)
         assertEquals(listOf("/media/video.mkv", "/media/video-2.mkv"), repository.probePaths)
     }
+
+    @Test
+    fun `subtitle retry replaces tracks and clears only subtitle failure`() = runTest {
+        val store = PlaybackRequestStore()
+        val request = request()
+        store.put(request)
+        val repository = FakeMediaRepository(
+            subtitles = AppResult.Failure(AppError.Offline),
+            danmakus = AppResult.Success(listOf(danmaku())),
+        )
+        val coordinator = PlayerCoordinator(store, repository)
+        coordinator.load(session(), request.requestId)
+        repository.subtitles = AppResult.Success(listOf(subtitle()))
+
+        coordinator.retryExtra(session(), PlayerExtra.Subtitles)
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals("subtitle-1", content.subtitles.single().id)
+        assertEquals("danmaku-1", content.danmakus.single().id)
+        assertTrue(PlayerExtra.Subtitles !in content.extraErrors)
+        assertEquals(2, repository.subtitleCalls)
+        assertEquals(1, repository.danmakuCalls)
+        assertEquals(1, repository.probeCalls)
+    }
+
+    @Test
+    fun `failed danmaku retry preserves subtitles and updates its error`() = runTest {
+        val store = PlaybackRequestStore()
+        val request = request()
+        store.put(request)
+        val repository = FakeMediaRepository(
+            subtitles = AppResult.Success(listOf(subtitle())),
+            danmakus = AppResult.Failure(AppError.Timeout),
+        )
+        val coordinator = PlayerCoordinator(store, repository)
+        coordinator.load(session(), request.requestId)
+        repository.danmakus = AppResult.Failure(AppError.Offline)
+
+        coordinator.retryExtra(session(), PlayerExtra.Danmakus)
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals("subtitle-1", content.subtitles.single().id)
+        assertTrue(content.danmakus.isEmpty())
+        assertEquals(AppError.Offline, content.extraFailures[PlayerExtra.Danmakus])
+        assertEquals(1, repository.subtitleCalls)
+        assertEquals(2, repository.danmakuCalls)
+        assertEquals(1, repository.probeCalls)
+    }
 }
 
 private class FakeMediaRepository(
-    private val subtitles: AppResult<List<SubtitleTrack>> = AppResult.Success(emptyList()),
-    private val danmakus: AppResult<List<DanmakuComment>> = AppResult.Success(emptyList()),
-    private val probe: AppResult<MediaProbe> = AppResult.Success(MediaProbe(0, emptyList())),
+    var subtitles: AppResult<List<SubtitleTrack>> = AppResult.Success(emptyList()),
+    var danmakus: AppResult<List<DanmakuComment>> = AppResult.Success(emptyList()),
+    var probe: AppResult<MediaProbe> = AppResult.Success(MediaProbe(0, emptyList())),
 ) : MediaRepository {
     var subtitleCalls = 0
     var danmakuCalls = 0

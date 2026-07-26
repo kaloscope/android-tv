@@ -292,6 +292,9 @@ fun KaloscopeApp(
                     onSwitchPlayerItem = { offset ->
                         playerViewModel.switchAdjacent(state.session, offset)
                     },
+                    onRetryPlayerExtra = { extra ->
+                        playerViewModel.retryExtra(state.session, extra)
+                    },
                     onClosePlayer = playerViewModel::close,
                 )
             }

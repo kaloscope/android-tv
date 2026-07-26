@@ -37,6 +37,7 @@ class PlayerViewModel @Inject constructor(
     private var loadJob: Job? = null
     private val progressRecorders = mutableMapOf<Long, PlaybackProgressRecorder>()
     private val progressJobs = mutableMapOf<Long, Job>()
+    private val extraRetryJobs = mutableMapOf<PlayerExtra, Job>()
 
     val uiState: StateFlow<PlayerUiState> = coordinator.state
 
@@ -80,6 +81,7 @@ class PlayerViewModel @Inject constructor(
         if (currentRequestId == requestId) {
             return
         }
+        cancelExtraRetries()
         currentRequestId = requestId
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
@@ -165,6 +167,7 @@ class PlayerViewModel @Inject constructor(
         val request = (uiState.value as? PlayerUiState.Content)?.request ?: return
         if (request is PlaybackRequest.LocalMedia) {
             val selected = PlaybackRequestNavigator.selectLocalAdjacent(request, offset) ?: return
+            cancelExtraRetries()
             coordinator.beginItemSwitch()
             loadJob?.cancel()
             loadJob = viewModelScope.launch {
@@ -177,6 +180,7 @@ class PlayerViewModel @Inject constructor(
             networkRequest,
             offset,
         ) ?: return
+        cancelExtraRetries()
         coordinator.beginItemSwitch()
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
@@ -202,9 +206,23 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun retryExtra(
+        session: Session,
+        extra: PlayerExtra,
+    ) {
+        if (extra == PlayerExtra.MediaProbe) {
+            return
+        }
+        extraRetryJobs.remove(extra)?.cancel()
+        extraRetryJobs[extra] = viewModelScope.launch {
+            coordinator.retryExtra(session, extra)
+        }
+    }
+
     fun close(requestId: String) {
         requestStore.remove(requestId)
         if (currentRequestId == requestId) {
+            cancelExtraRetries()
             loadJob?.cancel()
             loadJob = null
             currentRequestId = null
@@ -214,6 +232,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun clearServer(serverId: String) {
+        cancelExtraRetries()
         loadJob?.cancel()
         loadJob = null
         currentRequestId = null
@@ -221,6 +240,11 @@ class PlayerViewModel @Inject constructor(
         progressJobs.values.forEach(Job::cancel)
         progressJobs.clear()
         requestStore.clearServer(serverId)
+    }
+
+    private fun cancelExtraRetries() {
+        extraRetryJobs.values.forEach(Job::cancel)
+        extraRetryJobs.clear()
     }
 
     private fun createLocalRequest(

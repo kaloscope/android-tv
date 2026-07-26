@@ -141,6 +141,55 @@ class PlayerCoordinator(
         )
     }
 
+    suspend fun retryExtra(
+        session: Session,
+        extra: PlayerExtra,
+    ) {
+        val original = mutableState.value as? PlayerUiState.Content ?: return
+        val request = original.request as? PlaybackRequest.LocalMedia ?: return
+        when (extra) {
+            PlayerExtra.Subtitles -> {
+                val result = mediaRepository.getSubtitleTracks(session, request.path)
+                val latest = mutableState.value as? PlayerUiState.Content ?: return
+                if (latest.request != request) {
+                    return
+                }
+                mutableState.value = when (result) {
+                    is AppResult.Success -> latest.copy(
+                        subtitles = result.value,
+                        extraFailures = latest.extraFailures - PlayerExtra.Subtitles,
+                    )
+
+                    is AppResult.Failure -> latest.copy(
+                        extraFailures = latest.extraFailures +
+                            (PlayerExtra.Subtitles to result.error),
+                    )
+                }
+            }
+
+            PlayerExtra.Danmakus -> {
+                val result = mediaRepository.getDanmakus(session, request.path)
+                val latest = mutableState.value as? PlayerUiState.Content ?: return
+                if (latest.request != request) {
+                    return
+                }
+                mutableState.value = when (result) {
+                    is AppResult.Success -> latest.copy(
+                        danmakus = result.value,
+                        extraFailures = latest.extraFailures - PlayerExtra.Danmakus,
+                    )
+
+                    is AppResult.Failure -> latest.copy(
+                        extraFailures = latest.extraFailures +
+                            (PlayerExtra.Danmakus to result.error),
+                    )
+                }
+            }
+
+            PlayerExtra.MediaProbe -> Unit
+        }
+    }
+
     fun reportItemSwitchFailure(error: AppError) {
         val content = mutableState.value as? PlayerUiState.Content ?: return
         mutableState.value = content.copy(switchingItem = false, switchError = error)

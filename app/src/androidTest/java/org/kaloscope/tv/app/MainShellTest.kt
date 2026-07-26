@@ -181,12 +181,20 @@ class MainShellTest {
 
     @Test
     fun mediaCardOpensDetailAndBackRestoresCardFocus() {
+        val libraryItems = listOf(
+            summary(),
+            summary().copy(
+                id = 202,
+                title = "下一项",
+                path = "/media/next.mkv",
+            ),
+        )
         composeRule.setContent {
             KaloscopeTheme {
                 MainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
-                    libraryState = libraryState(),
+                    libraryState = libraryState(items = libraryItems),
                     detailState = MediaDetailUiState.Content(detail()),
                     onRefresh = {},
                     onOpenLibrary = {},
@@ -223,6 +231,10 @@ class MainShellTest {
             ).fetchSemanticsNodes().size == 1
         }
         composeRule.onNodeWithTag("media-card-201").assertIsFocused()
+        composeRule.onNodeWithTag("media-card-201")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("media-card-202").assertIsFocused()
     }
 
     @Test
@@ -313,12 +325,14 @@ private fun session() = Session(
     user = SessionUser(1, "tv_user", "user"),
 )
 
-private fun libraryState() = LibraryUiState.Content(
+private fun libraryState(
+    items: List<MediaSummary> = listOf(summary()),
+) = LibraryUiState.Content(
     libraries = listOf(MediaLibrary(21, "剧集库", MediaLibraryType.TvShow)),
     selectedLibraryId = 21,
     items = LibraryItemsState.Content(
-        items = listOf(summary()),
-        total = 1,
+        items = items,
+        total = items.size,
         pageNumber = 1,
         hasNext = false,
     ),

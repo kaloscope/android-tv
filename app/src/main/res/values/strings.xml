@@ -197,11 +197,11 @@
     <string name="subtitles_on">字幕 开</string>
     <string name="subtitles_off">字幕 关</string>
     <string name="no_subtitles">无字幕</string>
-    <string name="subtitle_unavailable">字幕不可用</string>
+    <string name="retry_subtitles">重试字幕</string>
     <string name="danmaku_on">弹幕 开</string>
     <string name="danmaku_off">弹幕 关</string>
     <string name="no_danmaku">无弹幕</string>
-    <string name="danmaku_unavailable">弹幕不可用</string>
+    <string name="retry_danmakus">重试弹幕</string>
     <string name="direct_playback_failed">直连播放失败</string>
     <string name="transcode_playback_failed">转码播放失败</string>
     <string name="playback_network_failed">网络连接中断</string>

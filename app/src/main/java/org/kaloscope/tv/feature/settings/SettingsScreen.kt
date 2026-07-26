@@ -30,11 +30,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -54,7 +49,6 @@ import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
-import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
@@ -63,7 +57,6 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleDisplayMode
 import org.kaloscope.tv.core.model.SubtitleSettings
-import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
 
@@ -365,444 +358,7 @@ private fun SettingsPanel(
 }
 
 @Composable
-private fun PlaybackSettings(
-    state: SettingsUiState.Content,
-    enabled: Boolean,
-    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
-    onPlaybackMode: (PlaybackMode) -> Unit,
-    onTranscodeResolution: (TranscodeResolution) -> Unit,
-    onAutoplayNext: (Boolean) -> Unit,
-) {
-    ChoiceSettingRow(
-        title = stringResource(R.string.default_playback_mode),
-        description = stringResource(R.string.default_playback_mode_description),
-        value = playbackModeLabel(state.settings.playbackMode),
-        enabled = enabled,
-        createChoice = {
-            SettingsChoice(
-                title = stringResource(R.string.default_playback_mode),
-                options = PlaybackMode.entries.map { mode ->
-                    SettingsChoiceOption(
-                        label = playbackModeLabel(mode),
-                        selected = mode == state.settings.playbackMode,
-                        onSelect = { onPlaybackMode(mode) },
-                    )
-                },
-            )
-        },
-        onOpenChoice = onOpenChoice,
-    )
-    Spacer(Modifier.height(10.dp))
-    ChoiceSettingRow(
-        title = stringResource(R.string.default_transcode_resolution),
-        description = stringResource(R.string.default_transcode_resolution_description),
-        value = resolutionLabel(state.settings.transcodeResolution),
-        enabled = enabled,
-        createChoice = {
-            SettingsChoice(
-                title = stringResource(R.string.default_transcode_resolution),
-                options = TranscodeResolution.entries.map { resolution ->
-                    SettingsChoiceOption(
-                        label = resolutionLabel(resolution),
-                        selected = resolution == state.settings.transcodeResolution,
-                        onSelect = { onTranscodeResolution(resolution) },
-                    )
-                },
-            )
-        },
-        onOpenChoice = onOpenChoice,
-    )
-    Spacer(Modifier.height(10.dp))
-    ToggleSettingRow(
-        title = stringResource(R.string.autoplay_next),
-        description = stringResource(R.string.autoplay_next_description),
-        checked = state.settings.autoplayNext,
-        enabled = enabled,
-        onToggle = { onAutoplayNext(!state.settings.autoplayNext) },
-    )
-}
-
-@Composable
-private fun SubtitleDefaultSettings(
-    settings: SubtitleSettings,
-    enabled: Boolean,
-    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
-    onOpenLanguage: (FocusRequester) -> Unit,
-    onChange: (SubtitleSettings) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("subtitle-default-settings"),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        item {
-            ToggleSettingRow(
-                title = stringResource(R.string.default_subtitle),
-                description = stringResource(R.string.default_subtitle_description),
-                checked = settings.enabled,
-                enabled = enabled,
-                onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
-            )
-        }
-        item {
-            SubtitleLanguageSettingRow(
-                value = settings.languagePreference,
-                enabled = enabled,
-                onOpen = onOpenLanguage,
-            )
-        }
-        item {
-            ChoiceSettingRow(
-                title = stringResource(R.string.subtitle_display_mode),
-                description = stringResource(R.string.subtitle_display_mode_description),
-                value = subtitleDisplayModeLabel(settings.displayMode),
-                enabled = enabled,
-                createChoice = {
-                    SettingsChoice(
-                        title = stringResource(R.string.subtitle_display_mode),
-                        options = SubtitleDisplayMode.entries.map { mode ->
-                            SettingsChoiceOption(
-                                label = subtitleDisplayModeLabel(mode),
-                                selected = mode == settings.displayMode,
-                                onSelect = { onChange(settings.copy(displayMode = mode)) },
-                            )
-                        },
-                    )
-                },
-                onOpenChoice = onOpenChoice,
-            )
-        }
-        item {
-            AdjustableSettingRow(
-                title = stringResource(R.string.subtitle_font_scale),
-                description = stringResource(R.string.subtitle_font_scale_description),
-                value = stringResource(R.string.percentage_value, settings.fontScalePercent),
-                enabled = enabled,
-                onDecrease = {
-                    onChange(SubtitleSettingsPolicy.adjustFontScale(settings, -1))
-                },
-                onIncrease = {
-                    onChange(SubtitleSettingsPolicy.adjustFontScale(settings, 1))
-                },
-            )
-        }
-        item {
-            AdjustableSettingRow(
-                title = stringResource(R.string.subtitle_vertical_position),
-                description = stringResource(R.string.subtitle_vertical_position_description),
-                value = stringResource(
-                    R.string.percentage_value,
-                    settings.verticalPositionPercent,
-                ),
-                enabled = enabled,
-                onDecrease = {
-                    onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, -1))
-                },
-                onIncrease = {
-                    onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, 1))
-                },
-            )
-        }
-        item {
-            AdjustableSettingRow(
-                title = stringResource(R.string.subtitle_time_offset),
-                description = stringResource(R.string.subtitle_time_offset_description),
-                value = formatSubtitleOffset(settings.timeOffsetSeconds),
-                enabled = enabled,
-                onDecrease = {
-                    onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, -1))
-                },
-                onIncrease = {
-                    onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, 1))
-                },
-                onClick = {
-                    onChange(settings.copy(timeOffsetSeconds = 0f))
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun SubtitleLanguageSettingRow(
-    value: String,
-    enabled: Boolean,
-    onOpen: (FocusRequester) -> Unit,
-) {
-    val focus = remember { FocusRequester() }
-    Button(
-        onClick = { onOpen(focus) },
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusRequester(focus),
-        colors = settingRowColors(),
-    ) {
-        SettingRowContent(
-            title = stringResource(R.string.subtitle_language_preference),
-            description = stringResource(R.string.subtitle_language_preference_description),
-            value = value.ifBlank {
-                stringResource(R.string.subtitle_language_preference_any)
-            } + "  ›",
-        )
-    }
-}
-
-@Composable
-private fun AdjustableSettingRow(
-    title: String,
-    description: String,
-    value: String,
-    enabled: Boolean,
-    onDecrease: () -> Unit,
-    onIncrease: () -> Unit,
-    onClick: () -> Unit = {},
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) {
-                    return@onPreviewKeyEvent false
-                }
-                when (event.key) {
-                    Key.DirectionLeft -> {
-                        onDecrease()
-                        true
-                    }
-
-                    Key.DirectionRight -> {
-                        onIncrease()
-                        true
-                    }
-
-                    else -> false
-                }
-            },
-        colors = settingRowColors(),
-    ) {
-        SettingRowContent(title, description, "‹  $value  ›")
-    }
-}
-
-@Composable
-private fun DanmakuDefaultSettings(
-    settings: DanmakuSettings,
-    enabled: Boolean,
-    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
-    onChange: (DanmakuSettings) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val percentages = listOf(25, 50, 75, 100)
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        item {
-            ToggleSettingRow(
-                title = stringResource(R.string.default_danmaku),
-                description = stringResource(R.string.default_danmaku_description),
-                checked = settings.enabled,
-                enabled = enabled,
-                onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
-            )
-        }
-        item {
-            ChoiceSettingRow(
-                title = stringResource(R.string.danmaku_text_size),
-                description = stringResource(R.string.danmaku_text_size_description),
-                value = danmakuTextSizeLabel(settings.textSize),
-                enabled = enabled,
-                createChoice = {
-                    SettingsChoice(
-                        title = stringResource(R.string.danmaku_text_size),
-                        options = DanmakuTextSize.entries.map { size ->
-                            SettingsChoiceOption(
-                                label = danmakuTextSizeLabel(size),
-                                selected = size == settings.textSize,
-                                onSelect = { onChange(settings.copy(textSize = size)) },
-                            )
-                        },
-                    )
-                },
-                onOpenChoice = onOpenChoice,
-            )
-        }
-        item {
-            ChoiceSettingRow(
-                title = stringResource(R.string.danmaku_speed),
-                description = stringResource(R.string.danmaku_speed_description),
-                value = danmakuSpeedLabel(settings.speed),
-                enabled = enabled,
-                createChoice = {
-                    SettingsChoice(
-                        title = stringResource(R.string.danmaku_speed),
-                        options = DanmakuSpeed.entries.map { speed ->
-                            SettingsChoiceOption(
-                                label = danmakuSpeedLabel(speed),
-                                selected = speed == settings.speed,
-                                onSelect = { onChange(settings.copy(speed = speed)) },
-                            )
-                        },
-                    )
-                },
-                onOpenChoice = onOpenChoice,
-            )
-        }
-        item {
-            DanmakuPercentageSetting(
-                title = stringResource(R.string.danmaku_opacity),
-                description = stringResource(R.string.danmaku_opacity_description),
-                value = settings.opacityPercent,
-                percentages = percentages,
-                enabled = enabled,
-                onOpenChoice = onOpenChoice,
-                onSelect = { onChange(settings.copy(opacityPercent = it)) },
-            )
-        }
-        item {
-            DanmakuPercentageSetting(
-                title = stringResource(R.string.danmaku_display_area),
-                description = stringResource(R.string.danmaku_display_area_description),
-                value = settings.displayAreaPercent,
-                percentages = percentages,
-                enabled = enabled,
-                onOpenChoice = onOpenChoice,
-                onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
-            )
-        }
-        DanmakuDisplayMode.entries.forEach { mode ->
-            item {
-                ToggleSettingRow(
-                    title = danmakuModeLabel(mode),
-                    description = danmakuModeDescription(mode),
-                    checked = mode in settings.visibleModes,
-                    enabled = enabled,
-                    onToggle = {
-                        val visibleModes = if (mode in settings.visibleModes) {
-                            settings.visibleModes - mode
-                        } else {
-                            settings.visibleModes + mode
-                        }
-                        onChange(settings.copy(visibleModes = visibleModes))
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DanmakuPercentageSetting(
-    title: String,
-    description: String,
-    value: Int,
-    percentages: List<Int>,
-    enabled: Boolean,
-    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
-    onSelect: (Int) -> Unit,
-) {
-    ChoiceSettingRow(
-        title = title,
-        description = description,
-        value = stringResource(R.string.percentage_value, value),
-        enabled = enabled,
-        createChoice = {
-            SettingsChoice(
-                title = title,
-                options = percentages.map { percentage ->
-                    SettingsChoiceOption(
-                        label = stringResource(R.string.percentage_value, percentage),
-                        selected = percentage == value,
-                        onSelect = { onSelect(percentage) },
-                    )
-                },
-            )
-        },
-        onOpenChoice = onOpenChoice,
-    )
-}
-
-@Composable
-private fun BehaviorSettings(
-    state: SettingsUiState.Content,
-    enabled: Boolean,
-    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
-    onStartPage: (StartPage) -> Unit,
-) {
-    ChoiceSettingRow(
-        title = stringResource(R.string.default_start_page),
-        description = stringResource(R.string.default_start_page_description),
-        value = startPageLabel(state.settings.startPage),
-        enabled = enabled,
-        createChoice = {
-            SettingsChoice(
-                title = stringResource(R.string.default_start_page),
-                options = StartPage.entries.map { page ->
-                    SettingsChoiceOption(
-                        label = startPageLabel(page),
-                        selected = page == state.settings.startPage,
-                        onSelect = { onStartPage(page) },
-                    )
-                },
-            )
-        },
-        onOpenChoice = onOpenChoice,
-    )
-}
-
-@Composable
-private fun ServerAccountSettings(
-    session: Session,
-    connection: SettingsConnection,
-    enabled: Boolean,
-    onTestConnection: () -> Unit,
-    onManageServers: () -> Unit,
-    onLogout: () -> Unit,
-) {
-    SettingValue(
-        label = stringResource(R.string.current_server),
-        value = session.server.name,
-        detail = session.server.origin,
-    )
-    Spacer(Modifier.height(14.dp))
-    SettingValue(
-        label = stringResource(R.string.current_account),
-        value = session.user.username,
-        detail = session.user.role,
-    )
-    Spacer(Modifier.height(18.dp))
-    SettingActionRow(
-        title = stringResource(R.string.test_connection),
-        description = connectionDescription(connection),
-        enabled = enabled && connection != SettingsConnection.Testing,
-        danger = false,
-        onClick = onTestConnection,
-    )
-    Spacer(Modifier.height(10.dp))
-    SettingActionRow(
-        title = stringResource(R.string.manage_servers),
-        description = stringResource(R.string.manage_servers_description),
-        enabled = enabled,
-        danger = false,
-        onClick = onManageServers,
-    )
-    Spacer(Modifier.height(10.dp))
-    SettingActionRow(
-        title = stringResource(R.string.logout),
-        description = stringResource(R.string.logout_description),
-        enabled = enabled,
-        danger = true,
-        onClick = onLogout,
-    )
-}
-
-@Composable
-private fun ChoiceSettingRow(
+internal fun ChoiceSettingRow(
     title: String,
     description: String,
     value: String,
@@ -825,7 +381,7 @@ private fun ChoiceSettingRow(
 }
 
 @Composable
-private fun ToggleSettingRow(
+internal fun ToggleSettingRow(
     title: String,
     description: String,
     checked: Boolean,
@@ -851,7 +407,7 @@ private fun ToggleSettingRow(
 }
 
 @Composable
-private fun SettingActionRow(
+internal fun SettingActionRow(
     title: String,
     description: String,
     enabled: Boolean,
@@ -872,7 +428,7 @@ private fun SettingActionRow(
 }
 
 @Composable
-private fun SettingRowContent(
+internal fun SettingRowContent(
     title: String,
     description: String,
     value: String,
@@ -892,7 +448,7 @@ private fun SettingRowContent(
 }
 
 @Composable
-private fun SettingValue(
+internal fun SettingValue(
     label: String,
     value: String,
     detail: String,
@@ -1077,7 +633,7 @@ private fun SettingsStatus(
 }
 
 @Composable
-private fun settingRowColors() = ButtonDefaults.colors(
+internal fun settingRowColors() = ButtonDefaults.colors(
     containerColor = PanelElevated,
     focusedContainerColor = Primary,
 )
@@ -1113,7 +669,7 @@ private fun sectionDescription(section: SettingsSection): String =
     }
 
 @Composable
-private fun playbackModeLabel(mode: PlaybackMode): String =
+internal fun playbackModeLabel(mode: PlaybackMode): String =
     when (mode) {
         PlaybackMode.Auto -> stringResource(R.string.playback_mode_auto)
         PlaybackMode.Direct -> stringResource(R.string.playback_mode_direct)
@@ -1121,7 +677,7 @@ private fun playbackModeLabel(mode: PlaybackMode): String =
     }
 
 @Composable
-private fun resolutionLabel(resolution: TranscodeResolution): String =
+internal fun resolutionLabel(resolution: TranscodeResolution): String =
     when (resolution) {
         TranscodeResolution.Original -> stringResource(R.string.resolution_original)
         TranscodeResolution.P1080 -> stringResource(R.string.resolution_1080p)
@@ -1130,14 +686,14 @@ private fun resolutionLabel(resolution: TranscodeResolution): String =
     }
 
 @Composable
-private fun subtitleDisplayModeLabel(mode: SubtitleDisplayMode): String =
+internal fun subtitleDisplayModeLabel(mode: SubtitleDisplayMode): String =
     when (mode) {
         SubtitleDisplayMode.Stroke -> stringResource(R.string.subtitle_display_mode_stroke)
         SubtitleDisplayMode.Background ->
             stringResource(R.string.subtitle_display_mode_background)
     }
 
-private fun formatSubtitleOffset(value: Float): String =
+internal fun formatSubtitleOffset(value: Float): String =
     if (value == 0f) {
         "0.0s"
     } else {
@@ -1145,7 +701,7 @@ private fun formatSubtitleOffset(value: Float): String =
     }
 
 @Composable
-private fun danmakuTextSizeLabel(size: DanmakuTextSize): String =
+internal fun danmakuTextSizeLabel(size: DanmakuTextSize): String =
     when (size) {
         DanmakuTextSize.Small -> stringResource(R.string.danmaku_size_small)
         DanmakuTextSize.Medium -> stringResource(R.string.danmaku_size_medium)
@@ -1154,7 +710,7 @@ private fun danmakuTextSizeLabel(size: DanmakuTextSize): String =
     }
 
 @Composable
-private fun danmakuSpeedLabel(speed: DanmakuSpeed): String =
+internal fun danmakuSpeedLabel(speed: DanmakuSpeed): String =
     when (speed) {
         DanmakuSpeed.Slow -> stringResource(R.string.danmaku_speed_slow)
         DanmakuSpeed.Standard -> stringResource(R.string.danmaku_speed_standard)
@@ -1162,7 +718,7 @@ private fun danmakuSpeedLabel(speed: DanmakuSpeed): String =
     }
 
 @Composable
-private fun danmakuModeLabel(mode: DanmakuDisplayMode): String =
+internal fun danmakuModeLabel(mode: DanmakuDisplayMode): String =
     when (mode) {
         DanmakuDisplayMode.Scroll -> stringResource(R.string.danmaku_mode_scroll)
         DanmakuDisplayMode.Top -> stringResource(R.string.danmaku_mode_top)
@@ -1170,7 +726,7 @@ private fun danmakuModeLabel(mode: DanmakuDisplayMode): String =
     }
 
 @Composable
-private fun danmakuModeDescription(mode: DanmakuDisplayMode): String =
+internal fun danmakuModeDescription(mode: DanmakuDisplayMode): String =
     when (mode) {
         DanmakuDisplayMode.Scroll ->
             stringResource(R.string.danmaku_mode_scroll_description)
@@ -1183,7 +739,7 @@ private fun danmakuModeDescription(mode: DanmakuDisplayMode): String =
     }
 
 @Composable
-private fun startPageLabel(page: StartPage): String =
+internal fun startPageLabel(page: StartPage): String =
     when (page) {
         StartPage.Home -> stringResource(R.string.home)
         StartPage.Search -> stringResource(R.string.search)
@@ -1191,7 +747,7 @@ private fun startPageLabel(page: StartPage): String =
     }
 
 @Composable
-private fun connectionDescription(connection: SettingsConnection): String =
+internal fun connectionDescription(connection: SettingsConnection): String =
     when (connection) {
         SettingsConnection.Idle -> stringResource(R.string.test_connection_description)
         SettingsConnection.Testing -> stringResource(R.string.testing)
@@ -1216,12 +772,12 @@ private fun settingsErrorText(error: AppError): String =
         is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
     }
 
-private data class SettingsChoice(
+internal data class SettingsChoice(
     val title: String,
     val options: List<SettingsChoiceOption>,
 )
 
-private data class SettingsChoiceOption(
+internal data class SettingsChoiceOption(
     val label: String,
     val selected: Boolean,
     val onSelect: () -> Unit,

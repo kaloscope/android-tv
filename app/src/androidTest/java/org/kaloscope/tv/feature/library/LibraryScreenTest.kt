@@ -1,6 +1,9 @@
 package org.kaloscope.tv.feature.library
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -127,6 +130,42 @@ class LibraryScreenTest {
         }
 
         composeRule.onNodeWithTag("media-card-25").assertIsFocused()
+    }
+
+    @Test
+    fun rememberedFocusDoesNotOverrideDpadMovement() {
+        var currentState by mutableStateOf(
+            state(
+                media = mediaItems(4),
+                focusedMediaId = 1,
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = currentState,
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = { focusedId ->
+                        currentState = currentState.copy(focusedMediaId = focusedId)
+                    },
+                    onGridViewportChanged = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("media-card-1")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("media-card-2").assertIsFocused()
     }
 
     @Test
