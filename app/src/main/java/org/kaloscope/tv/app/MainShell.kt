@@ -3,7 +3,10 @@ package org.kaloscope.tv.app
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -72,6 +75,7 @@ import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeBrand
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -263,10 +267,20 @@ internal fun MainShell(
                 backStack = backStack,
                 onBack = ::goBack,
                 transitionSpec = {
-                    EnterTransition.None togetherWith ExitTransition.None
+                    if (initialState.key is PlayerRoute || targetState.key is PlayerRoute) {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    } else {
+                        fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
+                            fadeOut(tween(KaloscopeMotion.ContentMillis))
+                    }
                 },
                 popTransitionSpec = {
-                    EnterTransition.None togetherWith ExitTransition.None
+                    if (initialState.key is PlayerRoute || targetState.key is PlayerRoute) {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    } else {
+                        fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
+                            fadeOut(tween(KaloscopeMotion.ContentMillis))
+                    }
                 },
                 entryProvider = entryProvider {
                     entry<HomeRoute> {

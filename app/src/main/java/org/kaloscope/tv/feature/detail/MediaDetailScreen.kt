@@ -26,7 +26,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -41,6 +40,7 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeDetailSkeleton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -48,6 +48,7 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.ServerImage
+import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
@@ -69,10 +70,7 @@ fun MediaDetailScreen(
                 .padding(horizontal = 44.dp, vertical = 30.dp),
         ) {
             when (state) {
-                MediaDetailUiState.Loading -> DetailStatus(
-                    title = stringResource(R.string.loading_detail),
-                    description = stringResource(R.string.loading_detail_description),
-                )
+                MediaDetailUiState.Loading -> KaloscopeDetailSkeleton()
 
                 is MediaDetailUiState.Error -> DetailError(
                     error = state.error,
@@ -119,13 +117,11 @@ private fun DetailContent(
             .fillMaxSize()
             .testTag("detail-cinematic-surface"),
     ) {
-        ServerImage(
+        ServerBackdrop(
             session = session,
-            rawValue = displayed.backdropPath ?: displayed.posterPath,
-            fallbackText = displayed.title,
-            contentDescription = null,
+            backdropPath = displayed.backdropPath,
+            title = displayed.title,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
         )
         Box(
             modifier = Modifier
@@ -152,7 +148,7 @@ private fun DetailContent(
         ) {
             ServerImage(
                 session = session,
-                rawValue = displayed.posterPath ?: displayed.backdropPath,
+                rawValue = displayed.posterPath,
                 fallbackText = displayed.title,
                 contentDescription = null,
                 modifier = Modifier
@@ -212,6 +208,10 @@ private fun DetailContent(
                         )
                     }
                     DetailCredits(displayed)
+                    CastStrip(
+                        session = session,
+                        actors = displayed.actors,
+                    )
                     if (state.parent.children.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         Text(
@@ -226,8 +226,9 @@ private fun DetailContent(
                                 items = state.parent.children,
                                 key = MediaSummary::id,
                             ) { child ->
-                                ChildButton(
-                                    child = child,
+                                EpisodeCard(
+                                    session = session,
+                                    episode = child,
                                     selected = state.selectedChild?.id == child.id,
                                     loading = state.loadingChildId == child.id,
                                     onClick = { onSelectChild(child.id) },
@@ -321,12 +322,6 @@ private fun DetailCredits(detail: MediaDetail) {
         detail.directors.takeIf(List<String>::isNotEmpty)?.let {
             stringResource(R.string.directors, it.joinToString("、"))
         },
-        detail.actors.takeIf { it.isNotEmpty() }?.let { actors ->
-            stringResource(
-                R.string.cast,
-                actors.take(6).joinToString("、") { it.name },
-            )
-        },
     )
     if (credits.isNotEmpty()) {
         Spacer(Modifier.height(18.dp))
@@ -337,53 +332,6 @@ private fun DetailCredits(detail: MediaDetail) {
                 fontSize = 15.sp,
             )
             Spacer(Modifier.height(5.dp))
-        }
-    }
-}
-
-@Composable
-private fun ChildButton(
-    child: MediaSummary,
-    selected: Boolean,
-    loading: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    KaloscopeFocusSurface(
-        onClick = onClick,
-        selected = selected,
-        enabled = !loading,
-        shape = RoundedCornerShape(14.dp),
-        containerColor = Panel.copy(alpha = 0.74f),
-        focusedContainerColor = PanelElevated,
-        focusScale = 1.03f,
-        modifier = modifier.width(190.dp),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp)) {
-            Text(
-                text = child.title,
-                color = OnBackground,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
-            val episodeLabel = child.season?.let { season ->
-                child.episode?.let { episode ->
-                    stringResource(R.string.season_episode, season, episode)
-                }
-            }
-            if (episodeLabel != null || loading) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = if (loading) {
-                        stringResource(R.string.loading)
-                    } else {
-                        episodeLabel.orEmpty()
-                    },
-                    color = Muted,
-                    fontSize = 12.sp,
-                )
-            }
         }
     }
 }

@@ -22,6 +22,7 @@ data class MediaSummary(
     val rating: Double?,
     val season: Int?,
     val episode: Int?,
+    val aired: String? = null,
 )
 
 data class MediaPage(

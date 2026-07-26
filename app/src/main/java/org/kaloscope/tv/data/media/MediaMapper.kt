@@ -134,6 +134,7 @@ private fun MediaItemData.toSummary(): MediaSummary? {
         rating = rating.asRating(),
         season = season,
         episode = episode,
+        aired = aired.nonBlankOrNull(),
     )
 }
 

@@ -180,6 +180,8 @@
     <string name="loading_detail_description">正在获取媒体信息。</string>
     <string name="detail_load_failed">无法加载媒体详情</string>
     <string name="episodes">分集</string>
+    <string name="episode_number">第 %1$d 集</string>
+    <string name="cast_title">演职人员</string>
     <string name="directors">导演：%1$s</string>
     <string name="cast">演员：%1$s</string>
     <string name="play">播放</string>

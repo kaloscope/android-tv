@@ -2,6 +2,7 @@ package org.kaloscope.tv.feature.library
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
@@ -25,6 +26,81 @@ import org.kaloscope.tv.core.model.SessionUser
 class LibraryScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun initialLoadingUsesSkeleton() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = LibraryUiState.Loading,
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-loading-skeleton").assertExists()
+    }
+
+    @Test
+    fun mediaCardShowsValidRatingAndDoesNotUseBackdropAsPoster() {
+        val media = mediaItems(1).single().copy(
+            rating = 8.14,
+            backdropPath = "/backdrop.jpg",
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(media = listOf(media)),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("media-rating-1", useUnmergedTree = true)
+            .assertExists()
+        composeRule.onNodeWithText("★ 8.1", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag("server-image-missing", useUnmergedTree = true)
+            .assertExists()
+    }
+
+    @Test
+    fun mediaCardHidesInvalidRating() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(media = listOf(mediaItems(1).single().copy(rating = 10.1))),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("media-rating-1", useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
 
     @Test
     fun deepViewportRestoresFocusedMediaFromSessionState() {

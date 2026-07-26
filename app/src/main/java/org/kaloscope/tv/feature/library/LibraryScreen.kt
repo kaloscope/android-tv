@@ -40,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
@@ -57,10 +58,13 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.ServerImage
+import org.kaloscope.tv.core.designsystem.RatingBadge
+import org.kaloscope.tv.core.designsystem.KaloscopeGridSkeleton
 import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaSummary
+import org.kaloscope.tv.core.model.RatingDisplayPolicy
 import org.kaloscope.tv.core.model.Session
 
 @Composable
@@ -78,10 +82,7 @@ fun LibraryScreen(
     onGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
 ) {
     when (state) {
-        LibraryUiState.Loading -> LibraryStatus(
-            title = stringResource(R.string.loading_libraries),
-            description = stringResource(R.string.loading_libraries_description),
-        )
+        LibraryUiState.Loading -> KaloscopeGridSkeleton("library-loading-skeleton")
 
         LibraryUiState.EmptyLibraries -> LibraryStatus(
             title = stringResource(R.string.no_libraries),
@@ -273,10 +274,7 @@ private fun LibraryItems(
     onOpenMedia: (Long) -> Unit,
 ) {
     when (state) {
-        LibraryItemsState.Loading -> LibraryStatus(
-            title = stringResource(R.string.loading_media),
-            description = stringResource(R.string.loading_media_description),
-        )
+        LibraryItemsState.Loading -> KaloscopeGridSkeleton("library-items-loading-skeleton")
 
         LibraryItemsState.Empty -> LibraryStatus(
             title = stringResource(R.string.no_media),
@@ -438,16 +436,27 @@ private fun MediaCard(
             .semantics(mergeDescendants = true) {},
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
-            ServerImage(
-                session = session,
-                rawValue = media.posterPath ?: media.backdropPath,
-                fallbackText = media.title,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(2f / 3f)
-                    .clip(RoundedCornerShape(11.dp)),
-            )
+            Box {
+                ServerImage(
+                    session = session,
+                    rawValue = media.posterPath,
+                    fallbackText = media.title,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(2f / 3f)
+                        .clip(RoundedCornerShape(11.dp)),
+                )
+                RatingDisplayPolicy.format(media.rating)?.let { rating ->
+                    RatingBadge(
+                        rating = rating,
+                        testTag = "media-rating-${media.id}",
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(7.dp),
+                    )
+                }
+            }
             Spacer(Modifier.height(9.dp))
             Text(
                 text = media.title,
@@ -455,6 +464,7 @@ private fun MediaCard(
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             media.year?.let { year ->
                 Text(

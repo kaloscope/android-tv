@@ -56,14 +56,26 @@ class MediaMapperTest {
             children = listOf(
                 child(id = 303, season = 1, episode = 2, title = "回声"),
                 child(id = 304, season = 1, episode = 3, title = "隐藏", visible = false),
-                child(id = 301, season = 1, episode = 1, title = "启程"),
+                child(
+                    id = 301,
+                    season = 1,
+                    episode = 1,
+                    title = "启程",
+                    aired = "2026-01-02",
+                ),
                 child(id = 302, season = null, episode = null, title = "序章"),
             ),
             metadata = MediaMetadataData(
                 plot = "来自服务器的简介",
                 genres = listOf("剧情", "科幻"),
                 directors = listOf("林屿"),
-                actors = listOf(MediaActorData(name = "沈川", role = "队长")),
+                actors = listOf(
+                    MediaActorData(
+                        name = "沈川",
+                        role = "队长",
+                        thumb = "actors/shen.webp",
+                    ),
+                ),
             ),
         ).toDetail()
 
@@ -73,6 +85,8 @@ class MediaMapperTest {
         assertEquals(listOf("剧情", "科幻"), detail.genres)
         assertEquals(listOf("林屿"), detail.directors)
         assertEquals("沈川", detail.actors.single().name)
+        assertEquals("actors/shen.webp", detail.actors.single().thumbPath)
+        assertEquals("2026-01-02", detail.children[1].aired)
     }
 
     @Test
@@ -92,6 +106,7 @@ class MediaMapperTest {
         episode: Int?,
         title: String,
         visible: Boolean = true,
+        aired: String? = null,
     ) = MediaItemData(
         id = id,
         name = "S${season}E${episode}.mkv",
@@ -100,5 +115,6 @@ class MediaMapperTest {
         title = title,
         season = season,
         episode = episode,
+        aired = aired,
     )
 }

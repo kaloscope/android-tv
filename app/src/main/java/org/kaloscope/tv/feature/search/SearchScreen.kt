@@ -53,6 +53,7 @@ import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeGridSkeleton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -85,10 +86,7 @@ fun SearchScreen(
     onGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
 ) {
     when (state) {
-        SearchUiState.Loading -> SearchStatus(
-            title = stringResource(R.string.loading_indexers),
-            description = stringResource(R.string.loading_indexers_description),
-        )
+        SearchUiState.Loading -> KaloscopeGridSkeleton("search-loading-skeleton")
 
         SearchUiState.EmptyIndexers -> SearchEmptyIndexers(onRefreshIndexers)
 
@@ -371,10 +369,7 @@ private fun SearchResults(
             description = stringResource(R.string.search_indexer_prompt_description),
         )
 
-        SearchResultsState.Loading -> SearchStatus(
-            title = stringResource(R.string.searching_indexer),
-            description = stringResource(R.string.searching_indexer_description),
-        )
+        SearchResultsState.Loading -> KaloscopeGridSkeleton("search-results-loading-skeleton")
 
         SearchResultsState.Empty -> SearchStatus(
             title = stringResource(R.string.no_search_results),
