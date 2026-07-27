@@ -33,6 +33,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
@@ -63,6 +65,7 @@ import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.designsystem.Subtle
 import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.login.LoginError
@@ -499,6 +502,11 @@ private fun ServerTextField(
     var selectorFocused by remember { mutableStateOf(false) }
     val editorFocus = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val fieldTextStyle = MaterialTheme.typography.bodyLarge.copy(
+        fontSize = 17.sp,
+        lineHeight = 20.sp,
+    )
+    val placeholderTextStyle = fieldTextStyle.copy(color = Subtle)
     val exitEditing = {
         keyboardController?.hide()
         restoreSelectorFocus = true
@@ -528,9 +536,11 @@ private fun ServerTextField(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = true,
-                textStyle = TextStyle(color = OnBackground, fontSize = 17.sp),
+                textStyle = fieldTextStyle.copy(color = OnBackground),
+                cursorBrush = SolidColor(Color.White),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(min = 48.dp)
                     .focusRequester(editorFocus)
                     .testTag(editorTestTag)
                     .onPreInterceptKeyBeforeSoftKeyboard { event ->
@@ -579,8 +589,7 @@ private fun ServerTextField(
                         if (value.isEmpty()) {
                             Text(
                                 text = placeholder,
-                                color = Muted,
-                                fontSize = 17.sp,
+                                style = placeholderTextStyle,
                             )
                         }
                         innerTextField()
@@ -592,6 +601,7 @@ private fun ServerTextField(
                 onClick = { editing = true },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(min = 48.dp)
                     .focusRequester(focusRequester)
                     .testTag(selectorTestTag)
                     .onFocusChanged { selectorFocused = it.isFocused }
@@ -630,16 +640,20 @@ private fun ServerTextField(
                 shape = ButtonDefaults.shape(shape = RoundedCornerShape(12.dp)),
                 colors = ButtonDefaults.colors(
                     containerColor = BackgroundRaised,
-                    contentColor = if (value.isEmpty()) Muted else OnBackground,
+                    contentColor = if (value.isEmpty()) Subtle else OnBackground,
                     focusedContainerColor = BackgroundRaised,
-                    focusedContentColor = OnBackground,
+                    focusedContentColor = if (value.isEmpty()) Subtle else OnBackground,
                 ),
                 scale = ButtonDefaults.scale(focusedScale = 1f),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Text(
                     text = value.ifEmpty { placeholder },
-                    fontSize = 17.sp,
+                    style = if (value.isEmpty()) {
+                        placeholderTextStyle
+                    } else {
+                        fieldTextStyle.copy(color = OnBackground)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -671,7 +685,11 @@ private fun AppTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            textStyle = TextStyle(color = OnBackground, fontSize = 18.sp),
+            textStyle = TextStyle(
+                color = OnBackground,
+                fontSize = 18.sp,
+                lineHeight = 22.sp,
+            ),
             visualTransformation = if (isPassword) {
                 PasswordVisualTransformation()
             } else {
@@ -679,6 +697,7 @@ private fun AppTextField(
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 56.dp)
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) {
                         false
@@ -706,13 +725,15 @@ private fun AppTextField(
                     shape = RoundedCornerShape(12.dp),
                 )
                 .padding(horizontal = 18.dp, vertical = 16.dp),
+            cursorBrush = SolidColor(Color.White),
             decorationBox = { innerTextField ->
                 Box {
                     if (value.isEmpty()) {
                         Text(
                             text = placeholder,
-                            color = Muted,
+                            color = Subtle,
                             fontSize = 18.sp,
+                            lineHeight = 22.sp,
                         )
                     }
                     innerTextField()

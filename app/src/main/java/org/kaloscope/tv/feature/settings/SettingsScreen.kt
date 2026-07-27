@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -30,6 +31,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -507,14 +509,17 @@ private fun SubtitleLanguageDialog(
                 onValueChange = { value = it },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(min = 52.dp)
                     .focusRequester(textFocus)
                     .background(Color(0xFF202738), RoundedCornerShape(10.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 textStyle = TextStyle(
                     color = OnBackground,
                     fontSize = 18.sp,
+                    lineHeight = 22.sp,
                 ),
                 singleLine = true,
+                cursorBrush = SolidColor(Color.White),
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),

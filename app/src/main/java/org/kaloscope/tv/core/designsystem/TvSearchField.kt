@@ -3,6 +3,7 @@ package org.kaloscope.tv.core.designsystem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -20,8 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -101,12 +102,9 @@ internal fun TvSearchFieldValue(
                     }
                 }
                 .onFocusChanged { focused = it.isFocused }
+                .heightIn(min = 48.dp)
                 .background(
-                    color = if (focused) {
-                        Primary.copy(alpha = 0.12f).compositeOver(PanelElevated)
-                    } else {
-                        Panel.copy(alpha = 0.88f)
-                    },
+                    color = Panel.copy(alpha = 0.88f),
                     shape = shape,
                 )
                 .border(
@@ -118,9 +116,10 @@ internal fun TvSearchFieldValue(
             textStyle = TextStyle(
                 color = OnBackground,
                 fontSize = 16.sp,
+                lineHeight = 20.sp,
             ),
             singleLine = true,
-            cursorBrush = SolidColor(PrimarySoft),
+            cursorBrush = SolidColor(Color.White),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             decorationBox = { field ->
@@ -128,8 +127,9 @@ internal fun TvSearchFieldValue(
                     if (value.text.isBlank()) {
                         Text(
                             text = hint,
-                            color = if (focused) OnBackground.copy(alpha = 0.7f) else Muted,
+                            color = Subtle,
                             fontSize = 16.sp,
+                            lineHeight = 20.sp,
                         )
                     }
                     field()
