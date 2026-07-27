@@ -15,4 +15,5 @@ data class WatchHistoryItem(
     val backdropPath: String?,
     val rating: Double?,
     val updatedAt: String?,
+    val parentTitle: String? = null,
 )

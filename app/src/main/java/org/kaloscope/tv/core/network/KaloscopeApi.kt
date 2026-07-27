@@ -197,6 +197,7 @@ data class HistoryMediaData(
     val poster: String? = null,
     val backdrop: String? = null,
     val rating: String? = null,
+    val parent: HistoryMediaData? = null,
 )
 
 @Serializable

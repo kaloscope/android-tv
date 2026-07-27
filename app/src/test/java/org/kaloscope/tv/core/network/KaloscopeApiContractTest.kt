@@ -98,7 +98,13 @@ class KaloscopeApiContractTest {
         assertEquals("Token fixture-token", request.getHeader("Authorization"))
         assertEquals(301L, response.data.items.single().media?.id)
         assertEquals(63, response.data.items.single().percentage)
-        assertEquals("8.5", response.data.items.single().media?.rating)
+        assertEquals("7.1", response.data.items.single().media?.rating)
+        assertEquals(201L, response.data.items.single().media?.parent?.id)
+        assertEquals(2026, response.data.items.single().media?.parent?.year)
+        assertEquals(
+            "/images/series-poster.webp",
+            response.data.items.single().media?.parent?.poster,
+        )
     }
 
     @Test

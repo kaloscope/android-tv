@@ -9,6 +9,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.network.ApiClientFactory
 import org.kaloscope.tv.core.network.HistoryItemData
+import org.kaloscope.tv.core.network.HistoryMediaData
 import org.kaloscope.tv.core.network.HistoryRecordData
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
@@ -61,10 +62,16 @@ internal fun HistoryItemData.toModel(): WatchHistoryItem? {
     // History can outlive deleted media, which must not create dead TV cards.
     val source = media ?: return null
     // Older servers may expose only the original file name.
-    val resolvedTitle = source.title?.trim().orEmpty().ifBlank { source.name.trim() }
+    val resolvedTitle = source.resolvedTitle()
     if (source.id <= 0 || resolvedTitle.isBlank()) {
         return null
     }
+    val parent = source.parent
+    val posterPath = parent?.poster.nonBlankOrNull()
+        ?: source.poster.nonBlankOrNull()
+    val backdropPath = parent?.backdrop.nonBlankOrNull()
+        ?: source.backdrop.nonBlankOrNull()
+        ?: posterPath
     return WatchHistoryItem(
         historyId = id,
         mediaId = source.id,
@@ -73,12 +80,18 @@ internal fun HistoryItemData.toModel(): WatchHistoryItem? {
         path = source.path,
         positionSeconds = position.coerceAtLeast(0),
         percentage = percentage.coerceIn(0, 100),
-        year = source.year,
+        year = parent?.year ?: source.year,
         season = source.season,
         episode = source.episode,
-        posterPath = source.poster?.takeIf(String::isNotBlank),
-        backdropPath = source.backdrop?.takeIf(String::isNotBlank),
-        rating = source.rating?.toDoubleOrNull(),
+        posterPath = posterPath,
+        backdropPath = backdropPath,
+        rating = parent?.rating?.toDoubleOrNull() ?: source.rating?.toDoubleOrNull(),
         updatedAt = updatedAt,
+        parentTitle = parent?.resolvedTitle().nonBlankOrNull(),
     )
 }
+
+private fun HistoryMediaData.resolvedTitle(): String =
+    title?.trim().orEmpty().ifBlank { name.trim() }
+
+private fun String?.nonBlankOrNull(): String? = this?.trim()?.takeIf(String::isNotEmpty)

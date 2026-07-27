@@ -30,13 +30,28 @@
           "danmaku_meta": null,
           "unique_id": "fixture-episode-301",
           "title": "启程",
-          "year": 2026,
+          "year": 2021,
           "aired": "2026-01-01",
           "season": 1,
           "episode": 1,
-          "poster": null,
-          "backdrop": null,
-          "rating": "8.5"
+          "poster": "/images/episode-poster.webp",
+          "backdrop": "/images/episode-backdrop.webp",
+          "rating": "7.1",
+          "parent": {
+            "id": 201,
+            "dir": "/media/tv",
+            "path": "/media/tv/Stellar Archive",
+            "name": "Stellar Archive",
+            "visible": true,
+            "title": "群星档案",
+            "year": 2026,
+            "aired": "2026-01-01",
+            "season": null,
+            "episode": null,
+            "poster": "/images/series-poster.webp",
+            "backdrop": "/images/series-backdrop.webp",
+            "rating": "8.8"
+          }
         }
       }
     ]
