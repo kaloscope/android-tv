@@ -65,7 +65,13 @@ internal fun MainTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(76.dp)
-            .background(BackgroundRaised.copy(alpha = 0.88f))
+            .background(
+                if (currentRoute == HomeRoute) {
+                    Color.Transparent
+                } else {
+                    BackgroundRaised.copy(alpha = 0.88f)
+                },
+            )
             .padding(horizontal = 44.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -20,10 +20,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -34,7 +36,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -64,13 +65,16 @@ import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
-import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 
 private val HomeDivider = Color(0xFF252D40)
-private val HomeCard = Color(0xFF182132)
+
+internal data class HomeBackdropPresentation(
+    val path: String,
+    val title: String,
+)
 
 @Composable
 internal fun HomeScreen(
@@ -81,7 +85,20 @@ internal fun HomeScreen(
     onOpenLibrary: () -> Unit,
     onOpenMedia: (Long) -> Unit,
     onPlayHistory: (WatchHistoryItem) -> Unit,
+    onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
 ) {
+    val currentOnBackdropChanged by rememberUpdatedState(onBackdropChanged)
+    DisposableEffect(Unit) {
+        onDispose {
+            currentOnBackdropChanged(null)
+        }
+    }
+    LaunchedEffect(state) {
+        if (state !is HomeUiState.Content) {
+            onBackdropChanged(null)
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -129,6 +146,7 @@ internal fun HomeScreen(
                 restoreMediaId = restoreMediaId,
                 onOpenMedia = onOpenMedia,
                 onPlayHistory = onPlayHistory,
+                onBackdropChanged = onBackdropChanged,
             )
         }
     }
@@ -141,6 +159,7 @@ private fun HistoryContent(
     restoreMediaId: Long?,
     onOpenMedia: (Long) -> Unit,
     onPlayHistory: (WatchHistoryItem) -> Unit,
+    onBackdropChanged: (HomeBackdropPresentation?) -> Unit,
 ) {
     var selectedMediaId by remember { mutableStateOf<Long?>(null) }
     val selectedItem = items.firstOrNull { it.mediaId == selectedMediaId }
@@ -162,6 +181,26 @@ private fun HistoryContent(
             listState.animateScrollToItem(index)
         }
     }
+    LaunchedEffect(
+        session.server.id,
+        selectedItem.mediaId,
+        selectedItem.backdropPath,
+        selectedItem.posterPath,
+        selectedItem.parentTitle,
+        selectedItem.title,
+    ) {
+        val backdropPath = selectedItem.backdropPath
+            ?.takeIf { it.isNotBlank() }
+            ?: selectedItem.posterPath?.takeIf { it.isNotBlank() }
+        onBackdropChanged(
+            backdropPath?.let { path ->
+                HomeBackdropPresentation(
+                    path = path,
+                    title = selectedItem.parentTitle ?: selectedItem.title,
+                )
+            },
+        )
+    }
     LaunchedEffect(restoreMediaId, selectedItem.mediaId) {
         if (restoreMediaId == selectedItem.mediaId) {
             withFrameNanos { }
@@ -172,34 +211,8 @@ private fun HistoryContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(22.dp))
-            .background(HomeCard)
-            .testTag("home-hero"),
+            .testTag("home-content"),
     ) {
-        ServerBackdrop(
-            session = session,
-            backdropPath = selectedItem.backdropPath ?: selectedItem.posterPath,
-            title = selectedItem.parentTitle ?: selectedItem.title,
-            modifier = Modifier.fillMaxSize(),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        0f to Color(0xFA070B14),
-                        0.58f to Color(0xD9070B14),
-                        1f to Color(0x38070B14),
-                    ),
-                )
-                .background(
-                    Brush.verticalGradient(
-                        0f to Color(0x18070B14),
-                        0.64f to Color(0x52070B14),
-                        1f to Color(0xF5070B14),
-                    ),
-                ),
-        )
         Column(
             modifier = Modifier
                 .fillMaxSize()

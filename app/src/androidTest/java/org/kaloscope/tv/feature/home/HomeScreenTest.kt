@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -66,7 +67,10 @@ class HomeScreenTest {
 
     @Test
     fun historyCarouselMovesRightAndUpdatesSelectedBackdrop() {
-        showContentHome()
+        var selectedBackdrop: HomeBackdropPresentation? = null
+        showContentHome(
+            onBackdropChanged = { selectedBackdrop = it },
+        )
 
         composeRule.onAllNodesWithText("最近观看").assertCountEquals(1)
         composeRule.onNodeWithTag("history-selected-title").assertTextEquals("星海纪行")
@@ -77,7 +81,9 @@ class HomeScreenTest {
 
         composeRule.onNodeWithTag("history-card-302").assertIsFocused()
         composeRule.onNodeWithTag("history-selected-title").assertTextEquals("森林来信")
-        composeRule.onNodeWithTag("detail-backdrop-/backdrops/forest.webp").assertExists()
+        composeRule.runOnIdle {
+            assertEquals("/backdrops/forest.webp", selectedBackdrop?.path)
+        }
     }
 
     @Test
@@ -166,6 +172,7 @@ class HomeScreenTest {
         restoreMediaId: Long? = null,
         items: List<WatchHistoryItem> = historyItems(),
         onPlayHistory: (WatchHistoryItem) -> Unit = {},
+        onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
     ) {
         composeRule.setContent {
             KaloscopeTheme {
@@ -182,6 +189,7 @@ class HomeScreenTest {
                         onOpenLibrary = {},
                         onOpenMedia = {},
                         onPlayHistory = onPlayHistory,
+                        onBackdropChanged = onBackdropChanged,
                     )
                 }
             }

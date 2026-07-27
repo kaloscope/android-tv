@@ -1,12 +1,23 @@
 package org.kaloscope.tv.app
 
+import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
@@ -15,12 +26,20 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.focus.FocusRequester
+import androidx.navigation3.runtime.NavKey
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.kaloscope.tv.app.navigation.HomeRoute
+import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
@@ -65,7 +84,7 @@ class MainShellTest {
     }
 
     @Test
-    fun homeHistoryUsesBrandedBackgroundAndCinematicHero() {
+    fun homeHistoryBackdropFillsAuthenticatedShellWithoutHero() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -77,8 +96,120 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithTag("kaloscope-background").assertExists()
-        composeRule.onNodeWithTag("home-hero").assertExists()
+        val shellBounds = composeRule.onNodeWithTag("kaloscope-background")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val backdropBounds = composeRule.onNodeWithTag("home-fullscreen-backdrop")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertEquals(shellBounds, backdropBounds)
+        composeRule.onNodeWithTag("home-hero").assertDoesNotExist()
+        composeRule.onNodeWithTag("detail-backdrop-/backdrop.jpg").assertExists()
+    }
+
+    @Test
+    fun homeTopBarKeepsBackdropMoreVisibleThanOtherRoutes() {
+        var route by mutableStateOf<NavKey>(HomeRoute)
+        composeRule.setContent {
+            KaloscopeTheme {
+                val homeFocus = remember { FocusRequester() }
+                val searchFocus = remember { FocusRequester() }
+                val libraryFocus = remember { FocusRequester() }
+                val settingsFocus = remember { FocusRequester() }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(ComposeColor.Magenta),
+                ) {
+                    MainTopBar(
+                        currentRoute = route,
+                        onHome = {},
+                        onSearch = {},
+                        onLibrary = {},
+                        onSettings = {},
+                        homeFocus = homeFocus,
+                        searchFocus = searchFocus,
+                        libraryFocus = libraryFocus,
+                        settingsFocus = settingsFocus,
+                    )
+                }
+            }
+        }
+
+        val homeBitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
+        val sampleX = homeBitmap.width * 3 / 4
+        val sampleY = 20
+        val homeRed = AndroidColor.red(homeBitmap.getPixel(sampleX, sampleY))
+
+        composeRule.runOnIdle {
+            route = SearchRoute
+        }
+        val searchBitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
+        val searchRed = AndroidColor.red(searchBitmap.getPixel(sampleX, sampleY))
+
+        assertTrue(
+            "Home top bar must reveal substantially more of the backdrop",
+            homeRed > searchRed + 100,
+        )
+    }
+
+    @Test
+    fun movingCarouselFocusUpdatesFullscreenBackdrop() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Content(
+                        listOf(
+                            history(),
+                            history(
+                                historyId = 2,
+                                mediaId = 202,
+                                title = "森林来信",
+                                posterPath = "/forest-poster.jpg",
+                                backdropPath = "/forest-backdrop.jpg",
+                            ),
+                        ),
+                    ),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("home-fullscreen-backdrop").assertExists()
+        composeRule.onNodeWithTag("history-card-201")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithTag("history-card-202").assertIsFocused()
+        composeRule.onNodeWithTag("detail-backdrop-/forest-backdrop.jpg").assertExists()
+    }
+
+    @Test
+    fun emptyHomeClearsFullscreenBackdrop() {
+        var homeState by mutableStateOf<HomeUiState>(
+            HomeUiState.Content(listOf(history())),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = homeState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("home-fullscreen-backdrop").assertExists()
+
+        composeRule.runOnIdle {
+            homeState = HomeUiState.Empty
+        }
+
+        composeRule.onNodeWithTag("home-fullscreen-backdrop").assertDoesNotExist()
     }
 
     @Test
@@ -343,10 +474,16 @@ private fun summary() = MediaSummary(
     episode = null,
 )
 
-private fun history() = WatchHistoryItem(
-    historyId = 1,
-    mediaId = 201,
-    title = "群星档案",
+private fun history(
+    historyId: Long = 1,
+    mediaId: Long = 201,
+    title: String = "群星档案",
+    posterPath: String = "/poster.jpg",
+    backdropPath: String = "/backdrop.jpg",
+) = WatchHistoryItem(
+    historyId = historyId,
+    mediaId = mediaId,
+    title = title,
     fileName = "episode-1.mkv",
     path = "/media/episode-1.mkv",
     positionSeconds = 1_200,
@@ -354,8 +491,8 @@ private fun history() = WatchHistoryItem(
     year = 2026,
     season = 1,
     episode = 1,
-    posterPath = "/poster.jpg",
-    backdropPath = "/backdrop.jpg",
+    posterPath = posterPath,
+    backdropPath = backdropPath,
     rating = 8.8,
     updatedAt = "2026-07-25T00:00:00Z",
 )

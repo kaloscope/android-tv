@@ -232,20 +232,51 @@ Prefer lightweight fakes over heavyweight mocking for state tests. Fixtures may
 exist only under test, androidTest, or preview source paths. When a DTO changes,
 update the corresponding fixture and parsing/contract tests.
 
-For code changes, run the relevant targeted tests first, then run:
+For code changes, run only the relevant targeted tests by default. Do not
+automatically run full regression commands such as:
 
 ```bash
 ./gradlew testDebugUnitTest
 ./gradlew lintDebug
 ./gradlew assembleDebug
-```
-
-When navigation, focus, device behavior, or Media3 integration changes and a
-device is available, also run:
-
-```bash
 ./gradlew connectedDebugAndroidTest
 ```
+
+When a change is large or cross-cutting enough to justify full regression
+testing, explain which full checks are recommended and why, then obtain the
+user's explicit permission before running them.
+
+### Persistent device and emulator state
+
+When an emulator or real Android TV device is available, treat its existing
+logged-in app installation as a persistent test environment:
+
+- Preserve application data, the authenticated session, and device or AVD state
+  by default. Reuse the existing installation instead of setting up and logging
+  in again for every test run.
+- Never run `adb uninstall`, `adb shell pm clear`, Gradle uninstall tasks,
+  emulator `-wipe-data`, an AVD factory reset, or an AVD delete/recreate as part
+  of the ordinary test workflow. Do not replace the logged-in state with a
+  clean snapshot.
+- When changed code requires a new APK, update the installed app in place with
+  a data-preserving operation such as `adb install -r`, then relaunch it. Do not
+  uninstall the old APK first. If the required build is already installed,
+  relaunch the app without reinstalling it.
+- Changes outside server setup, login, authentication, token or session
+  storage, authenticated bootstrap, and logout must be tested from the existing
+  authenticated state. Do not log out, clear app data, or repeat the login flow
+  for unrelated business logic changes.
+- A fresh unauthenticated state and a repeated login flow are needed only when
+  the changed behavior directly concerns login or session handling, or when the
+  task explicitly requires clean-state coverage. Prefer a separate clean AVD,
+  device, or snapshot for those tests so the persistent logged-in environment
+  remains intact.
+- Do not reproduce an unrelated login manually through a long sequence of
+  individual ADB commands and screenshots. Batch deterministic remote-control
+  input where safe, and capture screenshots only at meaningful validation
+  checkpoints.
+- Preserving a session does not permit extracting, displaying, logging, or
+  copying its token, credentials, server address, or other private data.
 
 If a command or required device is unavailable, state that clearly. Never claim
 that a check passed unless it was actually executed successfully.
