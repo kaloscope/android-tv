@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
+import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Text
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -43,9 +45,11 @@ import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
 import org.kaloscope.tv.core.designsystem.KaloscopeBrand
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
+import org.kaloscope.tv.core.designsystem.PanelSelected
 
 @Composable
 internal fun MainTopBar(
@@ -160,12 +164,17 @@ private fun SettingsButton(
     modifier: Modifier = Modifier,
 ) {
     val label = stringResource(R.string.settings)
-    KaloscopeFocusSurface(
+    KaloscopeIconButton(
         onClick = onClick,
         selected = selected,
         shape = RoundedCornerShape(14.dp),
-        focusedContainerColor = PanelElevated,
-        focusScale = 1.02f,
+        scale = IconButtonDefaults.scale(focusedScale = 1.02f),
+        colors = IconButtonDefaults.colors(
+            containerColor = if (selected) PanelSelected else Color.Transparent,
+            focusedContainerColor = PanelElevated,
+            contentColor = OnBackground,
+            focusedContentColor = OnBackground,
+        ),
         modifier = modifier
             .size(46.dp)
             .semantics {

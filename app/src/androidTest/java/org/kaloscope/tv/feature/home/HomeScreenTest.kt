@@ -1,17 +1,26 @@
 package org.kaloscope.tv.feature.home
 
+import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -23,11 +32,14 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.TimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
@@ -69,6 +81,38 @@ class HomeScreenTest {
     }
 
     @Test
+    fun refreshButtonHasSubtleRestingOutline() {
+        showEmptyHome()
+        composeRule.onNodeWithText("进入媒体库")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        val bitmap = composeRule.onNodeWithTag("home-refresh")
+            .captureToImage()
+            .asAndroidBitmap()
+        val sampleDepth = with(composeRule.density) {
+            2.dp.roundToPx().coerceAtLeast(1)
+        }
+        val sampleHalfWidth = with(composeRule.density) {
+            4.dp.roundToPx().coerceAtLeast(1)
+        }
+        val centerX = bitmap.width / 2
+        var redTotal = 0L
+        var sampleCount = 0L
+        for (x in centerX - sampleHalfWidth until centerX + sampleHalfWidth) {
+            for (y in 0 until sampleDepth) {
+                redTotal += AndroidColor.red(bitmap.getPixel(x, y))
+                sampleCount += 1
+            }
+        }
+        val averageRed = redTotal.toDouble() / sampleCount
+
+        assertTrue(
+            "Expected a subtle light outline at the top edge, average red=$averageRed",
+            averageRed in 35.0..60.0,
+        )
+    }
+
+    @Test
     fun historyCarouselMovesRightAndUpdatesSelectedBackdrop() {
         var selectedBackdrop: HomeBackdropPresentation? = null
         showContentHome(
@@ -87,6 +131,73 @@ class HomeScreenTest {
         composeRule.runOnIdle {
             assertEquals("/backdrops/forest.webp", selectedBackdrop?.path)
         }
+    }
+
+    @Test
+    fun recentWatchingLabelIsSecondaryToSelectedTitle() {
+        showContentHome()
+
+        val label = textLayoutFor("最近观看")
+        val title = textLayoutForTag("history-selected-title")
+
+        assertTrue(
+            label.layoutInput.style.fontSize.value <
+                title.layoutInput.style.fontSize.value,
+        )
+        assertEquals(Muted, label.layoutInput.style.color)
+    }
+
+    @Test
+    fun cardShowsLocalTimestampAndOnlyOneProgressIndicator() {
+        val originalTimeZone = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("GMT+08:00"))
+            showContentHome()
+
+            composeRule.onAllNodesWithText("2026/07/27 16:00:00")
+                .assertCountEquals(2)
+            composeRule.onAllNodesWithTag("history-progress")
+                .assertCountEquals(1)
+        } finally {
+            TimeZone.setDefault(originalTimeZone)
+        }
+    }
+
+    @Test
+    fun unselectedCardPosterIsVisiblyDimmer() {
+        val duplicatedVisuals = historyItems().mapIndexed { index, item ->
+            item.copy(
+                mediaId = 301L + index,
+                parentTitle = "同一海报",
+                title = "同一集",
+                posterPath = null,
+                backdropPath = null,
+            )
+        }
+        showContentHome(items = duplicatedVisuals)
+
+        composeRule.onNodeWithTag("history-card-301").assertIsSelected()
+        composeRule.onNodeWithTag("history-card-302").assertIsNotSelected()
+        val selected = composeRule.onNodeWithTag(
+            "history-card-poster-301",
+            useUnmergedTree = true,
+        )
+            .captureToImage()
+            .asAndroidBitmap()
+        val unselected = composeRule.onNodeWithTag(
+            "history-card-poster-302",
+            useUnmergedTree = true,
+        )
+            .captureToImage()
+            .asAndroidBitmap()
+        val selectedLuminance = averagePosterLuminance(selected)
+        val unselectedLuminance = averagePosterLuminance(unselected)
+
+        assertTrue(
+            "Expected unselected poster luminance ($unselectedLuminance) " +
+                "to be below 90% of selected poster luminance ($selectedLuminance)",
+            unselectedLuminance < selectedLuminance * 0.9,
+        )
     }
 
     @Test
@@ -302,15 +413,21 @@ class HomeScreenTest {
     private fun showEmptyHome(onRefresh: () -> Unit = {}) {
         composeRule.setContent {
             KaloscopeTheme {
-                HomeScreen(
-                    session = testSession(),
-                    state = HomeUiState.Empty,
-                    onRefresh = onRefresh,
-                    restoreMediaId = null,
-                    onOpenLibrary = {},
-                    onOpenMedia = {},
-                    onPlayHistory = {},
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background),
+                ) {
+                    HomeScreen(
+                        session = testSession(),
+                        state = HomeUiState.Empty,
+                        onRefresh = onRefresh,
+                        restoreMediaId = null,
+                        onOpenLibrary = {},
+                        onOpenMedia = {},
+                        onPlayHistory = {},
+                    )
+                }
             }
         }
     }
@@ -327,7 +444,8 @@ class HomeScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(viewportHeight),
+                        .height(viewportHeight)
+                        .background(Background),
                 ) {
                     HomeScreen(
                         session = testSession(),
@@ -343,6 +461,45 @@ class HomeScreenTest {
             }
         }
         composeRule.waitForIdle()
+    }
+
+    private fun textLayoutFor(text: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText(text, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(results)
+            }
+        return results.single()
+    }
+
+    private fun textLayoutForTag(tag: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithTag(tag)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(results)
+            }
+        return results.single()
+    }
+
+    private fun averagePosterLuminance(bitmap: Bitmap): Double {
+        val density = composeRule.density
+        val inset = with(density) { 4.dp.roundToPx() }
+        val left = inset
+        val right = bitmap.width - inset
+        val top = inset
+        val bottom = bitmap.height - top
+        var total = 0L
+        var count = 0L
+        for (x in left until right) {
+            for (y in top until bottom) {
+                val pixel = bitmap.getPixel(x, y)
+                total += AndroidColor.red(pixel)
+                total += AndroidColor.green(pixel)
+                total += AndroidColor.blue(pixel)
+                count += 3
+            }
+        }
+        return total.toDouble() / count
     }
 }
 

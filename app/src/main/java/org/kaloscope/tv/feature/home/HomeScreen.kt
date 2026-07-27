@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -57,7 +56,6 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
-import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -65,6 +63,7 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -72,6 +71,7 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
+import org.kaloscope.tv.core.designsystem.Subtle
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 
@@ -112,17 +112,16 @@ internal fun HomeScreen(
         ) {
             Text(
                 text = stringResource(R.string.continue_watching),
-                color = OnBackground,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
+                color = Muted,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.weight(1f))
-            IconButton(
+            KaloscopeIconButton(
                 onClick = onRefresh,
                 modifier = Modifier
                     .size(52.dp)
                     .testTag("home-refresh"),
-                shape = IconButtonDefaults.shape(CircleShape),
                 colors = IconButtonDefaults.colors(
                     containerColor = Color(0xFF202738),
                     focusedContainerColor = Primary,
@@ -319,7 +318,10 @@ private fun SelectedHistoryDetails(
         }
         HistoryMetadata(item)
         Spacer(Modifier.height(10.dp))
-        ProgressBar(item.percentage)
+        ProgressBar(
+            percentage = item.percentage,
+            modifier = Modifier.testTag("history-progress"),
+        )
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
@@ -356,7 +358,8 @@ private fun HistoryCarouselCard(
     onPlayHistory: (WatchHistoryItem) -> Unit,
 ) {
     val shape = RoundedCornerShape(14.dp)
-    val restingColor = if (selected) PanelSelected else Panel.copy(alpha = 0.82f)
+    val restingColor = if (selected) PanelSelected else Panel.copy(alpha = 0.58f)
+    val contentAlpha = if (selected) 1f else 0.78f
     Surface(
         onClick = { onPlayHistory(item) },
         modifier = Modifier
@@ -408,6 +411,7 @@ private fun HistoryCarouselCard(
         Row(
             modifier = Modifier
                 .fillMaxSize()
+                .alpha(contentAlpha)
                 .padding(7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -419,6 +423,7 @@ private fun HistoryCarouselCard(
                 modifier = Modifier
                     .width(48.dp)
                     .fillMaxHeight()
+                    .testTag("history-card-poster-${item.mediaId}")
                     .clip(RoundedCornerShape(9.dp)),
                 contentScale = ContentScale.Crop,
             )
@@ -447,8 +452,16 @@ private fun HistoryCarouselCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Spacer(Modifier.height(7.dp))
-                ProgressBar(item.percentage)
+                formatHistoryUpdatedAt(item.updatedAt)?.let { updatedAt ->
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = updatedAt,
+                        color = Subtle,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -557,9 +570,12 @@ private fun historyEpisodeText(item: WatchHistoryItem): String? {
 }
 
 @Composable
-private fun ProgressBar(percentage: Int) {
+private fun ProgressBar(
+    percentage: Int,
+    modifier: Modifier = Modifier,
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(4.dp)
             .background(HomeDivider, RoundedCornerShape(4.dp)),

@@ -56,13 +56,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
-import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
@@ -70,6 +68,7 @@ import org.kaloscope.tv.core.model.MediaChapter
 import org.kaloscope.tv.core.player.ChapterTimelinePolicy
 import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.PanelElevated
@@ -331,9 +330,10 @@ private fun PlayerIconButton(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(contentAlignment = Alignment.TopEnd) {
-            IconButton(
+            KaloscopeIconButton(
                 onClick = onClick,
                 enabled = action.enabled,
+                selected = action.active,
                 modifier = modifier
                     .size(if (primary) 54.dp else 50.dp)
                     .focusProperties {
@@ -345,13 +345,11 @@ private fun PlayerIconButton(
                     .semantics {
                         contentDescription = label
                         role = Role.Button
-                        selected = action.active
                         if (action.error) {
                             error(label)
                         }
                     }
                     .alpha(if (action.enabled) 1f else 0.48f),
-                shape = IconButtonDefaults.shape(shape = CircleShape),
                 colors = IconButtonDefaults.colors(
                     containerColor = when {
                         action.active -> Primary
