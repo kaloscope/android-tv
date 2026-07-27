@@ -43,7 +43,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -111,6 +112,7 @@ internal fun ServerSetupScreen(
         SetupWizardPanel(
             title = stringResource(R.string.setup_title),
             description = stringResource(R.string.setup_description),
+            activeStep = 1,
         ) {
             Text(
                 text = stringResource(R.string.setup_form_title),
@@ -149,7 +151,7 @@ internal fun ServerSetupScreen(
                 )
                 Spacer(Modifier.height(14.dp))
             }
-            ServerTextField(
+            WizardTextField(
                 value = state.name,
                 onValueChange = onNameChange,
                 label = stringResource(R.string.server_name),
@@ -160,7 +162,7 @@ internal fun ServerSetupScreen(
                 onMoveDown = { urlFocus.requestFocus() },
             )
             Spacer(Modifier.height(12.dp))
-            ServerTextField(
+            WizardTextField(
                 value = state.url,
                 onValueChange = onUrlChange,
                 label = stringResource(R.string.server_url),
@@ -232,31 +234,42 @@ internal fun LoginScreen(
     LaunchedEffect(server.id) { usernameFocus.requestFocus() }
 
     AppFrame {
-        FormPanel(
-            eyebrow = stringResource(R.string.login_eyebrow),
+        SetupWizardPanel(
             title = stringResource(R.string.login_title),
             description = stringResource(R.string.login_server, server.name, server.origin),
+            activeStep = 2,
         ) {
-            AppTextField(
+            Text(
+                text = stringResource(R.string.login_form_title),
+                color = Muted,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(20.dp))
+            WizardTextField(
                 value = state.username,
                 onValueChange = onUsernameChange,
                 label = stringResource(R.string.username),
                 placeholder = stringResource(R.string.username_hint),
-                modifier = Modifier.focusRequester(usernameFocus),
+                focusRequester = usernameFocus,
+                selectorTestTag = "login-username-selector",
+                editorTestTag = "login-username-editor",
                 onMoveDown = { passwordFocus.requestFocus() },
             )
-            Spacer(Modifier.height(18.dp))
-            AppTextField(
+            Spacer(Modifier.height(12.dp))
+            WizardTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
                 label = stringResource(R.string.password),
                 placeholder = stringResource(R.string.password_hint),
                 isPassword = true,
-                modifier = Modifier.focusRequester(passwordFocus),
+                focusRequester = passwordFocus,
+                selectorTestTag = "login-password-selector",
+                editorTestTag = "login-password-editor",
                 onMoveUp = { usernameFocus.requestFocus() },
                 onMoveDown = { loginFocus.requestFocus() },
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             state.error?.let {
                 ErrorText(loginErrorText(it))
                 Spacer(Modifier.height(12.dp))
@@ -270,12 +283,15 @@ internal fun LoginScreen(
                     },
                     enabled = !state.isSubmitting,
                     onClick = onLogin,
-                    modifier = Modifier.focusRequester(loginFocus),
+                    modifier = Modifier
+                        .focusRequester(loginFocus)
+                        .weight(1f),
                 )
                 PrimaryButton(
                     text = stringResource(R.string.change_server),
                     enabled = !state.isSubmitting,
                     onClick = onChangeServer,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -317,6 +333,7 @@ internal fun ConnectionErrorScreen(
 private fun SetupWizardPanel(
     title: String,
     description: String,
+    activeStep: Int,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Row(
@@ -325,7 +342,7 @@ private fun SetupWizardPanel(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(0.86f)) {
-            SetupProgress()
+            SetupProgress(activeStep)
             Spacer(Modifier.height(22.dp))
             Text(
                 text = title,
@@ -356,12 +373,12 @@ private fun SetupWizardPanel(
 }
 
 @Composable
-private fun SetupProgress() {
+private fun SetupProgress(activeStep: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         SetupStep(
             number = "1",
             label = stringResource(R.string.setup_step_server),
-            active = true,
+            active = activeStep == 1,
         )
         Box(
             modifier = Modifier
@@ -373,7 +390,7 @@ private fun SetupProgress() {
         SetupStep(
             number = "2",
             label = stringResource(R.string.setup_step_login),
-            active = false,
+            active = activeStep == 2,
         )
     }
 }
@@ -385,6 +402,9 @@ private fun SetupStep(
     active: Boolean,
 ) {
     Row(
+        modifier = Modifier
+            .testTag("setup-step-$number")
+            .semantics { selected = active },
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -486,7 +506,7 @@ private fun FormPanel(
 }
 
 @Composable
-private fun ServerTextField(
+private fun WizardTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
@@ -494,6 +514,7 @@ private fun ServerTextField(
     focusRequester: FocusRequester,
     selectorTestTag: String,
     editorTestTag: String,
+    isPassword: Boolean = false,
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
 ) {
@@ -536,6 +557,11 @@ private fun ServerTextField(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = true,
+                visualTransformation = if (isPassword) {
+                    PasswordVisualTransformation()
+                } else {
+                    VisualTransformation.None
+                },
                 textStyle = fieldTextStyle.copy(color = OnBackground),
                 cursorBrush = SolidColor(Color.White),
                 modifier = Modifier
@@ -647,8 +673,13 @@ private fun ServerTextField(
                 scale = ButtonDefaults.scale(focusedScale = 1f),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             ) {
+                val displayedValue = if (isPassword) {
+                    "•".repeat(value.length)
+                } else {
+                    value
+                }
                 Text(
-                    text = value.ifEmpty { placeholder },
+                    text = displayedValue.ifEmpty { placeholder },
                     style = if (value.isEmpty()) {
                         placeholderTextStyle
                     } else {
@@ -658,88 +689,6 @@ private fun ServerTextField(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun AppTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    placeholder: String,
-    modifier: Modifier = Modifier,
-    isPassword: Boolean = false,
-    onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null,
-) {
-    var focused by remember { mutableStateOf(false) }
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            color = OnBackground,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(8.dp))
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = TextStyle(
-                color = OnBackground,
-                fontSize = 18.sp,
-                lineHeight = 22.sp,
-            ),
-            visualTransformation = if (isPassword) {
-                PasswordVisualTransformation()
-            } else {
-                VisualTransformation.None
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) {
-                        false
-                    } else {
-                        when (event.key) {
-                            Key.DirectionUp -> onMoveUp?.let {
-                                it()
-                                true
-                            } ?: false
-
-                            Key.DirectionDown -> onMoveDown?.let {
-                                it()
-                                true
-                            } ?: false
-
-                            else -> false
-                        }
-                    }
-                }
-                .onFocusChanged { focused = it.isFocused }
-                .background(BackgroundRaised, RoundedCornerShape(12.dp))
-                .border(
-                    width = if (focused) 2.dp else 1.dp,
-                    color = if (focused) OnBackground else Outline,
-                    shape = RoundedCornerShape(12.dp),
-                )
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            cursorBrush = SolidColor(Color.White),
-            decorationBox = { innerTextField ->
-                Box {
-                    if (value.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            color = Subtle,
-                            fontSize = 18.sp,
-                            lineHeight = 22.sp,
-                        )
-                    }
-                    innerTextField()
-                }
-            },
-        )
     }
 }
 

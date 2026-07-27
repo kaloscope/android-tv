@@ -1,0 +1,116 @@
+package org.kaloscope.tv.app
+
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.pressKey
+import kotlin.math.abs
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.kaloscope.tv.core.model.SavedServer
+import org.kaloscope.tv.feature.login.LoginState
+
+class LoginScreenFocusTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun loginShowsSecondWizardStepAsActive() {
+        showLogin()
+
+        composeRule.onNodeWithTag("setup-step-1").assertIsNotSelected()
+        composeRule.onNodeWithTag("setup-step-2").assertIsSelected()
+    }
+
+    @Test
+    fun usernameStartsInNavigationMode() {
+        showLogin()
+
+        composeRule.onNodeWithTag("login-username-selector")
+            .assertIsFocused()
+            .assertHasClickAction()
+        composeRule.onNodeWithTag("login-username-editor").assertDoesNotExist()
+    }
+
+    @Test
+    fun usernameReturnsToNavigationModeOnBack() {
+        showLogin()
+
+        composeRule.onNodeWithTag("login-username-selector")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithTag("login-username-editor")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Back) }
+
+        composeRule.onNodeWithTag("login-username-editor").assertDoesNotExist()
+        composeRule.onNodeWithTag("login-username-selector").assertIsFocused()
+    }
+
+    @Test
+    fun dpadMovesThroughLoginControls() {
+        showLogin()
+
+        composeRule.onNodeWithTag("login-username-selector")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag("login-password-selector").assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithText("登录").assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("更换服务器").assertIsFocused()
+    }
+
+    @Test
+    fun loginButtonsUseEqualWidths() {
+        showLogin()
+
+        val loginWidth = composeRule.onNodeWithText("登录")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .width
+        val changeServerWidth = composeRule.onNodeWithText("更换服务器")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .width
+
+        assertTrue(
+            "Login width was $loginWidth px; change-server width was $changeServerWidth px",
+            abs(loginWidth - changeServerWidth) <= 1f,
+        )
+    }
+
+    @Test
+    fun passwordStaysMaskedInNavigationMode() {
+        showLogin(LoginState(password = "secret"))
+
+        composeRule.onNodeWithText("secret", useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithText("••••••", useUnmergedTree = true).assertExists()
+    }
+
+    private fun showLogin(state: LoginState = LoginState()) {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LoginScreen(
+                    server = SavedServer(
+                        id = "demo",
+                        name = "Demo",
+                        origin = "https://demo.example",
+                    ),
+                    state = state,
+                    onUsernameChange = {},
+                    onPasswordChange = {},
+                    onLogin = {},
+                    onChangeServer = {},
+                )
+            }
+        }
+    }
+}

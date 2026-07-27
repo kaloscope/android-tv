@@ -22,9 +22,9 @@
     <string name="saved_servers">已保存服务器</string>
     <string name="add_another_server">添加新服务器</string>
 
-    <string name="login_eyebrow">第二步</string>
     <string name="login_title">登录账户</string>
     <string name="login_server">%1$s\n%2$s</string>
+    <string name="login_form_title">登录你的账户</string>
     <string name="username">用户名</string>
     <string name="username_hint">输入用户名</string>
     <string name="password">密码</string>
