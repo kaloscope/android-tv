@@ -37,15 +37,85 @@ class ServerImageResolverTest {
     }
 
     @Test
-    fun `third party image never receives Kaloscope token`() {
+    fun `auto policy proxies unmarked remote image on Android`() {
         val request = ServerImageResolver.resolve(
             session = session(),
             rawValue = "https://covers.example/a.webp",
         )
 
         checkNotNull(request)
-        assertEquals("https://covers.example/a.webp", request.url)
+        assertEquals(
+            "https://media.example/_api/image/proxy?store=false&url=" +
+                "https%3A%2F%2Fcovers.example%2Fa.webp",
+            request.url,
+        )
+        assertEquals("Token token-one", request.authorization)
+    }
+
+    @Test
+    fun `direct policy keeps remote image off the Kaloscope server`() {
+        val request = ServerImageResolver.resolve(
+            session = session(),
+            rawValue = "https://covers.example/a.webp?proxy=store",
+            policy = ServerImagePolicy.Direct,
+        )
+
+        checkNotNull(request)
+        assertEquals(
+            "https://covers.example/a.webp?proxy=store",
+            request.url,
+        )
         assertNull(request.authorization)
+    }
+
+    @Test
+    fun `proxy policy routes remote image without server storage`() {
+        val request = ServerImageResolver.resolve(
+            session = session(),
+            rawValue = "https://covers.example/a.webp",
+            policy = ServerImagePolicy.Proxy,
+        )
+
+        checkNotNull(request)
+        assertEquals(
+            "https://media.example/_api/image/proxy?store=false&url=" +
+                "https%3A%2F%2Fcovers.example%2Fa.webp",
+            request.url,
+        )
+        assertEquals("Token token-one", request.authorization)
+    }
+
+    @Test
+    fun `store policy routes remote image with server storage`() {
+        val request = ServerImageResolver.resolve(
+            session = session(),
+            rawValue = "https://covers.example/a.webp",
+            policy = ServerImagePolicy.Store,
+        )
+
+        checkNotNull(request)
+        assertEquals(
+            "https://media.example/_api/image/proxy?store=true&url=" +
+                "https%3A%2F%2Fcovers.example%2Fa.webp",
+            request.url,
+        )
+        assertEquals("Token token-one", request.authorization)
+    }
+
+    @Test
+    fun `server avatar bypasses remote proxy for every policy`() {
+        val request = ServerImageResolver.resolve(
+            session = session(),
+            rawValue = "avatars/user.webp",
+            policy = ServerImagePolicy.Store,
+        )
+
+        checkNotNull(request)
+        assertEquals(
+            "https://media.example/_api/avatars/user.webp",
+            request.url,
+        )
+        assertEquals("Token token-one", request.authorization)
     }
 
     @Test

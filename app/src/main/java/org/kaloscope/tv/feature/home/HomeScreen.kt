@@ -74,6 +74,7 @@ import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.Subtle
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
+import org.kaloscope.tv.core.network.ServerImagePolicy
 
 private val HomeDivider = Color(0xFF252D40)
 
@@ -415,6 +416,7 @@ private fun HistoryCarouselCard(
                 rawValue = item.posterPath,
                 fallbackText = item.parentTitle ?: item.title,
                 contentDescription = item.parentTitle ?: item.title,
+                policy = ServerImagePolicy.Store,
                 modifier = Modifier
                     .width(48.dp)
                     .fillMaxHeight()

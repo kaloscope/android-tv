@@ -31,6 +31,7 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.network.ServerImagePolicy
 
 @Composable
 internal fun EpisodeCard(
@@ -58,6 +59,7 @@ internal fun EpisodeCard(
                     rawValue = episode.posterPath,
                     fallbackText = episode.title,
                     contentDescription = null,
+                    policy = ServerImagePolicy.Store,
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
                         .clip(RoundedCornerShape(10.dp)),
                 )

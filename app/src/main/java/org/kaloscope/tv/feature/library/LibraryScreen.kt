@@ -66,6 +66,7 @@ import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.RatingDisplayPolicy
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.network.ServerImagePolicy
 
 @Composable
 fun LibraryScreen(
@@ -442,6 +443,7 @@ private fun MediaCard(
                     rawValue = media.posterPath,
                     fallbackText = media.title,
                     contentDescription = null,
+                    policy = ServerImagePolicy.Store,
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(2f / 3f)

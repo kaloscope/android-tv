@@ -52,6 +52,7 @@ import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.network.ServerImagePolicy
 
 @Composable
 fun MediaDetailScreen(
@@ -121,6 +122,7 @@ private fun DetailContent(
             session = session,
             backdropPath = displayed.backdropPath,
             title = displayed.title,
+            policy = ServerImagePolicy.Store,
             modifier = Modifier.fillMaxSize(),
         )
         Box(
@@ -151,6 +153,7 @@ private fun DetailContent(
                 rawValue = displayed.posterPath,
                 fallbackText = displayed.title,
                 contentDescription = null,
+                policy = ServerImagePolicy.Store,
                 modifier = Modifier
                     .width(250.dp)
                     .aspectRatio(2f / 3f),

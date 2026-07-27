@@ -66,6 +66,7 @@ import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.network.ServerImagePolicy
 
 @Composable
 fun SearchScreen(
@@ -557,6 +558,7 @@ private fun NetworkResultCard(
                 rawValue = result.coverPath,
                 fallbackText = result.title,
                 contentDescription = null,
+                policy = ServerImagePolicy.Auto,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(coverRatio)

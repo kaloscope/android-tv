@@ -8,29 +8,41 @@ data class ServerImageRequest(
     val authorization: String?,
 )
 
+enum class ServerImagePolicy {
+    Direct,
+    Auto,
+    Proxy,
+    Store,
+}
+
 object ServerImageResolver {
     fun resolve(
         session: Session,
         rawValue: String?,
+        policy: ServerImagePolicy = ServerImagePolicy.Auto,
     ): ServerImageRequest? {
         val raw = rawValue?.trim()?.takeIf(String::isNotEmpty) ?: return null
         val serverOrigin = session.server.origin.removeSuffix("/")
         val absolute = raw.toHttpUrlOrNull()
         val resolvedUrl = when {
-            absolute != null && absolute.queryParameter("proxy") in setOf("true", "store") -> {
-                val server = serverOrigin.toHttpUrlOrNull() ?: return null
-                server.newBuilder()
-                    .addPathSegments("_api/image/proxy")
-                    .addQueryParameter(
-                        "store",
-                        (absolute.queryParameter("proxy") == "store").toString(),
-                    )
-                    .addQueryParameter("url", raw)
-                    .build()
-                    .toString()
+            absolute != null -> when (policy) {
+                ServerImagePolicy.Direct -> absolute.toString()
+                ServerImagePolicy.Auto -> proxyUrl(
+                    serverOrigin = serverOrigin,
+                    rawValue = raw,
+                    store = absolute.queryParameter("proxy") == "store",
+                ) ?: return null
+                ServerImagePolicy.Proxy -> proxyUrl(
+                    serverOrigin = serverOrigin,
+                    rawValue = raw,
+                    store = false,
+                ) ?: return null
+                ServerImagePolicy.Store -> proxyUrl(
+                    serverOrigin = serverOrigin,
+                    rawValue = raw,
+                    store = true,
+                ) ?: return null
             }
-
-            absolute != null -> absolute.toString()
             raw.startsWith("/") -> "$serverOrigin$raw"
             else -> "$serverOrigin/_api/$raw"
         }
@@ -44,4 +56,18 @@ object ServerImageResolver {
         }
         return ServerImageRequest(resolvedUrl, authorization)
     }
+}
+
+private fun proxyUrl(
+    serverOrigin: String,
+    rawValue: String,
+    store: Boolean,
+): String? {
+    val server = serverOrigin.toHttpUrlOrNull() ?: return null
+    return server.newBuilder()
+        .addPathSegments("_api/image/proxy")
+        .addQueryParameter("store", store.toString())
+        .addQueryParameter("url", rawValue)
+        .build()
+        .toString()
 }

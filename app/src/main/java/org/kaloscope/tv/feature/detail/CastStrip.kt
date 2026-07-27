@@ -26,6 +26,7 @@ import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.MediaActor
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.network.ServerImagePolicy
 
 @Composable
 internal fun CastStrip(
@@ -53,6 +54,7 @@ internal fun CastStrip(
                         rawValue = actor.thumbPath,
                         fallbackText = actor.name,
                         contentDescription = null,
+                        policy = ServerImagePolicy.Store,
                         modifier = Modifier.size(72.dp).clip(CircleShape),
                     )
                     Spacer(Modifier.height(6.dp))

@@ -8,12 +8,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.network.ServerImagePolicy
 
 @Composable
 fun ServerBackdrop(
     session: Session,
     backdropPath: String?,
     title: String,
+    policy: ServerImagePolicy = ServerImagePolicy.Auto,
     modifier: Modifier = Modifier,
 ) {
     Crossfade(
@@ -28,6 +30,7 @@ fun ServerBackdrop(
                 rawValue = path,
                 fallbackText = title,
                 contentDescription = null,
+                policy = policy,
                 modifier = Modifier.fillMaxSize().testTag("detail-backdrop-$path"),
                 contentScale = ContentScale.Crop,
             )

@@ -49,6 +49,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.TvSettings
+import org.kaloscope.tv.core.network.ServerImagePolicy
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.feature.detail.MediaDetailScreen
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
@@ -364,6 +365,7 @@ private fun HomeFullscreenBackdrop(
             session = session,
             backdropPath = backdrop.path,
             title = backdrop.title,
+            policy = ServerImagePolicy.Store,
             modifier = Modifier
                 .fillMaxSize()
                 .homeBackdropEdgeFade(),

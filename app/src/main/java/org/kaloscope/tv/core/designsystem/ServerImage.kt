@@ -28,6 +28,7 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.network.ServerImagePolicy
 import org.kaloscope.tv.core.network.ServerImageResolver
 import org.kaloscope.tv.R
 
@@ -81,11 +82,12 @@ fun ServerImage(
     rawValue: String?,
     fallbackText: String,
     contentDescription: String?,
+    policy: ServerImagePolicy = ServerImagePolicy.Auto,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
 ) {
-    val request = remember(session.server.origin, session.token, rawValue) {
-        ServerImageResolver.resolve(session, rawValue)
+    val request = remember(session.server.origin, session.token, rawValue, policy) {
+        ServerImageResolver.resolve(session, rawValue, policy)
     }
     if (request == null) {
         ServerImagePlaceholder(
