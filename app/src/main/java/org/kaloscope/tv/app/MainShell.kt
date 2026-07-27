@@ -20,9 +20,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
@@ -360,7 +364,9 @@ private fun HomeFullscreenBackdrop(
             session = session,
             backdropPath = backdrop.path,
             title = backdrop.title,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .homeBackdropEdgeFade(),
         )
         Box(
             modifier = Modifier
@@ -391,3 +397,26 @@ private fun HomeFullscreenBackdrop(
         )
     }
 }
+
+internal fun Modifier.homeBackdropEdgeFade(): Modifier =
+    graphicsLayer {
+        compositingStrategy = CompositingStrategy.Offscreen
+    }.drawWithCache {
+        val horizontalMask = Brush.horizontalGradient(
+            0f to Color.Transparent,
+            0.12f to Color.White,
+            0.82f to Color.White,
+            1f to Color.Transparent,
+        )
+        val verticalMask = Brush.verticalGradient(
+            0f to Color.Transparent,
+            0.18f to Color.White,
+            0.76f to Color.White,
+            1f to Color.Transparent,
+        )
+        onDrawWithContent {
+            drawContent()
+            drawRect(horizontalMask, blendMode = BlendMode.DstIn)
+            drawRect(verticalMask, blendMode = BlendMode.DstIn)
+        }
+    }

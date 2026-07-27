@@ -109,7 +109,7 @@ class MainShellTest {
     }
 
     @Test
-    fun homeTopBarKeepsBackdropMoreVisibleThanOtherRoutes() {
+    fun rootRoutesUseTheSameTransparentTopBar() {
         var route by mutableStateOf<NavKey>(HomeRoute)
         composeRule.setContent {
             KaloscopeTheme {
@@ -140,18 +140,56 @@ class MainShellTest {
         val homeBitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
         val sampleX = homeBitmap.width * 3 / 4
         val sampleY = 20
-        val homeRed = AndroidColor.red(homeBitmap.getPixel(sampleX, sampleY))
+        val homePixel = homeBitmap.getPixel(sampleX, sampleY)
 
         composeRule.runOnIdle {
             route = SearchRoute
         }
         val searchBitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
-        val searchRed = AndroidColor.red(searchBitmap.getPixel(sampleX, sampleY))
+        val searchPixel = searchBitmap.getPixel(sampleX, sampleY)
 
-        assertTrue(
-            "Home top bar must reveal substantially more of the backdrop",
-            homeRed > searchRed + 100,
+        assertEquals(
+            "Root routes must use the same top-bar background",
+            homePixel,
+            searchPixel,
         )
+    }
+
+    @Test
+    fun homeBackdropFadesTowardEveryEdge() {
+        composeRule.setContent {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(ComposeColor.Black),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .homeBackdropEdgeFade()
+                        .background(ComposeColor.Magenta),
+                )
+            }
+        }
+
+        val bitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
+        val centerX = bitmap.width / 2
+        val centerY = bitmap.height / 2
+        val edgeInset = 2
+        val centerRed = AndroidColor.red(bitmap.getPixel(centerX, centerY))
+        val leftRed = AndroidColor.red(bitmap.getPixel(edgeInset, centerY))
+        val rightRed = AndroidColor.red(
+            bitmap.getPixel(bitmap.width - edgeInset - 1, centerY),
+        )
+        val topRed = AndroidColor.red(bitmap.getPixel(centerX, edgeInset))
+        val bottomRed = AndroidColor.red(
+            bitmap.getPixel(centerX, bitmap.height - edgeInset - 1),
+        )
+
+        assertTrue(centerRed > leftRed + 100)
+        assertTrue(centerRed > rightRed + 100)
+        assertTrue(centerRed > topRed + 100)
+        assertTrue(centerRed > bottomRed + 100)
     }
 
     @Test

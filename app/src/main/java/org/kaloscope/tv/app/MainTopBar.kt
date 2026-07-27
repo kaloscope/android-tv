@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -42,7 +41,6 @@ import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.LibraryRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
-import org.kaloscope.tv.core.designsystem.BackgroundRaised
 import org.kaloscope.tv.core.designsystem.KaloscopeBrand
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.OnBackground
@@ -65,13 +63,6 @@ internal fun MainTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(76.dp)
-            .background(
-                if (currentRoute == HomeRoute) {
-                    Color.Transparent
-                } else {
-                    BackgroundRaised.copy(alpha = 0.88f)
-                },
-            )
             .padding(horizontal = 44.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

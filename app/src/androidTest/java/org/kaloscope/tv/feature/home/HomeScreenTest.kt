@@ -19,7 +19,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -152,6 +155,150 @@ class HomeScreenTest {
         )
     }
 
+    @Test
+    fun longSelectedTitleKeepsActionButtonsAtFullHeight() {
+        val items = historyItems().toMutableList()
+        items[0] = items[0].copy(
+            parentTitle = "无职转生～到了异世界就拿出真本事～ 第二季",
+        )
+        showContentHome(
+            items = items,
+            viewportHeight = 416.dp,
+        )
+
+        val minimumActionHeight = with(composeRule.density) { 42.dp.toPx() }
+        val resumeBounds = composeRule.onNodeWithText("继续播放")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val detailBounds = composeRule.onNodeWithText("查看详情")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(
+            "Resume action must keep its full height when the title wraps",
+            resumeBounds.height >= minimumActionHeight,
+        )
+        assertTrue(
+            "Detail action must keep its full height when the title wraps",
+            detailBounds.height >= minimumActionHeight,
+        )
+    }
+
+    @Test
+    fun longSelectedTitleUsesNonOverlappingLines() {
+        val items = historyItems().toMutableList()
+        items[0] = items[0].copy(
+            parentTitle = "无职转生～到了异世界就拿出真本事～ 第二季",
+        )
+        showContentHome(items = items)
+
+        val layoutResults = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithTag("history-selected-title")
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(layoutResults)
+            }
+
+        val layout = layoutResults.single()
+        assertEquals(2, layout.lineCount)
+        val lineAdvance = layout.getLineTop(1) - layout.getLineTop(0)
+        val minimumAdvance = with(layout.layoutInput.density) { 37.sp.toPx() }
+        assertTrue(
+            "Selected title lines must have enough vertical separation",
+            lineAdvance >= minimumAdvance,
+        )
+    }
+
+    @Test
+    fun firstFocusedCardHasSafeCarouselInsets() {
+        showContentHome()
+
+        composeRule.onNodeWithTag("history-card-301")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.waitForIdle()
+
+        val carouselBounds = composeRule.onNodeWithTag("history-carousel")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val firstCardBounds = composeRule.onNodeWithTag("history-card-301")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(firstCardBounds.left > carouselBounds.left)
+        assertTrue(firstCardBounds.top > carouselBounds.top)
+    }
+
+    @Test
+    fun carouselShowsFadesOnlyForScrollableDirections() {
+        val items = historyItems() + listOf(
+            historyItem(
+                historyId = 403,
+                mediaId = 303,
+                title = "潮声",
+                parentTitle = "海岸来信",
+                posterPath = "/posters/coast.webp",
+                backdropPath = "/backdrops/coast.webp",
+                episode = 5,
+            ),
+            historyItem(
+                historyId = 404,
+                mediaId = 304,
+                title = "雪夜",
+                parentTitle = "北境纪行",
+                posterPath = "/posters/snow.webp",
+                backdropPath = "/backdrops/snow.webp",
+                episode = 6,
+            ),
+        )
+        showContentHome(items = items)
+
+        composeRule.onNodeWithTag("history-carousel-end-fade").assertExists()
+        composeRule.onNodeWithTag("history-carousel-start-fade").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("history-card-301")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("history-card-302").assertIsFocused()
+        composeRule.onNodeWithTag("history-carousel-start-fade").assertExists()
+    }
+
+    @Test
+    fun endFadeCoversEnoughOfContinuationCardToAvoidHardCut() {
+        val items = historyItems() + listOf(
+            historyItem(
+                historyId = 403,
+                mediaId = 303,
+                title = "潮声",
+                parentTitle = "海岸来信",
+                posterPath = "/posters/coast.webp",
+                backdropPath = "/backdrops/coast.webp",
+                episode = 5,
+            ),
+            historyItem(
+                historyId = 404,
+                mediaId = 304,
+                title = "雪夜",
+                parentTitle = "北境纪行",
+                posterPath = "/posters/snow.webp",
+                backdropPath = "/backdrops/snow.webp",
+                episode = 6,
+            ),
+        )
+        showContentHome(items = items)
+
+        val minimumFadeWidth = with(composeRule.density) { 96.dp.toPx() }
+        val fadeBounds = composeRule.onNodeWithTag("history-carousel-end-fade")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(
+            "End fade must cover a meaningful portion of the continuation card",
+            fadeBounds.width >= minimumFadeWidth,
+        )
+    }
+
     private fun showEmptyHome(onRefresh: () -> Unit = {}) {
         composeRule.setContent {
             KaloscopeTheme {
@@ -173,13 +320,14 @@ class HomeScreenTest {
         items: List<WatchHistoryItem> = historyItems(),
         onPlayHistory: (WatchHistoryItem) -> Unit = {},
         onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
+        viewportHeight: Dp = 440.dp,
     ) {
         composeRule.setContent {
             KaloscopeTheme {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(440.dp),
+                        .height(viewportHeight),
                 ) {
                     HomeScreen(
                         session = testSession(),

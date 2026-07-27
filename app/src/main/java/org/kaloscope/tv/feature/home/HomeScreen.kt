@@ -4,7 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,8 +39,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -58,6 +63,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
@@ -165,8 +171,15 @@ private fun HistoryContent(
     val selectedItem = items.firstOrNull { it.mediaId == selectedMediaId }
         ?: items.first()
     val listState = rememberLazyListState()
+    val canScrollBackward by remember {
+        derivedStateOf { listState.canScrollBackward }
+    }
+    val canScrollForward by remember {
+        derivedStateOf { listState.canScrollForward }
+    }
     val actionFocusRequester = remember { FocusRequester() }
     val selectedCardFocusRequester = remember { FocusRequester() }
+    val carouselEdgeOffset = with(LocalDensity.current) { 48.dp.roundToPx() }
 
     LaunchedEffect(items, restoreMediaId) {
         val restored = restoreMediaId?.let { mediaId ->
@@ -178,7 +191,10 @@ private fun HistoryContent(
     LaunchedEffect(selectedItem.mediaId) {
         val index = items.indexOfFirst { it.mediaId == selectedItem.mediaId }
         if (index >= 0) {
-            listState.animateScrollToItem(index)
+            listState.animateScrollToItem(
+                index = index,
+                scrollOffset = -carouselEdgeOffset,
+            )
         }
     }
     LaunchedEffect(
@@ -216,7 +232,7 @@ private fun HistoryContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 34.dp, vertical = 18.dp),
+                .padding(horizontal = 34.dp, vertical = 12.dp),
         ) {
             SelectedHistoryDetails(
                 item = selectedItem,
@@ -229,27 +245,39 @@ private fun HistoryContent(
                     .fillMaxWidth(0.58f),
             )
             Spacer(Modifier.height(10.dp))
-            LazyRow(
-                state = listState,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(86.dp)
+                    .height(94.dp)
                     .testTag("history-carousel"),
             ) {
-                itemsIndexed(
-                    items = items,
-                    key = { _, item -> item.historyId },
-                ) { _, item ->
-                    HistoryCarouselCard(
-                        session = session,
-                        item = item,
-                        selected = item.mediaId == selectedItem.mediaId,
-                        actionFocusRequester = actionFocusRequester,
-                        selectedCardFocusRequester = selectedCardFocusRequester,
-                        onFocused = { selectedMediaId = item.mediaId },
-                        onPlayHistory = onPlayHistory,
-                    )
+                LazyRow(
+                    state = listState,
+                    contentPadding = PaddingValues(horizontal = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    itemsIndexed(
+                        items = items,
+                        key = { _, item -> item.historyId },
+                    ) { _, item ->
+                        HistoryCarouselCard(
+                            session = session,
+                            item = item,
+                            selected = item.mediaId == selectedItem.mediaId,
+                            actionFocusRequester = actionFocusRequester,
+                            selectedCardFocusRequester = selectedCardFocusRequester,
+                            onFocused = { selectedMediaId = item.mediaId },
+                            onPlayHistory = onPlayHistory,
+                        )
+                    }
+                }
+                if (canScrollBackward) {
+                    CarouselEdgeFade(start = true)
+                }
+                if (canScrollForward) {
+                    CarouselEdgeFade(start = false)
                 }
             }
         }
@@ -274,6 +302,7 @@ private fun SelectedHistoryDetails(
             color = OnBackground,
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
+            lineHeight = 38.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.testTag("history-selected-title"),
@@ -296,6 +325,7 @@ private fun SelectedHistoryDetails(
             Button(
                 onClick = { onPlayHistory(item) },
                 modifier = Modifier
+                    .height(42.dp)
                     .focusRequester(actionFocusRequester)
                     .focusProperties { down = selectedCardFocusRequester },
                 colors = ButtonDefaults.colors(focusedContainerColor = Primary),
@@ -304,7 +334,9 @@ private fun SelectedHistoryDetails(
             }
             Button(
                 onClick = { onOpenMedia(item.mediaId) },
-                modifier = Modifier.focusProperties { down = selectedCardFocusRequester },
+                modifier = Modifier
+                    .height(42.dp)
+                    .focusProperties { down = selectedCardFocusRequester },
                 colors = ButtonDefaults.colors(focusedContainerColor = Primary),
             ) {
                 Text(stringResource(R.string.view_detail))
@@ -329,7 +361,7 @@ private fun HistoryCarouselCard(
         onClick = { onPlayHistory(item) },
         modifier = Modifier
             .width(284.dp)
-            .fillMaxHeight()
+            .height(86.dp)
             .focusProperties { up = actionFocusRequester }
             .onFocusChanged { focusState ->
                 if (focusState.isFocused) {
@@ -420,6 +452,37 @@ private fun HistoryCarouselCard(
             }
         }
     }
+}
+
+@Composable
+private fun BoxScope.CarouselEdgeFade(start: Boolean) {
+    val fadeWidth = if (start) 48.dp else 112.dp
+    val fadeBrush = if (start) {
+        Brush.horizontalGradient(
+            colors = listOf(Background, Color.Transparent),
+        )
+    } else {
+        Brush.horizontalGradient(
+            0f to Color.Transparent,
+            0.42f to Background.copy(alpha = 0.2f),
+            0.72f to Background.copy(alpha = 0.72f),
+            1f to Background,
+        )
+    }
+    Box(
+        modifier = Modifier
+            .align(if (start) Alignment.CenterStart else Alignment.CenterEnd)
+            .width(fadeWidth)
+            .fillMaxHeight()
+            .background(fadeBrush)
+            .testTag(
+                if (start) {
+                    "history-carousel-start-fade"
+                } else {
+                    "history-carousel-end-fade"
+                },
+            ),
+    )
 }
 
 @Composable
