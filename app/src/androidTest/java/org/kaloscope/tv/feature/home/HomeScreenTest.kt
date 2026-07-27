@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.TimeZone
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -164,7 +165,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun unselectedCardPosterIsVisiblyDimmer() {
+    fun unselectedCardKeepsSelectedCardContentStrength() {
         val duplicatedVisuals = historyItems().mapIndexed { index, item ->
             item.copy(
                 mediaId = 301L + index,
@@ -194,9 +195,44 @@ class HomeScreenTest {
         val unselectedLuminance = averagePosterLuminance(unselected)
 
         assertTrue(
-            "Expected unselected poster luminance ($unselectedLuminance) " +
-                "to be below 90% of selected poster luminance ($selectedLuminance)",
-            unselectedLuminance < selectedLuminance * 0.9,
+            "Expected selected ($selectedLuminance) and unselected " +
+                "($unselectedLuminance) posters to have matching visual strength",
+            abs(unselectedLuminance - selectedLuminance) <=
+                selectedLuminance * 0.08,
+        )
+    }
+
+    @Test
+    fun restingCardUsesFaintNeutralBorderBeforeBrightWhiteFocusBorder() {
+        showContentHome()
+        composeRule.onNodeWithTag("home-refresh")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        val resting = composeRule.onNodeWithTag("history-card-301")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        composeRule.onNodeWithTag("history-card-301")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.waitForIdle()
+        val focused = composeRule.onNodeWithTag("history-card-301")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val restingBorder = averageTopCenterColor(resting)
+        val focusedBorder = averageTopCenterColor(focused)
+
+        assertTrue(
+            "Resting border must be neutral rather than purple: $restingBorder",
+            restingBorder.channelSpread <= 45.0,
+        )
+        assertTrue(
+            "Resting border must remain faintly visible: $restingBorder",
+            restingBorder.luminance >= 35.0,
+        )
+        assertTrue(
+            "Focused white border must be clearly brighter: " +
+                "resting=$restingBorder, focused=$focusedBorder",
+            focusedBorder.luminance >= restingBorder.luminance * 1.5,
         )
     }
 
@@ -500,6 +536,43 @@ class HomeScreenTest {
             }
         }
         return total.toDouble() / count
+    }
+
+    private fun averageTopCenterColor(bitmap: Bitmap): AverageColor {
+        val density = composeRule.density
+        val halfWidth = with(density) { 8.dp.roundToPx().coerceAtLeast(1) }
+        val depth = with(density) { 2.dp.roundToPx().coerceAtLeast(1) }
+        val centerX = bitmap.width / 2
+        var red = 0L
+        var green = 0L
+        var blue = 0L
+        var count = 0L
+        for (x in centerX - halfWidth until centerX + halfWidth) {
+            for (y in 0 until depth) {
+                val pixel = bitmap.getPixel(x, y)
+                red += AndroidColor.red(pixel)
+                green += AndroidColor.green(pixel)
+                blue += AndroidColor.blue(pixel)
+                count += 1
+            }
+        }
+        return AverageColor(
+            red = red.toDouble() / count,
+            green = green.toDouble() / count,
+            blue = blue.toDouble() / count,
+        )
+    }
+
+    private data class AverageColor(
+        val red: Double,
+        val green: Double,
+        val blue: Double,
+    ) {
+        val luminance: Double
+            get() = (red + green + blue) / 3.0
+
+        val channelSpread: Double
+            get() = maxOf(red, green, blue) - minOf(red, green, blue)
     }
 }
 

@@ -66,9 +66,9 @@ import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.PanelSelected
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.Subtle
@@ -358,8 +358,7 @@ private fun HistoryCarouselCard(
     onPlayHistory: (WatchHistoryItem) -> Unit,
 ) {
     val shape = RoundedCornerShape(14.dp)
-    val restingColor = if (selected) PanelSelected else Panel.copy(alpha = 0.58f)
-    val contentAlpha = if (selected) 1f else 0.78f
+    val restingColor = PanelElevated
     Surface(
         onClick = { onPlayHistory(item) },
         modifier = Modifier
@@ -396,10 +395,7 @@ private fun HistoryCarouselCard(
         ),
         border = ClickableSurfaceDefaults.border(
             border = Border(
-                border = BorderStroke(
-                    1.dp,
-                    if (selected) Primary.copy(alpha = 0.7f) else Color.Transparent,
-                ),
+                border = BorderStroke(1.dp, Outline),
                 shape = shape,
             ),
             focusedBorder = Border(
@@ -411,7 +407,6 @@ private fun HistoryCarouselCard(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .alpha(contentAlpha)
                 .padding(7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
