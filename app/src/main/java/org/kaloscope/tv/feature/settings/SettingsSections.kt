@@ -431,40 +431,55 @@ internal fun ServerAccountSettings(
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
     onLogout: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    SettingValue(
-        label = stringResource(R.string.current_server),
-        value = session.server.name,
-        detail = session.server.origin,
-    )
-    Spacer(Modifier.height(14.dp))
-    SettingValue(
-        label = stringResource(R.string.current_account),
-        value = session.user.username,
-        detail = session.user.role,
-    )
-    Spacer(Modifier.height(18.dp))
-    SettingActionRow(
-        title = stringResource(R.string.test_connection),
-        description = connectionDescription(connection),
-        enabled = enabled && connection != SettingsConnection.Testing,
-        danger = false,
-        onClick = onTestConnection,
-    )
-    Spacer(Modifier.height(10.dp))
-    SettingActionRow(
-        title = stringResource(R.string.manage_servers),
-        description = stringResource(R.string.manage_servers_description),
-        enabled = enabled,
-        danger = false,
-        onClick = onManageServers,
-    )
-    Spacer(Modifier.height(10.dp))
-    SettingActionRow(
-        title = stringResource(R.string.logout),
-        description = stringResource(R.string.logout_description),
-        enabled = enabled,
-        danger = true,
-        onClick = onLogout,
-    )
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        item {
+            SettingValue(
+                label = stringResource(R.string.current_server),
+                value = session.server.name,
+                detail = session.server.origin,
+            )
+        }
+        item { Spacer(Modifier.height(14.dp)) }
+        item {
+            SettingValue(
+                label = stringResource(R.string.current_account),
+                value = session.user.username,
+                detail = session.user.role,
+            )
+        }
+        item { Spacer(Modifier.height(18.dp)) }
+        item {
+            SettingActionRow(
+                title = stringResource(R.string.test_connection),
+                description = connectionDescription(connection),
+                enabled = enabled && connection != SettingsConnection.Testing,
+                danger = false,
+                onClick = onTestConnection,
+            )
+        }
+        item { Spacer(Modifier.height(10.dp)) }
+        item {
+            SettingActionRow(
+                title = stringResource(R.string.manage_servers),
+                description = stringResource(R.string.manage_servers_description),
+                enabled = enabled,
+                danger = false,
+                onClick = onManageServers,
+            )
+        }
+        item { Spacer(Modifier.height(10.dp)) }
+        item {
+            SettingActionRow(
+                title = stringResource(R.string.logout),
+                description = stringResource(R.string.logout_description),
+                enabled = enabled,
+                danger = true,
+                onClick = onLogout,
+            )
+        }
+    }
 }

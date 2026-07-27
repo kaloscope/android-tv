@@ -346,6 +346,7 @@ private fun SettingsPanel(
                 onTestConnection = onTestConnection,
                 onManageServers = onManageServers,
                 onLogout = onLogout,
+                modifier = Modifier.weight(1f),
             )
         }
         state.saveError?.let {

@@ -78,7 +78,7 @@ import org.kaloscope.tv.feature.server.ServerSetupState
 internal fun LoadingScreen() {
     AppFrame {
         Text(
-            text = stringResource(R.string.loading),
+            text = stringResource(R.string.connecting_server),
             color = Muted,
             fontSize = 22.sp,
         )
@@ -303,26 +303,34 @@ internal fun ConnectionErrorScreen(
     server: SavedServer,
     error: AppError,
     onRetry: () -> Unit,
-    onLoginAgain: () -> Unit,
+    onSwitchServer: () -> Unit,
 ) {
+    val retryFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        retryFocus.requestFocus()
+    }
+
     AppFrame {
         FormPanel(
-            eyebrow = stringResource(R.string.connection_error_eyebrow),
             title = stringResource(R.string.connection_error_title),
             description = stringResource(R.string.connection_error_server, server.name),
         ) {
             ErrorText(appErrorText(error))
             Spacer(Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PrimaryButton(
                     text = stringResource(R.string.retry),
                     enabled = true,
                     onClick = onRetry,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(retryFocus),
                 )
                 PrimaryButton(
-                    text = stringResource(R.string.login_again),
+                    text = stringResource(R.string.switch_server),
                     enabled = true,
-                    onClick = onLoginAgain,
+                    onClick = onSwitchServer,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -459,7 +467,6 @@ private fun AppFrame(content: @Composable () -> Unit) {
 
 @Composable
 private fun FormPanel(
-    eyebrow: String,
     title: String,
     description: String,
     content: @Composable ColumnScope.() -> Unit,
@@ -469,14 +476,6 @@ private fun FormPanel(
         verticalAlignment = Alignment.Top,
     ) {
         Column(modifier = Modifier.width(390.dp)) {
-            Text(
-                text = eyebrow,
-                color = Primary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp,
-            )
-            Spacer(Modifier.height(12.dp))
             Text(
                 text = title,
                 color = OnBackground,

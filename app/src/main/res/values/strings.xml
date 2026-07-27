@@ -2,7 +2,8 @@
 <resources>
     <string name="app_name">Kaloscope</string>
     <string name="tv_experience">TV EXPERIENCE</string>
-    <string name="loading">正在连接 Kaloscope…</string>
+    <string name="connecting_server">正在连接服务器…</string>
+    <string name="loading_episode">正在加载…</string>
 
     <string name="setup_eyebrow">第一步</string>
     <string name="setup_title">添加服务器</string>
@@ -227,11 +228,10 @@
     <string name="switching_episode">正在切换剧集…</string>
     <string name="switch_episode_failed">剧集切换失败，请重试</string>
 
-    <string name="connection_error_eyebrow">连接中断</string>
     <string name="connection_error_title">暂时无法连接</string>
     <string name="connection_error_server">无法验证 %1$s 的会话，本地登录信息仍然保留。</string>
     <string name="retry">重试</string>
-    <string name="login_again">重新登录</string>
+    <string name="switch_server">切换服务器</string>
 
     <string name="error_server_name">请输入服务器名称</string>
     <string name="error_server_url">请输入有效的 HTTP 或 HTTPS 服务器地址</string>

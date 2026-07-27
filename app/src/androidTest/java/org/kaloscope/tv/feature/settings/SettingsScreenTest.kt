@@ -1,6 +1,12 @@
 package org.kaloscope.tv.feature.settings
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -10,7 +16,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -108,6 +114,58 @@ class SettingsScreenTest {
         composeRule.runOnIdle {
             assertEquals(1, manages)
             assertEquals(1, tests)
+        }
+    }
+
+    @Test
+    fun serverActionsScrollIntoViewWithDpadAtMainShellHeight() {
+        var manages = 0
+        var logouts = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    SettingsScreen(
+                        session = session(),
+                        state = SettingsUiState.Content(
+                            settings = TvSettings(),
+                            section = SettingsSection.ServerAccount,
+                        ),
+                        onRetry = {},
+                        onSelectSection = {},
+                        onPlaybackMode = {},
+                        onTranscodeResolution = {},
+                        onAutoplayNext = {},
+                        onDanmakuSettings = {},
+                        onSubtitleSettings = {},
+                        onStartPage = {},
+                        onTestConnection = {},
+                        onManageServers = { manages += 1 },
+                        onLogout = { logouts += 1 },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("测试连接")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithText("切换或添加服务器")
+            .assertIsFocused()
+            .assertIsDisplayed()
+            .performKeyInput { pressKey(Key.Enter) }
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithText("退出登录")
+            .assertIsFocused()
+            .assertIsDisplayed()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(1, manages)
+            assertEquals(1, logouts)
         }
     }
 

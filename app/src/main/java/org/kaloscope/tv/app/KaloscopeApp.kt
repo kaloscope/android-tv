@@ -245,7 +245,7 @@ fun KaloscopeApp(
                 server = state.server,
                 error = state.error,
                 onRetry = viewModel::retryBootstrap,
-                onLoginAgain = { viewModel.useDifferentAccount(state.server) },
+                onSwitchServer = viewModel::showServerSelection,
             )
         }
     }

@@ -83,7 +83,7 @@ internal fun EpisodeCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            (if (loading) stringResource(R.string.loading) else episode.aired)
+            (if (loading) stringResource(R.string.loading_episode) else episode.aired)
                 ?.let { secondary ->
                     Spacer(Modifier.height(3.dp))
                     Text(
