@@ -94,6 +94,9 @@ internal fun MainShell(
     var currentRoute by remember {
         mutableStateOf<NavKey>(backStack.lastOrNull() ?: HomeRoute)
     }
+    var destinationEntryKeepsTopFocus by remember {
+        mutableStateOf(false)
+    }
     var homeBackdrop by remember(session.server.id) {
         mutableStateOf<HomeBackdropPresentation?>(null)
     }
@@ -102,22 +105,60 @@ internal fun MainShell(
     LaunchedEffect(launchRoute) {
         when (launchRoute) {
             SearchRoute -> {
+                destinationEntryKeepsTopFocus = true
                 searchActions.open()
                 searchFocus.requestFocus()
             }
 
             LibraryRoute -> {
+                destinationEntryKeepsTopFocus = true
                 libraryActions.open()
                 libraryFocus.requestFocus()
             }
 
-            else -> homeFocus.requestFocus()
+            SettingsRoute -> destinationEntryKeepsTopFocus = false
+            else -> {
+                destinationEntryKeepsTopFocus = true
+                homeFocus.requestFocus()
+            }
         }
     }
 
     fun selectRoot(route: NavKey) {
         backStack.selectRoot(route)
         currentRoute = route
+    }
+
+    fun activateTopDestination(
+        route: NavKey,
+        keepTopBarFocus: Boolean,
+    ) {
+        if (route == currentRoute) {
+            return
+        }
+        destinationEntryKeepsTopFocus = keepTopBarFocus
+        when (route) {
+            HomeRoute -> {
+                restoreMediaId = null
+                selectRoot(HomeRoute)
+            }
+
+            SearchRoute -> {
+                selectRoot(SearchRoute)
+                searchActions.open()
+            }
+
+            LibraryRoute -> {
+                restoreMediaId = null
+                selectRoot(LibraryRoute)
+                libraryActions.open()
+            }
+
+            SettingsRoute -> {
+                backStack.openSettings()
+                currentRoute = SettingsRoute
+            }
+        }
     }
 
     fun goBack() {
@@ -155,21 +196,19 @@ internal fun MainShell(
                     MainTopBar(
                         currentRoute = currentRoute,
                         onHome = {
-                            restoreMediaId = null
-                            selectRoot(HomeRoute)
+                            activateTopDestination(HomeRoute, keepTopBarFocus = false)
                         },
                         onSearch = {
-                            selectRoot(SearchRoute)
-                            searchActions.open()
+                            activateTopDestination(SearchRoute, keepTopBarFocus = false)
                         },
                         onLibrary = {
-                            restoreMediaId = null
-                            selectRoot(LibraryRoute)
-                            libraryActions.open()
+                            activateTopDestination(LibraryRoute, keepTopBarFocus = false)
                         },
                         onSettings = {
-                            backStack.openSettings()
-                            currentRoute = SettingsRoute
+                            activateTopDestination(SettingsRoute, keepTopBarFocus = false)
+                        },
+                        onDestinationFocused = { route ->
+                            activateTopDestination(route, keepTopBarFocus = true)
                         },
                         homeFocus = homeFocus,
                         searchFocus = searchFocus,
@@ -215,17 +254,20 @@ internal fun MainShell(
                                     onRefresh = homeActions.refresh,
                                     restoreMediaId = restoreMediaId,
                                     onOpenLibrary = {
-                                        restoreMediaId = null
-                                        selectRoot(LibraryRoute)
-                                        libraryActions.open()
+                                        activateTopDestination(
+                                            LibraryRoute,
+                                            keepTopBarFocus = false,
+                                        )
                                     },
                                     onOpenMedia = { mediaId ->
+                                        destinationEntryKeepsTopFocus = false
                                         restoreMediaId = null
                                         backStack.openMediaDetail(mediaId)
                                         currentRoute = MediaDetailRoute(mediaId)
                                         detailActions.open(mediaId)
                                     },
                                     onPlayHistory = { item ->
+                                        destinationEntryKeepsTopFocus = false
                                         restoreMediaId = item.mediaId
                                         homeActions.play(item)?.let { requestId ->
                                             backStack.openPlayer(requestId)
@@ -242,6 +284,7 @@ internal fun MainShell(
                                 )?.pendingPlaybackRequestId
                                 LaunchedEffect(pendingRequestId) {
                                     pendingRequestId?.let { requestId ->
+                                        destinationEntryKeepsTopFocus = false
                                         backStack.openPlayer(requestId)
                                         currentRoute = PlayerRoute(requestId)
                                         playerActions.load(requestId)
@@ -251,6 +294,7 @@ internal fun MainShell(
                                 SearchScreen(
                                     session = session,
                                     state = searchState,
+                                    requestInitialFocus = !destinationEntryKeepsTopFocus,
                                     onRefreshIndexers = searchActions.refreshIndexers,
                                     onSelectIndexer = searchActions.selectIndexer,
                                     onQueryChange = searchActions.updateQuery,
@@ -271,6 +315,7 @@ internal fun MainShell(
                                     session = session,
                                     state = libraryState,
                                     restoreMediaId = restoreMediaId,
+                                    requestInitialFocus = !destinationEntryKeepsTopFocus,
                                     onSelectLibrary = libraryActions.select,
                                     onQueryChange = libraryActions.updateQuery,
                                     onSearch = libraryActions.search,
@@ -279,6 +324,7 @@ internal fun MainShell(
                                     onMediaFocused = libraryActions.rememberFocusedMedia,
                                     onGridViewportChanged = libraryActions.rememberGridViewport,
                                     onOpenMedia = { mediaId ->
+                                        destinationEntryKeepsTopFocus = false
                                         restoreMediaId = null
                                         backStack.openMediaDetail(mediaId)
                                         currentRoute = MediaDetailRoute(mediaId)
@@ -290,6 +336,7 @@ internal fun MainShell(
                                 SettingsScreen(
                                     session = session,
                                     state = settingsState,
+                                    requestInitialFocus = !destinationEntryKeepsTopFocus,
                                     onRetry = settingsActions.retry,
                                     onSelectSection = settingsActions.selectSection,
                                     onPlaybackMode = settingsActions.setPlaybackMode,
@@ -319,6 +366,7 @@ internal fun MainShell(
                                     onRetry = detailActions.retry,
                                     onSelectChild = detailActions.selectChild,
                                     onPlay = { detail, resume ->
+                                        destinationEntryKeepsTopFocus = false
                                         detailActions.play(detail, resume)?.let { requestId ->
                                             backStack.openPlayer(requestId)
                                             currentRoute = PlayerRoute(requestId)

@@ -1,9 +1,13 @@
 package org.kaloscope.tv.feature.player
 
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
@@ -47,17 +51,23 @@ class PlayerFeedbackOverlayTest {
     }
 
     @Test
-    fun failureFocusesRetry() {
+    fun failureFocusesRetryAndHandlesRemoteClick() {
+        var retries = 0
         composeRule.setContent {
             KaloscopeTheme {
                 PlayerFeedbackOverlay(
                     feedback = PlaybackFeedback.Failed,
                     failure = PlaybackFailure.Decoder,
                     sourceKind = PlaybackSourceKind.Direct,
-                    onRetry = {},
+                    onRetry = { retries += 1 },
                 )
             }
         }
-        composeRule.onNodeWithText("重试").assertIsFocused()
+        composeRule.onNodeWithText("重试")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, retries)
+        }
     }
 }

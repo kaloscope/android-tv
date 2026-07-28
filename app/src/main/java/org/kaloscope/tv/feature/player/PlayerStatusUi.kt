@@ -12,14 +12,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackSourceKind
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -78,9 +77,9 @@ internal fun PlayerMessage(
                 )
                 onBack?.let {
                     Spacer(Modifier.height(18.dp))
-                    Button(
+                    KaloscopeButton(
                         onClick = it,
-                        colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                        size = KaloscopeControlSize.Compact,
                     ) {
                         Text(stringResource(R.string.back))
                     }

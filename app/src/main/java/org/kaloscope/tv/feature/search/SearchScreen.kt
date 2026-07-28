@@ -44,14 +44,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
-import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.KaloscopeGridSkeleton
 import org.kaloscope.tv.core.designsystem.Muted
@@ -61,6 +61,7 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
+import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
@@ -72,6 +73,7 @@ import org.kaloscope.tv.core.network.ServerImagePolicy
 fun SearchScreen(
     session: Session,
     state: SearchUiState,
+    requestInitialFocus: Boolean = true,
     onRefreshIndexers: () -> Unit,
     onSelectIndexer: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -95,6 +97,7 @@ fun SearchScreen(
         is SearchUiState.Content -> SearchContent(
             session = session,
             state = state,
+            requestInitialFocus = requestInitialFocus,
             onSelectIndexer = onSelectIndexer,
             onQueryChange = onQueryChange,
             onSearch = onSearch,
@@ -115,6 +118,7 @@ fun SearchScreen(
 private fun SearchContent(
     session: Session,
     state: SearchUiState.Content,
+    requestInitialFocus: Boolean,
     onSelectIndexer: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -131,8 +135,12 @@ private fun SearchContent(
     val firstIndexerFocus = remember { FocusRequester() }
     val filterButtonFocus = remember { FocusRequester() }
     var restoreFilterFocus by remember { mutableStateOf(false) }
-    LaunchedEffect(state.selectedIndexerId, state.focusedResultId) {
-        if (state.focusedResultId == null) {
+    LaunchedEffect(
+        state.selectedIndexerId,
+        state.focusedResultId,
+        requestInitialFocus,
+    ) {
+        if (requestInitialFocus && state.focusedResultId == null) {
             firstIndexerFocus.requestFocus()
         }
     }
@@ -175,6 +183,7 @@ private fun SearchContent(
                 session = session,
                 state = state,
                 coverRatio = state.selectedProfile.coverRatio,
+                requestInitialFocus = requestInitialFocus,
                 onRetry = onRetry,
                 onLoadMore = onLoadMore,
                 onResultFocused = onResultFocused,
@@ -215,10 +224,11 @@ private fun SearchEmptyIndexers(onRefresh: () -> Unit) {
             fontSize = 16.sp,
         )
         Spacer(Modifier.height(18.dp))
-        Button(
+        KaloscopeButton(
             onClick = onRefresh,
             modifier = Modifier.testTag("refresh-indexers"),
-            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
         ) {
             Text(stringResource(R.string.refresh_indexers))
         }
@@ -241,12 +251,13 @@ private fun IndexerSidebar(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(indexers, key = NetworkIndexer::id) { indexer ->
-            KaloscopeFocusSurface(
+            KaloscopeButton(
                 onClick = { onSelectIndexer(indexer.id) },
                 selected = indexer.id == selectedIndexerId,
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Row,
                 shape = RoundedCornerShape(12.dp),
-                focusedContainerColor = PanelElevated,
-                focusScale = 1.02f,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp)
@@ -260,9 +271,7 @@ private fun IndexerSidebar(
                     ),
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -312,7 +321,7 @@ private fun SearchInput(
                 .focusProperties { right = searchActionFocus }
                 .testTag("network-search-input"),
         )
-        Button(
+        KaloscopeButton(
             onClick = onSearch,
             modifier = Modifier
                 .focusRequester(searchActionFocus)
@@ -324,20 +333,20 @@ private fun SearchInput(
                     }
                 }
                 .testTag("search-action-button"),
-            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
         ) {
             Text(stringResource(R.string.search_action))
         }
         if (filtersAvailable) {
-            Button(
+            KaloscopeButton(
                 onClick = onOpenFilters,
+                selected = filtersActive,
                 modifier = Modifier
                     .focusRequester(filterFocusRequester)
                     .testTag("search-filter-button"),
-                colors = ButtonDefaults.colors(
-                    containerColor = if (filtersActive) Primary else PanelElevated,
-                    focusedContainerColor = Primary,
-                ),
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Compact,
             ) {
                 Text(
                     stringResource(
@@ -358,6 +367,7 @@ private fun SearchResults(
     session: Session,
     state: SearchUiState.Content,
     coverRatio: Float,
+    requestInitialFocus: Boolean,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
@@ -444,7 +454,8 @@ private fun SearchResults(
                             session = session,
                             result = result,
                             coverRatio = coverRatio,
-                            restoreFocus = result.id == restoreResultId,
+                            restoreFocus =
+                                requestInitialFocus && result.id == restoreResultId,
                             enabled = state.resolvingResultId == null,
                             resolving = result.id == state.resolvingResultId,
                             onFocused = {
@@ -496,14 +507,13 @@ private fun SearchResults(
                                     fontSize = 14.sp,
                                 )
                                 Spacer(Modifier.height(8.dp))
-                                Button(
+                                KaloscopeButton(
                                     onClick = onLoadMore,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .testTag("search-load-more-retry"),
-                                    colors = ButtonDefaults.colors(
-                                        focusedContainerColor = Primary,
-                                    ),
+                                    variant = KaloscopeControlVariant.Filled,
+                                    size = KaloscopeControlSize.Compact,
                                 ) {
                                     Text(stringResource(R.string.retry))
                                 }
@@ -629,9 +639,10 @@ private fun SearchError(
         Spacer(Modifier.height(8.dp))
         Text(searchErrorText(error), color = Danger, fontSize = 16.sp)
         Spacer(Modifier.height(18.dp))
-        Button(
+        KaloscopeButton(
             onClick = onRetry,
-            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
         ) {
             Text(stringResource(R.string.retry))
         }

@@ -3,11 +3,16 @@ package org.kaloscope.tv.feature.settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -63,6 +68,7 @@ class SettingsScreenTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.onNodeWithText("自动")
+            .assertIsSelected()
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }
             .assertIsFocused()
@@ -73,6 +79,120 @@ class SettingsScreenTest {
         composeRule.runOnIdle {
             assertEquals(PlaybackMode.Direct, selectedMode)
         }
+    }
+
+    @Test
+    fun menuSelectionAndSettingFocusRemainIndependent() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Playback,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("播放").assertIsSelected()
+        composeRule.onNodeWithText("默认播放模式")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.onNodeWithText("播放")
+            .assertIsSelected()
+            .assertIsNotFocused()
+    }
+
+    @Test
+    fun focusingNextMenuCategorySelectsItWithoutCenter() {
+        var state by mutableStateOf(
+            SettingsUiState.Content(
+                settings = TvSettings(),
+                section = SettingsSection.Playback,
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = state,
+                    onRetry = {},
+                    onSelectSection = { section ->
+                        state = state.copy(section = section)
+                    },
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("播放")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithText("弹幕")
+            .assertIsFocused()
+            .assertIsSelected()
+        composeRule.onNodeWithText("默认开启弹幕").assertExists()
+    }
+
+    @Test
+    fun movingLeftReturnsToTheSelectedMenuCategory() {
+        var state by mutableStateOf(
+            SettingsUiState.Content(
+                settings = TvSettings(),
+                section = SettingsSection.Danmaku,
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = state,
+                    onRetry = {},
+                    onSelectSection = { section ->
+                        state = state.copy(section = section)
+                    },
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("默认开启弹幕")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithText("弹幕")
+            .assertIsSelected()
+            .assertIsFocused()
     }
 
     @Test
@@ -263,6 +383,12 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("滚动速度").assertExists()
         composeRule.onNodeWithText("默认开启弹幕")
             .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        composeRule.runOnIdle {
+            assertEquals(null, updatedSettings)
+        }
+
+        composeRule.onNodeWithText("默认开启弹幕")
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.runOnIdle {

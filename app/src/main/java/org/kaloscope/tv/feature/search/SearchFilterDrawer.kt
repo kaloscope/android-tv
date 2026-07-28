@@ -34,16 +34,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.PanelSelected
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.model.SearchFilterDefinition
 import org.kaloscope.tv.core.model.SearchFilterType
@@ -228,15 +225,13 @@ private fun FilterOptionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Button(
+    KaloscopeButton(
         onClick = onClick,
+        selected = selected,
+        size = KaloscopeControlSize.Row,
         modifier = modifier
             .fillMaxWidth()
             .testTag(tag),
-        colors = ButtonDefaults.colors(
-            containerColor = if (selected) PanelSelected else PanelElevated,
-            focusedContainerColor = Primary,
-        ),
     ) {
         Text(text = text)
     }
@@ -249,8 +244,9 @@ private fun DrawerActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Button(
+    KaloscopeButton(
         onClick = onClick,
+        size = KaloscopeControlSize.Compact,
         modifier = modifier
             .testTag(tag)
             .focusProperties {
@@ -258,7 +254,6 @@ private fun DrawerActionButton(
                 right = FocusRequester.Cancel
                 down = FocusRequester.Cancel
             },
-        colors = ButtonDefaults.colors(focusedContainerColor = Primary),
     ) {
         Text(text = text)
     }

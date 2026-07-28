@@ -61,6 +61,9 @@ import org.kaloscope.tv.core.designsystem.BackgroundRaised
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeBrand
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Outline
@@ -698,17 +701,12 @@ private fun PrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Button(
+    KaloscopeButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
-        colors = ButtonDefaults.colors(
-            containerColor = Color(0xFF272D40),
-            contentColor = OnBackground,
-            focusedContainerColor = Primary,
-            focusedContentColor = Color.White,
-        ),
-        scale = ButtonDefaults.scale(focusedScale = 1.03f),
+        variant = KaloscopeControlVariant.Filled,
+        size = KaloscopeControlSize.Compact,
     ) {
         Text(
             text = text,

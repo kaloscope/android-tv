@@ -51,18 +51,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
-import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
@@ -123,12 +123,8 @@ internal fun HomeScreen(
                 modifier = Modifier
                     .size(52.dp)
                     .testTag("home-refresh"),
-                colors = IconButtonDefaults.colors(
-                    containerColor = Color(0xFF202738),
-                    focusedContainerColor = Primary,
-                    contentColor = OnBackground,
-                    focusedContentColor = Color.White,
-                ),
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Compact,
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_refresh),
@@ -325,22 +321,24 @@ private fun SelectedHistoryDetails(
         )
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(
+            KaloscopeButton(
                 onClick = { onPlayHistory(item) },
                 modifier = Modifier
                     .height(42.dp)
                     .focusRequester(actionFocusRequester)
                     .focusProperties { down = selectedCardFocusRequester },
-                colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Compact,
             ) {
                 Text(stringResource(R.string.resume_playback))
             }
-            Button(
+            KaloscopeButton(
                 onClick = { onOpenMedia(item.mediaId) },
                 modifier = Modifier
                     .height(42.dp)
                     .focusProperties { down = selectedCardFocusRequester },
-                colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Compact,
             ) {
                 Text(stringResource(R.string.view_detail))
             }
@@ -526,9 +524,10 @@ private fun HomeEmpty(onOpenLibrary: () -> Unit) {
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(20.dp))
-            Button(
+            KaloscopeButton(
                 onClick = onOpenLibrary,
-                colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Compact,
             ) {
                 Text(stringResource(R.string.open_library))
             }
@@ -640,9 +639,10 @@ private fun ErrorPanel(
             fontSize = 17.sp,
         )
         Spacer(Modifier.height(20.dp))
-        Button(
+        KaloscopeButton(
             onClick = onRetry,
-            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
         ) {
             Text(stringResource(R.string.retry))
         }

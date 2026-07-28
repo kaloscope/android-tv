@@ -82,34 +82,31 @@ class HomeScreenTest {
     }
 
     @Test
-    fun refreshButtonHasSubtleRestingOutline() {
+    fun refreshButtonHasBorderlessRestingStateAndBrightFocusBorder() {
         showEmptyHome()
         composeRule.onNodeWithText("进入媒体库")
             .performSemanticsAction(SemanticsActions.RequestFocus)
 
-        val bitmap = composeRule.onNodeWithTag("home-refresh")
+        val resting = composeRule.onNodeWithTag("home-refresh")
             .captureToImage()
             .asAndroidBitmap()
-        val sampleDepth = with(composeRule.density) {
-            2.dp.roundToPx().coerceAtLeast(1)
-        }
-        val sampleHalfWidth = with(composeRule.density) {
-            4.dp.roundToPx().coerceAtLeast(1)
-        }
-        val centerX = bitmap.width / 2
-        var redTotal = 0L
-        var sampleCount = 0L
-        for (x in centerX - sampleHalfWidth until centerX + sampleHalfWidth) {
-            for (y in 0 until sampleDepth) {
-                redTotal += AndroidColor.red(bitmap.getPixel(x, y))
-                sampleCount += 1
-            }
-        }
-        val averageRed = redTotal.toDouble() / sampleCount
+        composeRule.onNodeWithTag("home-refresh")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.waitForIdle()
+        val focused = composeRule.onNodeWithTag("home-refresh")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val restingEdge = averageTopCenterColor(resting)
+        val focusedEdge = averageTopCenterColor(focused)
 
         assertTrue(
-            "Expected a subtle light outline at the top edge, average red=$averageRed",
-            averageRed in 35.0..60.0,
+            "Resting control must not draw a visible outline: $restingEdge",
+            restingEdge.red <= 32.0,
+        )
+        assertTrue(
+            "Focused control must draw a bright white border: $focusedEdge",
+            focusedEdge.luminance >= 180.0,
         )
     }
 

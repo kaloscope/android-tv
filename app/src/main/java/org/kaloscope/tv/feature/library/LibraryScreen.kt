@@ -43,24 +43,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
-import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeGridSkeleton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
-import org.kaloscope.tv.core.common.AppError
-import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.RatingBadge
-import org.kaloscope.tv.core.designsystem.KaloscopeGridSkeleton
+import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
+import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaSummary
@@ -73,6 +74,7 @@ fun LibraryScreen(
     session: Session,
     state: LibraryUiState,
     restoreMediaId: Long?,
+    requestInitialFocus: Boolean = true,
     onSelectLibrary: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -99,6 +101,7 @@ fun LibraryScreen(
             session = session,
             state = state,
             restoreMediaId = restoreMediaId,
+            requestInitialFocus = requestInitialFocus,
             onSelectLibrary = onSelectLibrary,
             onQueryChange = onQueryChange,
             onSearch = onSearch,
@@ -116,6 +119,7 @@ private fun LibraryContent(
     session: Session,
     state: LibraryUiState.Content,
     restoreMediaId: Long?,
+    requestInitialFocus: Boolean,
     onSelectLibrary: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -129,8 +133,12 @@ private fun LibraryContent(
     val restoreTargetId = restoreMediaId ?: state.focusedMediaId
 
     // Entering the root starts at the first source; returning from detail restores its card.
-    LaunchedEffect(state.selectedLibraryId, restoreTargetId) {
-        if (restoreTargetId == null) {
+    LaunchedEffect(
+        state.selectedLibraryId,
+        restoreTargetId,
+        requestInitialFocus,
+    ) {
+        if (requestInitialFocus && restoreTargetId == null) {
             firstLibraryFocus.requestFocus()
         }
     }
@@ -160,6 +168,7 @@ private fun LibraryContent(
                 session = session,
                 state = state.items,
                 restoreMediaId = restoreTargetId,
+                requestInitialFocus = requestInitialFocus,
                 gridViewport = state.gridViewport,
                 onRetry = onRetry,
                 onLoadMore = onLoadMore,
@@ -190,12 +199,13 @@ private fun LibrarySidebar(
             items = libraries,
             key = MediaLibrary::id,
         ) { library ->
-            KaloscopeFocusSurface(
+            KaloscopeButton(
                 onClick = { onSelectLibrary(library.id) },
                 selected = library.id == selectedLibraryId,
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Row,
                 shape = RoundedCornerShape(12.dp),
-                focusedContainerColor = PanelElevated,
-                focusScale = 1.02f,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp)
@@ -208,9 +218,7 @@ private fun LibrarySidebar(
                     ),
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -253,9 +261,10 @@ private fun LibrarySearch(
                 .height(52.dp)
                 .testTag("library-search-input"),
         )
-        Button(
+        KaloscopeButton(
             onClick = onSearch,
-            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
         ) {
             Text(stringResource(R.string.search_action))
         }
@@ -267,6 +276,7 @@ private fun LibraryItems(
     session: Session,
     state: LibraryItemsState,
     restoreMediaId: Long?,
+    requestInitialFocus: Boolean,
     gridViewport: GridViewportSnapshot,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
@@ -333,7 +343,8 @@ private fun LibraryItems(
                         MediaCard(
                             session = session,
                             media = media,
-                            restoreFocus = media.id == resolvedRestoreMediaId,
+                            restoreFocus =
+                                requestInitialFocus && media.id == resolvedRestoreMediaId,
                             onFocused = {
                                 onMediaFocused(media.id)
                                 if (
@@ -383,14 +394,13 @@ private fun LibraryItems(
                                     fontSize = 14.sp,
                                 )
                                 Spacer(Modifier.height(8.dp))
-                                Button(
+                                KaloscopeButton(
                                     onClick = onLoadMore,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .testTag("library-load-more-retry"),
-                                    colors = ButtonDefaults.colors(
-                                        focusedContainerColor = Primary,
-                                    ),
+                                    variant = KaloscopeControlVariant.Filled,
+                                    size = KaloscopeControlSize.Compact,
                                 ) {
                                     Text(stringResource(R.string.retry))
                                 }
@@ -532,9 +542,10 @@ private fun LibraryError(
             fontSize = 16.sp,
         )
         Spacer(Modifier.height(18.dp))
-        Button(
+        KaloscopeButton(
             onClick = onRetry,
-            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
         ) {
             Text(stringResource(R.string.retry))
         }

@@ -26,15 +26,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.PanelSelected
-import org.kaloscope.tv.core.designsystem.Primary
 
 internal val PlayerPlaybackSpeeds = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
 
@@ -72,8 +69,10 @@ internal fun PlayerSpeedDrawer(
             )
             Spacer(Modifier.height(8.dp))
             PlayerPlaybackSpeeds.forEachIndexed { index, value ->
-                Button(
+                KaloscopeButton(
                     onClick = { onSelect(value) },
+                    selected = value == speed,
+                    size = KaloscopeControlSize.Row,
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(
@@ -93,11 +92,6 @@ internal fun PlayerSpeedDrawer(
                                 down = FocusRequester.Cancel
                             }
                         },
-                    colors = ButtonDefaults.colors(
-                        containerColor =
-                            if (value == speed) PanelSelected else PanelElevated,
-                        focusedContainerColor = Primary,
-                    ),
                 ) {
                     Text(formatPlaybackSpeed(value))
                 }

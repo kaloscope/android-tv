@@ -2,6 +2,7 @@ package org.kaloscope.tv.feature.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,9 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
@@ -38,19 +41,18 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import java.util.Locale
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.PanelSelected
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
@@ -66,6 +68,7 @@ import org.kaloscope.tv.core.player.TranscodeResolution
 fun SettingsScreen(
     session: Session,
     state: SettingsUiState,
+    requestInitialFocus: Boolean = true,
     onRetry: () -> Unit,
     onSelectSection: (SettingsSection) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
@@ -93,6 +96,7 @@ fun SettingsScreen(
         is SettingsUiState.Content -> SettingsContent(
             session = session,
             state = state,
+            requestInitialFocus = requestInitialFocus,
             onSelectSection = onSelectSection,
             onPlaybackMode = onPlaybackMode,
             onTranscodeResolution = onTranscodeResolution,
@@ -111,6 +115,7 @@ fun SettingsScreen(
 private fun SettingsContent(
     session: Session,
     state: SettingsUiState.Content,
+    requestInitialFocus: Boolean,
     onSelectSection: (SettingsSection) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
@@ -128,8 +133,10 @@ private fun SettingsContent(
     val selectedSectionFocus = remember { FocusRequester() }
     val controlsEnabled = choice == null && !languageEditorOpen && !state.isSaving
 
-    LaunchedEffect(Unit) {
-        selectedSectionFocus.requestFocus()
+    LaunchedEffect(requestInitialFocus) {
+        if (requestInitialFocus) {
+            selectedSectionFocus.requestFocus()
+        }
     }
     LaunchedEffect(choice, languageEditorOpen, restoreFocus) {
         if (choice == null && !languageEditorOpen) {
@@ -177,7 +184,15 @@ private fun SettingsContent(
                     enabled = controlsEnabled,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .focusProperties {
+                            onExit = {
+                                if (requestedFocusDirection == FocusDirection.Left) {
+                                    selectedSectionFocus.requestFocus()
+                                }
+                            }
+                        }
+                        .focusGroup(),
                     onOpenChoice = { focus, requestedChoice ->
                         restoreFocus = focus
                         choice = requestedChoice
@@ -241,9 +256,15 @@ private fun SettingsMenu(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         SettingsSection.entries.forEach { section ->
-            Button(
-                onClick = { onSelect(section) },
+            KaloscopeButton(
+                onClick = {
+                    if (selected != section) {
+                        onSelect(section)
+                    }
+                },
                 enabled = enabled,
+                selected = selected == section,
+                size = KaloscopeControlSize.Row,
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(
@@ -252,15 +273,12 @@ private fun SettingsMenu(
                         } else {
                             Modifier
                         },
-                    ),
-                colors = ButtonDefaults.colors(
-                    containerColor = if (selected == section) {
-                        PanelSelected
-                    } else {
-                        Color.Transparent
+                    )
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused && selected != section) {
+                            onSelect(section)
+                        }
                     },
-                    focusedContainerColor = Primary,
-                ),
             ) {
                 Text(sectionLabel(section))
             }
@@ -371,13 +389,13 @@ internal fun ChoiceSettingRow(
 ) {
     val focus = remember { FocusRequester() }
     val choice = createChoice()
-    Button(
+    KaloscopeButton(
         onClick = { onOpenChoice(focus, choice) },
         enabled = enabled,
+        size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
             .focusRequester(focus),
-        colors = settingRowColors(),
     ) {
         SettingRowContent(title, description, "$value  ›")
     }
@@ -391,11 +409,12 @@ internal fun ToggleSettingRow(
     enabled: Boolean,
     onToggle: () -> Unit,
 ) {
-    Button(
+    KaloscopeButton(
         onClick = onToggle,
         enabled = enabled,
+        selected = checked,
+        size = KaloscopeControlSize.Row,
         modifier = Modifier.fillMaxWidth(),
-        colors = settingRowColors(),
     ) {
         SettingRowContent(
             title = title,
@@ -417,14 +436,16 @@ internal fun SettingActionRow(
     danger: Boolean,
     onClick: () -> Unit,
 ) {
-    Button(
+    KaloscopeButton(
         onClick = onClick,
         enabled = enabled,
+        size = KaloscopeControlSize.Row,
+        tone = if (danger) {
+            KaloscopeControlTone.Danger
+        } else {
+            KaloscopeControlTone.Default
+        },
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.colors(
-            containerColor = Color(0xFF202738),
-            focusedContainerColor = if (danger) Danger else Primary,
-        ),
     ) {
         SettingRowContent(title, description, "")
     }
@@ -526,10 +547,10 @@ private fun SubtitleLanguageDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
             ) {
-                Button(onClick = onDismiss) {
+                KaloscopeButton(onClick = onDismiss) {
                     Text(stringResource(R.string.cancel))
                 }
-                Button(onClick = { onSave(value) }) {
+                KaloscopeButton(onClick = { onSave(value) }) {
                     Text(stringResource(R.string.save))
                 }
             }
@@ -570,8 +591,10 @@ private fun SettingsChoiceDialog(
             )
             Spacer(Modifier.height(6.dp))
             choice.options.forEachIndexed { index, option ->
-                Button(
+                KaloscopeButton(
                     onClick = { onSelect(option) },
+                    selected = option.selected,
+                    size = KaloscopeControlSize.Row,
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusProperties {
@@ -591,14 +614,6 @@ private fun SettingsChoiceDialog(
                                 Modifier
                             },
                         ),
-                    colors = ButtonDefaults.colors(
-                        containerColor = if (option.selected) {
-                            PanelSelected
-                        } else {
-                            Panel
-                        },
-                        focusedContainerColor = Primary,
-                    ),
                 ) {
                     Text(option.label)
                 }
@@ -626,10 +641,9 @@ private fun SettingsStatus(
             Text(description, color = Muted, fontSize = 15.sp)
             onRetry?.let {
                 Spacer(Modifier.height(16.dp))
-                Button(
+                KaloscopeButton(
                     onClick = it,
                     modifier = Modifier.focusRequester(retryFocus),
-                    colors = ButtonDefaults.colors(focusedContainerColor = Primary),
                 ) {
                     Text(stringResource(R.string.retry))
                 }
@@ -637,12 +651,6 @@ private fun SettingsStatus(
         }
     }
 }
-
-@Composable
-internal fun settingRowColors() = ButtonDefaults.colors(
-    containerColor = PanelElevated,
-    focusedContainerColor = Primary,
-)
 
 @Composable
 private fun sectionLabel(section: SettingsSection): String =

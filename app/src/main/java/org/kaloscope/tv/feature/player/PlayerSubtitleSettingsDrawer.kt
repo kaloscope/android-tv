@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -34,17 +33,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import java.util.Locale
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.PanelSelected
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.SubtitleDisplayMode
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
@@ -272,18 +268,16 @@ private fun SubtitleDrawerRow(
     modifier: Modifier = Modifier,
     active: Boolean = false,
 ) {
-    Button(
+    KaloscopeButton(
         onClick = onClick,
+        selected = active,
+        size = KaloscopeControlSize.Row,
         modifier = modifier
             .fillMaxWidth()
             .focusProperties {
                 left = FocusRequester.Cancel
                 right = FocusRequester.Cancel
             },
-        colors = ButtonDefaults.colors(
-            containerColor = if (active) PanelSelected else PanelElevated,
-            focusedContainerColor = Primary,
-        ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

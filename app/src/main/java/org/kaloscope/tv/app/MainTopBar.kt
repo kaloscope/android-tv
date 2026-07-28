@@ -3,9 +3,9 @@ package org.kaloscope.tv.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -32,7 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
-import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Text
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,12 +43,12 @@ import org.kaloscope.tv.app.navigation.LibraryRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
 import org.kaloscope.tv.core.designsystem.KaloscopeBrand
-import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.PanelSelected
 
 @Composable
 internal fun MainTopBar(
@@ -58,6 +57,7 @@ internal fun MainTopBar(
     onSearch: () -> Unit,
     onLibrary: () -> Unit,
     onSettings: () -> Unit,
+    onDestinationFocused: (NavKey) -> Unit,
     homeFocus: FocusRequester,
     searchFocus: FocusRequester,
     libraryFocus: FocusRequester,
@@ -86,6 +86,7 @@ internal fun MainTopBar(
                 text = stringResource(R.string.home),
                 selected = currentRoute == HomeRoute,
                 onClick = onHome,
+                onFocused = { onDestinationFocused(HomeRoute) },
                 modifier = Modifier
                     .focusRequester(homeFocus)
                     .focusProperties { right = searchFocus },
@@ -94,6 +95,7 @@ internal fun MainTopBar(
                 text = stringResource(R.string.search),
                 selected = currentRoute == SearchRoute,
                 onClick = onSearch,
+                onFocused = { onDestinationFocused(SearchRoute) },
                 modifier = Modifier
                     .focusRequester(searchFocus)
                     .focusProperties {
@@ -105,6 +107,7 @@ internal fun MainTopBar(
                 text = stringResource(R.string.library),
                 selected = currentRoute == LibraryRoute,
                 onClick = onLibrary,
+                onFocused = { onDestinationFocused(LibraryRoute) },
                 modifier = Modifier
                     .focusRequester(libraryFocus)
                     .focusProperties {
@@ -117,6 +120,7 @@ internal fun MainTopBar(
         SettingsButton(
             selected = currentRoute == SettingsRoute,
             onClick = onSettings,
+            onFocused = { onDestinationFocused(SettingsRoute) },
             modifier = Modifier
                 .focusRequester(settingsFocus)
                 .focusProperties { left = libraryFocus },
@@ -131,29 +135,30 @@ private fun MainNavButton(
     text: String,
     selected: Boolean,
     onClick: () -> Unit,
+    onFocused: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    KaloscopeFocusSurface(
+    KaloscopeButton(
         onClick = onClick,
         selected = selected,
-        modifier = modifier.height(42.dp),
+        variant = KaloscopeControlVariant.Ghost,
+        size = KaloscopeControlSize.Compact,
+        modifier = modifier
+            .height(42.dp)
+            .onFocusChanged { state ->
+                if (state.isFocused) {
+                    onFocused()
+                }
+            },
         shape = RoundedCornerShape(11.dp),
-        focusedContainerColor = PanelElevated,
-        focusScale = 1.02f,
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .padding(horizontal = 20.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = text,
-                color = OnBackground,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        Text(
+            text = text,
+            color = OnBackground,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -161,22 +166,23 @@ private fun MainNavButton(
 private fun SettingsButton(
     selected: Boolean,
     onClick: () -> Unit,
+    onFocused: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val label = stringResource(R.string.settings)
     KaloscopeIconButton(
         onClick = onClick,
         selected = selected,
+        variant = KaloscopeControlVariant.Ghost,
+        size = KaloscopeControlSize.Compact,
         shape = RoundedCornerShape(14.dp),
-        scale = IconButtonDefaults.scale(focusedScale = 1.02f),
-        colors = IconButtonDefaults.colors(
-            containerColor = if (selected) PanelSelected else Color.Transparent,
-            focusedContainerColor = PanelElevated,
-            contentColor = OnBackground,
-            focusedContentColor = OnBackground,
-        ),
         modifier = modifier
             .size(46.dp)
+            .onFocusChanged { state ->
+                if (state.isFocused) {
+                    onFocused()
+                }
+            }
             .semantics {
                 contentDescription = label
             },

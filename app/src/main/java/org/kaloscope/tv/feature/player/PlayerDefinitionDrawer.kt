@@ -23,15 +23,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.PanelSelected
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.model.NetworkDefinition
 
 @Composable
@@ -89,15 +86,11 @@ private fun DefinitionButton(
     modifier: Modifier = Modifier,
     active: Boolean = false,
 ) {
-    Button(
+    KaloscopeButton(
         onClick = onClick,
+        selected = active,
+        size = KaloscopeControlSize.Row,
         modifier = modifier.height(48.dp),
-        colors = ButtonDefaults.colors(
-            containerColor = if (active) PanelSelected else PanelElevated,
-            focusedContainerColor = Primary,
-            contentColor = OnBackground,
-            focusedContentColor = Color.White,
-        ),
     ) {
         Text(text)
     }

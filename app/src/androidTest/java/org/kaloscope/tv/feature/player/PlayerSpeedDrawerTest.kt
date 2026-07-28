@@ -2,6 +2,7 @@ package org.kaloscope.tv.feature.player
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
@@ -30,7 +31,9 @@ class PlayerSpeedDrawerTest {
             }
         }
 
-        composeRule.onNodeWithText("1.25x").assertIsFocused()
+        composeRule.onNodeWithText("1.25x")
+            .assertIsSelected()
+            .assertIsFocused()
         composeRule.onNodeWithText("2.0x")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }

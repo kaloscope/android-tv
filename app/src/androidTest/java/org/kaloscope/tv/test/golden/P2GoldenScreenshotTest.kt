@@ -132,6 +132,31 @@ class P2GoldenScreenshotTest {
         composeRule.mainClock.advanceTimeBy(600)
         assertGolden("image-states-1920", composeRule.onRoot().captureToImage().asAndroidBitmap())
     }
+
+    @Test
+    fun controlStatesMatch1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.mainClock.autoAdvance = false
+        var spec by mutableStateOf(controlStateGoldenSpecs().first())
+        composeRule.setContent {
+            KaloscopeTheme {
+                ControlStateGoldenCell(
+                    spec = spec,
+                    modifier = Modifier.testTag("control-state-cell"),
+                )
+            }
+        }
+
+        val cells = controlStateGoldenSpecs().map { next ->
+            composeRule.runOnIdle { spec = next }
+            composeRule.mainClock.advanceTimeBy(220)
+            composeRule.waitForIdle()
+            composeRule.onNodeWithTag("control-state-cell")
+                .captureToImage()
+                .asAndroidBitmap()
+        }
+        assertGolden("control-states-1920", stitchControlStateCells(cells))
+    }
 }
 
 private fun libraryState(): LibraryUiState.Content {

@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -61,17 +60,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
-import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.model.MediaChapter
 import org.kaloscope.tv.core.player.ChapterTimelinePolicy
-import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import kotlinx.coroutines.delay
 
@@ -334,6 +332,8 @@ private fun PlayerIconButton(
                 onClick = onClick,
                 enabled = action.enabled,
                 selected = action.active,
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Compact,
                 modifier = modifier
                     .size(if (primary) 54.dp else 50.dp)
                     .focusProperties {
@@ -348,19 +348,7 @@ private fun PlayerIconButton(
                         if (action.error) {
                             error(label)
                         }
-                    }
-                    .alpha(if (action.enabled) 1f else 0.48f),
-                colors = IconButtonDefaults.colors(
-                    containerColor = when {
-                        action.active -> Primary
-                        else -> PanelElevated
                     },
-                    focusedContainerColor = Color.White,
-                    contentColor = OnBackground,
-                    focusedContentColor = Background,
-                    disabledContainerColor = PanelElevated,
-                    disabledContentColor = Muted,
-                ),
             ) {
                 Icon(
                     painter = painterResource(iconRes),

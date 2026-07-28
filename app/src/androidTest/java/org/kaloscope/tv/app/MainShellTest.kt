@@ -16,6 +16,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
@@ -128,6 +130,7 @@ class MainShellTest {
                         onSearch = {},
                         onLibrary = {},
                         onSettings = {},
+                        onDestinationFocused = {},
                         homeFocus = homeFocus,
                         searchFocus = searchFocus,
                         libraryFocus = libraryFocus,
@@ -251,7 +254,7 @@ class MainShellTest {
     }
 
     @Test
-    fun settingsGearStaysSelectedAndShowsCurrentAccount() {
+    fun settingsGearOpensOnFocusAndKeepsFocus() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -277,11 +280,122 @@ class MainShellTest {
 
         composeRule.onNodeWithContentDescription("设置")
             .assertIsFocused()
-            .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.onNodeWithText("家庭服务器").assertExists()
         composeRule.onNodeWithText("tv_user").assertExists()
-        composeRule.onNodeWithContentDescription("设置").assertIsSelected()
+        composeRule.onNodeWithContentDescription("设置")
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
+    fun focusingSearchSelectsRouteWithoutCenterAndKeepsFocus() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("首页").assertIsSelected()
+        composeRule.onNodeWithText("网络搜索")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .assertIsSelected()
+        composeRule.onNodeWithTag("search-content").assertExists()
+        composeRule.onNodeWithText("首页")
+            .assertIsNotSelected()
+            .assertIsNotFocused()
+    }
+
+    @Test
+    fun recomposingFocusedSearchDoesNotOpenAgain() {
+        var homeState by mutableStateOf<HomeUiState>(HomeUiState.Empty)
+        var searchOpens = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = homeState,
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    searchActions = SearchActions(open = { searchOpens += 1 }),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("网络搜索")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.runOnIdle {
+            assertEquals(1, searchOpens)
+            homeState = HomeUiState.Loading
+        }
+        composeRule.runOnIdle {
+            assertEquals(1, searchOpens)
+        }
+    }
+
+    @Test
+    fun movingAcrossTopNavigationActivatesEachFocusedRoute() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = deepLibraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("首页")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("网络搜索")
+            .assertIsFocused()
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("媒体库")
+            .assertIsFocused()
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithContentDescription("设置")
+            .assertIsFocused()
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("媒体库")
+            .assertIsFocused()
+            .assertIsSelected()
+    }
+
+    @Test
+    fun directionDownEntersTheActiveSearchContent() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("网络搜索")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithText("网络搜索").assertIsNotFocused()
+        composeRule.onNodeWithTag("network-search-input").assertIsFocused()
     }
 
     @Test
@@ -324,9 +438,9 @@ class MainShellTest {
 
         composeRule.onNode(hasText("媒体库") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
+            .performKeyInput { pressKey(Key.DirectionDown) }
 
-        composeRule.onNodeWithText("剧集库").assertIsFocused()
+        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
         composeRule.onNodeWithTag("media-card-201")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
@@ -348,7 +462,7 @@ class MainShellTest {
     }
 
     @Test
-    fun topLevelRoundTripRestoresDeepLibraryCard() {
+    fun topLevelRoundTripKeepsLibraryFocusAndDeepViewport() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -362,21 +476,26 @@ class MainShellTest {
 
         composeRule.onNode(hasText("媒体库") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithTag("media-card-25").assertIsFocused()
+            .assertIsFocused()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("media-card-25"))
+                .fetchSemanticsNodes().size == 1
+        }
 
         composeRule.onNode(hasText("首页") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
         composeRule.onNode(hasText("媒体库") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithTag("media-card-25").assertIsFocused()
+        composeRule.onNodeWithText("媒体库").assertIsFocused()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("media-card-25"))
+                .fetchSemanticsNodes().size == 1
+        }
     }
 
     @Test
-    fun topLevelRoundTripRestoresDeepSearchResult() {
+    fun topLevelRoundTripKeepsSearchFocusAndDeepViewport() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -391,17 +510,22 @@ class MainShellTest {
 
         composeRule.onNode(hasText("网络搜索") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
+            .assertIsFocused()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("network-result-v25"))
+                .fetchSemanticsNodes().size == 1
+        }
 
         composeRule.onNode(hasText("首页") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
         composeRule.onNode(hasText("网络搜索") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
+        composeRule.onNodeWithText("网络搜索").assertIsFocused()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("network-result-v25"))
+                .fetchSemanticsNodes().size == 1
+        }
     }
 }
 
@@ -413,6 +537,9 @@ private fun TestMainShell(
     libraryState: LibraryUiState,
     detailState: MediaDetailUiState,
     settingsState: SettingsUiState = SettingsUiState.Content(TvSettings()),
+    initialRoute: NavKey = HomeRoute,
+    searchActions: SearchActions = SearchActions(),
+    libraryActions: LibraryActions = LibraryActions(),
 ) {
     MainShell(
         session = session,
@@ -421,10 +548,11 @@ private fun TestMainShell(
         libraryState = libraryState,
         detailState = detailState,
         homeActions = HomeActions(),
-        searchActions = SearchActions(),
-        libraryActions = LibraryActions(),
+        searchActions = searchActions,
+        libraryActions = libraryActions,
         detailActions = DetailActions(),
         settingsState = settingsState,
+        initialRoute = initialRoute,
         settingsActions = SettingsActions(),
         playerActions = PlayerActions(),
     )

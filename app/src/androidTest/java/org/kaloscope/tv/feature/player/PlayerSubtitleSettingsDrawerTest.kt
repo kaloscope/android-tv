@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
@@ -39,7 +40,9 @@ class PlayerSubtitleSettingsDrawerTest {
             }
         }
 
-        composeRule.onNodeWithText("简体中文").assertIsFocused()
+        composeRule.onNodeWithText("简体中文")
+            .assertIsSelected()
+            .assertIsFocused()
         composeRule.onNodeWithText("字幕字号")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionRight) }
@@ -64,7 +67,9 @@ class PlayerSubtitleSettingsDrawerTest {
             }
         }
 
-        composeRule.onNodeWithText("关闭字幕").assertIsFocused()
+        composeRule.onNodeWithText("关闭字幕")
+            .assertIsSelected()
+            .assertIsFocused()
         composeRule.onNodeWithText("English")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }

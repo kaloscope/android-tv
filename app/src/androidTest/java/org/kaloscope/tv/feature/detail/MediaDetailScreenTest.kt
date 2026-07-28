@@ -1,18 +1,22 @@
 package org.kaloscope.tv.feature.detail
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaActor
 import org.kaloscope.tv.core.model.MediaLibrary
@@ -114,6 +118,60 @@ class MediaDetailScreenTest {
 
         composeRule.runOnIdle {
             assertEquals(501L, playedId)
+        }
+    }
+
+    @Test
+    fun backButtonHandlesRemoteClick() {
+        var backs = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(movie()),
+                    resumePositionSeconds = null,
+                    onBack = { backs += 1 },
+                    onRetry = {},
+                    onSelectChild = {},
+                    onPlay = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("返回")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(1, backs)
+        }
+    }
+
+    @Test
+    fun errorRetryHandlesRemoteClick() {
+        var retries = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Error(AppError.Offline),
+                    resumePositionSeconds = null,
+                    onBack = {},
+                    onRetry = { retries += 1 },
+                    onSelectChild = {},
+                    onPlay = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("重试")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(1, retries)
         }
     }
 

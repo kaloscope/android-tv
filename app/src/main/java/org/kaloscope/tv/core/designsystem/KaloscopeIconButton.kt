@@ -1,51 +1,74 @@
 package org.kaloscope.tv.core.designsystem
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
-import androidx.tv.material3.ButtonColors
-import androidx.tv.material3.ButtonScale
+import androidx.tv.material3.Glow
 import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 
 @Composable
 fun KaloscopeIconButton(
     onClick: () -> Unit,
-    colors: ButtonColors,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     selected: Boolean = false,
+    variant: KaloscopeControlVariant = KaloscopeControlVariant.Filled,
+    size: KaloscopeControlSize = KaloscopeControlSize.Compact,
+    tone: KaloscopeControlTone = KaloscopeControlTone.Default,
     shape: Shape = CircleShape,
-    scale: ButtonScale = IconButtonDefaults.scale(),
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val outline = Border(
-        border = BorderStroke(1.dp, Outline),
-        shape = shape,
+    val visuals = rememberKaloscopeControlVisuals(
+        variant = variant,
+        size = size,
+        tone = tone,
+        selected = selected,
+        enabled = enabled,
+    )
+    val colors = IconButtonDefaults.colors(
+        containerColor = Color.Transparent,
+        contentColor = visuals.state.contentColor,
+        focusedContainerColor = Color.Transparent,
+        focusedContentColor = visuals.state.contentColor,
+        pressedContainerColor = Color.Transparent,
+        pressedContentColor = visuals.state.contentColor,
+        disabledContainerColor = Color.Transparent,
+        disabledContentColor = visuals.state.contentColor,
     )
     IconButton(
         onClick = onClick,
-        modifier = modifier.semantics {
-            this.selected = selected
-        },
+        modifier = modifier
+            .focusProperties { canFocus = enabled }
+            .kaloscopeControlVisuals(visuals, selected, shape),
         enabled = enabled,
-        scale = scale,
+        scale = IconButtonDefaults.scale(
+            scale = 1f,
+            focusedScale = 1f,
+            pressedScale = 1f,
+            disabledScale = 1f,
+            focusedDisabledScale = 1f,
+        ),
+        glow = IconButtonDefaults.glow(
+            glow = Glow.None,
+            focusedGlow = Glow.None,
+            pressedGlow = Glow.None,
+        ),
         shape = IconButtonDefaults.shape(shape),
         colors = colors,
         border = IconButtonDefaults.border(
-            border = outline,
-            focusedBorder = outline,
-            pressedBorder = outline,
-            disabledBorder = outline,
-            focusedDisabledBorder = outline,
+            border = Border.None,
+            focusedBorder = Border.None,
+            pressedBorder = Border.None,
+            disabledBorder = Border.None,
+            focusedDisabledBorder = Border.None,
         ),
+        interactionSource = visuals.interactionSource,
         content = content,
     )
 }

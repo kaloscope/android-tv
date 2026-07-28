@@ -20,13 +20,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.player.PlaybackFailure
 import org.kaloscope.tv.core.player.PlaybackFeedback
 import org.kaloscope.tv.core.player.PlaybackSourceKind
@@ -117,10 +116,10 @@ private fun FeedbackError(
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(16.dp))
-            Button(
+            KaloscopeButton(
                 onClick = onRetry,
                 modifier = Modifier.focusRequester(retryFocus),
-                colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+                size = KaloscopeControlSize.Compact,
             ) {
                 Text(stringResource(R.string.retry))
             }

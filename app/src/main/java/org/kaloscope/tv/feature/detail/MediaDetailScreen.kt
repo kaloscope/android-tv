@@ -33,22 +33,22 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
-import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeDetailSkeleton
+import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
-import org.kaloscope.tv.core.common.AppError
-import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.ServerBackdrop
+import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
@@ -171,30 +171,27 @@ private fun DetailContent(
                         Spacer(Modifier.height(18.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             if (resumePositionSeconds != null && resumePositionSeconds > 0) {
-                                Button(
+                                KaloscopeButton(
                                     onClick = { onPlay(displayed, resumePositionSeconds) },
                                     modifier = Modifier.focusRequester(playFocus),
-                                    colors = ButtonDefaults.colors(
-                                        focusedContainerColor = Primary,
-                                    ),
+                                    variant = KaloscopeControlVariant.Filled,
+                                    size = KaloscopeControlSize.Compact,
                                 ) {
                                     Text(stringResource(R.string.resume_playback))
                                 }
-                                Button(
+                                KaloscopeButton(
                                     onClick = { onPlay(displayed, null) },
-                                    colors = ButtonDefaults.colors(
-                                        focusedContainerColor = Primary,
-                                    ),
+                                    variant = KaloscopeControlVariant.Filled,
+                                    size = KaloscopeControlSize.Compact,
                                 ) {
                                     Text(stringResource(R.string.play_from_start))
                                 }
                             } else {
-                                Button(
+                                KaloscopeButton(
                                     onClick = { onPlay(displayed, null) },
                                     modifier = Modifier.focusRequester(playFocus),
-                                    colors = ButtonDefaults.colors(
-                                        focusedContainerColor = Primary,
-                                    ),
+                                    variant = KaloscopeControlVariant.Filled,
+                                    size = KaloscopeControlSize.Compact,
                                 ) {
                                     Text(stringResource(R.string.play))
                                 }
@@ -265,27 +262,21 @@ private fun DetailBackButton(
     modifier: Modifier = Modifier,
 ) {
     val label = stringResource(R.string.back)
-    KaloscopeFocusSurface(
+    KaloscopeIconButton(
         onClick = onBack,
+        variant = KaloscopeControlVariant.Filled,
+        size = KaloscopeControlSize.Compact,
         shape = RoundedCornerShape(14.dp),
-        containerColor = Panel.copy(alpha = 0.72f),
-        focusedContainerColor = PanelElevated,
-        focusScale = 1.02f,
         modifier = modifier
             .width(54.dp)
             .height(46.dp)
             .semantics { contentDescription = label },
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "←",
-                color = OnBackground,
-                fontSize = 23.sp,
-            )
-        }
+        Text(
+            text = "←",
+            color = OnBackground,
+            fontSize = 23.sp,
+        )
     }
 }
 
@@ -392,9 +383,10 @@ private fun DetailError(
             fontSize = 16.sp,
         )
         Spacer(Modifier.height(18.dp))
-        Button(
+        KaloscopeButton(
             onClick = onRetry,
-            colors = ButtonDefaults.colors(focusedContainerColor = Primary),
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
         ) {
             Text(stringResource(R.string.retry))
         }

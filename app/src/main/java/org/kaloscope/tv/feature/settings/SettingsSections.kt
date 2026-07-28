@@ -18,8 +18,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
@@ -200,13 +201,13 @@ private fun SubtitleLanguageSettingRow(
     onOpen: (FocusRequester) -> Unit,
 ) {
     val focus = remember { FocusRequester() }
-    Button(
+    KaloscopeButton(
         onClick = { onOpen(focus) },
         enabled = enabled,
+        size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
             .focusRequester(focus),
-        colors = settingRowColors(),
     ) {
         SettingRowContent(
             title = stringResource(R.string.subtitle_language_preference),
@@ -228,9 +229,10 @@ private fun AdjustableSettingRow(
     onIncrease: () -> Unit,
     onClick: () -> Unit = {},
 ) {
-    Button(
+    KaloscopeButton(
         onClick = onClick,
         enabled = enabled,
+        size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
             .onPreviewKeyEvent { event ->
@@ -251,7 +253,6 @@ private fun AdjustableSettingRow(
                     else -> false
                 }
             },
-        colors = settingRowColors(),
     ) {
         SettingRowContent(title, description, "‹  $value  ›")
     }

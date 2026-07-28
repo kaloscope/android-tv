@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -223,6 +224,66 @@ class SearchScreenTest {
     }
 
     @Test
+    fun selectedIndexerRemainsSelectedWhileSearchActionOwnsFocus() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-action-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.onNodeWithTag("indexer-11").assertIsSelected()
+    }
+
+    @Test
+    fun appliedFiltersMarkFilterActionSelected() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(regionFilter()),
+                        appliedFilters = mapOf(
+                            "region" to SearchFilterValue.Scalar("cn"),
+                        ),
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-filter-button").assertIsSelected()
+    }
+
+    @Test
     fun filterChoiceAppliesSelectedValue() {
         var applied: Map<String, SearchFilterValue>? = null
         composeRule.setContent {
@@ -252,6 +313,7 @@ class SearchScreenTest {
         composeRule.onNodeWithTag("filter-option-region-cn")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
         composeRule.onNodeWithTag("filter-apply")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
@@ -444,6 +506,7 @@ class SearchScreenTest {
 
 private fun state(
     filters: List<SearchFilterDefinition> = emptyList(),
+    appliedFilters: Map<String, SearchFilterValue> = emptyMap(),
     filterDrawerOpen: Boolean = false,
     results: List<NetworkSearchResult> = listOf(result("v1")),
     focusedResultId: String? = null,
@@ -463,6 +526,7 @@ private fun state(
         selectedIndexerId = 11,
         query = "星际",
         submittedKeyword = "星际",
+        appliedFilters = appliedFilters,
         filterDrawerOpen = filterDrawerOpen,
         focusedResultId = focusedResultId,
         gridViewport = gridViewport,
