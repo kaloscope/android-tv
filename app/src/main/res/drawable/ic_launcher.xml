@@ -1,22 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="@color/launcher_background"
-        android:pathData="M0,0h108v108h-108z" />
-    <path
-        android:fillColor="@color/launcher_primary"
-        android:pathData="M25,22h16v64h-16z" />
-    <path
-        android:fillColor="#D16BEE"
-        android:pathData="M45,22h38v14h-38z" />
-    <path
-        android:fillColor="#FFB44A"
-        android:pathData="M45,43h25v14h-25z" />
-    <path
-        android:fillColor="@color/launcher_accent"
-        android:pathData="M45,64h38v14h-38z" />
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_launcher_background" />
+    <item
+        android:width="72dp"
+        android:height="72dp"
+        android:drawable="@drawable/kaloscope_logo"
+        android:gravity="center" />
+</layer-list>
