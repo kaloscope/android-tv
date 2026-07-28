@@ -77,6 +77,8 @@ import org.kaloscope.tv.feature.login.LoginState
 import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
 
+private val SetupProgressOutline = Color(0x33FFFFFF)
+
 @Composable
 internal fun LoadingScreen() {
     AppFrame {
@@ -396,7 +398,7 @@ private fun SetupProgress(activeStep: Int) {
                 .padding(horizontal = 10.dp)
                 .width(24.dp)
                 .height(1.dp)
-                .background(Outline),
+                .background(SetupProgressOutline),
         )
         SetupStep(
             number = "2",
@@ -428,7 +430,7 @@ private fun SetupStep(
                 )
                 .border(
                     width = 1.dp,
-                    color = if (active) Primary else Outline,
+                    color = if (active) Primary else SetupProgressOutline,
                     shape = CircleShape,
                 ),
             contentAlignment = Alignment.Center,

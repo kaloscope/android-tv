@@ -49,7 +49,6 @@
     <string name="season_episode">第 %1$d 季 · 第 %2$d 集</string>
     <string name="history_episode_title">S%1$dE%2$d - %3$s</string>
     <string name="rating">评分 %1$.1f</string>
-    <string name="settings_device_only">仅保存在这台设备上</string>
     <string name="loading_settings">正在加载设置</string>
     <string name="loading_settings_description">正在读取这台设备保存的偏好。</string>
     <string name="settings_load_failed">无法加载设置</string>

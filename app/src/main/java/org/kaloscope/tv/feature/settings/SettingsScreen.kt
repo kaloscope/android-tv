@@ -156,63 +156,49 @@ private fun SettingsContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = stringResource(R.string.settings),
-                color = OnBackground,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            SettingsMenu(
+                selected = state.section,
+                enabled = controlsEnabled,
+                selectedFocus = selectedSectionFocus,
+                onSelect = onSelectSection,
             )
-            Text(
-                text = stringResource(R.string.settings_device_only),
-                color = Muted,
-                fontSize = 16.sp,
-            )
-            Spacer(Modifier.height(24.dp))
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-            ) {
-                SettingsMenu(
-                    selected = state.section,
-                    enabled = controlsEnabled,
-                    selectedFocus = selectedSectionFocus,
-                    onSelect = onSelectSection,
-                )
-                SettingsPanel(
-                    session = session,
-                    state = state,
-                    enabled = controlsEnabled,
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .widthIn(max = 720.dp)
-                        .focusProperties {
-                            onExit = {
-                                if (requestedFocusDirection == FocusDirection.Left) {
-                                    selectedSectionFocus.requestFocus()
-                                }
+            SettingsPanel(
+                session = session,
+                state = state,
+                enabled = controlsEnabled,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .widthIn(max = 720.dp)
+                    .focusProperties {
+                        onExit = {
+                            if (requestedFocusDirection == FocusDirection.Left) {
+                                selectedSectionFocus.requestFocus()
                             }
                         }
-                        .focusGroup(),
-                    onOpenChoice = { focus, requestedChoice ->
-                        restoreFocus = focus
-                        choice = requestedChoice
-                    },
-                    onAutoplayNext = onAutoplayNext,
-                    onDanmakuSettings = onDanmakuSettings,
-                    onSubtitleSettings = onSubtitleSettings,
-                    onOpenSubtitleLanguage = { focus ->
-                        restoreFocus = focus
-                        languageEditorOpen = true
-                    },
-                    onTestConnection = onTestConnection,
-                    onManageServers = onManageServers,
-                    onLogout = onLogout,
-                    onPlaybackMode = onPlaybackMode,
-                    onTranscodeResolution = onTranscodeResolution,
-                    onStartPage = onStartPage,
-                )
-            }
+                    }
+                    .focusGroup(),
+                onOpenChoice = { focus, requestedChoice ->
+                    restoreFocus = focus
+                    choice = requestedChoice
+                },
+                onAutoplayNext = onAutoplayNext,
+                onDanmakuSettings = onDanmakuSettings,
+                onSubtitleSettings = onSubtitleSettings,
+                onOpenSubtitleLanguage = { focus ->
+                    restoreFocus = focus
+                    languageEditorOpen = true
+                },
+                onTestConnection = onTestConnection,
+                onManageServers = onManageServers,
+                onLogout = onLogout,
+                onPlaybackMode = onPlaybackMode,
+                onTranscodeResolution = onTranscodeResolution,
+                onStartPage = onStartPage,
+            )
         }
         choice?.let { current ->
             SettingsChoiceDialog(

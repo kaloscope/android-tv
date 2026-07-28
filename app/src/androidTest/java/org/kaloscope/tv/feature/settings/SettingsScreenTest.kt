@@ -21,8 +21,10 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -322,34 +324,73 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun settingRowsStayInsideTvViewport() {
+    fun playbackSettingsFitMainShellViewport() {
         composeRule.setContent {
             KaloscopeTheme {
-                SettingsScreen(
-                    session = session(),
-                    state = SettingsUiState.Content(TvSettings()),
-                    onRetry = {},
-                    onSelectSection = {},
-                    onPlaybackMode = {},
-                    onTranscodeResolution = {},
-                    onAutoplayNext = {},
-                    onDanmakuSettings = {},
-                    onSubtitleSettings = {},
-                    onStartPage = {},
-                    onTestConnection = {},
-                    onManageServers = {},
-                    onLogout = {},
-                )
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    SettingsScreen(
+                        session = session(),
+                        state = SettingsUiState.Content(TvSettings()),
+                        onRetry = {},
+                        onSelectSection = {},
+                        onPlaybackMode = {},
+                        onTranscodeResolution = {},
+                        onAutoplayNext = {},
+                        onDanmakuSettings = {},
+                        onSubtitleSettings = {},
+                        onStartPage = {},
+                        onTestConnection = {},
+                        onManageServers = {},
+                        onLogout = {},
+                    )
+                }
             }
         }
 
         val viewport = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
-        val settingRow = composeRule.onNodeWithText("默认播放模式")
+        val firstRow = composeRule.onNodeWithText("默认播放模式")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val lastRow = composeRule.onNodeWithText("自动播放下一集")
             .fetchSemanticsNode()
             .boundsInRoot
 
-        assertTrue(settingRow.left >= viewport.left)
-        assertTrue(settingRow.right <= viewport.right)
+        assertTrue(lastRow.left >= viewport.left)
+        assertTrue(lastRow.right <= viewport.right)
+        assertTrue(lastRow.top >= viewport.top)
+        assertTrue(lastRow.bottom <= viewport.bottom)
+        assertTrue(lastRow.height >= firstRow.height)
+
+        listOf(
+            "自动播放下一集",
+            "当前内容结束且存在下一集时自动继续。",
+            "开启",
+        ).forEach { text ->
+            val layoutResults = mutableListOf<TextLayoutResult>()
+            composeRule.onNodeWithText(text, useUnmergedTree = true)
+                .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                    it(layoutResults)
+                }
+            assertFalse(
+                "$text must not overflow its text bounds",
+                layoutResults.single().hasVisualOverflow,
+            )
+        }
+
+        composeRule.onNodeWithText("设置").assertDoesNotExist()
+        composeRule.onNodeWithText("仅保存在这台设备上").assertDoesNotExist()
+
+        composeRule.onNodeWithText("默认播放模式")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.DirectionDown)
+                pressKey(Key.DirectionDown)
+            }
+        composeRule.onNodeWithText("自动播放下一集").assertIsFocused()
     }
 
     @Test
