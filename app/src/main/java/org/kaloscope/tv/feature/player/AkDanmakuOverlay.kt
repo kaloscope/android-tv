@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import com.kuaishou.akdanmaku.ui.DanmakuView
 import org.kaloscope.tv.core.model.DanmakuComment
@@ -36,6 +35,9 @@ internal fun AkDanmakuOverlay(
     val synchronizer = remember(runtime) {
         runtime?.let(::DanmakuPlaybackSynchronizer)
     }
+    val playbackBinding = remember(player, synchronizer) {
+        synchronizer?.let { DanmakuPlaybackBinding(player, it) }
+    }
     var runtimeBound by remember(player, comments) { mutableStateOf(false) }
     var setupFailed by remember(player, comments) {
         mutableStateOf(runtimeResult.isFailure)
@@ -49,42 +51,18 @@ internal fun AkDanmakuOverlay(
             synchronizer?.onSettingsChanged(settings)
         }
     }
-    DisposableEffect(player, synchronizer, runtimeBound) {
-        if (!runtimeBound || synchronizer == null) {
+    DisposableEffect(playbackBinding) {
+        onDispose {
+            playbackBinding?.dispose()
+        }
+    }
+    DisposableEffect(playbackBinding, runtimeBound) {
+        if (!runtimeBound || playbackBinding == null) {
             onDispose {}
         } else {
-            val listener = object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    synchronizer.onIsPlayingChanged(
-                        isPlaying = isPlaying,
-                        positionMillis = player.currentPosition,
-                        playbackSpeed = player.playbackParameters.speed,
-                    )
-                }
-
-                override fun onPositionDiscontinuity(
-                    oldPosition: Player.PositionInfo,
-                    newPosition: Player.PositionInfo,
-                    reason: Int,
-                ) {
-                    synchronizer.onPositionDiscontinuity(player.currentPosition)
-                }
-
-                override fun onPlaybackParametersChanged(
-                    playbackParameters: PlaybackParameters,
-                ) {
-                    synchronizer.onPlaybackSpeedChanged(playbackParameters.speed)
-                }
-            }
-            player.addListener(listener)
-            synchronizer.onIsPlayingChanged(
-                isPlaying = player.isPlaying,
-                positionMillis = player.currentPosition,
-                playbackSpeed = player.playbackParameters.speed,
-            )
+            playbackBinding.attach()
             onDispose {
-                player.removeListener(listener)
-                synchronizer.dispose()
+                playbackBinding.detach()
             }
         }
     }
