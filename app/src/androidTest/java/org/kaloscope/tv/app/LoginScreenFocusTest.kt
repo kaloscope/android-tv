@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
@@ -53,6 +54,18 @@ class LoginScreenFocusTest {
 
         composeRule.onNodeWithTag("login-username-editor").assertDoesNotExist()
         composeRule.onNodeWithTag("login-username-selector").assertIsFocused()
+    }
+
+    @Test
+    fun usernameImeNextMovesToPassword() {
+        showLogin()
+
+        composeRule.onNodeWithTag("login-username-selector")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithTag("login-username-editor").performImeAction()
+
+        composeRule.onNodeWithTag("login-username-editor").assertDoesNotExist()
+        composeRule.onNodeWithTag("login-password-selector").assertIsFocused()
     }
 
     @Test

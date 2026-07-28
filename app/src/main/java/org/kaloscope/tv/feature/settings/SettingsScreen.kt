@@ -12,14 +12,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,11 +33,10 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +55,7 @@ import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
+import org.kaloscope.tv.core.designsystem.TvTextField
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
@@ -540,22 +538,16 @@ private fun SubtitleLanguageDialog(
                     color = Muted,
                     fontSize = 14.sp,
                 )
-                BasicTextField(
+                TvTextField(
                     value = value,
                     onValueChange = { value = it },
+                    placeholder = stringResource(R.string.subtitle_language_preference_any),
+                    focusRequester = textFocus,
+                    imeAction = ImeAction.Done,
+                    selectorTestTag = "subtitle-language-selector",
+                    editorTestTag = "subtitle-language-editor",
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 52.dp)
-                        .focusRequester(textFocus)
-                        .background(Color(0xFF202738), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    textStyle = TextStyle(
-                        color = OnBackground,
-                        fontSize = 18.sp,
-                        lineHeight = 22.sp,
-                    ),
-                    singleLine = true,
-                    cursorBrush = SolidColor(Color.White),
+                        .fillMaxWidth(),
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),

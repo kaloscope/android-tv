@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.settings
 
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -23,6 +24,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -477,6 +479,56 @@ class SettingsScreenTest {
         composeRule.runOnIdle {
             assertEquals(false, updatedSettings?.enabled)
         }
+    }
+
+    @Test
+    fun subtitleLanguageBackLeavesEditingBeforeDismissingDialog() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Subtitle,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("首选语言")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("subtitle-language-selector").assertIsFocused()
+        composeRule.onNodeWithTag("subtitle-language-editor").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("subtitle-language-selector")
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("subtitle-language-editor")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Back) }
+
+        composeRule.onNodeWithTag("subtitle-language-editor").assertDoesNotExist()
+        composeRule.onNodeWithTag("subtitle-language-selector").assertIsFocused()
+        composeRule.onNodeWithText("保存").assertExists()
+
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("保存").assertDoesNotExist()
+        composeRule.onNodeWithText("首选语言").assertIsFocused()
     }
 }
 

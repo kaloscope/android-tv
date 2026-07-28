@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,41 +18,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreInterceptKeyBeforeSoftKeyboard
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
@@ -69,8 +51,8 @@ import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.Primary
-import org.kaloscope.tv.core.designsystem.Subtle
 import org.kaloscope.tv.core.designsystem.Success
+import org.kaloscope.tv.core.designsystem.TvTextField
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.login.LoginError
 import org.kaloscope.tv.feature.login.LoginState
@@ -156,23 +138,25 @@ internal fun ServerSetupScreen(
                 )
                 Spacer(Modifier.height(14.dp))
             }
-            WizardTextField(
+            TvTextField(
                 value = state.name,
                 onValueChange = onNameChange,
                 label = stringResource(R.string.server_name),
                 placeholder = stringResource(R.string.server_name_hint),
                 focusRequester = nameFocus,
+                imeAction = ImeAction.Next,
                 selectorTestTag = "server-name-selector",
                 editorTestTag = "server-name-editor",
                 onMoveDown = { urlFocus.requestFocus() },
             )
             Spacer(Modifier.height(12.dp))
-            WizardTextField(
+            TvTextField(
                 value = state.url,
                 onValueChange = onUrlChange,
                 label = stringResource(R.string.server_url),
                 placeholder = stringResource(R.string.server_url_hint),
                 focusRequester = urlFocus,
+                imeAction = ImeAction.Next,
                 selectorTestTag = "server-url-selector",
                 editorTestTag = "server-url-editor",
                 onMoveUp = { nameFocus.requestFocus() },
@@ -251,24 +235,26 @@ internal fun LoginScreen(
                 fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.height(20.dp))
-            WizardTextField(
+            TvTextField(
                 value = state.username,
                 onValueChange = onUsernameChange,
                 label = stringResource(R.string.username),
                 placeholder = stringResource(R.string.username_hint),
                 focusRequester = usernameFocus,
+                imeAction = ImeAction.Next,
                 selectorTestTag = "login-username-selector",
                 editorTestTag = "login-username-editor",
                 onMoveDown = { passwordFocus.requestFocus() },
             )
             Spacer(Modifier.height(12.dp))
-            WizardTextField(
+            TvTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
                 label = stringResource(R.string.password),
                 placeholder = stringResource(R.string.password_hint),
                 isPassword = true,
                 focusRequester = passwordFocus,
+                imeAction = ImeAction.Next,
                 selectorTestTag = "login-password-selector",
                 editorTestTag = "login-password-editor",
                 onMoveUp = { usernameFocus.requestFocus() },
@@ -506,193 +492,6 @@ private fun FormPanel(
                 .padding(32.dp),
             content = content,
         )
-    }
-}
-
-@Composable
-private fun WizardTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    placeholder: String,
-    focusRequester: FocusRequester,
-    selectorTestTag: String,
-    editorTestTag: String,
-    isPassword: Boolean = false,
-    onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null,
-) {
-    var editing by remember { mutableStateOf(false) }
-    var restoreSelectorFocus by remember { mutableStateOf(false) }
-    var selectorFocused by remember { mutableStateOf(false) }
-    val editorFocus = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val fieldTextStyle = MaterialTheme.typography.bodyLarge.copy(
-        fontSize = 17.sp,
-        lineHeight = 20.sp,
-    )
-    val placeholderTextStyle = fieldTextStyle.copy(color = Subtle)
-    val exitEditing = {
-        keyboardController?.hide()
-        restoreSelectorFocus = true
-        editing = false
-    }
-
-    LaunchedEffect(editing, restoreSelectorFocus) {
-        if (editing) {
-            editorFocus.requestFocus()
-            keyboardController?.show()
-        } else if (restoreSelectorFocus) {
-            restoreSelectorFocus = false
-            focusRequester.requestFocus()
-        }
-    }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            color = OnBackground,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(7.dp))
-        if (editing) {
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                visualTransformation = if (isPassword) {
-                    PasswordVisualTransformation()
-                } else {
-                    VisualTransformation.None
-                },
-                textStyle = fieldTextStyle.copy(color = OnBackground),
-                cursorBrush = SolidColor(Color.White),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .focusRequester(editorFocus)
-                    .testTag(editorTestTag)
-                    .onPreInterceptKeyBeforeSoftKeyboard { event ->
-                        if (event.key == Key.Back) {
-                            if (event.type == KeyEventType.KeyDown) {
-                                exitEditing()
-                            }
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    .onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) {
-                            false
-                        } else {
-                            when (event.key) {
-                                Key.Back -> {
-                                    exitEditing()
-                                    true
-                                }
-
-                                Key.DirectionUp -> onMoveUp?.let { moveFocus ->
-                                    keyboardController?.hide()
-                                    editing = false
-                                    moveFocus()
-                                    true
-                                } ?: false
-
-                                Key.DirectionDown -> onMoveDown?.let { moveFocus ->
-                                    keyboardController?.hide()
-                                    editing = false
-                                    moveFocus()
-                                    true
-                                } ?: false
-
-                                else -> false
-                            }
-                        }
-                    }
-                    .background(BackgroundRaised, RoundedCornerShape(12.dp))
-                    .border(2.dp, Primary, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                decorationBox = { innerTextField ->
-                    Box {
-                        if (value.isEmpty()) {
-                            Text(
-                                text = placeholder,
-                                style = placeholderTextStyle,
-                            )
-                        }
-                        innerTextField()
-                    }
-                },
-            )
-        } else {
-            Button(
-                onClick = { editing = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .focusRequester(focusRequester)
-                    .testTag(selectorTestTag)
-                    .onFocusChanged { selectorFocused = it.isFocused }
-                    .onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) {
-                            false
-                        } else {
-                            when (event.key) {
-                                Key.DirectionCenter,
-                                Key.Enter,
-                                Key.NumPadEnter,
-                                -> {
-                                    editing = true
-                                    true
-                                }
-
-                                Key.DirectionUp -> onMoveUp?.let {
-                                    it()
-                                    true
-                                } ?: false
-
-                                Key.DirectionDown -> onMoveDown?.let {
-                                    it()
-                                    true
-                                } ?: false
-
-                                else -> false
-                            }
-                        }
-                    }
-                    .border(
-                        width = if (selectorFocused) 2.dp else 1.dp,
-                        color = if (selectorFocused) OnBackground else Outline,
-                        shape = RoundedCornerShape(12.dp),
-                    ),
-                shape = ButtonDefaults.shape(shape = RoundedCornerShape(12.dp)),
-                colors = ButtonDefaults.colors(
-                    containerColor = BackgroundRaised,
-                    contentColor = if (value.isEmpty()) Subtle else OnBackground,
-                    focusedContainerColor = BackgroundRaised,
-                    focusedContentColor = if (value.isEmpty()) Subtle else OnBackground,
-                ),
-                scale = ButtonDefaults.scale(focusedScale = 1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            ) {
-                val displayedValue = if (isPassword) {
-                    "•".repeat(value.length)
-                } else {
-                    value
-                }
-                Text(
-                    text = displayedValue.ifEmpty { placeholder },
-                    style = if (value.isEmpty()) {
-                        placeholderTextStyle
-                    } else {
-                        fieldTextStyle.copy(color = OnBackground)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
     }
 }
 

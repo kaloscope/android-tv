@@ -10,6 +10,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -292,6 +293,30 @@ class ServerSetupFocusTest {
 
         composeRule.onNodeWithTag("server-name-editor").assertDoesNotExist()
         composeRule.onNodeWithTag("server-name-selector").assertIsFocused()
+    }
+
+    @Test
+    fun serverNameImeNextMovesToUrl() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                ServerSetupScreen(
+                    savedServers = emptyList(),
+                    state = ServerSetupState(),
+                    onNameChange = {},
+                    onUrlChange = {},
+                    onTest = {},
+                    onSave = {},
+                    onSelectServer = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("server-name-selector")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithTag("server-name-editor").performImeAction()
+
+        composeRule.onNodeWithTag("server-name-editor").assertDoesNotExist()
+        composeRule.onNodeWithTag("server-url-selector").assertIsFocused()
     }
 
     @Test

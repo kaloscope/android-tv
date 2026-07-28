@@ -5,8 +5,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -16,6 +19,8 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.text.input.ImeAction
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -154,11 +159,17 @@ class SearchScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("星际").performImeAction()
+        composeRule.onNodeWithTag("network-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .performImeAction()
 
         composeRule.runOnIdle {
             assertEquals(1, searches)
         }
+        composeRule.onNodeWithTag("network-search-input")
+            .assertIsFocused()
+            .assertHasClickAction()
     }
 
     @Test
@@ -281,6 +292,48 @@ class SearchScreenTest {
         }
 
         composeRule.onNodeWithTag("search-filter-button").assertIsSelected()
+    }
+
+    @Test
+    fun textFilterWaitsForCenterAndUsesDoneImeAction() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(textFilter()),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("filter-input-title")
+            .assertIsFocused()
+            .assertHasClickAction()
+            .performKeyInput { pressKey(Key.Enter) }
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ImeAction,
+                    ImeAction.Done,
+                ),
+            )
+            .performImeAction()
+        composeRule.onNodeWithTag("filter-input-title")
+            .assertIsFocused()
+            .assertHasClickAction()
     }
 
     @Test
@@ -559,6 +612,12 @@ private fun regionFilter() = SearchFilterDefinition(
         SearchFilterOption("cn", "中国"),
         SearchFilterOption("jp", "日本"),
     ),
+)
+
+private fun textFilter() = SearchFilterDefinition(
+    key = "title",
+    label = "标题",
+    type = SearchFilterType.Text,
 )
 
 private fun indexer() = NetworkIndexer(11, "星海站", null)

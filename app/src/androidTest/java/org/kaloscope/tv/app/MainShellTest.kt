@@ -21,6 +21,7 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.hasText
@@ -513,6 +514,34 @@ class MainShellTest {
 
         composeRule.onNodeWithText("网络搜索").assertIsNotFocused()
         composeRule.onNodeWithTag("network-search-input").assertIsFocused()
+    }
+
+    @Test
+    fun enteringSearchEditorKeepsSearchRouteAndFocus() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("网络搜索")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag("network-search-input")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNode(
+            hasTestTag("network-search-input") and hasSetTextAction(),
+        ).assertIsFocused()
+        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
     }
 
     @Test

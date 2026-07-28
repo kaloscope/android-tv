@@ -8,22 +8,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.test.pressKey
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.designsystem.ServerImagePlaceholder
 import org.kaloscope.tv.core.designsystem.ServerImageVisualState
 import org.kaloscope.tv.core.designsystem.TvSearchField
-import org.kaloscope.tv.core.designsystem.TvSearchFieldValue
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
@@ -84,6 +84,7 @@ class P2GoldenScreenshotTest {
         }
         composeRule.onNodeWithTag("golden-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
         composeRule.mainClock.advanceTimeBy(100)
         assertGolden(
             "search-cursor-1920",
@@ -94,12 +95,10 @@ class P2GoldenScreenshotTest {
     @Test
     fun searchSelectionMatches1080p() {
         if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
-        var query by mutableStateOf(
-            TextFieldValue("Kaloscope", selection = TextRange(1, 5)),
-        )
+        var query by mutableStateOf("Kaloscope")
         composeRule.setContent {
             KaloscopeTheme {
-                TvSearchFieldValue(
+                TvSearchField(
                     value = query,
                     hint = "搜索",
                     onValueChange = { query = it },
@@ -110,6 +109,10 @@ class P2GoldenScreenshotTest {
         }
         composeRule.onNodeWithTag("golden-search-selection")
             .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .performSemanticsAction(SemanticsActions.SetSelection) {
+                it(1, 5, false)
+            }
         assertGolden(
             "search-selection-1920",
             composeRule.onNodeWithTag("golden-search-selection")

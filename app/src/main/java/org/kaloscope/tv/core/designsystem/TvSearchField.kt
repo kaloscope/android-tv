@@ -1,40 +1,8 @@
 package org.kaloscope.tv.core.designsystem
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.LocalTextSelectionColors
-import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Text
 
 @Composable
 fun TvSearchField(
@@ -44,97 +12,15 @@ fun TvSearchField(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
     onMoveRight: (() -> Unit)? = null,
+    imeAction: ImeAction = ImeAction.Search,
 ) {
-    var fieldValue by remember {
-        mutableStateOf(TextFieldValue(value, selection = TextRange(value.length)))
-    }
-    LaunchedEffect(value) {
-        if (value != fieldValue.text) {
-            fieldValue = TextFieldValue(value, selection = TextRange(value.length))
-        }
-    }
-    TvSearchFieldValue(
-        value = fieldValue,
-        hint = hint,
-        onValueChange = { updated ->
-            fieldValue = updated
-            onValueChange(updated.text)
-        },
-        onSearch = onSearch,
+    TvTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = hint,
         modifier = modifier,
+        imeAction = imeAction,
+        onImeAction = onSearch,
         onMoveRight = onMoveRight,
     )
-}
-
-@Composable
-internal fun TvSearchFieldValue(
-    value: TextFieldValue,
-    hint: String,
-    onValueChange: (TextFieldValue) -> Unit,
-    onSearch: () -> Unit,
-    modifier: Modifier = Modifier,
-    onMoveRight: (() -> Unit)? = null,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(12.dp)
-    val selectionColors = remember {
-        TextSelectionColors(
-            handleColor = Primary,
-            backgroundColor = Primary.copy(alpha = 0.35f),
-        )
-    }
-
-    CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = modifier
-                .onPreviewKeyEvent { event ->
-                    if (
-                        onMoveRight != null &&
-                        event.key == Key.DirectionRight &&
-                        event.type == KeyEventType.KeyDown
-                    ) {
-                        onMoveRight()
-                        true
-                    } else {
-                        false
-                    }
-                }
-                .onFocusChanged { focused = it.isFocused }
-                .heightIn(min = 48.dp)
-                .background(
-                    color = Panel.copy(alpha = 0.88f),
-                    shape = shape,
-                )
-                .border(
-                    width = if (focused) 2.dp else 1.dp,
-                    color = if (focused) Primary else Outline,
-                    shape = shape,
-                )
-                .padding(horizontal = 18.dp, vertical = 13.dp),
-            textStyle = TextStyle(
-                color = OnBackground,
-                fontSize = 16.sp,
-                lineHeight = 20.sp,
-            ),
-            singleLine = true,
-            cursorBrush = SolidColor(Color.White),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            decorationBox = { field ->
-                Box(contentAlignment = Alignment.CenterStart) {
-                    if (value.text.isBlank()) {
-                        Text(
-                            text = hint,
-                            color = Subtle,
-                            fontSize = 16.sp,
-                            lineHeight = 20.sp,
-                        )
-                    }
-                    field()
-                }
-            },
-        )
-    }
 }
