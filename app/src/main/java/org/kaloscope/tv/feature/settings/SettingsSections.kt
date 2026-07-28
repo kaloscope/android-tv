@@ -36,7 +36,7 @@ import org.kaloscope.tv.core.player.TranscodeResolution
 @Composable
 internal fun PlaybackSettings(
     state: SettingsUiState.Content,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
@@ -46,7 +46,7 @@ internal fun PlaybackSettings(
         title = stringResource(R.string.default_playback_mode),
         description = stringResource(R.string.default_playback_mode_description),
         value = playbackModeLabel(state.settings.playbackMode),
-        enabled = enabled,
+        interactionsEnabled = interactionsEnabled,
         createChoice = {
             SettingsChoice(
                 title = stringResource(R.string.default_playback_mode),
@@ -66,7 +66,7 @@ internal fun PlaybackSettings(
         title = stringResource(R.string.default_transcode_resolution),
         description = stringResource(R.string.default_transcode_resolution_description),
         value = resolutionLabel(state.settings.transcodeResolution),
-        enabled = enabled,
+        interactionsEnabled = interactionsEnabled,
         createChoice = {
             SettingsChoice(
                 title = stringResource(R.string.default_transcode_resolution),
@@ -86,7 +86,7 @@ internal fun PlaybackSettings(
         title = stringResource(R.string.autoplay_next),
         description = stringResource(R.string.autoplay_next_description),
         checked = state.settings.autoplayNext,
-        enabled = enabled,
+        interactionsEnabled = interactionsEnabled,
         onToggle = { onAutoplayNext(!state.settings.autoplayNext) },
     )
 }
@@ -94,7 +94,7 @@ internal fun PlaybackSettings(
 @Composable
 internal fun SubtitleDefaultSettings(
     settings: SubtitleSettings,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onOpenLanguage: (FocusRequester) -> Unit,
     onChange: (SubtitleSettings) -> Unit,
@@ -111,14 +111,14 @@ internal fun SubtitleDefaultSettings(
                 title = stringResource(R.string.default_subtitle),
                 description = stringResource(R.string.default_subtitle_description),
                 checked = settings.enabled,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
             )
         }
         item {
             SubtitleLanguageSettingRow(
                 value = settings.languagePreference,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onOpen = onOpenLanguage,
             )
         }
@@ -127,7 +127,7 @@ internal fun SubtitleDefaultSettings(
                 title = stringResource(R.string.subtitle_display_mode),
                 description = stringResource(R.string.subtitle_display_mode_description),
                 value = subtitleDisplayModeLabel(settings.displayMode),
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 createChoice = {
                     SettingsChoice(
                         title = stringResource(R.string.subtitle_display_mode),
@@ -148,7 +148,7 @@ internal fun SubtitleDefaultSettings(
                 title = stringResource(R.string.subtitle_font_scale),
                 description = stringResource(R.string.subtitle_font_scale_description),
                 value = stringResource(R.string.percentage_value, settings.fontScalePercent),
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onDecrease = {
                     onChange(SubtitleSettingsPolicy.adjustFontScale(settings, -1))
                 },
@@ -165,7 +165,7 @@ internal fun SubtitleDefaultSettings(
                     R.string.percentage_value,
                     settings.verticalPositionPercent,
                 ),
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onDecrease = {
                     onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, -1))
                 },
@@ -179,7 +179,7 @@ internal fun SubtitleDefaultSettings(
                 title = stringResource(R.string.subtitle_time_offset),
                 description = stringResource(R.string.subtitle_time_offset_description),
                 value = formatSubtitleOffset(settings.timeOffsetSeconds),
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onDecrease = {
                     onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, -1))
                 },
@@ -197,13 +197,16 @@ internal fun SubtitleDefaultSettings(
 @Composable
 private fun SubtitleLanguageSettingRow(
     value: String,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onOpen: (FocusRequester) -> Unit,
 ) {
     val focus = remember { FocusRequester() }
     KaloscopeButton(
-        onClick = { onOpen(focus) },
-        enabled = enabled,
+        onClick = {
+            if (interactionsEnabled) {
+                onOpen(focus)
+            }
+        },
         size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
@@ -224,14 +227,17 @@ private fun AdjustableSettingRow(
     title: String,
     description: String,
     value: String,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
     onClick: () -> Unit = {},
 ) {
     KaloscopeButton(
-        onClick = onClick,
-        enabled = enabled,
+        onClick = {
+            if (interactionsEnabled) {
+                onClick()
+            }
+        },
         size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
@@ -241,12 +247,16 @@ private fun AdjustableSettingRow(
                 }
                 when (event.key) {
                     Key.DirectionLeft -> {
-                        onDecrease()
+                        if (interactionsEnabled) {
+                            onDecrease()
+                        }
                         true
                     }
 
                     Key.DirectionRight -> {
-                        onIncrease()
+                        if (interactionsEnabled) {
+                            onIncrease()
+                        }
                         true
                     }
 
@@ -261,7 +271,7 @@ private fun AdjustableSettingRow(
 @Composable
 internal fun DanmakuDefaultSettings(
     settings: DanmakuSettings,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onChange: (DanmakuSettings) -> Unit,
     modifier: Modifier = Modifier,
@@ -276,7 +286,7 @@ internal fun DanmakuDefaultSettings(
                 title = stringResource(R.string.default_danmaku),
                 description = stringResource(R.string.default_danmaku_description),
                 checked = settings.enabled,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
             )
         }
@@ -285,7 +295,7 @@ internal fun DanmakuDefaultSettings(
                 title = stringResource(R.string.danmaku_text_size),
                 description = stringResource(R.string.danmaku_text_size_description),
                 value = danmakuTextSizeLabel(settings.textSize),
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 createChoice = {
                     SettingsChoice(
                         title = stringResource(R.string.danmaku_text_size),
@@ -306,7 +316,7 @@ internal fun DanmakuDefaultSettings(
                 title = stringResource(R.string.danmaku_speed),
                 description = stringResource(R.string.danmaku_speed_description),
                 value = danmakuSpeedLabel(settings.speed),
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 createChoice = {
                     SettingsChoice(
                         title = stringResource(R.string.danmaku_speed),
@@ -328,7 +338,7 @@ internal fun DanmakuDefaultSettings(
                 description = stringResource(R.string.danmaku_opacity_description),
                 value = settings.opacityPercent,
                 percentages = percentages,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onOpenChoice = onOpenChoice,
                 onSelect = { onChange(settings.copy(opacityPercent = it)) },
             )
@@ -339,7 +349,7 @@ internal fun DanmakuDefaultSettings(
                 description = stringResource(R.string.danmaku_display_area_description),
                 value = settings.displayAreaPercent,
                 percentages = percentages,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onOpenChoice = onOpenChoice,
                 onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
             )
@@ -350,7 +360,7 @@ internal fun DanmakuDefaultSettings(
                     title = danmakuModeLabel(mode),
                     description = danmakuModeDescription(mode),
                     checked = mode in settings.visibleModes,
-                    enabled = enabled,
+                    interactionsEnabled = interactionsEnabled,
                     onToggle = {
                         val visibleModes = if (mode in settings.visibleModes) {
                             settings.visibleModes - mode
@@ -371,7 +381,7 @@ private fun DanmakuPercentageSetting(
     description: String,
     value: Int,
     percentages: List<Int>,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onSelect: (Int) -> Unit,
 ) {
@@ -379,7 +389,7 @@ private fun DanmakuPercentageSetting(
         title = title,
         description = description,
         value = stringResource(R.string.percentage_value, value),
-        enabled = enabled,
+        interactionsEnabled = interactionsEnabled,
         createChoice = {
             SettingsChoice(
                 title = title,
@@ -399,7 +409,7 @@ private fun DanmakuPercentageSetting(
 @Composable
 internal fun BehaviorSettings(
     state: SettingsUiState.Content,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onStartPage: (StartPage) -> Unit,
 ) {
@@ -407,7 +417,7 @@ internal fun BehaviorSettings(
         title = stringResource(R.string.default_start_page),
         description = stringResource(R.string.default_start_page_description),
         value = startPageLabel(state.settings.startPage),
-        enabled = enabled,
+        interactionsEnabled = interactionsEnabled,
         createChoice = {
             SettingsChoice(
                 title = stringResource(R.string.default_start_page),
@@ -428,7 +438,7 @@ internal fun BehaviorSettings(
 internal fun ServerAccountSettings(
     session: Session,
     connection: SettingsConnection,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
     onLogout: () -> Unit,
@@ -457,7 +467,8 @@ internal fun ServerAccountSettings(
             SettingActionRow(
                 title = stringResource(R.string.test_connection),
                 description = connectionDescription(connection),
-                enabled = enabled && connection != SettingsConnection.Testing,
+                interactionsEnabled = interactionsEnabled &&
+                    connection != SettingsConnection.Testing,
                 danger = false,
                 onClick = onTestConnection,
             )
@@ -467,7 +478,7 @@ internal fun ServerAccountSettings(
             SettingActionRow(
                 title = stringResource(R.string.manage_servers),
                 description = stringResource(R.string.manage_servers_description),
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 danger = false,
                 onClick = onManageServers,
             )
@@ -477,7 +488,7 @@ internal fun ServerAccountSettings(
             SettingActionRow(
                 title = stringResource(R.string.logout),
                 description = stringResource(R.string.logout_description),
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 danger = true,
                 onClick = onLogout,
             )

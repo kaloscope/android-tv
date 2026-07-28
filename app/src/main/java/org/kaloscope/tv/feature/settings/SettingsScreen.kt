@@ -1,10 +1,10 @@
 package org.kaloscope.tv.feature.settings
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,8 +40,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import java.util.Locale
@@ -132,7 +136,8 @@ private fun SettingsContent(
     var languageEditorOpen by remember { mutableStateOf(false) }
     var restoreFocus by remember { mutableStateOf<FocusRequester?>(null) }
     val selectedSectionFocus = remember { FocusRequester() }
-    val controlsEnabled = choice == null && !languageEditorOpen && !state.isSaving
+    // A transiently disabled TV control loses focus before its dialog can take over.
+    val interactionsEnabled = choice == null && !languageEditorOpen && !state.isSaving
 
     LaunchedEffect(requestInitialFocus) {
         if (requestInitialFocus) {
@@ -148,28 +153,22 @@ private fun SettingsContent(
             }
         }
     }
-    BackHandler(enabled = choice != null) {
-        choice = null
-    }
-    BackHandler(enabled = languageEditorOpen) {
-        languageEditorOpen = false
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val viewportSize = DpSize(maxWidth, maxHeight)
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             SettingsMenu(
                 selected = state.section,
-                enabled = controlsEnabled,
+                interactionsEnabled = interactionsEnabled,
                 selectedFocus = selectedSectionFocus,
                 onSelect = onSelectSection,
             )
             SettingsPanel(
                 session = session,
                 state = state,
-                enabled = controlsEnabled,
+                interactionsEnabled = interactionsEnabled,
                 modifier = Modifier
                     .weight(1f, fill = false)
                     .widthIn(max = 720.dp)
@@ -203,6 +202,7 @@ private fun SettingsContent(
         choice?.let { current ->
             SettingsChoiceDialog(
                 choice = current,
+                viewportSize = viewportSize,
                 onDismiss = { choice = null },
                 onSelect = { option ->
                     choice = null
@@ -213,6 +213,7 @@ private fun SettingsContent(
         if (languageEditorOpen) {
             SubtitleLanguageDialog(
                 initialValue = state.settings.subtitle.languagePreference,
+                viewportSize = viewportSize,
                 onDismiss = { languageEditorOpen = false },
                 onSave = { language ->
                     languageEditorOpen = false
@@ -230,7 +231,7 @@ private fun SettingsContent(
 @Composable
 private fun SettingsMenu(
     selected: SettingsSection,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     selectedFocus: FocusRequester,
     onSelect: (SettingsSection) -> Unit,
 ) {
@@ -245,11 +246,10 @@ private fun SettingsMenu(
         SettingsSection.entries.forEach { section ->
             KaloscopeButton(
                 onClick = {
-                    if (selected != section) {
+                    if (interactionsEnabled && selected != section) {
                         onSelect(section)
                     }
                 },
-                enabled = enabled,
                 selected = selected == section,
                 size = KaloscopeControlSize.Row,
                 modifier = Modifier
@@ -262,7 +262,11 @@ private fun SettingsMenu(
                         },
                     )
                     .onFocusChanged { focusState ->
-                        if (focusState.isFocused && selected != section) {
+                        if (
+                            interactionsEnabled &&
+                            focusState.isFocused &&
+                            selected != section
+                        ) {
                             onSelect(section)
                         }
                     },
@@ -277,7 +281,7 @@ private fun SettingsMenu(
 private fun SettingsPanel(
     session: Session,
     state: SettingsUiState.Content,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     modifier: Modifier,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
@@ -313,7 +317,7 @@ private fun SettingsPanel(
         when (state.section) {
             SettingsSection.Playback -> PlaybackSettings(
                 state = state,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onOpenChoice = onOpenChoice,
                 onPlaybackMode = onPlaybackMode,
                 onTranscodeResolution = onTranscodeResolution,
@@ -322,7 +326,7 @@ private fun SettingsPanel(
 
             SettingsSection.Danmaku -> DanmakuDefaultSettings(
                 settings = state.settings.danmaku,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onOpenChoice = onOpenChoice,
                 onChange = onDanmakuSettings,
                 modifier = Modifier.weight(1f),
@@ -330,7 +334,7 @@ private fun SettingsPanel(
 
             SettingsSection.Subtitle -> SubtitleDefaultSettings(
                 settings = state.settings.subtitle,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onOpenChoice = onOpenChoice,
                 onOpenLanguage = onOpenSubtitleLanguage,
                 onChange = onSubtitleSettings,
@@ -339,7 +343,7 @@ private fun SettingsPanel(
 
             SettingsSection.Behavior -> BehaviorSettings(
                 state = state,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onOpenChoice = onOpenChoice,
                 onStartPage = onStartPage,
             )
@@ -347,7 +351,7 @@ private fun SettingsPanel(
             SettingsSection.ServerAccount -> ServerAccountSettings(
                 session = session,
                 connection = state.connection,
-                enabled = enabled,
+                interactionsEnabled = interactionsEnabled,
                 onTestConnection = onTestConnection,
                 onManageServers = onManageServers,
                 onLogout = onLogout,
@@ -370,15 +374,18 @@ internal fun ChoiceSettingRow(
     title: String,
     description: String,
     value: String,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     createChoice: @Composable () -> SettingsChoice,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
 ) {
     val focus = remember { FocusRequester() }
     val choice = createChoice()
     KaloscopeButton(
-        onClick = { onOpenChoice(focus, choice) },
-        enabled = enabled,
+        onClick = {
+            if (interactionsEnabled) {
+                onOpenChoice(focus, choice)
+            }
+        },
         size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
@@ -393,12 +400,15 @@ internal fun ToggleSettingRow(
     title: String,
     description: String,
     checked: Boolean,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     onToggle: () -> Unit,
 ) {
     KaloscopeButton(
-        onClick = onToggle,
-        enabled = enabled,
+        onClick = {
+            if (interactionsEnabled) {
+                onToggle()
+            }
+        },
         selected = checked,
         size = KaloscopeControlSize.Row,
         modifier = Modifier.fillMaxWidth(),
@@ -419,13 +429,16 @@ internal fun ToggleSettingRow(
 internal fun SettingActionRow(
     title: String,
     description: String,
-    enabled: Boolean,
+    interactionsEnabled: Boolean,
     danger: Boolean,
     onClick: () -> Unit,
 ) {
     KaloscopeButton(
-        onClick = onClick,
-        enabled = enabled,
+        onClick = {
+            if (interactionsEnabled) {
+                onClick()
+            }
+        },
         size = KaloscopeControlSize.Row,
         tone = if (danger) {
             KaloscopeControlTone.Danger
@@ -483,6 +496,7 @@ internal fun SettingValue(
 @Composable
 private fun SubtitleLanguageDialog(
     initialValue: String,
+    viewportSize: DpSize,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
@@ -492,57 +506,67 @@ private fun SubtitleLanguageDialog(
         withFrameNanos { }
         textFocus.requestFocus()
     }
-    BackHandler(onBack = onDismiss)
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xCC050812)),
-        contentAlignment = Alignment.Center,
+    Popup(
+        alignment = Alignment.Center,
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(
+            focusable = true,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false,
+            clippingEnabled = false,
+        ),
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .width(520.dp)
-                .background(PanelElevated, RoundedCornerShape(22.dp))
-                .padding(28.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .size(viewportSize)
+                .background(Color(0xCC050812)),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = stringResource(R.string.subtitle_language_preference),
-                color = OnBackground,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(R.string.subtitle_language_editor_hint),
-                color = Muted,
-                fontSize = 14.sp,
-            )
-            BasicTextField(
-                value = value,
-                onValueChange = { value = it },
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 52.dp)
-                    .focusRequester(textFocus)
-                    .background(Color(0xFF202738), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                textStyle = TextStyle(
-                    color = OnBackground,
-                    fontSize = 18.sp,
-                    lineHeight = 22.sp,
-                ),
-                singleLine = true,
-                cursorBrush = SolidColor(Color.White),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                    .width(520.dp)
+                    .background(PanelElevated, RoundedCornerShape(22.dp))
+                    .padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                KaloscopeButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.cancel))
-                }
-                KaloscopeButton(onClick = { onSave(value) }) {
-                    Text(stringResource(R.string.save))
+                Text(
+                    text = stringResource(R.string.subtitle_language_preference),
+                    color = OnBackground,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringResource(R.string.subtitle_language_editor_hint),
+                    color = Muted,
+                    fontSize = 14.sp,
+                )
+                BasicTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp)
+                        .focusRequester(textFocus)
+                        .background(Color(0xFF202738), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    textStyle = TextStyle(
+                        color = OnBackground,
+                        fontSize = 18.sp,
+                        lineHeight = 22.sp,
+                    ),
+                    singleLine = true,
+                    cursorBrush = SolidColor(Color.White),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                ) {
+                    KaloscopeButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    KaloscopeButton(onClick = { onSave(value) }) {
+                        Text(stringResource(R.string.save))
+                    }
                 }
             }
         }
@@ -552,6 +576,7 @@ private fun SubtitleLanguageDialog(
 @Composable
 private fun SettingsChoiceDialog(
     choice: SettingsChoice,
+    viewportSize: DpSize,
     onDismiss: () -> Unit,
     onSelect: (SettingsChoiceOption) -> Unit,
 ) {
@@ -560,53 +585,66 @@ private fun SettingsChoiceDialog(
         withFrameNanos { }
         initialFocus.requestFocus()
     }
-    BackHandler(onBack = onDismiss)
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xCC050812)),
-        contentAlignment = Alignment.Center,
+    Popup(
+        alignment = Alignment.Center,
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(
+            focusable = true,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false,
+            clippingEnabled = false,
+        ),
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .width(420.dp)
-                .background(PanelElevated, RoundedCornerShape(22.dp))
-                .padding(28.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .size(viewportSize)
+                .background(Color(0xCC050812)),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = choice.title,
-                color = OnBackground,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(6.dp))
-            choice.options.forEachIndexed { index, option ->
-                KaloscopeButton(
-                    onClick = { onSelect(option) },
-                    selected = option.selected,
-                    size = KaloscopeControlSize.Row,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusProperties {
-                            left = FocusRequester.Cancel
-                            right = FocusRequester.Cancel
-                            if (index == 0) {
-                                up = FocusRequester.Cancel
+            Column(
+                modifier = Modifier
+                    .width(420.dp)
+                    .background(PanelElevated, RoundedCornerShape(22.dp))
+                    .padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = choice.title,
+                    color = OnBackground,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(6.dp))
+                choice.options.forEachIndexed { index, option ->
+                    KaloscopeButton(
+                        onClick = { onSelect(option) },
+                        selected = option.selected,
+                        size = KaloscopeControlSize.Row,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusProperties {
+                                left = FocusRequester.Cancel
+                                right = FocusRequester.Cancel
+                                if (index == 0) {
+                                    up = FocusRequester.Cancel
+                                }
+                                if (index == choice.options.lastIndex) {
+                                    down = FocusRequester.Cancel
+                                }
                             }
-                            if (index == choice.options.lastIndex) {
-                                down = FocusRequester.Cancel
-                            }
-                        }
-                        .then(
-                            if (option.selected || choice.options.none { it.selected } && index == 0) {
-                                Modifier.focusRequester(initialFocus)
-                            } else {
-                                Modifier
-                            },
-                        ),
-                ) {
-                    Text(option.label)
+                            .then(
+                                if (
+                                    option.selected ||
+                                    choice.options.none { it.selected } && index == 0
+                                ) {
+                                    Modifier.focusRequester(initialFocus)
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    ) {
+                        Text(option.label)
+                    }
                 }
             }
         }

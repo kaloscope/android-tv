@@ -42,6 +42,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
+import org.kaloscope.tv.app.navigation.SettingsRoute
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
@@ -62,6 +63,7 @@ import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchUiState
+import org.kaloscope.tv.feature.settings.SettingsConnection
 import org.kaloscope.tv.feature.settings.SettingsSection
 import org.kaloscope.tv.feature.settings.SettingsUiState
 
@@ -286,6 +288,121 @@ class MainShellTest {
         composeRule.onNodeWithContentDescription("设置")
             .assertIsSelected()
             .assertIsFocused()
+    }
+
+    @Test
+    fun openingSettingChoiceKeepsSettingsRouteAndFocusesDialog() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SettingsRoute,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("默认播放模式")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithContentDescription("设置").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
+        composeRule.onNodeWithText("自动")
+            .assertIsSelected()
+            .assertIsFocused()
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+        composeRule.onNode(hasText("默认播放模式") and hasClickAction()).assertIsFocused()
+        composeRule.onNodeWithContentDescription("设置").assertIsSelected()
+    }
+
+    @Test
+    fun savingToggleKeepsSettingsFocusAndIgnoresRepeatCenter() {
+        var settingsState by mutableStateOf(
+            SettingsUiState.Content(TvSettings()),
+        )
+        var saves = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    settingsState = settingsState,
+                    initialRoute = SettingsRoute,
+                    settingsActions = SettingsActions(
+                        setAutoplayNext = {
+                            saves += 1
+                            settingsState = settingsState.copy(isSaving = true)
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("自动播放下一集")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithContentDescription("设置").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
+        composeRule.onNodeWithText("自动播放下一集")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, saves)
+        }
+    }
+
+    @Test
+    fun testingConnectionKeepsSettingsFocusAndIgnoresRepeatCenter() {
+        var settingsState by mutableStateOf(
+            SettingsUiState.Content(
+                settings = TvSettings(),
+                section = SettingsSection.ServerAccount,
+            ),
+        )
+        var tests = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    settingsState = settingsState,
+                    initialRoute = SettingsRoute,
+                    settingsActions = SettingsActions(
+                        testConnection = {
+                            tests += 1
+                            settingsState = settingsState.copy(
+                                connection = SettingsConnection.Testing,
+                            )
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("测试连接")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithContentDescription("设置").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
+        composeRule.onNodeWithText("测试连接")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, tests)
+        }
     }
 
     @Test
@@ -540,6 +657,7 @@ private fun TestMainShell(
     initialRoute: NavKey = HomeRoute,
     searchActions: SearchActions = SearchActions(),
     libraryActions: LibraryActions = LibraryActions(),
+    settingsActions: SettingsActions = SettingsActions(),
 ) {
     MainShell(
         session = session,
@@ -553,7 +671,7 @@ private fun TestMainShell(
         detailActions = DetailActions(),
         settingsState = settingsState,
         initialRoute = initialRoute,
-        settingsActions = SettingsActions(),
+        settingsActions = settingsActions,
         playerActions = PlayerActions(),
     )
 }
