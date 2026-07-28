@@ -15,8 +15,8 @@ fun ServerBackdrop(
     session: Session,
     backdropPath: String?,
     title: String,
-    policy: ServerImagePolicy = ServerImagePolicy.Auto,
     modifier: Modifier = Modifier,
+    policy: ServerImagePolicy = ServerImagePolicy.Auto,
 ) {
     Crossfade(
         targetState = backdropPath,

@@ -8,6 +8,10 @@ import org.junit.Test
 import org.kaloscope.tv.core.network.HistoryItemData
 import org.kaloscope.tv.core.network.HistoryMediaData
 
+private val tolerantJson = Json {
+    ignoreUnknownKeys = true
+}
+
 class HistoryMapperTest {
     @Test
     fun `maps numeric string rating and clamps progress`() {
@@ -32,9 +36,7 @@ class HistoryMapperTest {
 
     @Test
     fun `uses parent metadata for history display while retaining episode media`() {
-        val item = Json {
-            ignoreUnknownKeys = true
-        }.decodeFromString<HistoryItemData>(
+        val item = tolerantJson.decodeFromString<HistoryItemData>(
             """
             {
               "id": 401,

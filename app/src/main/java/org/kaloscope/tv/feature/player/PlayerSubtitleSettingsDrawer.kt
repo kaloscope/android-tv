@@ -232,8 +232,8 @@ private fun SubtitleDrawerAdjustRow(
     value: String,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
-    onClick: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     SubtitleDrawerRow(
         title = title,

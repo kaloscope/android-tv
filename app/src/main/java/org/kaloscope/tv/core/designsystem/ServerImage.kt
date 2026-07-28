@@ -82,8 +82,8 @@ fun ServerImage(
     rawValue: String?,
     fallbackText: String,
     contentDescription: String?,
-    policy: ServerImagePolicy = ServerImagePolicy.Auto,
     modifier: Modifier = Modifier,
+    policy: ServerImagePolicy = ServerImagePolicy.Auto,
     contentScale: ContentScale = ContentScale.Crop,
 ) {
     val request = remember(session.server.origin, session.token, rawValue, policy) {
@@ -112,14 +112,13 @@ fun ServerImage(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            request.let { resolved ->
-            val headers = resolved.authorization?.let { authorization ->
+            val headers = request.authorization?.let { authorization ->
                 NetworkHeaders.Builder()
                     .set("Authorization", authorization)
                     .build()
             }
             val imageRequest = ImageRequest.Builder(LocalContext.current)
-                .data(resolved.url)
+                .data(request.url)
                 .apply {
                     if (headers != null) {
                         httpHeaders(headers)
@@ -142,7 +141,6 @@ fun ServerImage(
                     }
                 },
             )
-        }
         }
     }
 }

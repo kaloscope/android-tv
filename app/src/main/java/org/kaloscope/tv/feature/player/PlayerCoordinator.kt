@@ -59,24 +59,7 @@ class PlayerCoordinator(
             mutableState.value = PlayerUiState.MissingRequest
             return
         }
-        if (request is PlaybackRequest.NetworkVideo) {
-            mutableState.value = PlayerUiState.Content(
-                request = request,
-                subtitles = emptyList(),
-                danmakus = request.source.danmakus,
-                extraFailures = emptyMap(),
-            )
-            return
-        }
-        val localRequest = request as PlaybackRequest.LocalMedia
-        val extras = loadLocalExtras(session, localRequest.path)
-        mutableState.value = PlayerUiState.Content(
-            request = request,
-            subtitles = extras.subtitles,
-            danmakus = extras.danmakus,
-            mediaProbe = extras.mediaProbe,
-            extraFailures = extras.failures,
-        )
+        mutableState.value = buildContent(session, request)
     }
 
     fun beginItemSwitch() {
@@ -89,28 +72,36 @@ class PlayerCoordinator(
         request: PlaybackRequest,
     ) {
         requestStore.put(request)
-        val current = mutableState.value as? PlayerUiState.Content
-        if (request is PlaybackRequest.NetworkVideo) {
-            mutableState.value = PlayerUiState.Content(
+        val progressError = (mutableState.value as? PlayerUiState.Content)?.progressError
+        mutableState.value = buildContent(session, request, progressError)
+    }
+
+    private suspend fun buildContent(
+        session: Session,
+        request: PlaybackRequest,
+        progressError: AppError? = null,
+    ): PlayerUiState.Content =
+        when (request) {
+            is PlaybackRequest.NetworkVideo -> PlayerUiState.Content(
                 request = request,
                 subtitles = emptyList(),
                 danmakus = request.source.danmakus,
                 extraFailures = emptyMap(),
-                progressError = current?.progressError,
+                progressError = progressError,
             )
-            return
+
+            is PlaybackRequest.LocalMedia -> {
+                val extras = loadLocalExtras(session, request.path)
+                PlayerUiState.Content(
+                    request = request,
+                    subtitles = extras.subtitles,
+                    danmakus = extras.danmakus,
+                    mediaProbe = extras.mediaProbe,
+                    extraFailures = extras.failures,
+                    progressError = progressError,
+                )
+            }
         }
-        val localRequest = request as PlaybackRequest.LocalMedia
-        val extras = loadLocalExtras(session, localRequest.path)
-        mutableState.value = PlayerUiState.Content(
-            request = request,
-            subtitles = extras.subtitles,
-            danmakus = extras.danmakus,
-            mediaProbe = extras.mediaProbe,
-            extraFailures = extras.failures,
-            progressError = current?.progressError,
-        )
-    }
 
     private suspend fun loadLocalExtras(
         session: Session,

@@ -331,35 +331,6 @@ private fun DetailCredits(detail: MediaDetail) {
 }
 
 @Composable
-private fun DetailStatus(
-    title: String,
-    description: String,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Panel, RoundedCornerShape(18.dp))
-            .padding(30.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Column {
-            Text(
-                text = title,
-                color = OnBackground,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = description,
-                color = Muted,
-                fontSize = 16.sp,
-            )
-        }
-    }
-}
-
-@Composable
 private fun DetailError(
     error: AppError,
     onRetry: () -> Unit,

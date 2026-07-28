@@ -49,27 +49,17 @@ sealed interface SearchUiState {
 
 sealed interface SearchResultsState {
     val items: List<NetworkSearchResult>
+        get() = emptyList()
     val hasNext: Boolean
+        get() = false
 
-    data object AwaitingQuery : SearchResultsState {
-        override val items = emptyList<NetworkSearchResult>()
-        override val hasNext = false
-    }
+    data object AwaitingQuery : SearchResultsState
 
-    data object Loading : SearchResultsState {
-        override val items = emptyList<NetworkSearchResult>()
-        override val hasNext = false
-    }
+    data object Loading : SearchResultsState
 
-    data object Empty : SearchResultsState {
-        override val items = emptyList<NetworkSearchResult>()
-        override val hasNext = false
-    }
+    data object Empty : SearchResultsState
 
-    data class Error(val error: AppError) : SearchResultsState {
-        override val items = emptyList<NetworkSearchResult>()
-        override val hasNext = false
-    }
+    data class Error(val error: AppError) : SearchResultsState
 
     data class Content(
         override val items: List<NetworkSearchResult>,
@@ -261,14 +251,7 @@ class SearchCoordinator(
     }
 
     suspend fun clearFilters(session: Session) {
-        val content = mutableState.value as? SearchUiState.Content ?: return
-        mutableState.value = content.copy(
-            appliedFilters = emptyMap(),
-            filterDrawerOpen = false,
-            focusedResultId = null,
-            gridViewport = GridViewportSnapshot.Top,
-        )
-        search(session)
+        applyFilters(session, emptyMap())
     }
 
     fun rememberFocusedResult(resultId: String) {

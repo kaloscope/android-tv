@@ -1,7 +1,7 @@
 package org.kaloscope.tv.core.player
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -182,16 +182,6 @@ class PlaybackController internal constructor(
         record(ProgressReason.Seeked)
     }
 
-    fun setSubtitlesEnabled(enabled: Boolean) {
-        selectSubtitle(
-            if (enabled) {
-                selectedSubtitleTrackId ?: subtitles.firstOrNull()?.id
-            } else {
-                null
-            },
-        )
-    }
-
     fun selectSubtitle(trackId: String?) {
         selectedSubtitleTrackId = trackId
         mutableStatus.value = mutableStatus.value.copy(selectedSubtitleTrackId = trackId)
@@ -289,7 +279,7 @@ class PlaybackController internal constructor(
         }
         val subtitleConfigurations = subtitles.map { track ->
             MediaItem.SubtitleConfiguration.Builder(
-                Uri.parse(PlaybackSourceResolver.resolveServerResource(session, track.url)),
+                PlaybackSourceResolver.resolveServerResource(session, track.url).toUri(),
             )
                 .setId(track.id)
                 .setLabel(track.label)

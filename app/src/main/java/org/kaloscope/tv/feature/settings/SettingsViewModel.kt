@@ -53,15 +53,14 @@ class SettingsViewModel @Inject constructor(
     fun setStartPage(value: StartPage) =
         launchSettingsOperation { coordinator.setStartPage(value) }
 
-    fun testConnection(session: Session) =
-        run {
-            if (connectionJob?.isActive == true) {
-                return@run
-            }
-            connectionJob = viewModelScope.launch {
-                coordinator.testConnection(session)
-            }
+    fun testConnection(session: Session) {
+        if (connectionJob?.isActive == true) {
+            return
         }
+        connectionJob = viewModelScope.launch {
+            coordinator.testConnection(session)
+        }
+    }
 
     private fun launchSettingsOperation(block: suspend () -> Unit) {
         // Serialize writes so a repeated remote key cannot strand an interrupted saving state.

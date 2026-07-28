@@ -36,24 +36,17 @@ sealed interface LibraryUiState {
 
 sealed interface LibraryItemsState {
     val items: List<MediaSummary>
+        get() = emptyList()
     val hasNext: Boolean
+        get() = false
 
-    data object Loading : LibraryItemsState {
-        override val items: List<MediaSummary> = emptyList()
-        override val hasNext: Boolean = false
-    }
+    data object Loading : LibraryItemsState
 
-    data object Empty : LibraryItemsState {
-        override val items: List<MediaSummary> = emptyList()
-        override val hasNext: Boolean = false
-    }
+    data object Empty : LibraryItemsState
 
     data class Error(
         val error: AppError,
-    ) : LibraryItemsState {
-        override val items: List<MediaSummary> = emptyList()
-        override val hasNext: Boolean = false
-    }
+    ) : LibraryItemsState
 
     data class Content(
         override val items: List<MediaSummary>,
