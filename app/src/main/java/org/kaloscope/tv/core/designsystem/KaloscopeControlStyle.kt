@@ -20,11 +20,8 @@ enum class KaloscopeControlTone {
 }
 
 object KaloscopeControlTokens {
-    val SelectedGradientTop = ControlSelectedTop
-    val SelectedGradientBottom = ControlSelectedBottom
-    val NeutralGlassTop = Color(0x38FFFFFF)
-    val NeutralGlassBottom = Color(0x18FFFFFF)
-    val SelectedFocusLift = Color(0x14FFFFFF)
+    val SelectedSurface = ControlSelected
+    val FocusedSurface = ControlFocused
     val PressedShade = Color(0x14000000)
     val FocusShadow = Color(0x52000000)
     val CompactFocusElevation = 8.dp
@@ -44,8 +41,7 @@ internal enum class KaloscopeControlBaseMaterial {
 
 internal enum class KaloscopeControlFocusMaterial {
     None,
-    NeutralGlass,
-    SelectedLift,
+    Focused,
 }
 
 internal data class KaloscopeResolvedControlState(
@@ -73,10 +69,10 @@ internal fun resolveKaloscopeControlState(
         variant == KaloscopeControlVariant.Ghost -> KaloscopeControlBaseMaterial.Ghost
         else -> KaloscopeControlBaseMaterial.Filled
     }
-    val focusMaterial = when {
-        !effectivelyFocused -> KaloscopeControlFocusMaterial.None
-        selected -> KaloscopeControlFocusMaterial.SelectedLift
-        else -> KaloscopeControlFocusMaterial.NeutralGlass
+    val focusMaterial = if (effectivelyFocused) {
+        KaloscopeControlFocusMaterial.Focused
+    } else {
+        KaloscopeControlFocusMaterial.None
     }
     val scale = when {
         !effectivelyFocused || pressed -> KaloscopeControlTokens.RestingScale
@@ -93,13 +89,21 @@ internal fun resolveKaloscopeControlState(
 
         else -> KaloscopeControlTokens.RowFocusElevation
     }
+    val contentColor = when {
+        effectivelyFocused && tone == KaloscopeControlTone.Danger ->
+            OnControlFocusedDanger
+
+        effectivelyFocused -> OnControlFocused
+        tone == KaloscopeControlTone.Danger -> Danger
+        else -> OnBackground
+    }
     return KaloscopeResolvedControlState(
         baseMaterial = baseMaterial,
         focusMaterial = focusMaterial,
         showPressedShade = effectivelyFocused && pressed,
         elevation = elevation,
         scale = scale,
-        contentColor = if (tone == KaloscopeControlTone.Danger) Danger else OnBackground,
+        contentColor = contentColor,
         alpha = if (enabled) 1f else KaloscopeControlTokens.DisabledAlpha,
     )
 }

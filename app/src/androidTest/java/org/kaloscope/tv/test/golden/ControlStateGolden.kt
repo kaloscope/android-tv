@@ -36,7 +36,6 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.Muted
-import org.kaloscope.tv.core.designsystem.OnBackground
 
 internal enum class GoldenControlKind {
     GhostText,
@@ -144,7 +143,7 @@ internal fun ControlStateGoldenCell(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text("Playback mode")
-                                Text("Auto", color = OnBackground)
+                                Text("Auto")
                             }
                         }
                 }

@@ -1,5 +1,6 @@
 package org.kaloscope.tv.core.designsystem
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,7 +39,7 @@ class KaloscopeControlStyleTest {
     }
 
     @Test
-    fun selectedAndFocusedKeepsPurpleAndAddsMaterialLift() {
+    fun focusedSelectionUsesDarkContentAndKeepsDepth() {
         val state = resolveKaloscopeControlState(
             variant = KaloscopeControlVariant.Ghost,
             size = KaloscopeControlSize.Compact,
@@ -51,16 +52,17 @@ class KaloscopeControlStyleTest {
 
         assertEquals(KaloscopeControlBaseMaterial.Selected, state.baseMaterial)
         assertEquals(
-            KaloscopeControlFocusMaterial.SelectedLift,
+            KaloscopeControlFocusMaterial.Focused,
             state.focusMaterial,
         )
         assertFalse(state.showPressedShade)
         assertEquals(8.dp, state.elevation)
         assertEquals(1.04f, state.scale)
+        assertEquals(Color(0xFF101725), state.contentColor)
     }
 
     @Test
-    fun rowFocusUsesNeutralGlassAndTheSmallerDepthTier() {
+    fun rowFocusUsesDarkContentAndTheSmallerDepthTier() {
         val state = resolveKaloscopeControlState(
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Row,
@@ -73,11 +75,12 @@ class KaloscopeControlStyleTest {
 
         assertEquals(KaloscopeControlBaseMaterial.Filled, state.baseMaterial)
         assertEquals(
-            KaloscopeControlFocusMaterial.NeutralGlass,
+            KaloscopeControlFocusMaterial.Focused,
             state.focusMaterial,
         )
         assertEquals(6.dp, state.elevation)
         assertEquals(1.02f, state.scale)
+        assertEquals(Color(0xFF101725), state.contentColor)
     }
 
     @Test
@@ -93,12 +96,28 @@ class KaloscopeControlStyleTest {
         )
 
         assertEquals(
-            KaloscopeControlFocusMaterial.NeutralGlass,
+            KaloscopeControlFocusMaterial.Focused,
             state.focusMaterial,
         )
         assertTrue(state.showPressedShade)
         assertEquals(2.dp, state.elevation)
         assertEquals(1f, state.scale)
+        assertEquals(Color(0xFF101725), state.contentColor)
+    }
+
+    @Test
+    fun focusedDangerUsesAccessibleDarkRedContent() {
+        val state = resolveKaloscopeControlState(
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Row,
+            tone = KaloscopeControlTone.Danger,
+            selected = false,
+            enabled = true,
+            focused = true,
+            pressed = false,
+        )
+
+        assertEquals(Color(0xFF8F2437), state.contentColor)
     }
 
     @Test
@@ -122,7 +141,7 @@ class KaloscopeControlStyleTest {
     }
 
     @Test
-    fun disabledSelectionPreservesPurpleAndDangerContent() {
+    fun disabledSelectionPreservesBaseAndDangerContent() {
         val state = resolveKaloscopeControlState(
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Row,

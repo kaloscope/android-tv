@@ -276,13 +276,11 @@ private fun IndexerSidebar(
                 ) {
                     Text(
                         text = indexer.name.take(1),
-                        color = Primary,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = indexer.name,
-                        color = OnBackground,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,

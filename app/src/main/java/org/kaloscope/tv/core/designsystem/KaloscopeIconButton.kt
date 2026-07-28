@@ -33,13 +33,13 @@ fun KaloscopeIconButton(
     )
     val colors = IconButtonDefaults.colors(
         containerColor = Color.Transparent,
-        contentColor = visuals.state.contentColor,
+        contentColor = visuals.animatedContentColor,
         focusedContainerColor = Color.Transparent,
-        focusedContentColor = visuals.state.contentColor,
+        focusedContentColor = visuals.animatedContentColor,
         pressedContainerColor = Color.Transparent,
-        pressedContentColor = visuals.state.contentColor,
+        pressedContentColor = visuals.animatedContentColor,
         disabledContainerColor = Color.Transparent,
-        disabledContentColor = visuals.state.contentColor,
+        disabledContentColor = visuals.animatedContentColor,
     )
     IconButton(
         onClick = onClick,

@@ -155,7 +155,6 @@ private fun MainNavButton(
     ) {
         Text(
             text = text,
-            color = OnBackground,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -193,7 +192,6 @@ private fun SettingsButton(
         ) {
             Text(
                 text = "⚙",
-                color = OnBackground,
                 fontSize = 22.sp,
             )
         }

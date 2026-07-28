@@ -41,6 +41,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import java.util.Locale
 import org.kaloscope.tv.R
@@ -463,7 +464,11 @@ internal fun SettingRowContent(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-            Text(description, color = Muted, fontSize = 13.sp)
+            Text(
+                description,
+                color = LocalContentColor.current.copy(alpha = 0.72f),
+                fontSize = 13.sp,
+            )
         }
         if (value.isNotEmpty()) {
             Text(value, fontSize = 15.sp)

@@ -57,7 +57,6 @@ import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
@@ -223,14 +222,12 @@ private fun LibrarySidebar(
                 ) {
                     Text(
                         text = library.name.take(1),
-                        color = Primary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = library.name,
-                        color = OnBackground,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                     )

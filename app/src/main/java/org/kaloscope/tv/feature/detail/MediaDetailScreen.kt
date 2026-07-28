@@ -274,7 +274,6 @@ private fun DetailBackButton(
     ) {
         Text(
             text = "←",
-            color = OnBackground,
             fontSize = 23.sp,
         )
     }

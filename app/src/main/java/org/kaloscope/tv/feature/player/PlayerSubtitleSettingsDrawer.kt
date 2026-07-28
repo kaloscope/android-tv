@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import java.util.Locale
 import org.kaloscope.tv.R
@@ -286,7 +287,11 @@ private fun SubtitleDrawerRow(
             Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
             if (value.isNotBlank()) {
-                Text(value, color = Muted, fontSize = 13.sp)
+                Text(
+                    value,
+                    color = LocalContentColor.current.copy(alpha = 0.72f),
+                    fontSize = 13.sp,
+                )
             }
         }
     }

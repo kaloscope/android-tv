@@ -17,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -33,10 +32,9 @@ import androidx.tv.material3.Glow
 internal data class KaloscopeControlVisuals(
     val interactionSource: MutableInteractionSource,
     val state: KaloscopeResolvedControlState,
-    val animatedBaseTop: Color,
-    val animatedBaseBottom: Color,
-    val animatedFocusTop: Color,
-    val animatedFocusBottom: Color,
+    val animatedBaseColor: Color,
+    val animatedFocusColor: Color,
+    val animatedContentColor: Color,
     val animatedPressedShade: Color,
     val animatedElevation: Dp,
     val animatedScale: Float,
@@ -67,39 +65,29 @@ internal fun rememberKaloscopeControlVisuals(
     } else {
         KaloscopeMotion.FocusMillis
     }
-    val (baseTop, baseBottom) = state.baseMaterial.colors()
-    val (focusTop, focusBottom) = state.focusMaterial.colors()
-    val animatedBaseTop by animateColorAsState(
-        targetValue = baseTop,
+    val animatedBaseColor by animateColorAsState(
+        targetValue = state.baseMaterial.color(),
         animationSpec = tween(
             durationMillis = duration,
             easing = LinearOutSlowInEasing,
         ),
-        label = "control-base-top",
+        label = "control-base",
     )
-    val animatedBaseBottom by animateColorAsState(
-        targetValue = baseBottom,
+    val animatedFocusColor by animateColorAsState(
+        targetValue = state.focusMaterial.color(),
         animationSpec = tween(
             durationMillis = duration,
             easing = LinearOutSlowInEasing,
         ),
-        label = "control-base-bottom",
+        label = "control-focus",
     )
-    val animatedFocusTop by animateColorAsState(
-        targetValue = focusTop,
+    val animatedContentColor by animateColorAsState(
+        targetValue = state.contentColor,
         animationSpec = tween(
             durationMillis = duration,
             easing = LinearOutSlowInEasing,
         ),
-        label = "control-focus-top",
-    )
-    val animatedFocusBottom by animateColorAsState(
-        targetValue = focusBottom,
-        animationSpec = tween(
-            durationMillis = duration,
-            easing = LinearOutSlowInEasing,
-        ),
-        label = "control-focus-bottom",
+        label = "control-content",
     )
     val animatedPressedShade by animateColorAsState(
         targetValue = if (state.showPressedShade) {
@@ -132,35 +120,26 @@ internal fun rememberKaloscopeControlVisuals(
     return KaloscopeControlVisuals(
         interactionSource = interactionSource,
         state = state,
-        animatedBaseTop = animatedBaseTop,
-        animatedBaseBottom = animatedBaseBottom,
-        animatedFocusTop = animatedFocusTop,
-        animatedFocusBottom = animatedFocusBottom,
+        animatedBaseColor = animatedBaseColor,
+        animatedFocusColor = animatedFocusColor,
+        animatedContentColor = animatedContentColor,
         animatedPressedShade = animatedPressedShade,
         animatedElevation = elevation,
         animatedScale = scale,
     )
 }
 
-private fun KaloscopeControlBaseMaterial.colors(): Pair<Color, Color> =
+private fun KaloscopeControlBaseMaterial.color(): Color =
     when (this) {
-        KaloscopeControlBaseMaterial.Ghost -> Color.Transparent to Color.Transparent
-        KaloscopeControlBaseMaterial.Filled -> PanelElevated to PanelElevated
-        KaloscopeControlBaseMaterial.Selected ->
-            KaloscopeControlTokens.SelectedGradientTop to
-                KaloscopeControlTokens.SelectedGradientBottom
+        KaloscopeControlBaseMaterial.Ghost -> Color.Transparent
+        KaloscopeControlBaseMaterial.Filled -> PanelElevated
+        KaloscopeControlBaseMaterial.Selected -> KaloscopeControlTokens.SelectedSurface
     }
 
-private fun KaloscopeControlFocusMaterial.colors(): Pair<Color, Color> =
+private fun KaloscopeControlFocusMaterial.color(): Color =
     when (this) {
-        KaloscopeControlFocusMaterial.None -> Color.Transparent to Color.Transparent
-        KaloscopeControlFocusMaterial.NeutralGlass ->
-            KaloscopeControlTokens.NeutralGlassTop to
-                KaloscopeControlTokens.NeutralGlassBottom
-
-        KaloscopeControlFocusMaterial.SelectedLift ->
-            KaloscopeControlTokens.SelectedFocusLift to
-                KaloscopeControlTokens.SelectedFocusLift
+        KaloscopeControlFocusMaterial.None -> Color.Transparent
+        KaloscopeControlFocusMaterial.Focused -> KaloscopeControlTokens.FocusedSurface
     }
 
 internal fun Modifier.kaloscopeControlVisuals(
@@ -180,21 +159,11 @@ internal fun Modifier.kaloscopeControlVisuals(
             spotShadowColor = KaloscopeControlTokens.FocusShadow
         }
         .background(
-            brush = Brush.verticalGradient(
-                listOf(
-                    visuals.animatedBaseTop,
-                    visuals.animatedBaseBottom,
-                ),
-            ),
+            color = visuals.animatedBaseColor,
             shape = shape,
         )
         .background(
-            brush = Brush.verticalGradient(
-                listOf(
-                    visuals.animatedFocusTop,
-                    visuals.animatedFocusBottom,
-                ),
-            ),
+            color = visuals.animatedFocusColor,
             shape = shape,
         )
         .background(
@@ -228,13 +197,13 @@ fun KaloscopeButton(
     )
     val colors = ButtonDefaults.colors(
         containerColor = Color.Transparent,
-        contentColor = visuals.state.contentColor,
+        contentColor = visuals.animatedContentColor,
         focusedContainerColor = Color.Transparent,
-        focusedContentColor = visuals.state.contentColor,
+        focusedContentColor = visuals.animatedContentColor,
         pressedContainerColor = Color.Transparent,
-        pressedContentColor = visuals.state.contentColor,
+        pressedContentColor = visuals.animatedContentColor,
         disabledContainerColor = Color.Transparent,
-        disabledContentColor = visuals.state.contentColor,
+        disabledContentColor = visuals.animatedContentColor,
     )
     Button(
         onClick = onClick,
