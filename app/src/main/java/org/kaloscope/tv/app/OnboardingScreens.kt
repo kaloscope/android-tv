@@ -125,6 +125,7 @@ internal fun ServerSetupScreen(
     val nameFocus = remember { FocusRequester() }
     val urlFocus = remember { FocusRequester() }
     val testFocus = remember { FocusRequester() }
+    val saveFocus = remember { FocusRequester() }
     val panelScrollState = rememberScrollState()
     val statusVisible = state.error != null || state.verifiedOrigin != null
     val serverIds = savedServers.map(SavedServer::id)
@@ -142,6 +143,7 @@ internal fun ServerSetupScreen(
     }
     var deleteFocusToRestore by remember { mutableStateOf<String?>(null) }
     var focusAfterDeletion by remember { mutableStateOf<ServerSetupFocusTarget?>(null) }
+    var wasTesting by remember { mutableStateOf(state.isTesting) }
 
     // Existing servers take focus priority; new installations start in navigation mode.
     LaunchedEffect(savedServers.isEmpty()) {
@@ -205,10 +207,20 @@ internal fun ServerSetupScreen(
     }
     LaunchedEffect(statusVisible) {
         if (statusVisible) {
-            // Focus stays on the action, so status rows must explicitly reveal it again.
+            // Status rows change the panel height and must remain visible with the actions.
             snapshotFlow { panelScrollState.maxValue }.collectLatest { maxValue ->
                 panelScrollState.animateScrollTo(maxValue)
             }
+        }
+    }
+    LaunchedEffect(state.isTesting, state.verifiedOrigin) {
+        val testSucceeded =
+            wasTesting && !state.isTesting && state.verifiedOrigin != null
+        wasTesting = state.isTesting
+        if (testSucceeded) {
+            // The save action is conditional, so wait until it is attached before focusing it.
+            withFrameNanos { }
+            saveFocus.requestFocus()
         }
     }
     BackHandler(enabled = pendingDeletion == null && revealedServerId != null) {
@@ -432,7 +444,9 @@ internal fun ServerSetupScreen(
                         },
                         enabled = state.canSave,
                         onClick = onSave,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .focusRequester(saveFocus)
+                            .weight(1f),
                     )
                 }
             }
