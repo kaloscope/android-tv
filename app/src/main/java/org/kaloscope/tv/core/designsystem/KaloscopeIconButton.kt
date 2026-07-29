@@ -21,6 +21,7 @@ fun KaloscopeIconButton(
     variant: KaloscopeControlVariant = KaloscopeControlVariant.Filled,
     size: KaloscopeControlSize = KaloscopeControlSize.Compact,
     tone: KaloscopeControlTone = KaloscopeControlTone.Default,
+    scaleOnFocus: Boolean = true,
     shape: Shape = CircleShape,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -30,6 +31,7 @@ fun KaloscopeIconButton(
         tone = tone,
         selected = selected,
         enabled = enabled,
+        scaleOnFocus = scaleOnFocus,
     )
     val colors = IconButtonDefaults.colors(
         containerColor = Color.Transparent,

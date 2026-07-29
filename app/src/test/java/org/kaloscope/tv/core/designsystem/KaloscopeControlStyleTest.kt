@@ -106,7 +106,7 @@ class KaloscopeControlStyleTest {
     }
 
     @Test
-    fun focusedDangerUsesAccessibleDarkRedContent() {
+    fun focusedDangerUsesDarkRedSurfaceAndLightContent() {
         val state = resolveKaloscopeControlState(
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Row,
@@ -117,7 +117,32 @@ class KaloscopeControlStyleTest {
             pressed = false,
         )
 
-        assertEquals(Color(0xFF8F2437), state.contentColor)
+        assertEquals(
+            KaloscopeControlFocusMaterial.DangerFocused,
+            state.focusMaterial,
+        )
+        assertEquals(OnBackground, state.contentColor)
+    }
+
+    @Test
+    fun focusScaleCanBeDisabledWithoutLosingFocusDepth() {
+        val state = resolveKaloscopeControlState(
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
+            tone = KaloscopeControlTone.Danger,
+            selected = false,
+            enabled = true,
+            focused = true,
+            pressed = false,
+            scaleOnFocus = false,
+        )
+
+        assertEquals(
+            KaloscopeControlFocusMaterial.DangerFocused,
+            state.focusMaterial,
+        )
+        assertEquals(8.dp, state.elevation)
+        assertEquals(1f, state.scale)
     }
 
     @Test

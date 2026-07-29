@@ -21,6 +21,11 @@
     <string name="connection_success">连接成功  v%1$s</string>
     <string name="saved_servers">已保存服务器</string>
     <string name="add_another_server">添加新服务器</string>
+    <string name="delete_server_description">删除服务器：%1$s</string>
+    <string name="delete_server_title">删除服务器？</string>
+    <string name="delete_server_message">将从此设备删除“%1$s”及其保存的登录信息。</string>
+    <string name="delete_server_failed">无法删除服务器，请重试。</string>
+    <string name="delete">删除</string>
 
     <string name="login_title">登录账户</string>
     <string name="login_server">%1$s\n%2$s</string>

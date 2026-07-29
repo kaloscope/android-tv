@@ -3,6 +3,7 @@ package org.kaloscope.tv.test.golden
 import android.content.res.Resources
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,6 +12,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -18,13 +20,15 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.app.ServerSetupScreen
+import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.ServerImagePlaceholder
 import org.kaloscope.tv.core.designsystem.ServerImageVisualState
 import org.kaloscope.tv.core.designsystem.TvSearchField
-import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
@@ -35,6 +39,7 @@ import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
+import org.kaloscope.tv.feature.server.ServerSetupState
 
 class P2GoldenScreenshotTest {
     @get:Rule
@@ -160,6 +165,65 @@ class P2GoldenScreenshotTest {
         }
         assertGolden("control-states-1920", stitchControlStateCells(cells))
     }
+
+    @Test
+    fun serverDeleteFocusMatches1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.setContent {
+            KaloscopeTheme {
+                GoldenServerSetup()
+            }
+        }
+
+        composeRule.onNodeWithTag("saved-server-golden-server")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("delete-server-golden-server").assertIsFocused()
+
+        assertGolden(
+            "server-delete-focus-1920",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
+    fun serverDeletionDialogMatches1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.setContent {
+            KaloscopeTheme {
+                GoldenServerSetup()
+            }
+        }
+
+        composeRule.onNodeWithTag("saved-server-golden-server")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("delete-server-golden-server")
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("confirm-dialog-cancel").assertIsFocused()
+
+        assertGolden(
+            "server-deletion-dialog-1920",
+            InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot(),
+        )
+    }
+}
+
+@Composable
+private fun GoldenServerSetup() {
+    ServerSetupScreen(
+        savedServers = listOf(
+            SavedServer(
+                id = "golden-server",
+                name = "家庭服务器",
+                origin = "https://home.example",
+            ),
+        ),
+        state = ServerSetupState(),
+        onNameChange = {},
+        onUrlChange = {},
+        onTest = {},
+        onSave = {},
+        onSelectServer = {},
+    )
 }
 
 private fun libraryState(): LibraryUiState.Content {

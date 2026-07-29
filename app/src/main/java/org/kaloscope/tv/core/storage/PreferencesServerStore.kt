@@ -42,6 +42,25 @@ class PreferencesServerStore @Inject constructor(
         }
     }
 
+    override suspend fun delete(serverId: String): List<SavedServer> {
+        var remaining = emptyList<StoredServer>()
+        dataStore.edit { preferences ->
+            val current = preferences[SERVERS]
+                ?.let { encoded ->
+                    runCatching {
+                        json.decodeFromString<List<StoredServer>>(encoded)
+                    }.getOrNull()
+                }
+                .orEmpty()
+            remaining = current.filterNot { it.id == serverId }
+            preferences[SERVERS] = json.encodeToString(remaining)
+            if (preferences[ACTIVE_SERVER] == serverId) {
+                preferences.remove(ACTIVE_SERVER)
+            }
+        }
+        return remaining.map(StoredServer::toModel)
+    }
+
     override suspend fun getActiveServerId(): String? =
         dataStore.data.first()[ACTIVE_SERVER]
 

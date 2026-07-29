@@ -1,10 +1,18 @@
 package org.kaloscope.tv.app
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -16,28 +24,43 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Icon
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.collectLatest
 import org.kaloscope.tv.R
@@ -47,8 +70,12 @@ import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeBrand
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeConfirmDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
+import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
+import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Outline
@@ -59,10 +86,17 @@ import org.kaloscope.tv.core.designsystem.TvTextField
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.login.LoginError
 import org.kaloscope.tv.feature.login.LoginState
+import org.kaloscope.tv.feature.server.SavedServerDeletionState
 import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
 
 private val SetupProgressOutline = Color(0x33FFFFFF)
+
+private sealed interface ServerSetupFocusTarget {
+    data object Name : ServerSetupFocusTarget
+
+    data class Server(val id: String) : ServerSetupFocusTarget
+}
 
 @Composable
 internal fun LoadingScreen() {
@@ -84,20 +118,90 @@ internal fun ServerSetupScreen(
     onTest: () -> Unit,
     onSave: () -> Unit,
     onSelectServer: (SavedServer) -> Unit,
+    deletionState: SavedServerDeletionState = SavedServerDeletionState.Idle,
+    onDeleteServer: (SavedServer) -> Unit = {},
+    onClearDeletionError: () -> Unit = {},
 ) {
-    val savedServerFocus = remember { FocusRequester() }
     val nameFocus = remember { FocusRequester() }
     val urlFocus = remember { FocusRequester() }
     val testFocus = remember { FocusRequester() }
     val panelScrollState = rememberScrollState()
     val statusVisible = state.error != null || state.verifiedOrigin != null
+    val serverIds = savedServers.map(SavedServer::id)
+    val serverFocusRequesters = remember(serverIds) {
+        serverIds.associateWith { FocusRequester() }
+    }
+    val deleteFocusRequesters = remember(serverIds) {
+        serverIds.associateWith { FocusRequester() }
+    }
+    var revealedServerId by remember { mutableStateOf<String?>(null) }
+    var pendingDeletion by remember { mutableStateOf<SavedServer?>(null) }
+    var pendingDeletionIndex by remember { mutableStateOf<Int?>(null) }
+    var focusAfterDeleteAction by remember {
+        mutableStateOf<ServerSetupFocusTarget?>(null)
+    }
+    var deleteFocusToRestore by remember { mutableStateOf<String?>(null) }
+    var focusAfterDeletion by remember { mutableStateOf<ServerSetupFocusTarget?>(null) }
+
     // Existing servers take focus priority; new installations start in navigation mode.
     LaunchedEffect(savedServers.isEmpty()) {
+        withFrameNanos { }
         if (savedServers.isEmpty()) {
             nameFocus.requestFocus()
         } else {
-            savedServerFocus.requestFocus()
+            serverFocusRequesters[savedServers.first().id]?.requestFocus()
         }
+    }
+    LaunchedEffect(revealedServerId, serverIds) {
+        revealedServerId?.let { serverId ->
+            withFrameNanos { }
+            deleteFocusRequesters[serverId]?.requestFocus()
+        }
+    }
+    LaunchedEffect(focusAfterDeleteAction, serverIds) {
+        focusAfterDeleteAction?.let { target ->
+            withFrameNanos { }
+            when (target) {
+                ServerSetupFocusTarget.Name -> nameFocus.requestFocus()
+                is ServerSetupFocusTarget.Server ->
+                    serverFocusRequesters[target.id]?.requestFocus()
+            }
+            focusAfterDeleteAction = null
+        }
+    }
+    LaunchedEffect(deleteFocusToRestore, serverIds) {
+        deleteFocusToRestore?.let { serverId ->
+            withFrameNanos { }
+            deleteFocusRequesters[serverId]?.requestFocus()
+            deleteFocusToRestore = null
+        }
+    }
+    LaunchedEffect(serverIds, pendingDeletion?.id, pendingDeletionIndex) {
+        val target = pendingDeletion ?: return@LaunchedEffect
+        val deletedIndex = pendingDeletionIndex ?: return@LaunchedEffect
+        if (target.id in serverIds) {
+            return@LaunchedEffect
+        }
+        focusAfterDeletion = if (serverIds.isEmpty()) {
+            ServerSetupFocusTarget.Name
+        } else {
+            ServerSetupFocusTarget.Server(
+                serverIds[deletedIndex.coerceAtMost(serverIds.lastIndex)],
+            )
+        }
+        pendingDeletion = null
+        pendingDeletionIndex = null
+        revealedServerId = null
+    }
+    LaunchedEffect(focusAfterDeletion, serverIds) {
+        val target = focusAfterDeletion ?: return@LaunchedEffect
+        withFrameNanos { }
+        when (target) {
+            ServerSetupFocusTarget.Name -> nameFocus.requestFocus()
+            is ServerSetupFocusTarget.Server ->
+                serverFocusRequesters[target.id]?.requestFocus()
+        }
+        focusAfterDeletion = null
     }
     LaunchedEffect(statusVisible) {
         if (statusVisible) {
@@ -106,6 +210,12 @@ internal fun ServerSetupScreen(
                 panelScrollState.animateScrollTo(maxValue)
             }
         }
+    }
+    BackHandler(enabled = pendingDeletion == null && revealedServerId != null) {
+        focusAfterDeleteAction = revealedServerId?.let {
+            ServerSetupFocusTarget.Server(it)
+        }
+        revealedServerId = null
     }
 
     AppFrame {
@@ -131,16 +241,119 @@ internal fun ServerSetupScreen(
                 )
                 Spacer(Modifier.height(10.dp))
                 savedServers.forEachIndexed { index, server ->
-                    PrimaryButton(
-                        text = "${server.name}  ${server.origin}",
-                        enabled = true,
-                        onClick = { onSelectServer(server) },
-                        modifier = if (index == 0) {
-                            Modifier.focusRequester(savedServerFocus)
-                        } else {
-                            Modifier
-                        },
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SavedServerButton(
+                            server = server,
+                            onClick = { onSelectServer(server) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("saved-server-${server.id}")
+                                .focusRequester(serverFocusRequesters.getValue(server.id))
+                                .onPreviewKeyEvent { event ->
+                                    if (event.key != Key.DirectionRight) {
+                                        return@onPreviewKeyEvent false
+                                    }
+                                    if (event.type == KeyEventType.KeyDown) {
+                                        if (revealedServerId == server.id) {
+                                            deleteFocusRequesters[server.id]?.requestFocus()
+                                        } else {
+                                            revealedServerId = server.id
+                                        }
+                                    }
+                                    true
+                                },
+                        )
+                        AnimatedVisibility(
+                            visible = revealedServerId == server.id,
+                            enter = fadeIn(
+                                tween(KaloscopeMotion.FocusMillis),
+                            ) + slideInHorizontally(
+                                animationSpec = tween(KaloscopeMotion.FocusMillis),
+                                initialOffsetX = { it / 2 },
+                            ),
+                            exit = fadeOut(
+                                tween(KaloscopeMotion.FocusMillis),
+                            ) + slideOutHorizontally(
+                                animationSpec = tween(KaloscopeMotion.FocusMillis),
+                                targetOffsetX = { it / 2 },
+                            ),
+                        ) {
+                            val deleteDescription = stringResource(
+                                R.string.delete_server_description,
+                                server.name,
+                            )
+                            KaloscopeIconButton(
+                                onClick = {
+                                    onClearDeletionError()
+                                    pendingDeletion = server
+                                },
+                                tone = KaloscopeControlTone.Danger,
+                                scaleOnFocus = false,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .testTag("delete-server-${server.id}")
+                                    .semantics {
+                                        contentDescription = deleteDescription
+                                    }
+                                    .focusRequester(
+                                        deleteFocusRequesters.getValue(server.id),
+                                    )
+                                    .onPreviewKeyEvent { event ->
+                                        when (event.key) {
+                                            Key.DirectionLeft -> {
+                                                if (event.type == KeyEventType.KeyDown) {
+                                                    focusAfterDeleteAction =
+                                                        ServerSetupFocusTarget.Server(server.id)
+                                                    revealedServerId = null
+                                                }
+                                                true
+                                            }
+
+                                            Key.DirectionUp -> {
+                                                if (
+                                                    event.type == KeyEventType.KeyDown &&
+                                                    index > 0
+                                                ) {
+                                                    focusAfterDeleteAction =
+                                                        ServerSetupFocusTarget.Server(
+                                                            savedServers[index - 1].id,
+                                                        )
+                                                    revealedServerId = null
+                                                }
+                                                true
+                                            }
+
+                                            Key.DirectionDown -> {
+                                                if (event.type == KeyEventType.KeyDown) {
+                                                    focusAfterDeleteAction =
+                                                        savedServers.getOrNull(index + 1)
+                                                            ?.let {
+                                                                ServerSetupFocusTarget.Server(
+                                                                    it.id,
+                                                                )
+                                                            }
+                                                            ?: ServerSetupFocusTarget.Name
+                                                    revealedServerId = null
+                                                }
+                                                true
+                                            }
+
+                                            else -> false
+                                        }
+                                    },
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_delete),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                 }
                 Spacer(Modifier.height(12.dp))
@@ -224,6 +437,41 @@ internal fun ServerSetupScreen(
                 }
             }
         }
+    }
+
+    pendingDeletion?.let { server ->
+        val isDeleting = deletionState is SavedServerDeletionState.Deleting &&
+            deletionState.serverId == server.id
+        val deletionFailed = deletionState is SavedServerDeletionState.Failed &&
+            deletionState.serverId == server.id
+        KaloscopeConfirmDialog(
+            title = stringResource(R.string.delete_server_title),
+            message = stringResource(R.string.delete_server_message, server.name),
+            cancelLabel = stringResource(R.string.cancel),
+            confirmLabel = stringResource(R.string.delete),
+            confirmTone = KaloscopeControlTone.Danger,
+            busy = isDeleting,
+            errorMessage = if (deletionFailed) {
+                stringResource(R.string.delete_server_failed)
+            } else {
+                null
+            },
+            onDismiss = {
+                onClearDeletionError()
+                pendingDeletion = null
+                pendingDeletionIndex = null
+                deleteFocusToRestore = server.id
+            },
+            onConfirm = {
+                val serverIndex = savedServers.indexOfFirst {
+                    it.id == server.id
+                }
+                if (serverIndex >= 0) {
+                    pendingDeletionIndex = serverIndex
+                    onDeleteServer(server)
+                }
+            },
+        )
     }
 }
 
@@ -538,6 +786,53 @@ private fun PrimaryButton(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 3.dp),
         )
+    }
+}
+
+@Composable
+private fun SavedServerButton(
+    server: SavedServer,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    KaloscopeButton(
+        onClick = onClick,
+        modifier = modifier,
+        variant = KaloscopeControlVariant.Filled,
+        size = KaloscopeControlSize.Compact,
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+        ) {
+            val nameMaxWidth = maxWidth * 0.4f
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = server.name,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
+                    modifier = Modifier.widthIn(max = nameMaxWidth),
+                )
+                Text(
+                    text = server.origin,
+                    color = LocalContentColor.current.copy(alpha = 0.68f),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 

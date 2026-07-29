@@ -149,6 +149,9 @@ private class FakeServerRepository(
         savedServer = server
     }
 
+    override suspend fun deleteServer(serverId: String): List<SavedServer> =
+        error("Not used")
+
     override suspend fun setActiveServer(serverId: String) {
         activeServerId = serverId
     }
@@ -167,6 +170,9 @@ private class SuspendingServerRepository : ServerRepository {
     }
 
     override suspend fun saveServer(server: SavedServer) = Unit
+
+    override suspend fun deleteServer(serverId: String): List<SavedServer> =
+        error("Not used")
 
     override suspend fun setActiveServer(serverId: String) = Unit
 }

@@ -47,6 +47,7 @@ internal fun rememberKaloscopeControlVisuals(
     tone: KaloscopeControlTone,
     selected: Boolean,
     enabled: Boolean,
+    scaleOnFocus: Boolean = true,
 ): KaloscopeControlVisuals {
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
@@ -59,6 +60,7 @@ internal fun rememberKaloscopeControlVisuals(
         enabled = enabled,
         focused = focused,
         pressed = pressed,
+        scaleOnFocus = scaleOnFocus,
     )
     val duration = if (pressed) {
         KaloscopeMotion.PressMillis
@@ -140,6 +142,7 @@ private fun KaloscopeControlFocusMaterial.color(): Color =
     when (this) {
         KaloscopeControlFocusMaterial.None -> Color.Transparent
         KaloscopeControlFocusMaterial.Focused -> KaloscopeControlTokens.FocusedSurface
+        KaloscopeControlFocusMaterial.DangerFocused -> DangerFocusedSurface
     }
 
 internal fun Modifier.kaloscopeControlVisuals(

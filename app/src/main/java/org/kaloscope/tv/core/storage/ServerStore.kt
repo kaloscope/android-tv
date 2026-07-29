@@ -10,6 +10,8 @@ interface ServerStore {
 
     suspend fun save(server: SavedServer)
 
+    suspend fun delete(serverId: String): List<SavedServer>
+
     suspend fun getActiveServerId(): String?
 
     suspend fun setActiveServerId(serverId: String)

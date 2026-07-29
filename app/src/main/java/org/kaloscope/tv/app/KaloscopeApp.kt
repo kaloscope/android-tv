@@ -45,14 +45,18 @@ fun KaloscopeApp(
             BootstrapState.Loading -> LoadingScreen()
             is BootstrapState.NeedsServer -> {
                 val setupState by viewModel.serverSetupState.collectAsStateWithLifecycle()
+                val deletionState by viewModel.serverDeletionState.collectAsStateWithLifecycle()
                 ServerSetupScreen(
                     savedServers = state.savedServers,
                     state = setupState,
+                    deletionState = deletionState,
                     onNameChange = viewModel::updateServerName,
                     onUrlChange = viewModel::updateServerUrl,
                     onTest = viewModel::testServerConnection,
                     onSave = viewModel::saveServer,
                     onSelectServer = viewModel::selectServer,
+                    onDeleteServer = viewModel::deleteServer,
+                    onClearDeletionError = viewModel::clearServerDeletionError,
                 )
             }
 

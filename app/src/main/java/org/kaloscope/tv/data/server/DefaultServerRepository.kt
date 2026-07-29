@@ -25,6 +25,9 @@ class DefaultServerRepository @Inject constructor(
         serverStore.save(server)
     }
 
+    override suspend fun deleteServer(serverId: String): List<SavedServer> =
+        serverStore.delete(serverId)
+
     override suspend fun setActiveServer(serverId: String) {
         serverStore.setActiveServerId(serverId)
     }

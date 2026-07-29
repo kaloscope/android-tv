@@ -134,6 +134,9 @@ private class FakeServerRepository(
 
     override suspend fun saveServer(server: SavedServer) = error("Not used")
 
+    override suspend fun deleteServer(serverId: String): List<SavedServer> =
+        error("Not used")
+
     override suspend fun setActiveServer(serverId: String) = error("Not used")
 }
 

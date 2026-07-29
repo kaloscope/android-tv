@@ -19,6 +19,8 @@ import org.kaloscope.tv.data.auth.SessionRepository
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.feature.login.LoginCoordinator
 import org.kaloscope.tv.feature.login.LoginState
+import org.kaloscope.tv.feature.server.SavedServerDeletionCoordinator
+import org.kaloscope.tv.feature.server.SavedServerDeletionState
 import org.kaloscope.tv.feature.server.ServerSetupCoordinator
 import org.kaloscope.tv.feature.server.ServerSetupState
 
@@ -33,6 +35,10 @@ class KaloscopeViewModel @Inject constructor(
         repository = serverRepository,
         createServerId = { UUID.randomUUID().toString() },
     )
+    private val serverDeletionCoordinator = SavedServerDeletionCoordinator(
+        serverRepository = serverRepository,
+        sessionRepository = sessionRepository,
+    )
     private val mutableBootstrapState =
         MutableStateFlow<BootstrapState>(BootstrapState.Loading)
     private val mutableLoginState = MutableStateFlow(LoginState())
@@ -42,6 +48,8 @@ class KaloscopeViewModel @Inject constructor(
 
     val bootstrapState: StateFlow<BootstrapState> = mutableBootstrapState.asStateFlow()
     val serverSetupState: StateFlow<ServerSetupState> = serverCoordinator.state
+    val serverDeletionState: StateFlow<SavedServerDeletionState> =
+        serverDeletionCoordinator.state
     val loginState: StateFlow<LoginState> = mutableLoginState.asStateFlow()
 
     init {
@@ -68,11 +76,22 @@ class KaloscopeViewModel @Inject constructor(
         viewModelScope.launch {
             // Drop any password-bearing login state before showing another root screen.
             stopLoginCollection()
+            serverDeletionCoordinator.clearError()
             mutableBootstrapState.value = BootstrapState.NeedsServer(
                 bootstrapRepository.getServers(),
             )
         }
     }
+
+    fun deleteServer(server: SavedServer) {
+        viewModelScope.launch {
+            serverDeletionCoordinator.delete(server.id)?.let { remainingServers ->
+                mutableBootstrapState.value = BootstrapState.NeedsServer(remainingServers)
+            }
+        }
+    }
+
+    fun clearServerDeletionError() = serverDeletionCoordinator.clearError()
 
     fun selectServer(server: SavedServer) {
         viewModelScope.launch {

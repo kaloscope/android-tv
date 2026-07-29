@@ -42,6 +42,7 @@ internal enum class KaloscopeControlBaseMaterial {
 internal enum class KaloscopeControlFocusMaterial {
     None,
     Focused,
+    DangerFocused,
 }
 
 internal data class KaloscopeResolvedControlState(
@@ -62,6 +63,7 @@ internal fun resolveKaloscopeControlState(
     enabled: Boolean,
     focused: Boolean,
     pressed: Boolean,
+    scaleOnFocus: Boolean = true,
 ): KaloscopeResolvedControlState {
     val effectivelyFocused = enabled && focused
     val baseMaterial = when {
@@ -69,13 +71,17 @@ internal fun resolveKaloscopeControlState(
         variant == KaloscopeControlVariant.Ghost -> KaloscopeControlBaseMaterial.Ghost
         else -> KaloscopeControlBaseMaterial.Filled
     }
-    val focusMaterial = if (effectivelyFocused) {
-        KaloscopeControlFocusMaterial.Focused
-    } else {
-        KaloscopeControlFocusMaterial.None
+    val focusMaterial = when {
+        !effectivelyFocused -> KaloscopeControlFocusMaterial.None
+        tone == KaloscopeControlTone.Danger ->
+            KaloscopeControlFocusMaterial.DangerFocused
+
+        else -> KaloscopeControlFocusMaterial.Focused
     }
     val scale = when {
-        !effectivelyFocused || pressed -> KaloscopeControlTokens.RestingScale
+        !effectivelyFocused || pressed || !scaleOnFocus ->
+            KaloscopeControlTokens.RestingScale
+
         size == KaloscopeControlSize.Compact ->
             KaloscopeControlTokens.CompactFocusedScale
 
@@ -91,7 +97,7 @@ internal fun resolveKaloscopeControlState(
     }
     val contentColor = when {
         effectivelyFocused && tone == KaloscopeControlTone.Danger ->
-            OnControlFocusedDanger
+            OnDangerFocused
 
         effectivelyFocused -> OnControlFocused
         tone == KaloscopeControlTone.Danger -> Danger
