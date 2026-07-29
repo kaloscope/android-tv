@@ -1,5 +1,6 @@
 package org.kaloscope.tv.app
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertHasClickAction
@@ -14,6 +15,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import kotlin.math.abs
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -79,6 +81,48 @@ class LoginScreenFocusTest {
         composeRule.onNodeWithText("登录").assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithText("更换服务器").assertIsFocused()
+    }
+
+    @Test
+    fun submittingLoginKeepsButtonFocusAndIgnoresRepeatCenter() {
+        val state = mutableStateOf(
+            LoginState(
+                username = "tv_user",
+                password = "secret",
+            ),
+        )
+        var loginRequests = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                LoginScreen(
+                    server = SavedServer(
+                        id = "demo",
+                        name = "Demo",
+                        origin = "https://demo.example",
+                    ),
+                    state = state.value,
+                    onUsernameChange = {},
+                    onPasswordChange = {},
+                    onLogin = {
+                        loginRequests += 1
+                        state.value = state.value.copy(isSubmitting = true)
+                    },
+                    onChangeServer = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("登录")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithText("正在登录…")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, loginRequests)
+        }
     }
 
     @Test

@@ -553,8 +553,13 @@ internal fun LoginScreen(
                     } else {
                         stringResource(R.string.login)
                     },
-                    enabled = !state.isSubmitting,
-                    onClick = onLogin,
+                    // Keep the focused action eligible for D-pad focus while submitting.
+                    enabled = true,
+                    onClick = {
+                        if (!state.isSubmitting) {
+                            onLogin()
+                        }
+                    },
                     modifier = Modifier
                         .focusRequester(loginFocus)
                         .weight(1f),
