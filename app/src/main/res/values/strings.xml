@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Kaloscope</string>
     <string name="tv_experience">TV EXPERIENCE</string>
     <string name="connecting_server">正在连接服务器…</string>
@@ -160,7 +160,10 @@
     <string name="search_filters_description">调整当前站点的搜索条件，应用后会重新搜索。</string>
     <string name="filter_clear">清除</string>
     <string name="filter_apply">应用</string>
-    <string name="filter_datetime_hint">例如 2026-07-25</string>
+    <!-- Hyphens are date separators, not punctuation for a numeric range. -->
+    <string
+        name="filter_datetime_hint"
+        tools:ignore="TypographyDashes">例如 2026-07-25</string>
     <string name="search_indexer_prompt">输入关键词开始搜索</string>
     <string name="search_indexer_prompt_description">结果会直接来自左侧选中的真实站点。</string>
     <string name="no_search_results">没有找到结果</string>
