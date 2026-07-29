@@ -17,24 +17,12 @@ class PreferencesServerStore @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val json: Json,
 ) : ServerStore {
-    override suspend fun getServers(): List<SavedServer> {
-        val encoded = dataStore.data.first()[SERVERS] ?: return emptyList()
-        // Corrupt local metadata must not crash startup or expose stale servers.
-        return runCatching {
-            json.decodeFromString<List<StoredServer>>(encoded).map(StoredServer::toModel)
-        }.getOrElse { emptyList() }
-    }
+    override suspend fun getServers(): List<SavedServer> =
+        decodeServers(dataStore.data.first()[SERVERS]).map(StoredServer::toModel)
 
     override suspend fun save(server: SavedServer) {
         dataStore.edit { preferences ->
-            // A corrupt list is replaced by the newly verified server.
-            val current = preferences[SERVERS]
-                ?.let { encoded ->
-                    runCatching {
-                        json.decodeFromString<List<StoredServer>>(encoded)
-                    }.getOrNull()
-                }
-                .orEmpty()
+            val current = decodeServers(preferences[SERVERS])
             val updated = current
                 .filterNot { it.id == server.id }
                 .plus(StoredServer.fromModel(server))
@@ -45,13 +33,7 @@ class PreferencesServerStore @Inject constructor(
     override suspend fun delete(serverId: String): List<SavedServer> {
         var remaining = emptyList<StoredServer>()
         dataStore.edit { preferences ->
-            val current = preferences[SERVERS]
-                ?.let { encoded ->
-                    runCatching {
-                        json.decodeFromString<List<StoredServer>>(encoded)
-                    }.getOrNull()
-                }
-                .orEmpty()
+            val current = decodeServers(preferences[SERVERS])
             remaining = current.filterNot { it.id == serverId }
             preferences[SERVERS] = json.encodeToString(remaining)
             if (preferences[ACTIVE_SERVER] == serverId) {
@@ -69,6 +51,14 @@ class PreferencesServerStore @Inject constructor(
             preferences[ACTIVE_SERVER] = serverId
         }
     }
+
+    // Treat corrupt metadata as empty so reads stay safe and the next write repairs the list.
+    private fun decodeServers(encoded: String?): List<StoredServer> =
+        encoded?.let {
+            runCatching {
+                json.decodeFromString<List<StoredServer>>(it)
+            }.getOrNull()
+        }.orEmpty()
 
     private companion object {
         val SERVERS = stringPreferencesKey("servers")

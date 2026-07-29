@@ -61,6 +61,7 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
+import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.NetworkIndexer
@@ -420,7 +421,7 @@ private fun SearchResults(
                     Text(
                         text = stringResource(
                             R.string.resolve_playback_failed,
-                            searchErrorText(error),
+                            appErrorText(error),
                         ),
                         color = Danger,
                         fontSize = 14.sp,
@@ -500,7 +501,7 @@ private fun SearchResults(
                         ) {
                             Column {
                                 Text(
-                                    text = searchErrorText(results.loadMoreError),
+                                    text = appErrorText(results.loadMoreError),
                                     color = Danger,
                                     fontSize = 14.sp,
                                 )
@@ -635,7 +636,7 @@ private fun SearchError(
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(8.dp))
-        Text(searchErrorText(error), color = Danger, fontSize = 16.sp)
+        Text(appErrorText(error), color = Danger, fontSize = 16.sp)
         Spacer(Modifier.height(18.dp))
         KaloscopeButton(
             onClick = onRetry,
@@ -646,15 +647,3 @@ private fun SearchError(
         }
     }
 }
-
-@Composable
-private fun searchErrorText(error: AppError): String =
-    when (error) {
-        AppError.Unauthorized -> stringResource(R.string.error_unauthorized)
-        AppError.Forbidden -> stringResource(R.string.error_forbidden)
-        AppError.NotFound -> stringResource(R.string.error_not_found)
-        AppError.Timeout -> stringResource(R.string.error_timeout)
-        AppError.Offline -> stringResource(R.string.error_offline)
-        is AppError.Api -> stringResource(R.string.error_api, error.code.orEmpty())
-        is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
-    }

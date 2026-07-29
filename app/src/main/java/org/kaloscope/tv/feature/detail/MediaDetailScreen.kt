@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -49,6 +47,7 @@ import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.designsystem.ServerImage
+import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
@@ -243,7 +242,7 @@ private fun DetailContent(
                         state.childError?.let { error ->
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                text = detailErrorText(error),
+                                text = appErrorText(error),
                                 color = Danger,
                                 fontSize = 14.sp,
                             )
@@ -348,7 +347,7 @@ private fun DetailError(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = detailErrorText(error),
+            text = appErrorText(error),
             color = Danger,
             fontSize = 16.sp,
         )
@@ -362,15 +361,3 @@ private fun DetailError(
         }
     }
 }
-
-@Composable
-private fun detailErrorText(error: AppError): String =
-    when (error) {
-        AppError.Unauthorized -> stringResource(R.string.error_unauthorized)
-        AppError.Forbidden -> stringResource(R.string.error_forbidden)
-        AppError.NotFound -> stringResource(R.string.error_not_found)
-        AppError.Timeout -> stringResource(R.string.error_timeout)
-        AppError.Offline -> stringResource(R.string.error_offline)
-        is AppError.Api -> stringResource(R.string.error_api, error.code.orEmpty())
-        is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
-    }

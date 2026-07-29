@@ -40,6 +40,9 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.danmakuModeLabel
+import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
+import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
@@ -253,28 +256,3 @@ private fun DrawerRow(
         }
     }
 }
-
-@Composable
-private fun danmakuTextSizeLabel(size: DanmakuTextSize): String =
-    when (size) {
-        DanmakuTextSize.Small -> stringResource(R.string.danmaku_size_small)
-        DanmakuTextSize.Medium -> stringResource(R.string.danmaku_size_medium)
-        DanmakuTextSize.Large -> stringResource(R.string.danmaku_size_large)
-        DanmakuTextSize.ExtraLarge -> stringResource(R.string.danmaku_size_extra_large)
-    }
-
-@Composable
-private fun danmakuSpeedLabel(speed: DanmakuSpeed): String =
-    when (speed) {
-        DanmakuSpeed.Slow -> stringResource(R.string.danmaku_speed_slow)
-        DanmakuSpeed.Standard -> stringResource(R.string.danmaku_speed_standard)
-        DanmakuSpeed.Fast -> stringResource(R.string.danmaku_speed_fast)
-    }
-
-@Composable
-private fun danmakuModeLabel(mode: DanmakuDisplayMode): String =
-    when (mode) {
-        DanmakuDisplayMode.Scroll -> stringResource(R.string.danmaku_mode_scroll)
-        DanmakuDisplayMode.Top -> stringResource(R.string.danmaku_mode_top)
-        DanmakuDisplayMode.Bottom -> stringResource(R.string.danmaku_mode_bottom)
-    }

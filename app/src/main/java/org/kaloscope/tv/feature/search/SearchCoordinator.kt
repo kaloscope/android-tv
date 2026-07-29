@@ -15,7 +15,6 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
-import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.search.SearchRepository
 
 sealed interface SearchUiState {

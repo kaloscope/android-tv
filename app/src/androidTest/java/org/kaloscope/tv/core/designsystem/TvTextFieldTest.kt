@@ -177,8 +177,8 @@ class TvTextFieldTest {
         contentAfter: @androidx.compose.runtime.Composable () -> Unit = {},
     ) {
         val fieldFocus = FocusRequester()
+        var value by mutableStateOf(initialValue)
         composeRule.setContent {
-            var value by mutableStateOf(initialValue)
             KaloscopeTheme {
                 Column {
                     TvTextField(

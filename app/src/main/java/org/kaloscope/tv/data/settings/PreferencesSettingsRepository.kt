@@ -126,19 +126,7 @@ class PreferencesSettingsRepository @Inject constructor(
             AppResult.Failure(AppError.InvalidData(context))
         }
 
-    private val StartPage.storedValue: String
-        get() = name.lowercase()
-
-    private val PlaybackMode.storedValue: String
-        get() = name.lowercase()
-
-    private val DanmakuTextSize.storedValue: String
-        get() = name.lowercase()
-
-    private val DanmakuSpeed.storedValue: String
-        get() = name.lowercase()
-
-    private val SubtitleDisplayMode.storedValue: String
+    private val Enum<*>.storedValue: String
         get() = name.lowercase()
 
     private inline fun <reified T : Enum<T>> enumValue(

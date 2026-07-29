@@ -89,8 +89,7 @@ class LibraryCoordinator(
     }
 
     fun updateQuery(value: String) {
-        val content = mutableState.value as? LibraryUiState.Content ?: return
-        mutableState.value = content.copy(query = value)
+        updateContent { copy(query = value) }
     }
 
     suspend fun search(session: Session) {
@@ -152,9 +151,8 @@ class LibraryCoordinator(
                 keyword = content.submittedKeyword.nonBlankOrNull(),
             )
         ) {
-            is AppResult.Failure -> {
-                val latest = mutableState.value as? LibraryUiState.Content ?: return
-                mutableState.value = latest.copy(
+            is AppResult.Failure -> updateContent {
+                copy(
                     items = currentItems.copy(
                         isLoadingMore = false,
                         loadMoreError = result.error,
@@ -162,11 +160,10 @@ class LibraryCoordinator(
                 )
             }
 
-            is AppResult.Success -> {
-                val latest = mutableState.value as? LibraryUiState.Content ?: return
+            is AppResult.Success -> updateContent {
                 val combined = (currentItems.items + result.value.items)
                     .distinctBy(MediaSummary::id)
-                mutableState.value = latest.copy(
+                copy(
                     items = LibraryItemsState.Content(
                         items = combined,
                         total = result.value.total,
@@ -202,16 +199,12 @@ class LibraryCoordinator(
                 keyword = content.submittedKeyword.nonBlankOrNull(),
             )
         ) {
-            is AppResult.Failure -> {
-                val latest = mutableState.value as? LibraryUiState.Content ?: return
-                mutableState.value = latest.copy(
-                    items = LibraryItemsState.Error(result.error),
-                )
+            is AppResult.Failure -> updateContent {
+                copy(items = LibraryItemsState.Error(result.error))
             }
 
-            is AppResult.Success -> {
-                val latest = mutableState.value as? LibraryUiState.Content ?: return
-                mutableState.value = latest.copy(
+            is AppResult.Success -> updateContent {
+                copy(
                     items = if (result.value.items.isEmpty()) {
                         LibraryItemsState.Empty
                     } else {
@@ -225,6 +218,13 @@ class LibraryCoordinator(
                 )
             }
         }
+    }
+
+    private inline fun updateContent(
+        transform: LibraryUiState.Content.() -> LibraryUiState.Content,
+    ) {
+        val content = mutableState.value as? LibraryUiState.Content ?: return
+        mutableState.value = content.transform()
     }
 }
 

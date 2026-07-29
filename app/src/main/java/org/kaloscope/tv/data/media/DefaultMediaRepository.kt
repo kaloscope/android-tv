@@ -26,7 +26,7 @@ class DefaultMediaRepository @Inject constructor(
         session: Session,
     ): AppResult<List<MediaLibrary>> =
         networkCall(json) {
-            apiClientFactory.create(session.server.origin)
+            api(session)
                 .getMediaLibraries(session.authorization())
                 .dataOrThrow()
                 .filter { it.id > 0 && it.name.isNotBlank() }
@@ -41,7 +41,7 @@ class DefaultMediaRepository @Inject constructor(
         keyword: String?,
     ): AppResult<MediaPage> =
         networkCall(json) {
-            apiClientFactory.create(session.server.origin)
+            api(session)
                 .getMediaPage(
                     authorization = session.authorization(),
                     pageNumber = pageNumber,
@@ -58,7 +58,7 @@ class DefaultMediaRepository @Inject constructor(
         mediaId: Long,
     ): AppResult<MediaDetail> =
         networkCall(json) {
-            apiClientFactory.create(session.server.origin)
+            api(session)
                 .getMediaDetail(session.authorization(), mediaId)
                 .dataOrThrow()
                 .toDetail()
@@ -70,7 +70,7 @@ class DefaultMediaRepository @Inject constructor(
         path: String,
     ): AppResult<MediaProbe> =
         networkCall(json) {
-            apiClientFactory.create(session.server.origin)
+            api(session)
                 .getMediaProbe(
                     authorization = session.authorization(),
                     path = path,
@@ -84,7 +84,7 @@ class DefaultMediaRepository @Inject constructor(
         path: String,
     ): AppResult<List<SubtitleTrack>> =
         networkCall(json) {
-            apiClientFactory.create(session.server.origin)
+            api(session)
                 .getSubtitleTracks(
                     authorization = session.authorization(),
                     body = MediaResourceData(path),
@@ -111,7 +111,7 @@ class DefaultMediaRepository @Inject constructor(
         path: String,
     ): AppResult<List<DanmakuComment>> =
         networkCall(json) {
-            apiClientFactory.create(session.server.origin)
+            api(session)
                 .getDanmakus(
                     authorization = session.authorization(),
                     body = MediaResourceData(path),
@@ -134,6 +134,8 @@ class DefaultMediaRepository @Inject constructor(
                     }
                 }
         }
+
+    private fun api(session: Session) = apiClientFactory.create(session.server.origin)
 
     private fun Session.authorization(): String = "Token $token"
 }

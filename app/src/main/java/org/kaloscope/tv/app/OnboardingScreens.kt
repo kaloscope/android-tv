@@ -83,6 +83,7 @@ import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.designsystem.TvTextField
+import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.login.LoginError
 import org.kaloscope.tv.feature.login.LoginState
@@ -878,16 +879,4 @@ private fun loginErrorText(error: LoginError): String =
     when (error) {
         LoginError.MissingCredentials -> stringResource(R.string.error_credentials)
         is LoginError.Request -> appErrorText(error.error)
-    }
-
-@Composable
-private fun appErrorText(error: AppError): String =
-    when (error) {
-        AppError.Unauthorized -> stringResource(R.string.error_unauthorized)
-        AppError.Forbidden -> stringResource(R.string.error_forbidden)
-        AppError.NotFound -> stringResource(R.string.error_not_found)
-        AppError.Timeout -> stringResource(R.string.error_timeout)
-        AppError.Offline -> stringResource(R.string.error_offline)
-        is AppError.Api -> stringResource(R.string.error_api, error.code.orEmpty())
-        is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
     }

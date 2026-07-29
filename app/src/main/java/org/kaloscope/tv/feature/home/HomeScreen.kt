@@ -72,6 +72,7 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.Subtle
+import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.network.ServerImagePolicy
@@ -634,7 +635,7 @@ private fun ErrorPanel(
         )
         Spacer(Modifier.height(10.dp))
         Text(
-            text = historyErrorText(error),
+            text = appErrorText(error),
             color = Danger,
             fontSize = 17.sp,
         )
@@ -648,15 +649,3 @@ private fun ErrorPanel(
         }
     }
 }
-
-@Composable
-private fun historyErrorText(error: AppError): String =
-    when (error) {
-        AppError.Unauthorized -> stringResource(R.string.error_unauthorized)
-        AppError.Forbidden -> stringResource(R.string.error_forbidden)
-        AppError.NotFound -> stringResource(R.string.error_not_found)
-        AppError.Timeout -> stringResource(R.string.error_timeout)
-        AppError.Offline -> stringResource(R.string.error_offline)
-        is AppError.Api -> stringResource(R.string.error_api, error.code.orEmpty())
-        is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
-    }

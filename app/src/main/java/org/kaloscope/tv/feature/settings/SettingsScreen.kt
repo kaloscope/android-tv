@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +45,6 @@ import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import java.util.Locale
 import org.kaloscope.tv.R
-import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
@@ -56,10 +54,9 @@ import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.TvTextField
+import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
-import org.kaloscope.tv.core.model.DanmakuSpeed
-import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleDisplayMode
@@ -92,7 +89,7 @@ fun SettingsScreen(
 
         is SettingsUiState.Error -> SettingsStatus(
             title = stringResource(R.string.settings_load_failed),
-            description = settingsErrorText(state.error),
+            description = appErrorText(state.error),
             onRetry = onRetry,
         )
 
@@ -736,31 +733,6 @@ internal fun formatSubtitleOffset(value: Float): String =
     }
 
 @Composable
-internal fun danmakuTextSizeLabel(size: DanmakuTextSize): String =
-    when (size) {
-        DanmakuTextSize.Small -> stringResource(R.string.danmaku_size_small)
-        DanmakuTextSize.Medium -> stringResource(R.string.danmaku_size_medium)
-        DanmakuTextSize.Large -> stringResource(R.string.danmaku_size_large)
-        DanmakuTextSize.ExtraLarge -> stringResource(R.string.danmaku_size_extra_large)
-    }
-
-@Composable
-internal fun danmakuSpeedLabel(speed: DanmakuSpeed): String =
-    when (speed) {
-        DanmakuSpeed.Slow -> stringResource(R.string.danmaku_speed_slow)
-        DanmakuSpeed.Standard -> stringResource(R.string.danmaku_speed_standard)
-        DanmakuSpeed.Fast -> stringResource(R.string.danmaku_speed_fast)
-    }
-
-@Composable
-internal fun danmakuModeLabel(mode: DanmakuDisplayMode): String =
-    when (mode) {
-        DanmakuDisplayMode.Scroll -> stringResource(R.string.danmaku_mode_scroll)
-        DanmakuDisplayMode.Top -> stringResource(R.string.danmaku_mode_top)
-        DanmakuDisplayMode.Bottom -> stringResource(R.string.danmaku_mode_bottom)
-    }
-
-@Composable
 internal fun danmakuModeDescription(mode: DanmakuDisplayMode): String =
     when (mode) {
         DanmakuDisplayMode.Scroll ->
@@ -792,19 +764,7 @@ internal fun connectionDescription(connection: SettingsConnection): String =
             stringResource(R.string.connection_success, connection.version)
         }
 
-        is SettingsConnection.Failure -> settingsErrorText(connection.error)
-    }
-
-@Composable
-private fun settingsErrorText(error: AppError): String =
-    when (error) {
-        AppError.Unauthorized -> stringResource(R.string.error_unauthorized)
-        AppError.Forbidden -> stringResource(R.string.error_forbidden)
-        AppError.NotFound -> stringResource(R.string.error_not_found)
-        AppError.Timeout -> stringResource(R.string.error_timeout)
-        AppError.Offline -> stringResource(R.string.error_offline)
-        is AppError.Api -> stringResource(R.string.error_api, error.code.orEmpty())
-        is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
+        is SettingsConnection.Failure -> appErrorText(connection.error)
     }
 
 internal data class SettingsChoice(
