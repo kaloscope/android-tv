@@ -62,6 +62,8 @@ internal fun MainTopBar(
     searchFocus: FocusRequester,
     libraryFocus: FocusRequester,
     settingsFocus: FocusRequester,
+    searchMenuFocus: FocusRequester,
+    libraryMenuFocus: FocusRequester,
     settingsMenuFocus: FocusRequester,
 ) {
     Row(
@@ -102,6 +104,7 @@ internal fun MainTopBar(
                     .focusProperties {
                         left = homeFocus
                         right = libraryFocus
+                        down = searchMenuFocus
                     },
             )
             MainNavButton(
@@ -114,6 +117,7 @@ internal fun MainTopBar(
                     .focusProperties {
                         left = searchFocus
                         right = settingsFocus
+                        down = libraryMenuFocus
                     },
             )
         }

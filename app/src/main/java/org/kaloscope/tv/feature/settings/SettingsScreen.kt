@@ -70,6 +70,7 @@ fun SettingsScreen(
     state: SettingsUiState,
     requestInitialFocus: Boolean = true,
     selectedSectionFocusRequester: FocusRequester? = null,
+    topNavigationFocusRequester: FocusRequester? = null,
     onRetry: () -> Unit,
     onSelectSection: (SettingsSection) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
@@ -99,6 +100,7 @@ fun SettingsScreen(
             state = state,
             requestInitialFocus = requestInitialFocus,
             selectedSectionFocusRequester = selectedSectionFocusRequester,
+            topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectSection = onSelectSection,
             onPlaybackMode = onPlaybackMode,
             onTranscodeResolution = onTranscodeResolution,
@@ -119,6 +121,7 @@ private fun SettingsContent(
     state: SettingsUiState.Content,
     requestInitialFocus: Boolean,
     selectedSectionFocusRequester: FocusRequester?,
+    topNavigationFocusRequester: FocusRequester?,
     onSelectSection: (SettingsSection) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
@@ -163,6 +166,7 @@ private fun SettingsContent(
                 selected = state.section,
                 interactionsEnabled = interactionsEnabled,
                 selectedFocus = selectedSectionFocus,
+                topNavigationFocusRequester = topNavigationFocusRequester,
                 onSelect = onSelectSection,
             )
             SettingsPanel(
@@ -174,8 +178,14 @@ private fun SettingsContent(
                     .widthIn(max = 720.dp)
                     .focusProperties {
                         onExit = {
-                            if (requestedFocusDirection == FocusDirection.Left) {
-                                selectedSectionFocus.requestFocus()
+                            when (requestedFocusDirection) {
+                                FocusDirection.Left ->
+                                    selectedSectionFocus.requestFocus()
+
+                                FocusDirection.Up ->
+                                    topNavigationFocusRequester?.requestFocus()
+
+                                else -> Unit
                             }
                         }
                     }
@@ -233,8 +243,10 @@ private fun SettingsMenu(
     selected: SettingsSection,
     interactionsEnabled: Boolean,
     selectedFocus: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
     onSelect: (SettingsSection) -> Unit,
 ) {
+    val firstSection = SettingsSection.entries.first()
     Column(
         modifier = Modifier
             .width(210.dp)
@@ -257,6 +269,15 @@ private fun SettingsMenu(
                     .then(
                         if (section == selected) {
                             Modifier.focusRequester(selectedFocus)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .then(
+                        if (section == firstSection) {
+                            topNavigationFocusRequester?.let { requester ->
+                                Modifier.focusProperties { up = requester }
+                            } ?: Modifier
                         } else {
                             Modifier
                         },

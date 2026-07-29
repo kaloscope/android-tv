@@ -122,6 +122,8 @@ class MainShellTest {
                 val searchFocus = remember { FocusRequester() }
                 val libraryFocus = remember { FocusRequester() }
                 val settingsFocus = remember { FocusRequester() }
+                val searchMenuFocus = remember { FocusRequester() }
+                val libraryMenuFocus = remember { FocusRequester() }
                 val settingsMenuFocus = remember { FocusRequester() }
                 Box(
                     modifier = Modifier
@@ -139,6 +141,8 @@ class MainShellTest {
                         searchFocus = searchFocus,
                         libraryFocus = libraryFocus,
                         settingsFocus = settingsFocus,
+                        searchMenuFocus = searchMenuFocus,
+                        libraryMenuFocus = libraryMenuFocus,
                         settingsMenuFocus = settingsMenuFocus,
                     )
                 }
@@ -317,6 +321,54 @@ class MainShellTest {
 
         composeRule.onNodeWithText("弹幕").assertIsFocused()
         composeRule.onNodeWithText("默认开启弹幕").assertIsNotFocused()
+    }
+
+    @Test
+    fun directionUpFromSettingsMenuFocusesActiveNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SettingsRoute,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("播放")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithContentDescription("设置")
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
+    fun directionUpFromSettingsPanelFocusesActiveNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SettingsRoute,
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("默认播放模式") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithContentDescription("设置")
+            .assertIsSelected()
+            .assertIsFocused()
     }
 
     @Test
@@ -522,7 +574,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionDownEntersTheActiveSearchContent() {
+    fun directionDownFromSearchNavigationFocusesFirstIndexer() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -541,7 +593,60 @@ class MainShellTest {
             .performKeyInput { pressKey(Key.DirectionDown) }
 
         composeRule.onNodeWithText("网络搜索").assertIsNotFocused()
-        composeRule.onNodeWithTag("network-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("indexer-11").assertIsFocused()
+        composeRule.onNodeWithTag("network-search-input").assertIsNotFocused()
+    }
+
+    @Test
+    fun directionUpFromFirstIndexerFocusesActiveSearchNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("网络搜索")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("indexer-11")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithText("网络搜索")
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
+    fun directionUpFromSearchInputFocusesActiveSearchNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("网络搜索")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("network-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithText("网络搜索")
+            .assertIsSelected()
+            .assertIsFocused()
     }
 
     @Test
@@ -560,8 +665,8 @@ class MainShellTest {
 
         composeRule.onNodeWithText("网络搜索")
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithTag("network-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
 
@@ -590,6 +695,79 @@ class MainShellTest {
     }
 
     @Test
+    fun directionDownFromLibraryNavigationFocusesFirstLibrary() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithText("媒体库").assertIsNotFocused()
+        composeRule.onNodeWithText("剧集库").assertIsFocused()
+        composeRule.onNodeWithTag("library-search-input").assertIsNotFocused()
+    }
+
+    @Test
+    fun directionUpFromFirstLibraryFocusesActiveLibraryNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithText("剧集库")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithText("媒体库")
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
+    fun directionUpFromLibraryInputFocusesActiveLibraryNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("library-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithText("媒体库")
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
     fun mediaCardOpensDetailAndBackRestoresCardFocus() {
         val libraryItems = listOf(
             summary(),
@@ -612,9 +790,6 @@ class MainShellTest {
 
         composeRule.onNode(hasText("媒体库") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.DirectionDown) }
-
-        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
         composeRule.onNodeWithTag("media-card-201")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }

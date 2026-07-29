@@ -11,6 +11,7 @@ fun TvSearchField(
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    onMoveUp: (() -> Unit)? = null,
     onMoveRight: (() -> Unit)? = null,
     imeAction: ImeAction = ImeAction.Search,
 ) {
@@ -21,6 +22,7 @@ fun TvSearchField(
         modifier = modifier,
         imeAction = imeAction,
         onImeAction = onSearch,
+        onMoveUp = onMoveUp,
         onMoveRight = onMoveRight,
     )
 }

@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
@@ -75,6 +76,8 @@ fun LibraryScreen(
     state: LibraryUiState,
     restoreMediaId: Long?,
     requestInitialFocus: Boolean = true,
+    firstLibraryFocusRequester: FocusRequester? = null,
+    topNavigationFocusRequester: FocusRequester? = null,
     onSelectLibrary: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -102,6 +105,8 @@ fun LibraryScreen(
             state = state,
             restoreMediaId = restoreMediaId,
             requestInitialFocus = requestInitialFocus,
+            firstLibraryFocusRequester = firstLibraryFocusRequester,
+            topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectLibrary = onSelectLibrary,
             onQueryChange = onQueryChange,
             onSearch = onSearch,
@@ -120,6 +125,8 @@ private fun LibraryContent(
     state: LibraryUiState.Content,
     restoreMediaId: Long?,
     requestInitialFocus: Boolean,
+    firstLibraryFocusRequester: FocusRequester?,
+    topNavigationFocusRequester: FocusRequester?,
     onSelectLibrary: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -129,7 +136,9 @@ private fun LibraryContent(
     onGridViewportChanged: (GridViewportSnapshot) -> Unit,
     onOpenMedia: (Long) -> Unit,
 ) {
-    val firstLibraryFocus = remember { FocusRequester() }
+    val internalFirstLibraryFocus = remember { FocusRequester() }
+    val firstLibraryFocus =
+        firstLibraryFocusRequester ?: internalFirstLibraryFocus
     val restoreTargetId = restoreMediaId ?: state.focusedMediaId
 
     // Entering the root starts at the first source; returning from detail restores its card.
@@ -151,6 +160,7 @@ private fun LibraryContent(
             libraries = state.libraries,
             selectedLibraryId = state.selectedLibraryId,
             firstLibraryFocus = firstLibraryFocus,
+            topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectLibrary = onSelectLibrary,
         )
         Column(
@@ -160,6 +170,7 @@ private fun LibraryContent(
         ) {
             LibrarySearch(
                 value = state.query,
+                topNavigationFocusRequester = topNavigationFocusRequester,
                 onValueChange = onQueryChange,
                 onSearch = onSearch,
             )
@@ -185,8 +196,10 @@ private fun LibrarySidebar(
     libraries: List<MediaLibrary>,
     selectedLibraryId: Long,
     firstLibraryFocus: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
     onSelectLibrary: (Long) -> Unit,
 ) {
+    val firstLibraryId = libraries.firstOrNull()?.id
     LazyColumn(
         modifier = Modifier
             .width(220.dp)
@@ -199,6 +212,7 @@ private fun LibrarySidebar(
             items = libraries,
             key = MediaLibrary::id,
         ) { library ->
+            val isFirstLibrary = library.id == firstLibraryId
             KaloscopeButton(
                 onClick = { onSelectLibrary(library.id) },
                 selected = library.id == selectedLibraryId,
@@ -210,8 +224,17 @@ private fun LibrarySidebar(
                     .fillMaxWidth()
                     .height(58.dp)
                     .then(
-                        if (library == libraries.first()) {
+                        if (isFirstLibrary) {
                             Modifier.focusRequester(firstLibraryFocus)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .then(
+                        if (isFirstLibrary) {
+                            topNavigationFocusRequester?.let { requester ->
+                                Modifier.focusProperties { up = requester }
+                            } ?: Modifier
                         } else {
                             Modifier
                         },
@@ -241,6 +264,7 @@ private fun LibrarySidebar(
 @Composable
 private fun LibrarySearch(
     value: String,
+    topNavigationFocusRequester: FocusRequester?,
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
 ) {
@@ -254,6 +278,9 @@ private fun LibrarySearch(
             hint = stringResource(R.string.search_library_hint),
             onValueChange = onValueChange,
             onSearch = onSearch,
+            onMoveUp = topNavigationFocusRequester?.let { requester ->
+                { requester.requestFocus() }
+            },
             modifier = Modifier
                 .weight(1f)
                 .height(52.dp)
@@ -261,6 +288,9 @@ private fun LibrarySearch(
         )
         KaloscopeButton(
             onClick = onSearch,
+            modifier = Modifier.focusProperties {
+                topNavigationFocusRequester?.let { up = it }
+            },
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Compact,
         ) {

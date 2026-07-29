@@ -89,6 +89,8 @@ internal fun MainShell(
     val searchFocus = remember { FocusRequester() }
     val libraryFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
+    val firstIndexerFocus = remember { FocusRequester() }
+    val firstLibraryFocus = remember { FocusRequester() }
     val selectedSettingsSectionFocus = remember { FocusRequester() }
     var restoreMediaId by remember { mutableStateOf<Long?>(null) }
     var currentRoute by remember {
@@ -214,6 +216,8 @@ internal fun MainShell(
                         searchFocus = searchFocus,
                         libraryFocus = libraryFocus,
                         settingsFocus = settingsFocus,
+                        searchMenuFocus = firstIndexerFocus,
+                        libraryMenuFocus = firstLibraryFocus,
                         settingsMenuFocus = selectedSettingsSectionFocus,
                     )
                 }
@@ -296,6 +300,8 @@ internal fun MainShell(
                                     session = session,
                                     state = searchState,
                                     requestInitialFocus = !destinationEntryKeepsTopFocus,
+                                    firstIndexerFocusRequester = firstIndexerFocus,
+                                    topNavigationFocusRequester = searchFocus,
                                     onRefreshIndexers = searchActions.refreshIndexers,
                                     onSelectIndexer = searchActions.selectIndexer,
                                     onQueryChange = searchActions.updateQuery,
@@ -317,6 +323,8 @@ internal fun MainShell(
                                     state = libraryState,
                                     restoreMediaId = restoreMediaId,
                                     requestInitialFocus = !destinationEntryKeepsTopFocus,
+                                    firstLibraryFocusRequester = firstLibraryFocus,
+                                    topNavigationFocusRequester = libraryFocus,
                                     onSelectLibrary = libraryActions.select,
                                     onQueryChange = libraryActions.updateQuery,
                                     onSearch = libraryActions.search,
@@ -340,6 +348,7 @@ internal fun MainShell(
                                     requestInitialFocus = !destinationEntryKeepsTopFocus,
                                     selectedSectionFocusRequester =
                                         selectedSettingsSectionFocus,
+                                    topNavigationFocusRequester = settingsFocus,
                                     onRetry = settingsActions.retry,
                                     onSelectSection = settingsActions.selectSection,
                                     onPlaybackMode = settingsActions.setPlaybackMode,

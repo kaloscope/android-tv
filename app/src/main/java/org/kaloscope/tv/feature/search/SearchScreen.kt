@@ -76,6 +76,8 @@ fun SearchScreen(
     session: Session,
     state: SearchUiState,
     requestInitialFocus: Boolean = true,
+    firstIndexerFocusRequester: FocusRequester? = null,
+    topNavigationFocusRequester: FocusRequester? = null,
     onRefreshIndexers: () -> Unit,
     onSelectIndexer: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -100,6 +102,8 @@ fun SearchScreen(
             session = session,
             state = state,
             requestInitialFocus = requestInitialFocus,
+            firstIndexerFocusRequester = firstIndexerFocusRequester,
+            topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectIndexer = onSelectIndexer,
             onQueryChange = onQueryChange,
             onSearch = onSearch,
@@ -121,6 +125,8 @@ private fun SearchContent(
     session: Session,
     state: SearchUiState.Content,
     requestInitialFocus: Boolean,
+    firstIndexerFocusRequester: FocusRequester?,
+    topNavigationFocusRequester: FocusRequester?,
     onSelectIndexer: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -134,7 +140,9 @@ private fun SearchContent(
     onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
     onClearFilters: () -> Unit,
 ) {
-    val firstIndexerFocus = remember { FocusRequester() }
+    val internalFirstIndexerFocus = remember { FocusRequester() }
+    val firstIndexerFocus =
+        firstIndexerFocusRequester ?: internalFirstIndexerFocus
     val filterButtonFocus = remember { FocusRequester() }
     var restoreFilterFocus by remember { mutableStateOf(false) }
     LaunchedEffect(
@@ -162,6 +170,7 @@ private fun SearchContent(
             indexers = state.indexers,
             selectedIndexerId = state.selectedIndexerId,
             firstIndexerFocus = firstIndexerFocus,
+            topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectIndexer = onSelectIndexer,
         )
         Column(
@@ -174,6 +183,7 @@ private fun SearchContent(
                 filtersAvailable = state.selectedProfile.filters.isNotEmpty(),
                 filtersActive = state.appliedFilters.isNotEmpty(),
                 filterFocusRequester = filterButtonFocus,
+                topNavigationFocusRequester = topNavigationFocusRequester,
                 onValueChange = onQueryChange,
                 onSearch = onSearch,
                 onOpenFilters = {
@@ -244,8 +254,10 @@ private fun IndexerSidebar(
     indexers: List<NetworkIndexer>,
     selectedIndexerId: Long,
     firstIndexerFocus: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
     onSelectIndexer: (Long) -> Unit,
 ) {
+    val firstIndexerId = indexers.firstOrNull()?.id
     LazyColumn(
         modifier = Modifier
             .width(220.dp)
@@ -255,6 +267,7 @@ private fun IndexerSidebar(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(indexers, key = NetworkIndexer::id) { indexer ->
+            val isFirstIndexer = indexer.id == firstIndexerId
             KaloscopeButton(
                 onClick = { onSelectIndexer(indexer.id) },
                 selected = indexer.id == selectedIndexerId,
@@ -267,8 +280,17 @@ private fun IndexerSidebar(
                     .height(58.dp)
                     .testTag("indexer-${indexer.id}")
                     .then(
-                        if (indexer == indexers.first()) {
+                        if (isFirstIndexer) {
                             Modifier.focusRequester(firstIndexerFocus)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .then(
+                        if (isFirstIndexer) {
+                            topNavigationFocusRequester?.let { requester ->
+                                Modifier.focusProperties { up = requester }
+                            } ?: Modifier
                         } else {
                             Modifier
                         },
@@ -314,6 +336,7 @@ private fun SearchInput(
     filtersAvailable: Boolean,
     filtersActive: Boolean,
     filterFocusRequester: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
     onOpenFilters: () -> Unit,
@@ -329,6 +352,9 @@ private fun SearchInput(
             hint = stringResource(R.string.search_indexer_hint),
             onValueChange = onValueChange,
             onSearch = onSearch,
+            onMoveUp = topNavigationFocusRequester?.let { requester ->
+                { requester.requestFocus() }
+            },
             onMoveRight = searchActionFocus::requestFocus,
             modifier = Modifier
                 .weight(1f)
@@ -341,6 +367,7 @@ private fun SearchInput(
             modifier = Modifier
                 .focusRequester(searchActionFocus)
                 .focusProperties {
+                    topNavigationFocusRequester?.let { up = it }
                     right = if (filtersAvailable) {
                         filterFocusRequester
                     } else {
@@ -359,6 +386,9 @@ private fun SearchInput(
                 selected = filtersActive,
                 modifier = Modifier
                     .focusRequester(filterFocusRequester)
+                    .focusProperties {
+                        topNavigationFocusRequester?.let { up = it }
+                    }
                     .testTag("search-filter-button"),
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
