@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -21,6 +22,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.kaloscope.tv.core.model.SavedServer
+import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
 
 class ServerSetupFocusTest {
@@ -102,6 +105,87 @@ class ServerSetupFocusTest {
             .x
 
         assertTrue(abs(buttonCenter - labelCenter) < 1f)
+    }
+
+    @Test
+    fun testingConnectionKeepsTestButtonFocusAndIgnoresRepeatCenter() {
+        val state = mutableStateOf(
+            ServerSetupState(
+                name = "家庭服务器",
+                url = "http://192.168.1.2:8000",
+            ),
+        )
+        var tests = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                ServerSetupScreen(
+                    savedServers = emptyList(),
+                    state = state.value,
+                    onNameChange = {},
+                    onUrlChange = {},
+                    onTest = {
+                        tests += 1
+                        state.value = state.value.copy(isTesting = true)
+                    },
+                    onSave = {},
+                    onSelectServer = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("测试连接")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithText("正在测试…")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, tests)
+        }
+    }
+
+    @Test
+    fun connectionErrorKeepsFocusedTestButtonInsidePanel() {
+        val state = mutableStateOf(
+            ServerSetupState(
+                name = "家庭服务器",
+                url = "invalid",
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                ServerSetupScreen(
+                    savedServers = listOf(
+                        SavedServer("demo", "Demo", "https://demo.example"),
+                        SavedServer("home", "家庭服务器", "http://192.168.1.2:8000"),
+                    ),
+                    state = state.value,
+                    onNameChange = {},
+                    onUrlChange = {},
+                    onTest = {
+                        state.value = state.value.copy(error = ServerSetupError.InvalidUrl)
+                    },
+                    onSave = {},
+                    onSelectServer = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("测试连接")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        val panelBounds = composeRule.onNodeWithTag("onboarding-panel")
+            .getUnclippedBoundsInRoot()
+        val buttonBounds = composeRule.onNodeWithText("测试连接")
+            .getUnclippedBoundsInRoot()
+        assertTrue(
+            "Button bounds $buttonBounds exceed panel bounds $panelBounds",
+            buttonBounds.top >= panelBounds.top && buttonBounds.bottom <= panelBounds.bottom,
+        )
     }
 
     @Test

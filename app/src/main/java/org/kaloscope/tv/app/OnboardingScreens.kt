@@ -1,5 +1,6 @@
 package org.kaloscope.tv.app
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -37,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
+import kotlinx.coroutines.flow.collectLatest
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.BackgroundRaised
@@ -86,6 +89,8 @@ internal fun ServerSetupScreen(
     val nameFocus = remember { FocusRequester() }
     val urlFocus = remember { FocusRequester() }
     val testFocus = remember { FocusRequester() }
+    val panelScrollState = rememberScrollState()
+    val statusVisible = state.error != null || state.verifiedOrigin != null
     // Existing servers take focus priority; new installations start in navigation mode.
     LaunchedEffect(savedServers.isEmpty()) {
         if (savedServers.isEmpty()) {
@@ -94,12 +99,21 @@ internal fun ServerSetupScreen(
             savedServerFocus.requestFocus()
         }
     }
+    LaunchedEffect(statusVisible) {
+        if (statusVisible) {
+            // Focus stays on the action, so status rows must explicitly reveal it again.
+            snapshotFlow { panelScrollState.maxValue }.collectLatest { maxValue ->
+                panelScrollState.animateScrollTo(maxValue)
+            }
+        }
+    }
 
     AppFrame {
         SetupWizardPanel(
             title = stringResource(R.string.setup_title),
             description = stringResource(R.string.setup_description),
             activeStep = 1,
+            scrollState = panelScrollState,
         ) {
             Text(
                 text = stringResource(R.string.setup_form_title),
@@ -185,8 +199,13 @@ internal fun ServerSetupScreen(
                     } else {
                         stringResource(R.string.test_connection)
                     },
-                    enabled = !state.isTesting && !state.isSaving,
-                    onClick = onTest,
+                    // Keep the focused test action enabled or Compose moves D-pad focus.
+                    enabled = !state.isSaving,
+                    onClick = {
+                        if (!state.isTesting) {
+                            onTest()
+                        }
+                    },
                     modifier = Modifier
                         .focusRequester(testFocus)
                         .weight(1f),
@@ -333,6 +352,7 @@ private fun SetupWizardPanel(
     title: String,
     description: String,
     activeStep: Int,
+    scrollState: ScrollState = rememberScrollState(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Row(
@@ -364,7 +384,7 @@ private fun SetupWizardPanel(
                 .background(Panel.copy(alpha = 0.9f), RoundedCornerShape(22.dp))
                 .border(1.dp, Outline, RoundedCornerShape(22.dp))
                 .testTag("onboarding-panel")
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(26.dp),
             content = content,
         )

@@ -60,6 +60,9 @@ class ServerSetupCoordinator(
 
     suspend fun testConnection() {
         val current = mutableState.value
+        if (current.isTesting || current.isSaving) {
+            return
+        }
         if (current.name.isBlank()) {
             mutableState.value = current.copy(error = ServerSetupError.InvalidName)
             return

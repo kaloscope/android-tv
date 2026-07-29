@@ -1,6 +1,9 @@
 package org.kaloscope.tv.feature.server
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -24,6 +27,24 @@ class ServerSetupCoordinatorTest {
         assertEquals(ServerSetupError.InvalidUrl, coordinator.state.value.error)
         assertEquals(0, repository.testCalls)
         assertFalse(coordinator.state.value.canSave)
+    }
+
+    @Test
+    fun `test in progress ignores concurrent retry`() = runBlocking {
+        val repository = SuspendingServerRepository()
+        val coordinator = coordinator(repository)
+        coordinator.updateName("家庭服务器")
+        coordinator.updateUrl("http://192.168.1.2:8000")
+
+        val firstTest = launch { coordinator.testConnection() }
+        repository.firstCallStarted.await()
+        val retry = launch { coordinator.testConnection() }
+        yield()
+
+        assertEquals(1, repository.testCalls)
+        repository.release.complete(Unit)
+        firstTest.join()
+        retry.join()
     }
 
     @Test
@@ -131,6 +152,23 @@ private class FakeServerRepository(
     override suspend fun setActiveServer(serverId: String) {
         activeServerId = serverId
     }
+}
+
+private class SuspendingServerRepository : ServerRepository {
+    val firstCallStarted = CompletableDeferred<Unit>()
+    val release = CompletableDeferred<Unit>()
+    var testCalls = 0
+
+    override suspend fun testConnection(origin: String): AppResult<String> {
+        testCalls += 1
+        firstCallStarted.complete(Unit)
+        release.await()
+        return AppResult.Success("0.0.0")
+    }
+
+    override suspend fun saveServer(server: SavedServer) = Unit
+
+    override suspend fun setActiveServer(serverId: String) = Unit
 }
 
 private fun coordinator(repository: ServerRepository) = ServerSetupCoordinator(
