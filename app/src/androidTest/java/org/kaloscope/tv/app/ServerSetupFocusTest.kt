@@ -188,6 +188,47 @@ class ServerSetupFocusTest {
     }
 
     @Test
+    fun savingServerKeepsSaveButtonFocusAndIgnoresRepeatCenter() {
+        val state = mutableStateOf(
+            ServerSetupState(
+                name = "家庭服务器",
+                url = "http://192.0.2.1:8000",
+                verifiedOrigin = "http://192.0.2.1:8000",
+                serverVersion = "1.0.0",
+            ),
+        )
+        var saves = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                ServerSetupScreen(
+                    savedServers = emptyList(),
+                    state = state.value,
+                    onNameChange = {},
+                    onUrlChange = {},
+                    onTest = {},
+                    onSave = {
+                        saves += 1
+                        state.value = state.value.copy(isSaving = true)
+                    },
+                    onSelectServer = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("保存并继续")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithText("正在保存…")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, saves)
+        }
+    }
+
+    @Test
     fun connectionErrorKeepsFocusedTestButtonInsidePanel() {
         val state = mutableStateOf(
             ServerSetupState(

@@ -443,8 +443,13 @@ internal fun ServerSetupScreen(
                         } else {
                             stringResource(R.string.save_continue)
                         },
-                        enabled = state.canSave,
-                        onClick = onSave,
+                        // Keep the focused action eligible for D-pad focus while saving.
+                        enabled = state.canSave || state.isSaving,
+                        onClick = {
+                            if (state.canSave) {
+                                onSave()
+                            }
+                        },
                         modifier = Modifier
                             .focusRequester(saveFocus)
                             .weight(1f),
