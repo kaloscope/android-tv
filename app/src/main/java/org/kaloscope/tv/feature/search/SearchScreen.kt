@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -157,6 +158,7 @@ private fun SearchContent(
         horizontalArrangement = Arrangement.spacedBy(22.dp),
     ) {
         IndexerSidebar(
+            session = session,
             indexers = state.indexers,
             selectedIndexerId = state.selectedIndexerId,
             firstIndexerFocus = firstIndexerFocus,
@@ -238,6 +240,7 @@ private fun SearchEmptyIndexers(onRefresh: () -> Unit) {
 
 @Composable
 private fun IndexerSidebar(
+    session: Session,
     indexers: List<NetworkIndexer>,
     selectedIndexerId: Long,
     firstIndexerFocus: FocusRequester,
@@ -275,10 +278,23 @@ private fun IndexerSidebar(
                     modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = indexer.name.take(1),
-                        fontWeight = FontWeight.Bold,
-                    )
+                    if (indexer.iconPath.isNullOrBlank()) {
+                        Text(
+                            text = indexer.name.take(1),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    } else {
+                        ServerImage(
+                            session = session,
+                            rawValue = indexer.iconPath,
+                            fallbackText = indexer.name,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            policy = ServerImagePolicy.Auto,
+                        )
+                    }
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = indexer.name,

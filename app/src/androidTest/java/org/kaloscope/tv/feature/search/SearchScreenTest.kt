@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
@@ -66,6 +67,71 @@ class SearchScreenTest {
         }
 
         composeRule.onNodeWithTag("indexer-11").assertIsFocused()
+    }
+
+    @Test
+    fun graphIconReplacesIndexerInitial() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        indexerIconPath = "icons/indexer.webp",
+                        results = emptyList(),
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            testTag = "server-image-success",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithText(
+            text = "星",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+    }
+
+    @Test
+    fun missingGraphIconKeepsIndexerInitial() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(results = emptyList()),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            text = "星",
+            useUnmergedTree = true,
+        ).assertExists()
     }
 
     @Test
@@ -557,6 +623,7 @@ class SearchScreenTest {
 }
 
 private fun state(
+    indexerIconPath: String? = null,
     filters: List<SearchFilterDefinition> = emptyList(),
     appliedFilters: Map<String, SearchFilterValue> = emptyMap(),
     filterDrawerOpen: Boolean = false,
@@ -568,7 +635,7 @@ private fun state(
     loadMoreError: AppError? = null,
 ): SearchUiState {
     val profile = IndexerSourceProfile(
-        indexer = indexer(),
+        indexer = indexer(indexerIconPath),
         pageSize = 20,
         keywordRequired = true,
         filters = filters,
@@ -619,7 +686,7 @@ private fun textFilter() = SearchFilterDefinition(
     type = SearchFilterType.Text,
 )
 
-private fun indexer() = NetworkIndexer(11, "星海站", null)
+private fun indexer(iconPath: String? = null) = NetworkIndexer(11, "星海站", iconPath)
 
 private fun session() = Session(
     server = SavedServer("server-id", "家庭服务器", "http://127.0.0.1:8000"),
