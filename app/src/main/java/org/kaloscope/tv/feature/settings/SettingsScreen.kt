@@ -69,6 +69,7 @@ fun SettingsScreen(
     session: Session,
     state: SettingsUiState,
     requestInitialFocus: Boolean = true,
+    selectedSectionFocusRequester: FocusRequester? = null,
     onRetry: () -> Unit,
     onSelectSection: (SettingsSection) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
@@ -97,6 +98,7 @@ fun SettingsScreen(
             session = session,
             state = state,
             requestInitialFocus = requestInitialFocus,
+            selectedSectionFocusRequester = selectedSectionFocusRequester,
             onSelectSection = onSelectSection,
             onPlaybackMode = onPlaybackMode,
             onTranscodeResolution = onTranscodeResolution,
@@ -116,6 +118,7 @@ private fun SettingsContent(
     session: Session,
     state: SettingsUiState.Content,
     requestInitialFocus: Boolean,
+    selectedSectionFocusRequester: FocusRequester?,
     onSelectSection: (SettingsSection) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
@@ -130,7 +133,9 @@ private fun SettingsContent(
     var choice by remember { mutableStateOf<SettingsChoice?>(null) }
     var languageEditorOpen by remember { mutableStateOf(false) }
     var restoreFocus by remember { mutableStateOf<FocusRequester?>(null) }
-    val selectedSectionFocus = remember { FocusRequester() }
+    val internalSelectedSectionFocus = remember { FocusRequester() }
+    val selectedSectionFocus =
+        selectedSectionFocusRequester ?: internalSelectedSectionFocus
     // A transiently disabled TV control loses focus before its dialog can take over.
     val interactionsEnabled = choice == null && !languageEditorOpen && !state.isSaving
 

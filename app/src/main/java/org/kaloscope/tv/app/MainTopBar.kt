@@ -62,6 +62,7 @@ internal fun MainTopBar(
     searchFocus: FocusRequester,
     libraryFocus: FocusRequester,
     settingsFocus: FocusRequester,
+    settingsMenuFocus: FocusRequester,
 ) {
     Row(
         modifier = Modifier
@@ -123,7 +124,10 @@ internal fun MainTopBar(
             onFocused = { onDestinationFocused(SettingsRoute) },
             modifier = Modifier
                 .focusRequester(settingsFocus)
-                .focusProperties { left = libraryFocus },
+                .focusProperties {
+                    left = libraryFocus
+                    down = settingsMenuFocus
+                },
         )
         Spacer(Modifier.width(18.dp))
         Clock()

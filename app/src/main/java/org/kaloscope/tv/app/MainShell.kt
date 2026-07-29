@@ -89,6 +89,7 @@ internal fun MainShell(
     val searchFocus = remember { FocusRequester() }
     val libraryFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
+    val selectedSettingsSectionFocus = remember { FocusRequester() }
     var restoreMediaId by remember { mutableStateOf<Long?>(null) }
     var currentRoute by remember {
         mutableStateOf<NavKey>(backStack.lastOrNull() ?: HomeRoute)
@@ -213,6 +214,7 @@ internal fun MainShell(
                         searchFocus = searchFocus,
                         libraryFocus = libraryFocus,
                         settingsFocus = settingsFocus,
+                        settingsMenuFocus = selectedSettingsSectionFocus,
                     )
                 }
                 Box(
@@ -336,6 +338,8 @@ internal fun MainShell(
                                     session = session,
                                     state = settingsState,
                                     requestInitialFocus = !destinationEntryKeepsTopFocus,
+                                    selectedSectionFocusRequester =
+                                        selectedSettingsSectionFocus,
                                     onRetry = settingsActions.retry,
                                     onSelectSection = settingsActions.selectSection,
                                     onPlaybackMode = settingsActions.setPlaybackMode,

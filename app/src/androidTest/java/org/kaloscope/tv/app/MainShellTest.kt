@@ -122,6 +122,7 @@ class MainShellTest {
                 val searchFocus = remember { FocusRequester() }
                 val libraryFocus = remember { FocusRequester() }
                 val settingsFocus = remember { FocusRequester() }
+                val settingsMenuFocus = remember { FocusRequester() }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -138,6 +139,7 @@ class MainShellTest {
                         searchFocus = searchFocus,
                         libraryFocus = libraryFocus,
                         settingsFocus = settingsFocus,
+                        settingsMenuFocus = settingsMenuFocus,
                     )
                 }
             }
@@ -289,6 +291,32 @@ class MainShellTest {
         composeRule.onNodeWithContentDescription("设置")
             .assertIsSelected()
             .assertIsFocused()
+    }
+
+    @Test
+    fun directionDownFromSettingsGearFocusesSelectedMenuSection() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    settingsState = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Danmaku,
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("设置")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithText("弹幕").assertIsFocused()
+        composeRule.onNodeWithText("默认开启弹幕").assertIsNotFocused()
     }
 
     @Test
