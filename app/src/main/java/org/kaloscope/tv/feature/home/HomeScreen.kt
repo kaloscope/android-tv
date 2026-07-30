@@ -118,11 +118,11 @@ internal fun HomeScreen(
                 fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
             KaloscopeIconButton(
                 onClick = onRefresh,
                 modifier = Modifier
-                    .size(52.dp)
+                    .size(32.dp)
                     .testTag("home-refresh"),
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
@@ -130,7 +130,7 @@ internal fun HomeScreen(
                 Icon(
                     painter = painterResource(R.drawable.ic_refresh),
                     contentDescription = stringResource(R.string.refresh),
-                    modifier = Modifier.size(25.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
@@ -229,7 +229,7 @@ private fun HistoryContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 34.dp, vertical = 12.dp),
+                .padding(vertical = 12.dp),
         ) {
             SelectedHistoryDetails(
                 item = selectedItem,
@@ -239,43 +239,52 @@ private fun HistoryContent(
                 selectedCardFocusRequester = selectedCardFocusRequester,
                 modifier = Modifier
                     .weight(1f)
+                    .padding(horizontal = 16.dp)
                     .fillMaxWidth(0.58f),
             )
             Spacer(Modifier.height(10.dp))
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(94.dp)
-                    .testTag("history-carousel"),
+                    .height(94.dp),
             ) {
-                LazyRow(
-                    state = listState,
-                    contentPadding = PaddingValues(horizontal = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxSize(),
+                Spacer(Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .testTag("history-carousel"),
                 ) {
-                    itemsIndexed(
-                        items = items,
-                        key = { _, item -> item.historyId },
-                    ) { _, item ->
-                        HistoryCarouselCard(
-                            session = session,
-                            item = item,
-                            selected = item.mediaId == selectedItem.mediaId,
-                            actionFocusRequester = actionFocusRequester,
-                            selectedCardFocusRequester = selectedCardFocusRequester,
-                            onFocused = { selectedMediaId = item.mediaId },
-                            onPlayHistory = onPlayHistory,
-                        )
+                    LazyRow(
+                        state = listState,
+                        contentPadding = PaddingValues(horizontal = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        itemsIndexed(
+                            items = items,
+                            key = { _, item -> item.historyId },
+                        ) { _, item ->
+                            HistoryCarouselCard(
+                                session = session,
+                                item = item,
+                                selected = item.mediaId == selectedItem.mediaId,
+                                actionFocusRequester = actionFocusRequester,
+                                selectedCardFocusRequester = selectedCardFocusRequester,
+                                onFocused = { selectedMediaId = item.mediaId },
+                                onPlayHistory = onPlayHistory,
+                            )
+                        }
+                    }
+                    if (canScrollBackward) {
+                        CarouselEdgeFade(start = true)
+                    }
+                    if (canScrollForward) {
+                        CarouselEdgeFade(start = false)
                     }
                 }
-                if (canScrollBackward) {
-                    CarouselEdgeFade(start = true)
-                }
-                if (canScrollForward) {
-                    CarouselEdgeFade(start = false)
-                }
+                Spacer(Modifier.width(10.dp))
             }
         }
     }
@@ -320,7 +329,7 @@ private fun SelectedHistoryDetails(
             percentage = item.percentage,
             modifier = Modifier.testTag("history-progress"),
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KaloscopeButton(
                 onClick = { onPlayHistory(item) },
@@ -330,7 +339,16 @@ private fun SelectedHistoryDetails(
                     .focusProperties { down = selectedCardFocusRequester },
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_player_play),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .testTag("history-resume-icon"),
+                )
+                Spacer(Modifier.width(7.dp))
                 Text(stringResource(R.string.resume_playback))
             }
             KaloscopeButton(
@@ -448,10 +466,18 @@ private fun HistoryCarouselCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                formatHistoryUpdatedAt(item.updatedAt)?.let { updatedAt ->
+                formatHistoryUpdatedAt(
+                    value = item.updatedAt,
+                    todayLabel = stringResource(R.string.history_today),
+                    yesterdayLabel = stringResource(R.string.history_yesterday),
+                )?.let { updatedAt ->
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = updatedAt,
+                        text = stringResource(
+                            R.string.history_card_progress,
+                            updatedAt,
+                            item.percentage.coerceIn(0, 100),
+                        ),
                         color = Subtle,
                         fontSize = 12.sp,
                         maxLines = 1,
@@ -541,6 +567,10 @@ private fun HistoryMetadata(item: WatchHistoryItem) {
     val metadata = listOfNotNull(
         item.year?.toString(),
         item.rating?.let { stringResource(R.string.rating, it) },
+        stringResource(
+            R.string.history_watched_percentage,
+            item.percentage.coerceIn(0, 100),
+        ),
     ).joinToString("  ·  ")
     if (metadata.isNotEmpty()) {
         Spacer(Modifier.height(4.dp))

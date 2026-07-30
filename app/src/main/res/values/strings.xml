@@ -51,6 +51,10 @@
     <string name="open_library">进入媒体库</string>
     <string name="history_load_failed">无法加载观看历史</string>
     <string name="continue_watching">最近观看</string>
+    <string name="history_today">今天</string>
+    <string name="history_yesterday">昨天</string>
+    <string name="history_card_progress">%1$s · %2$d%%</string>
+    <string name="history_watched_percentage">已看 %1$d%%</string>
     <string name="season_episode">第 %1$d 季 · 第 %2$d 集</string>
     <string name="history_episode_title">S%1$dE%2$d - %3$s</string>
     <string name="rating">评分 %1$.1f</string>

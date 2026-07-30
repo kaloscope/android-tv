@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
@@ -32,6 +35,9 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
@@ -82,7 +88,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun refreshButtonHasBorderlessRestingStateAndBrightFocusBorder() {
+    fun refreshButtonHasNeutralRestingStateAndBrightFocusBorder() {
         showEmptyHome()
         composeRule.onNodeWithText("进入媒体库")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -101,12 +107,13 @@ class HomeScreenTest {
         val focusedEdge = averageTopCenterColor(focused)
 
         assertTrue(
-            "Resting control must not draw a visible outline: $restingEdge",
-            restingEdge.red <= 32.0,
+            "Resting control must remain neutral: $restingEdge",
+            restingEdge.channelSpread <= 45.0,
         )
         assertTrue(
-            "Focused control must draw a bright white border: $focusedEdge",
-            focusedEdge.luminance >= 180.0,
+            "Focused control must draw a bright white border: " +
+                "resting=$restingEdge, focused=$focusedEdge",
+            focusedEdge.luminance >= restingEdge.luminance * 1.5,
         )
     }
 
@@ -146,19 +153,179 @@ class HomeScreenTest {
     }
 
     @Test
-    fun cardShowsLocalTimestampAndOnlyOneProgressIndicator() {
+    fun refreshActionSitsBesideRecentWatchingOnItsCenterLine() {
+        showEmptyHome()
+
+        val labelBounds = composeRule.onNodeWithText("最近观看")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val refreshBounds = composeRule.onNodeWithTag("home-refresh")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val minimumGap = with(composeRule.density) { 6.dp.toPx() }
+        val maximumGap = with(composeRule.density) { 10.dp.toPx() }
+        val centerTolerance = with(composeRule.density) { 1.dp.toPx() }
+        val heightTolerance = with(composeRule.density) { 8.dp.toPx() }
+        val gap = refreshBounds.left - labelBounds.right
+
+        assertTrue(
+            "Refresh action must sit immediately after the label: gap=$gap",
+            gap in minimumGap..maximumGap,
+        )
+        assertTrue(
+            "Refresh action and label must share the same vertical center",
+            abs(refreshBounds.center.y - labelBounds.center.y) <= centerTolerance,
+        )
+        assertTrue(
+            "Refresh action must stay visually compact beside the label",
+            refreshBounds.height - labelBounds.height <= heightTolerance,
+        )
+    }
+
+    @Test
+    fun cardShowsRelativeDateAndWatchPercentage() {
         val originalTimeZone = TimeZone.getDefault()
         try {
             TimeZone.setDefault(TimeZone.getTimeZone("GMT+08:00"))
-            showContentHome()
+            val items = historyItems().map { item ->
+                item.copy(updatedAt = timestampForLocalDayOffset(-1))
+            }
+            showContentHome(items = items)
 
-            composeRule.onAllNodesWithText("2026/07/27 16:00:00")
+            composeRule.onAllNodesWithText("昨天 · 45%")
                 .assertCountEquals(2)
             composeRule.onAllNodesWithTag("history-progress")
                 .assertCountEquals(1)
         } finally {
             TimeZone.setDefault(originalTimeZone)
         }
+    }
+
+    @Test
+    fun selectedMetadataShowsWatchPercentageAfterRating() {
+        showContentHome()
+
+        composeRule.onNodeWithText("2026  ·  评分 8.6  ·  已看 45%")
+            .assertExists()
+    }
+
+    @Test
+    fun resumeButtonShowsReadablePlayIcon() {
+        showContentHome()
+
+        val iconBounds = composeRule.onNodeWithTag(
+            "history-resume-icon",
+            useUnmergedTree = true,
+        )
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val actionBounds = composeRule.onNodeWithText("继续播放")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val minimumIconSize = with(composeRule.density) { 24.dp.toPx() }
+
+        assertTrue(
+            "Resume icon width must be at least 24 dp: " +
+                "icon=$iconBounds, action=$actionBounds",
+            iconBounds.width >= minimumIconSize,
+        )
+        assertTrue(
+            "Resume icon height must be at least 24 dp: " +
+                "icon=$iconBounds, action=$actionBounds",
+            iconBounds.height >= minimumIconSize,
+        )
+    }
+
+    @Test
+    fun progressBarLeavesClearSpaceBeforeHistoryActions() {
+        showContentHome()
+
+        val progressBounds = composeRule.onNodeWithTag("history-progress")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val actionBounds = composeRule.onNodeWithText("继续播放")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val minimumGap = with(composeRule.density) { 16.dp.toPx() }
+
+        assertTrue(
+            "Progress bar must leave at least 16 dp before the action row",
+            actionBounds.top - progressBounds.bottom >= minimumGap,
+        )
+    }
+
+    @Test
+    fun restingHomeSurfacesUseOpaqueProjectFill() {
+        val backdropColor = mutableStateOf(Color(0xFF782535))
+        showContentHome(backdropColor = backdropColor)
+
+        composeRule.onNodeWithTag("home-refresh").assertHasClickAction()
+        composeRule.onNodeWithText("继续播放").assertHasClickAction()
+        composeRule.onNodeWithText("查看详情").assertHasClickAction()
+        composeRule.onNodeWithTag("history-card-301").assertHasClickAction()
+        val warmColors = captureHomeSurfaceColors()
+
+        composeRule.runOnIdle {
+            backdropColor.value = Color(0xFF174D82)
+        }
+        composeRule.waitForIdle()
+        val coolColors = captureHomeSurfaceColors()
+
+        assertBackdropIndependence(warmColors, coolColors)
+    }
+
+    @Test
+    fun focusedHomeSurfacesUseOpaqueProjectFill() {
+        val backdropColor = mutableStateOf(Color(0xFF782535))
+        showContentHome(backdropColor = backdropColor)
+
+        composeRule.onNodeWithTag("home-refresh")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.waitForIdle()
+        val warmAction = averageInteriorTopCenterColor(
+            composeRule.onNodeWithTag("home-refresh")
+                .captureToImage()
+                .asAndroidBitmap(),
+        )
+        composeRule.runOnIdle {
+            backdropColor.value = Color(0xFF174D82)
+        }
+        composeRule.waitForIdle()
+        val coolAction = averageInteriorTopCenterColor(
+            composeRule.onNodeWithTag("home-refresh")
+                .captureToImage()
+                .asAndroidBitmap(),
+        )
+        assertBackdropIndependence(
+            warm = mapOf("focused refresh" to warmAction),
+            cool = mapOf("focused refresh" to coolAction),
+        )
+
+        composeRule.runOnIdle {
+            backdropColor.value = Color(0xFF782535)
+        }
+        composeRule.onNodeWithTag("history-card-301")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.waitForIdle()
+        val warmCard = averageInteriorTopCenterColor(
+            composeRule.onNodeWithTag("history-card-301")
+                .captureToImage()
+                .asAndroidBitmap(),
+        )
+        composeRule.runOnIdle {
+            backdropColor.value = Color(0xFF174D82)
+        }
+        composeRule.waitForIdle()
+        val coolCard = averageInteriorTopCenterColor(
+            composeRule.onNodeWithTag("history-card-301")
+                .captureToImage()
+                .asAndroidBitmap(),
+        )
+        assertBackdropIndependence(
+            warm = mapOf("focused history card" to warmCard),
+            cool = mapOf("focused history card" to coolCard),
+        )
     }
 
     @Test
@@ -296,6 +463,49 @@ class HomeScreenTest {
         assertTrue(
             "Selected history actions must not overlap the carousel",
             actionBounds.bottom <= carouselBounds.top,
+        )
+    }
+
+    @Test
+    fun homeContentUsesCompactHorizontalInsets() {
+        showContentHome()
+
+        val maximumInset = with(composeRule.density) { 18.dp.toPx() }
+        val contentBounds = composeRule.onNodeWithTag("home-content")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val titleBounds = composeRule.onNodeWithTag("history-selected-title")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val carouselBounds = composeRule.onNodeWithTag("history-carousel")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(
+            "Home content left inset must be compact",
+            titleBounds.left - contentBounds.left <= maximumInset,
+        )
+        assertTrue(
+            "Home content right inset must be compact",
+            contentBounds.right - carouselBounds.right <= maximumInset,
+        )
+    }
+
+    @Test
+    fun firstHistoryCardAlignsWithSelectedDetails() {
+        showContentHome()
+
+        val alignmentTolerance = with(composeRule.density) { 1.dp.toPx() }
+        val titleBounds = composeRule.onNodeWithTag("history-selected-title")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val firstCardBounds = composeRule.onNodeWithTag("history-card-301")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(
+            "First card and selected details must share the same left edge",
+            abs(firstCardBounds.left - titleBounds.left) <= alignmentTolerance,
         )
     }
 
@@ -471,6 +681,7 @@ class HomeScreenTest {
         onPlayHistory: (WatchHistoryItem) -> Unit = {},
         onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
         viewportHeight: Dp = 440.dp,
+        backdropColor: State<Color>? = null,
     ) {
         composeRule.setContent {
             KaloscopeTheme {
@@ -478,7 +689,7 @@ class HomeScreenTest {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(viewportHeight)
-                        .background(Background),
+                        .background(backdropColor?.value ?: Background),
                 ) {
                     HomeScreen(
                         session = testSession(),
@@ -494,6 +705,44 @@ class HomeScreenTest {
             }
         }
         composeRule.waitForIdle()
+    }
+
+    private fun captureHomeSurfaceColors(): Map<String, AverageColor> =
+        mapOf(
+            "refresh" to averageInteriorTopCenterColor(
+                composeRule.onNodeWithTag("home-refresh")
+                    .captureToImage()
+                    .asAndroidBitmap(),
+            ),
+            "resume" to averageInteriorTopCenterColor(
+                composeRule.onNodeWithText("继续播放")
+                    .captureToImage()
+                    .asAndroidBitmap(),
+            ),
+            "details" to averageInteriorTopCenterColor(
+                composeRule.onNodeWithText("查看详情")
+                    .captureToImage()
+                    .asAndroidBitmap(),
+            ),
+            "history card" to averageInteriorTopCenterColor(
+                composeRule.onNodeWithTag("history-card-301")
+                    .captureToImage()
+                    .asAndroidBitmap(),
+            ),
+        )
+
+    private fun assertBackdropIndependence(
+        warm: Map<String, AverageColor>,
+        cool: Map<String, AverageColor>,
+    ) {
+        warm.forEach { (label, warmColor) ->
+            val coolColor = cool.getValue(label)
+            assertTrue(
+                "$label must use the same opaque project fill across backdrops: " +
+                    "warm=$warmColor, cool=$coolColor",
+                warmColor.distanceTo(coolColor) <= 6.0,
+            )
+        }
     }
 
     private fun textLayoutFor(text: String): TextLayoutResult {
@@ -512,6 +761,20 @@ class HomeScreenTest {
                 it(results)
             }
         return results.single()
+    }
+
+    private fun timestampForLocalDayOffset(offset: Int): String {
+        val timeZone = TimeZone.getDefault()
+        val calendar = Calendar.getInstance(timeZone).apply {
+            add(Calendar.DAY_OF_YEAR, offset)
+            set(Calendar.HOUR_OF_DAY, 12)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply {
+            this.timeZone = timeZone
+        }.format(calendar.time)
     }
 
     private fun averagePosterLuminance(bitmap: Bitmap): Double {
@@ -560,6 +823,32 @@ class HomeScreenTest {
         )
     }
 
+    private fun averageInteriorTopCenterColor(bitmap: Bitmap): AverageColor {
+        val density = composeRule.density
+        val halfWidth = with(density) { 6.dp.roundToPx().coerceAtLeast(1) }
+        val top = with(density) { 7.dp.roundToPx().coerceAtLeast(1) }
+        val depth = with(density) { 4.dp.roundToPx().coerceAtLeast(1) }
+        val centerX = bitmap.width / 2
+        var red = 0L
+        var green = 0L
+        var blue = 0L
+        var count = 0L
+        for (x in centerX - halfWidth until centerX + halfWidth) {
+            for (y in top until top + depth) {
+                val pixel = bitmap.getPixel(x, y)
+                red += AndroidColor.red(pixel)
+                green += AndroidColor.green(pixel)
+                blue += AndroidColor.blue(pixel)
+                count += 1
+            }
+        }
+        return AverageColor(
+            red = red.toDouble() / count,
+            green = green.toDouble() / count,
+            blue = blue.toDouble() / count,
+        )
+    }
+
     private data class AverageColor(
         val red: Double,
         val green: Double,
@@ -570,6 +859,11 @@ class HomeScreenTest {
 
         val channelSpread: Double
             get() = maxOf(red, green, blue) - minOf(red, green, blue)
+
+        fun distanceTo(other: AverageColor): Double =
+            abs(red - other.red) +
+                abs(green - other.green) +
+                abs(blue - other.blue)
     }
 }
 
