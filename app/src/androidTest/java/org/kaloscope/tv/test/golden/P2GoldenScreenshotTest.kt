@@ -103,6 +103,23 @@ class P2GoldenScreenshotTest {
     }
 
     @Test
+    fun localNavigationIconsMatch1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeBackground {
+                    LocalNavigationIconGoldenSheet()
+                }
+            }
+        }
+
+        assertGolden(
+            "local-navigation-icons-1920",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
     fun searchCursorMatches1080p() {
         if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
         composeRule.mainClock.autoAdvance = false
