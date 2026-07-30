@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.library
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
+import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -65,6 +67,7 @@ import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
+import org.kaloscope.tv.core.model.MediaLibraryType
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.RatingDisplayPolicy
 import org.kaloscope.tv.core.model.Session
@@ -223,6 +226,7 @@ private fun LibrarySidebar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp)
+                    .testTag("library-sidebar-item-${library.id}")
                     .then(
                         if (isFirstLibrary) {
                             Modifier.focusRequester(firstLibraryFocus)
@@ -244,10 +248,9 @@ private fun LibrarySidebar(
                     modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = library.name.take(1),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                    KaloscopeNavigationIcon(
+                        iconRes = library.type.iconResource(),
+                        modifier = Modifier.testTag(library.type.iconTestTag()),
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
@@ -260,6 +263,21 @@ private fun LibrarySidebar(
         }
     }
 }
+
+@DrawableRes
+private fun MediaLibraryType.iconResource(): Int =
+    when (this) {
+        MediaLibraryType.Movie -> R.drawable.ic_library_movie
+        MediaLibraryType.TvShow -> R.drawable.ic_library_tv_show
+        MediaLibraryType.Unknown -> R.drawable.ic_library_unknown
+    }
+
+private fun MediaLibraryType.iconTestTag(): String =
+    when (this) {
+        MediaLibraryType.Movie -> "library-type-icon-movie"
+        MediaLibraryType.TvShow -> "library-type-icon-tv-show"
+        MediaLibraryType.Unknown -> "library-type-icon-unknown"
+    }
 
 @Composable
 private fun LibrarySearch(

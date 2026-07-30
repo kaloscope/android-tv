@@ -1,5 +1,6 @@
 package org.kaloscope.tv.app
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -47,6 +49,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
+import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 
@@ -87,6 +90,9 @@ internal fun MainTopBar(
         ) {
             MainNavButton(
                 text = stringResource(R.string.home),
+                iconRes = R.drawable.ic_nav_home,
+                selectedIconRes = R.drawable.ic_nav_home_filled,
+                iconTag = "main-nav-icon-home",
                 selected = currentRoute == HomeRoute,
                 onClick = onHome,
                 onFocused = { onDestinationFocused(HomeRoute) },
@@ -99,6 +105,9 @@ internal fun MainTopBar(
             )
             MainNavButton(
                 text = stringResource(R.string.search),
+                iconRes = R.drawable.ic_nav_search,
+                selectedIconRes = R.drawable.ic_nav_search_filled,
+                iconTag = "main-nav-icon-search",
                 selected = currentRoute == SearchRoute,
                 onClick = onSearch,
                 onFocused = { onDestinationFocused(SearchRoute) },
@@ -112,6 +121,9 @@ internal fun MainTopBar(
             )
             MainNavButton(
                 text = stringResource(R.string.library),
+                iconRes = R.drawable.ic_nav_library,
+                selectedIconRes = R.drawable.ic_nav_library_filled,
+                iconTag = "main-nav-icon-library",
                 selected = currentRoute == LibraryRoute,
                 onClick = onLibrary,
                 onFocused = { onDestinationFocused(LibraryRoute) },
@@ -145,6 +157,11 @@ internal fun MainTopBar(
 @Composable
 private fun MainNavButton(
     text: String,
+    @DrawableRes
+    iconRes: Int,
+    @DrawableRes
+    selectedIconRes: Int,
+    iconTag: String,
     selected: Boolean,
     onClick: () -> Unit,
     onFocused: () -> Unit,
@@ -165,6 +182,12 @@ private fun MainNavButton(
         shape = RoundedCornerShape(11.dp),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
     ) {
+        val displayedVariant = if (selected) "filled" else "regular"
+        KaloscopeNavigationIcon(
+            iconRes = if (selected) selectedIconRes else iconRes,
+            modifier = Modifier.testTag("$iconTag-$displayedVariant"),
+        )
+        Spacer(Modifier.width(10.dp))
         Text(
             text = text,
             fontSize = 15.sp,
@@ -202,9 +225,16 @@ private fun SettingsButton(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "⚙",
-                fontSize = 22.sp,
+            val displayedVariant = if (selected) "filled" else "regular"
+            KaloscopeNavigationIcon(
+                iconRes = if (selected) {
+                    R.drawable.ic_nav_settings_filled
+                } else {
+                    R.drawable.ic_nav_settings
+                },
+                modifier = Modifier.testTag(
+                    "main-nav-icon-settings-$displayedVariant",
+                ),
             )
         }
     }

@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.settings
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
+import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -290,6 +292,11 @@ private fun SettingsMenu(
                         }
                     },
             ) {
+                KaloscopeNavigationIcon(
+                    iconRes = section.iconResource(),
+                    modifier = Modifier.testTag(section.iconTestTag()),
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(sectionLabel(section))
             }
         }
@@ -693,6 +700,25 @@ private fun SettingsStatus(
         }
     }
 }
+
+@DrawableRes
+private fun SettingsSection.iconResource(): Int =
+    when (this) {
+        SettingsSection.Playback -> R.drawable.ic_settings_playback
+        SettingsSection.Danmaku -> R.drawable.ic_settings_danmaku
+        SettingsSection.Subtitle -> R.drawable.ic_settings_subtitle
+        SettingsSection.Behavior -> R.drawable.ic_settings_behavior
+        SettingsSection.ServerAccount -> R.drawable.ic_settings_server_account
+    }
+
+private fun SettingsSection.iconTestTag(): String =
+    when (this) {
+        SettingsSection.Playback -> "settings-section-icon-playback"
+        SettingsSection.Danmaku -> "settings-section-icon-danmaku"
+        SettingsSection.Subtitle -> "settings-section-icon-subtitle"
+        SettingsSection.Behavior -> "settings-section-icon-behavior"
+        SettingsSection.ServerAccount -> "settings-section-icon-server-account"
+    }
 
 @Composable
 private fun sectionLabel(section: SettingsSection): String =

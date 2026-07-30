@@ -247,6 +247,66 @@ class MainShellTest {
     }
 
     @Test
+    fun topNavigationUsesLocalVectorIcons() {
+        var route by mutableStateOf<NavKey>(HomeRoute)
+        composeRule.setContent {
+            KaloscopeTheme {
+                val homeFocus = remember { FocusRequester() }
+                val searchFocus = remember { FocusRequester() }
+                val libraryFocus = remember { FocusRequester() }
+                val settingsFocus = remember { FocusRequester() }
+                val searchMenuFocus = remember { FocusRequester() }
+                val libraryMenuFocus = remember { FocusRequester() }
+                val settingsMenuFocus = remember { FocusRequester() }
+                MainTopBar(
+                    currentRoute = route,
+                    onHome = {},
+                    onSearch = {},
+                    onLibrary = {},
+                    onSettings = {},
+                    onDestinationFocused = {},
+                    homeFocus = homeFocus,
+                    searchFocus = searchFocus,
+                    libraryFocus = libraryFocus,
+                    settingsFocus = settingsFocus,
+                    searchMenuFocus = searchMenuFocus,
+                    libraryMenuFocus = libraryMenuFocus,
+                    settingsMenuFocus = settingsMenuFocus,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            "main-nav-icon-home-filled",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            "main-nav-icon-search-regular",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            "main-nav-icon-library-regular",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            "main-nav-icon-settings-regular",
+            useUnmergedTree = true,
+        ).assertExists()
+
+        composeRule.runOnIdle { route = SettingsRoute }
+
+        composeRule.onNodeWithTag(
+            "main-nav-icon-home-regular",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            "main-nav-icon-settings-filled",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithContentDescription("设置").assertExists()
+    }
+
+    @Test
     fun homeHistoryBackdropFillsAuthenticatedShellWithoutHero() {
         composeRule.setContent {
             KaloscopeTheme {

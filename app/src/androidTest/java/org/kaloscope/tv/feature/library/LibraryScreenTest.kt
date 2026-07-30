@@ -105,6 +105,45 @@ class LibraryScreenTest {
     }
 
     @Test
+    fun librarySidebarUsesTypeIconsInsteadOfNameInitials() {
+        val libraries = listOf(
+            MediaLibrary(1, "电影库", MediaLibraryType.Movie),
+            MediaLibrary(2, "剧集库", MediaLibraryType.TvShow),
+            MediaLibrary(3, "其他库", MediaLibraryType.Unknown),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state().copy(
+                        libraries = libraries,
+                        selectedLibraryId = 1,
+                    ),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        listOf(
+            "library-type-icon-movie",
+            "library-type-icon-tv-show",
+            "library-type-icon-unknown",
+        ).forEach { tag ->
+            composeRule.onNodeWithTag(tag, useUnmergedTree = true).assertExists()
+        }
+        listOf("电", "剧", "其").forEach { initial ->
+            composeRule.onNodeWithText(initial, useUnmergedTree = true).assertDoesNotExist()
+        }
+    }
+
+    @Test
     fun mediaCardShowsValidRatingAndDoesNotUseBackdropAsPoster() {
         val media = mediaItems(1).single().copy(
             rating = 8.14,

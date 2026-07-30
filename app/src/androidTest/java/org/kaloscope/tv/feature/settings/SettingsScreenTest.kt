@@ -112,6 +112,39 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun settingsMenuUsesLocalIconsForEverySection() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(TvSettings()),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        listOf(
+            "settings-section-icon-playback",
+            "settings-section-icon-danmaku",
+            "settings-section-icon-subtitle",
+            "settings-section-icon-behavior",
+            "settings-section-icon-server-account",
+        ).forEach { tag ->
+            composeRule.onNodeWithTag(tag, useUnmergedTree = true).assertExists()
+        }
+    }
+
+    @Test
     fun menuSelectionAndSettingFocusRemainIndependent() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -549,8 +582,10 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("subtitle-language-selector").assertIsFocused()
         composeRule.onNodeWithText("保存").assertExists()
 
-        InstrumentationRegistry.getInstrumentation()
-            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        InstrumentationRegistry.getInstrumentation().apply {
+            waitForIdleSync()
+            sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        }
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("保存").assertDoesNotExist()

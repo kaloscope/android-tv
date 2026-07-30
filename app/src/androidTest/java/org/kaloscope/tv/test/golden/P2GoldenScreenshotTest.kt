@@ -72,6 +72,37 @@ class P2GoldenScreenshotTest {
     }
 
     @Test
+    fun librarySidebarRowMatches1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeBackground {
+                    LibraryScreen(
+                        session = session(),
+                        state = libraryState(),
+                        restoreMediaId = null,
+                        onSelectLibrary = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onMediaFocused = {},
+                        onOpenMedia = {},
+                    )
+                }
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(1_000)
+        assertGolden(
+            "library-sidebar-row-1920",
+            composeRule.onNodeWithTag("library-sidebar-item-1")
+                .captureToImage()
+                .asAndroidBitmap(),
+        )
+    }
+
+    @Test
     fun searchCursorMatches1080p() {
         if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
         composeRule.mainClock.autoAdvance = false
