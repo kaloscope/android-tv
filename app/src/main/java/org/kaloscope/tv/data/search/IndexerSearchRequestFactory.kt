@@ -21,9 +21,9 @@ internal fun buildIndexerSearchRequest(
     put("page_size", profile.pageSize)
     put("keyword", keyword.trim())
     put("mobile", false)
-    profile.filters.forEach { definition ->
+    for (definition in profile.filters) {
         if (definition.key in BASE_SEARCH_KEYS) {
-            return@forEach
+            continue
         }
         when (val value = filters[definition.key]) {
             is SearchFilterValue.Scalar ->

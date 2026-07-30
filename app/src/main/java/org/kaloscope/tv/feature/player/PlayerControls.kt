@@ -501,7 +501,7 @@ private fun SeekablePlayerProgress(
                         .fillMaxSize()
                         .testTag("player-chapter-markers"),
                 ) {
-                    chapterMarkers.forEach { marker ->
+                    for (marker in chapterMarkers) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.CenterStart)

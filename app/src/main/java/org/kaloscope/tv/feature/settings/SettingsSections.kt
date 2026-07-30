@@ -357,7 +357,7 @@ internal fun DanmakuDefaultSettings(
                 onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
             )
         }
-        DanmakuDisplayMode.entries.forEach { mode ->
+        for (mode in DanmakuDisplayMode.entries) {
             item {
                 ToggleSettingRow(
                     title = danmakuModeLabel(mode),

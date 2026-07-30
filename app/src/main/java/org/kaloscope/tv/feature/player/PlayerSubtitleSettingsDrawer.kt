@@ -107,7 +107,7 @@ internal fun PlayerSubtitleSettingsDrawer(
                             .focusProperties { up = FocusRequester.Cancel },
                     )
                 }
-                tracks.forEach { track ->
+                for (track in tracks) {
                     item(key = track.id) {
                         SubtitleDrawerRow(
                             title = track.label,

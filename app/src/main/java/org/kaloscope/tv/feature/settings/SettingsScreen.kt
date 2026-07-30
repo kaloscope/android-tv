@@ -255,7 +255,7 @@ private fun SettingsMenu(
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        SettingsSection.entries.forEach { section ->
+        for (section in SettingsSection.entries) {
             KaloscopeButton(
                 onClick = {
                     if (interactionsEnabled && selected != section) {
