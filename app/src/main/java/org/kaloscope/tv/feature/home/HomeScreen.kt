@@ -90,11 +90,13 @@ internal fun HomeScreen(
     state: HomeUiState,
     onRefresh: () -> Unit,
     restoreMediaId: Long?,
+    topNavigationFocusRequester: FocusRequester? = null,
     onOpenLibrary: () -> Unit,
     onOpenMedia: (Long) -> Unit,
     onPlayHistory: (WatchHistoryItem) -> Unit,
     onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
 ) {
+    val refreshFocusRequester = remember { FocusRequester() }
     val currentOnBackdropChanged by rememberUpdatedState(onBackdropChanged)
     DisposableEffect(Unit) {
         onDispose {
@@ -123,6 +125,10 @@ internal fun HomeScreen(
                 onClick = onRefresh,
                 modifier = Modifier
                     .size(32.dp)
+                    .focusRequester(refreshFocusRequester)
+                    .focusProperties {
+                        topNavigationFocusRequester?.let { up = it }
+                    }
                     .testTag("home-refresh"),
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
@@ -141,12 +147,22 @@ internal fun HomeScreen(
                 description = stringResource(R.string.loading_history_description),
             )
 
-            HomeUiState.Empty -> HomeEmpty(onOpenLibrary)
-            is HomeUiState.Error -> ErrorPanel(state.error, onRefresh)
+            HomeUiState.Empty -> HomeEmpty(
+                refreshFocusRequester = refreshFocusRequester,
+                onOpenLibrary = onOpenLibrary,
+            )
+
+            is HomeUiState.Error -> ErrorPanel(
+                error = state.error,
+                refreshFocusRequester = refreshFocusRequester,
+                onRetry = onRefresh,
+            )
+
             is HomeUiState.Content -> HistoryContent(
                 session = session,
                 items = state.items,
                 restoreMediaId = restoreMediaId,
+                refreshFocusRequester = refreshFocusRequester,
                 onOpenMedia = onOpenMedia,
                 onPlayHistory = onPlayHistory,
                 onBackdropChanged = onBackdropChanged,
@@ -160,6 +176,7 @@ private fun HistoryContent(
     session: Session,
     items: List<WatchHistoryItem>,
     restoreMediaId: Long?,
+    refreshFocusRequester: FocusRequester,
     onOpenMedia: (Long) -> Unit,
     onPlayHistory: (WatchHistoryItem) -> Unit,
     onBackdropChanged: (HomeBackdropPresentation?) -> Unit,
@@ -237,6 +254,7 @@ private fun HistoryContent(
                 onPlayHistory = onPlayHistory,
                 actionFocusRequester = actionFocusRequester,
                 selectedCardFocusRequester = selectedCardFocusRequester,
+                refreshFocusRequester = refreshFocusRequester,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 16.dp)
@@ -297,6 +315,7 @@ private fun SelectedHistoryDetails(
     onPlayHistory: (WatchHistoryItem) -> Unit,
     actionFocusRequester: FocusRequester,
     selectedCardFocusRequester: FocusRequester,
+    refreshFocusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -336,7 +355,10 @@ private fun SelectedHistoryDetails(
                 modifier = Modifier
                     .height(42.dp)
                     .focusRequester(actionFocusRequester)
-                    .focusProperties { down = selectedCardFocusRequester },
+                    .focusProperties {
+                        up = refreshFocusRequester
+                        down = selectedCardFocusRequester
+                    },
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -355,7 +377,10 @@ private fun SelectedHistoryDetails(
                 onClick = { onOpenMedia(item.mediaId) },
                 modifier = Modifier
                     .height(42.dp)
-                    .focusProperties { down = selectedCardFocusRequester },
+                    .focusProperties {
+                        up = refreshFocusRequester
+                        down = selectedCardFocusRequester
+                    },
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
             ) {
@@ -521,7 +546,10 @@ private fun BoxScope.CarouselEdgeFade(start: Boolean) {
 }
 
 @Composable
-private fun HomeEmpty(onOpenLibrary: () -> Unit) {
+private fun HomeEmpty(
+    refreshFocusRequester: FocusRequester,
+    onOpenLibrary: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -553,6 +581,9 @@ private fun HomeEmpty(onOpenLibrary: () -> Unit) {
             Spacer(Modifier.height(20.dp))
             KaloscopeButton(
                 onClick = onOpenLibrary,
+                modifier = Modifier.focusProperties {
+                    up = refreshFocusRequester
+                },
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
             ) {
@@ -649,6 +680,7 @@ private fun StatusPanel(
 @Composable
 private fun ErrorPanel(
     error: AppError,
+    refreshFocusRequester: FocusRequester,
     onRetry: () -> Unit,
 ) {
     Column(
@@ -672,6 +704,9 @@ private fun ErrorPanel(
         Spacer(Modifier.height(20.dp))
         KaloscopeButton(
             onClick = onRetry,
+            modifier = Modifier.focusProperties {
+                up = refreshFocusRequester
+            },
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Compact,
         ) {

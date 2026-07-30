@@ -3,17 +3,24 @@ package org.kaloscope.tv.app
 import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotFocused
@@ -33,8 +40,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -44,6 +50,7 @@ import org.junit.Test
 import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
+import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
@@ -86,6 +93,157 @@ class MainShellTest {
         }
 
         composeRule.onNode(hasText("首页") and hasClickAction()).assertIsFocused()
+    }
+
+    @Test
+    fun directionUpThroughHomeContentFocusesActiveHomeNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Content(listOf(history())),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("history-card-201")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithText("继续播放")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("home-refresh")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
+    fun directionUpFromEmptyHomeMovesThroughRefreshToNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("进入媒体库")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("home-refresh")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
+    fun directionUpFromHomeErrorMovesThroughRefreshToNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Error(AppError.Offline),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("重试")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("home-refresh")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
+    fun homeNavigationKeepsFocusAtLeftBoundary() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .assertIsSelected()
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
+    @Test
+    fun settingsNavigationKeepsFocusAtRightBoundary() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                val homeFocus = remember { FocusRequester() }
+                val searchFocus = remember { FocusRequester() }
+                val libraryFocus = remember { FocusRequester() }
+                val settingsFocus = remember { FocusRequester() }
+                val searchMenuFocus = remember { FocusRequester() }
+                val libraryMenuFocus = remember { FocusRequester() }
+                val settingsMenuFocus = remember { FocusRequester() }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    MainTopBar(
+                        currentRoute = SettingsRoute,
+                        onHome = {},
+                        onSearch = {},
+                        onLibrary = {},
+                        onSettings = {},
+                        onDestinationFocused = {},
+                        homeFocus = homeFocus,
+                        searchFocus = searchFocus,
+                        libraryFocus = libraryFocus,
+                        settingsFocus = settingsFocus,
+                        searchMenuFocus = searchMenuFocus,
+                        libraryMenuFocus = libraryMenuFocus,
+                        settingsMenuFocus = settingsMenuFocus,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(y = 18.dp)
+                            .size(40.dp)
+                            .focusable()
+                            .testTag("right-boundary-decoy"),
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("设置")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsSelected()
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+            .assertIsSelected()
+            .assertIsFocused()
+        composeRule.onNodeWithTag("right-boundary-decoy").assertIsNotFocused()
     }
 
     @Test

@@ -258,6 +258,7 @@ internal fun MainShell(
                                     state = homeState,
                                     onRefresh = homeActions.refresh,
                                     restoreMediaId = restoreMediaId,
+                                    topNavigationFocusRequester = homeFocus,
                                     onOpenLibrary = {
                                         activateTopDestination(
                                             LibraryRoute,

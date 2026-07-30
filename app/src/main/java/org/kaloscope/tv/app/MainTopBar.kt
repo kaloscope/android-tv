@@ -92,7 +92,10 @@ internal fun MainTopBar(
                 onFocused = { onDestinationFocused(HomeRoute) },
                 modifier = Modifier
                     .focusRequester(homeFocus)
-                    .focusProperties { right = searchFocus },
+                    .focusProperties {
+                        left = FocusRequester.Cancel
+                        right = searchFocus
+                    },
             )
             MainNavButton(
                 text = stringResource(R.string.search),
@@ -130,6 +133,7 @@ internal fun MainTopBar(
                 .focusRequester(settingsFocus)
                 .focusProperties {
                     left = libraryFocus
+                    right = FocusRequester.Cancel
                     down = settingsMenuFocus
                 },
         )
