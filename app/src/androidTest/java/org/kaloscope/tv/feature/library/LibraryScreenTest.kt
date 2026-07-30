@@ -32,7 +32,7 @@ class LibraryScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun initialLoadingUsesSkeleton() {
+    fun initialLoadingUsesCenteredIndicator() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -50,7 +50,33 @@ class LibraryScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("library-loading-skeleton").assertExists()
+        composeRule.onNodeWithTag("library-loading-indicator").assertExists()
+        composeRule.onNodeWithTag("library-loading-skeleton").assertDoesNotExist()
+    }
+
+    @Test
+    fun mediaLoadingKeepsKnownControlsAndCentersIndicatorInContentRegion() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state().copy(items = LibraryItemsState.Loading),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("剧集库").assertExists()
+        composeRule.onNodeWithTag("library-search-input").assertExists()
+        composeRule.onNodeWithTag("library-items-loading-indicator").assertExists()
+        composeRule.onNodeWithTag("library-items-loading-skeleton").assertDoesNotExist()
     }
 
     @Test

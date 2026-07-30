@@ -31,7 +31,7 @@ class MediaDetailScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun initialLoadingUsesSkeleton() {
+    fun initialLoadingUsesCenteredIndicator() {
         composeRule.setContent {
             KaloscopeTheme {
                 MediaDetailScreen(
@@ -46,7 +46,8 @@ class MediaDetailScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("detail-loading-skeleton").assertExists()
+        composeRule.onNodeWithTag("detail-loading-indicator").assertExists()
+        composeRule.onNodeWithTag("detail-loading-skeleton").assertDoesNotExist()
     }
 
     @Test

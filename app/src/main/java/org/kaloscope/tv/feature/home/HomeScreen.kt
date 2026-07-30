@@ -64,6 +64,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Outline
@@ -109,64 +110,64 @@ internal fun HomeScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.continue_watching),
-                color = Muted,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.width(8.dp))
-            KaloscopeIconButton(
-                onClick = onRefresh,
-                modifier = Modifier
-                    .size(32.dp)
-                    .focusRequester(refreshFocusRequester)
-                    .focusProperties {
-                        topNavigationFocusRequester?.let { up = it }
-                    }
-                    .testTag("home-refresh"),
-                variant = KaloscopeControlVariant.Filled,
-                size = KaloscopeControlSize.Compact,
+    when (state) {
+        HomeUiState.Loading -> KaloscopeLoadingLayout("home-loading")
+        else -> Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_refresh),
-                    contentDescription = stringResource(R.string.refresh),
-                    modifier = Modifier.size(24.dp),
+                Text(
+                    text = stringResource(R.string.continue_watching),
+                    color = Muted,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.width(8.dp))
+                KaloscopeIconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .focusRequester(refreshFocusRequester)
+                        .focusProperties {
+                            topNavigationFocusRequester?.let { up = it }
+                        }
+                        .testTag("home-refresh"),
+                    variant = KaloscopeControlVariant.Filled,
+                    size = KaloscopeControlSize.Compact,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_refresh),
+                        contentDescription = stringResource(R.string.refresh),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(28.dp))
+            when (state) {
+                HomeUiState.Loading -> Unit
+
+                HomeUiState.Empty -> HomeEmpty(
+                    refreshFocusRequester = refreshFocusRequester,
+                    onOpenLibrary = onOpenLibrary,
+                )
+
+                is HomeUiState.Error -> ErrorPanel(
+                    error = state.error,
+                    refreshFocusRequester = refreshFocusRequester,
+                    onRetry = onRefresh,
+                )
+
+                is HomeUiState.Content -> HistoryContent(
+                    session = session,
+                    items = state.items,
+                    restoreMediaId = restoreMediaId,
+                    refreshFocusRequester = refreshFocusRequester,
+                    onOpenMedia = onOpenMedia,
+                    onPlayHistory = onPlayHistory,
+                    onBackdropChanged = onBackdropChanged,
                 )
             }
-        }
-        Spacer(Modifier.height(28.dp))
-        when (state) {
-            HomeUiState.Loading -> StatusPanel(
-                title = stringResource(R.string.loading_history),
-                description = stringResource(R.string.loading_history_description),
-            )
-
-            HomeUiState.Empty -> HomeEmpty(
-                refreshFocusRequester = refreshFocusRequester,
-                onOpenLibrary = onOpenLibrary,
-            )
-
-            is HomeUiState.Error -> ErrorPanel(
-                error = state.error,
-                refreshFocusRequester = refreshFocusRequester,
-                onRetry = onRefresh,
-            )
-
-            is HomeUiState.Content -> HistoryContent(
-                session = session,
-                items = state.items,
-                restoreMediaId = restoreMediaId,
-                refreshFocusRequester = refreshFocusRequester,
-                onOpenMedia = onOpenMedia,
-                onPlayHistory = onPlayHistory,
-                onBackdropChanged = onBackdropChanged,
-            )
         }
     }
 }

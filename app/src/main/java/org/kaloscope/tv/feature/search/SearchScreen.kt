@@ -54,7 +54,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
-import org.kaloscope.tv.core.designsystem.KaloscopeGridSkeleton
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -93,7 +93,7 @@ fun SearchScreen(
     onGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
 ) {
     when (state) {
-        SearchUiState.Loading -> KaloscopeGridSkeleton("search-loading-skeleton")
+        SearchUiState.Loading -> KaloscopeLoadingLayout("search-loading")
 
         SearchUiState.EmptyIndexers -> SearchEmptyIndexers(onRefreshIndexers)
 
@@ -425,7 +425,7 @@ private fun SearchResults(
             description = stringResource(R.string.search_indexer_prompt_description),
         )
 
-        SearchResultsState.Loading -> KaloscopeGridSkeleton("search-results-loading-skeleton")
+        SearchResultsState.Loading -> KaloscopeLoadingLayout("search-results-loading")
 
         SearchResultsState.Empty -> SearchStatus(
             title = stringResource(R.string.no_search_results),

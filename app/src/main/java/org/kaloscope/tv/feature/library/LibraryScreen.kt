@@ -53,7 +53,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
-import org.kaloscope.tv.core.designsystem.KaloscopeGridSkeleton
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -88,7 +88,7 @@ fun LibraryScreen(
     onGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
 ) {
     when (state) {
-        LibraryUiState.Loading -> KaloscopeGridSkeleton("library-loading-skeleton")
+        LibraryUiState.Loading -> KaloscopeLoadingLayout("library-loading")
 
         LibraryUiState.EmptyLibraries -> LibraryStatus(
             title = stringResource(R.string.no_libraries),
@@ -313,7 +313,7 @@ private fun LibraryItems(
     onOpenMedia: (Long) -> Unit,
 ) {
     when (state) {
-        LibraryItemsState.Loading -> KaloscopeGridSkeleton("library-items-loading-skeleton")
+        LibraryItemsState.Loading -> KaloscopeLoadingLayout("library-items-loading")
 
         LibraryItemsState.Empty -> LibraryStatus(
             title = stringResource(R.string.no_media),

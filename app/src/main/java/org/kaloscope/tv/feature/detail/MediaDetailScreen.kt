@@ -39,8 +39,8 @@ import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
-import org.kaloscope.tv.core.designsystem.KaloscopeDetailSkeleton
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -70,7 +70,7 @@ fun MediaDetailScreen(
                 .padding(horizontal = 44.dp, vertical = 30.dp),
         ) {
             when (state) {
-                MediaDetailUiState.Loading -> KaloscopeDetailSkeleton()
+                MediaDetailUiState.Loading -> KaloscopeLoadingLayout("detail-loading")
 
                 is MediaDetailUiState.Error -> DetailError(
                     error = state.error,

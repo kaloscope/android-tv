@@ -45,6 +45,32 @@ class SettingsScreenTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun initialLoadingUsesCenteredIndicator() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Loading,
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("settings-loading-indicator").assertExists()
+        composeRule.onNodeWithText("正在加载设置").assertDoesNotExist()
+    }
+
+    @Test
     fun playbackCategoryHasInitialFocusAndChoiceUpdatesSetting() {
         var selectedMode: PlaybackMode? = null
         composeRule.setContent {

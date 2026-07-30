@@ -57,6 +57,26 @@ class HomeScreenTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun initialLoadingUsesCenteredIndicatorWithoutHistoryControls() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                HomeScreen(
+                    session = testSession(),
+                    state = HomeUiState.Loading,
+                    onRefresh = {},
+                    restoreMediaId = null,
+                    onOpenLibrary = {},
+                    onOpenMedia = {},
+                    onPlayHistory = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("home-loading-indicator").assertExists()
+        composeRule.onNodeWithTag("home-refresh").assertDoesNotExist()
+    }
+
+    @Test
     fun emptyHomeShowsRecentWatchingWithoutExtraDescriptions() {
         showEmptyHome()
 

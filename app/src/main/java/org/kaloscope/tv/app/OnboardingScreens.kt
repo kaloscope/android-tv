@@ -75,6 +75,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
@@ -101,12 +102,8 @@ private sealed interface ServerSetupFocusTarget {
 
 @Composable
 internal fun LoadingScreen() {
-    AppFrame {
-        Text(
-            text = stringResource(R.string.connecting_server),
-            color = Muted,
-            fontSize = 22.sp,
-        )
+    KaloscopeBackground {
+        KaloscopeLoadingLayout("app-loading")
     }
 }
 

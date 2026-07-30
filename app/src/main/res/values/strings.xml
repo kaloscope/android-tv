@@ -2,7 +2,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Kaloscope</string>
     <string name="tv_experience">TV EXPERIENCE</string>
-    <string name="connecting_server">正在连接服务器…</string>
     <string name="loading_episode">正在加载…</string>
 
     <string name="setup_title">添加服务器</string>
@@ -45,8 +44,6 @@
     <string name="library">媒体库</string>
     <string name="settings">设置</string>
     <string name="refresh">刷新</string>
-    <string name="loading_history">正在加载观看历史</string>
-    <string name="loading_history_description">正在从当前 Kaloscope 服务器获取最近观看。</string>
     <string name="no_history">暂无观看记录</string>
     <string name="open_library">进入媒体库</string>
     <string name="history_load_failed">无法加载观看历史</string>
@@ -58,8 +55,6 @@
     <string name="season_episode">第 %1$d 季 · 第 %2$d 集</string>
     <string name="history_episode_title">S%1$dE%2$d - %3$s</string>
     <string name="rating">评分 %1$.1f</string>
-    <string name="loading_settings">正在加载设置</string>
-    <string name="loading_settings_description">正在读取这台设备保存的偏好。</string>
     <string name="settings_load_failed">无法加载设置</string>
     <string name="settings_save_failed">设置未保存，请重试</string>
     <string name="playback_settings">播放</string>

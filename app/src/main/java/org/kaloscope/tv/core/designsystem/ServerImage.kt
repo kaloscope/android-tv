@@ -1,8 +1,13 @@
 package org.kaloscope.tv.core.designsystem
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -12,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
@@ -20,7 +26,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Image
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImagePainter
 import coil3.compose.AsyncImage
@@ -37,6 +42,34 @@ internal enum class ServerImageVisualState {
     Missing,
     Failed,
     Success,
+}
+
+@Composable
+private fun ServerImageSkeleton(
+    modifier: Modifier = Modifier,
+) {
+    val transition = rememberInfiniteTransition(label = "image-skeleton")
+    val offset = transition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1_200),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "image-skeleton-offset",
+    ).value
+    val base = Color(0xFF202B40)
+    val highlight = Color(0xFF34425E)
+    val brush = Brush.linearGradient(
+        colorStops = arrayOf(
+            0f to base,
+            (offset - 0.18f).coerceIn(0f, 1f) to base,
+            offset.coerceIn(0f, 1f) to highlight,
+            (offset + 0.18f).coerceIn(0f, 1f) to base,
+            1f to base,
+        ),
+    )
+    Box(modifier = modifier.background(brush))
 }
 
 @Composable
@@ -59,7 +92,7 @@ internal fun ServerImagePlaceholder(
         contentAlignment = Alignment.Center,
     ) {
         when (state) {
-            ServerImageVisualState.Loading -> KaloscopeSkeleton(Modifier.fillMaxSize())
+            ServerImageVisualState.Loading -> ServerImageSkeleton(Modifier.fillMaxSize())
             ServerImageVisualState.Missing -> Text(
                 text = fallbackText.take(1).ifBlank { "K" },
                 color = Color(0xFFBAC6E8),

@@ -44,6 +44,63 @@ class SearchScreenTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun initialLoadingUsesCenteredIndicator() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = SearchUiState.Loading,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-loading-indicator").assertExists()
+        composeRule.onNodeWithTag("search-loading-skeleton").assertDoesNotExist()
+    }
+
+    @Test
+    fun resultLoadingKeepsKnownControlsAndCentersIndicatorInContentRegion() {
+        val content = state()
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = content.copy(results = SearchResultsState.Loading),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("indexer-11").assertExists()
+        composeRule.onNodeWithTag("network-search-input").assertExists()
+        composeRule.onNodeWithTag("search-results-loading-indicator").assertExists()
+        composeRule.onNodeWithTag("search-results-loading-skeleton").assertDoesNotExist()
+    }
+
+    @Test
     fun firstRealIndexerReceivesInitialFocus() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -633,7 +690,7 @@ private fun state(
     hasNext: Boolean = false,
     isLoadingMore: Boolean = false,
     loadMoreError: AppError? = null,
-): SearchUiState {
+): SearchUiState.Content {
     val profile = IndexerSourceProfile(
         indexer = indexer(indexerIconPath),
         pageSize = 20,

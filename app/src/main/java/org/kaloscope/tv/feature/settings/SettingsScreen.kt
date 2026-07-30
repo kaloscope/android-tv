@@ -49,6 +49,7 @@ import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -84,10 +85,7 @@ fun SettingsScreen(
     onLogout: () -> Unit,
 ) {
     when (state) {
-        SettingsUiState.Loading -> SettingsStatus(
-            title = stringResource(R.string.loading_settings),
-            description = stringResource(R.string.loading_settings_description),
-        )
+        SettingsUiState.Loading -> KaloscopeLoadingLayout("settings-loading")
 
         is SettingsUiState.Error -> SettingsStatus(
             title = stringResource(R.string.settings_load_failed),
