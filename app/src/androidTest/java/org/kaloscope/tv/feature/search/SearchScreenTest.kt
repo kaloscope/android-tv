@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.input.ImeAction
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
@@ -269,6 +270,54 @@ class SearchScreenTest {
             text = "科幻",
             useUnmergedTree = true,
         ).assertExists()
+    }
+
+    @Test
+    fun shortSizeLeavesEnoughWidthForSingleLineSource() {
+        val width = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.widthPixels
+        if (width != 1920) return
+        val source = "UP: 就叫阿路8 · 2026-07-30"
+        val shortSize = "255.1万"
+        val completeResult = result("v1").copy(
+            uploader = "就叫阿路8",
+            uploadedAt = "2026-07-30",
+            size = shortSize,
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(results = listOf(completeResult)),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val sourceHeight = composeRule.onNodeWithText(
+            text = source,
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.height
+        val sizeHeight = composeRule.onNodeWithText(
+            text = shortSize,
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.height
+
+        assertTrue(
+            "Source metadata should remain one line when the short size fits",
+            sourceHeight <= sizeHeight * 1.25f,
+        )
     }
 
     @Test

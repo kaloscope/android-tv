@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -778,13 +780,14 @@ private fun SearchResultFooter(
     val source = listOfNotNull(uploader, result.uploadedAt)
         .joinToString(" · ")
         .takeIf(String::isNotEmpty)
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .height(34.dp)
             .testTag("search-result-footer-${result.id}"),
         contentAlignment = Alignment.CenterStart,
     ) {
+        val sizeMaxWidth = maxWidth / 2
         if (resolving) {
             Text(
                 text = stringResource(R.string.resolving_playback),
@@ -815,20 +818,16 @@ private fun SearchResultFooter(
                     if (source != null) {
                         Spacer(Modifier.width(8.dp))
                     }
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.CenterEnd,
-                    ) {
-                        Text(
-                            text = size,
-                            color = Muted.copy(alpha = 0.8f),
-                            fontSize = 11.sp,
-                            fontStyle = FontStyle.Italic,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.End,
-                        )
-                    }
+                    Text(
+                        text = size,
+                        color = Muted.copy(alpha = 0.8f),
+                        fontSize = 11.sp,
+                        fontStyle = FontStyle.Italic,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.widthIn(max = sizeMaxWidth),
+                    )
                 }
             }
         }
