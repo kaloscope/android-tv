@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -42,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,7 +76,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.network.ServerImagePolicy
 
 @Composable
-fun LibraryScreen(
+internal fun LibraryScreen(
     session: Session,
     state: LibraryUiState,
     restoreMediaId: Long?,
@@ -89,7 +91,21 @@ fun LibraryScreen(
     onMediaFocused: (Long) -> Unit,
     onOpenMedia: (Long) -> Unit,
     onGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
+    onBackdropChanged: (LibraryBackdropPresentation) -> Unit = {},
 ) {
+    val currentOnBackdropChanged by rememberUpdatedState(onBackdropChanged)
+    val backdrop = (state as? LibraryUiState.Content)?.let { content ->
+        val items = (content.items as? LibraryItemsState.Content)?.items.orEmpty()
+        resolveLibraryBackdropPresentation(
+            items = items,
+            restoreMediaId = restoreMediaId,
+            focusedMediaId = content.focusedMediaId,
+        )
+    }
+    LaunchedEffect(backdrop) {
+        backdrop?.let(currentOnBackdropChanged)
+    }
+
     when (state) {
         LibraryUiState.Loading -> KaloscopeLoadingLayout("library-loading")
 
@@ -523,14 +539,22 @@ private fun MediaCard(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("media-title-${media.id}"),
             )
-            media.year?.let { year ->
-                Text(
-                    text = year.toString(),
-                    color = Muted,
-                    fontSize = 13.sp,
-                )
-            }
+            Text(
+                text = media.year?.toString().orEmpty(),
+                color = Muted,
+                fontSize = 13.sp,
+                minLines = 1,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("media-year-${media.id}"),
+            )
         }
     }
 }

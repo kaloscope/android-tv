@@ -55,6 +55,7 @@ import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeBackdropPresentation
 import org.kaloscope.tv.feature.home.HomeScreen
 import org.kaloscope.tv.feature.home.HomeUiState
+import org.kaloscope.tv.feature.library.LibraryBackdropPresentation
 import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.player.PlayerScreen
@@ -101,6 +102,9 @@ internal fun MainShell(
     }
     var homeBackdrop by remember(session.server.id) {
         mutableStateOf<HomeBackdropPresentation?>(null)
+    }
+    var libraryBackdrop by remember(session.server.id) {
+        mutableStateOf<LibraryBackdropPresentation?>(null)
     }
 
     // TV launchers do not guarantee an initial Compose focus owner.
@@ -185,11 +189,22 @@ internal fun MainShell(
 
     KaloscopeBackground {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (currentRoute == HomeRoute) {
-                homeBackdrop?.let { backdrop ->
-                    HomeFullscreenBackdrop(
+            when (currentRoute) {
+                HomeRoute -> homeBackdrop?.let { backdrop ->
+                    RootFullscreenBackdrop(
                         session = session,
-                        backdrop = backdrop,
+                        path = backdrop.path,
+                        title = backdrop.title,
+                        testTag = "home-fullscreen-backdrop",
+                    )
+                }
+
+                LibraryRoute -> libraryBackdrop?.let { backdrop ->
+                    RootFullscreenBackdrop(
+                        session = session,
+                        path = backdrop.path,
+                        title = backdrop.title,
+                        testTag = "library-fullscreen-backdrop",
                     )
                 }
             }
@@ -333,6 +348,7 @@ internal fun MainShell(
                                     onLoadMore = libraryActions.loadMore,
                                     onMediaFocused = libraryActions.rememberFocusedMedia,
                                     onGridViewportChanged = libraryActions.rememberGridViewport,
+                                    onBackdropChanged = { libraryBackdrop = it },
                                     onOpenMedia = { mediaId ->
                                         destinationEntryKeepsTopFocus = false
                                         restoreMediaId = null
@@ -413,23 +429,37 @@ internal fun MainShell(
 }
 
 @Composable
-private fun HomeFullscreenBackdrop(
+private fun RootFullscreenBackdrop(
     session: Session,
-    backdrop: HomeBackdropPresentation,
+    path: String,
+    title: String,
+    testTag: String,
+) {
+    RootFullscreenBackdropFrame(testTag = testTag) { imageModifier ->
+        ServerBackdrop(
+            session = session,
+            backdropPath = path,
+            title = title,
+            policy = ServerImagePolicy.Store,
+            modifier = imageModifier,
+        )
+    }
+}
+
+@Composable
+internal fun RootFullscreenBackdropFrame(
+    testTag: String,
+    imageLayer: @Composable (Modifier) -> Unit,
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .testTag("home-fullscreen-backdrop"),
+            .testTag(testTag),
     ) {
-        ServerBackdrop(
-            session = session,
-            backdropPath = backdrop.path,
-            title = backdrop.title,
-            policy = ServerImagePolicy.Store,
-            modifier = Modifier
+        imageLayer(
+            Modifier
                 .fillMaxSize()
-                .homeBackdropEdgeFade(),
+                .rootBackdropEdgeFade(),
         )
         Box(
             modifier = Modifier
@@ -461,7 +491,7 @@ private fun HomeFullscreenBackdrop(
     }
 }
 
-internal fun Modifier.homeBackdropEdgeFade(): Modifier =
+internal fun Modifier.rootBackdropEdgeFade(): Modifier =
     graphicsLayer {
         compositingStrategy = CompositingStrategy.Offscreen
     }.drawWithCache {

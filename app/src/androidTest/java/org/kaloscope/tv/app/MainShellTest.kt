@@ -50,6 +50,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.navigation.HomeRoute
+import org.kaloscope.tv.app.navigation.LibraryRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
 import org.kaloscope.tv.core.common.AppError
@@ -473,7 +474,7 @@ class MainShellTest {
     }
 
     @Test
-    fun homeBackdropFadesTowardEveryEdge() {
+    fun rootBackdropFadesTowardEveryEdge() {
         composeRule.setContent {
             Box(
                 modifier = Modifier
@@ -483,7 +484,7 @@ class MainShellTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .homeBackdropEdgeFade()
+                        .rootBackdropEdgeFade()
                         .background(ComposeColor.Magenta),
                 )
             }
@@ -540,6 +541,162 @@ class MainShellTest {
 
         composeRule.onNodeWithTag("history-card-202").assertIsFocused()
         composeRule.onNodeWithTag("detail-backdrop-/forest-backdrop.jpg").assertExists()
+    }
+
+    @Test
+    fun libraryBackdropFillsAuthenticatedShell() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(
+                        items = listOf(
+                            summary().copy(backdropPath = "/library-backdrop.jpg"),
+                        ),
+                    ),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = LibraryRoute,
+                )
+            }
+        }
+
+        val shellBounds = composeRule.onNodeWithTag("kaloscope-background")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val backdropBounds = composeRule.onNodeWithTag("library-fullscreen-backdrop")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertEquals(shellBounds, backdropBounds)
+        composeRule.onNodeWithTag("home-fullscreen-backdrop").assertDoesNotExist()
+        composeRule.onNodeWithTag("detail-backdrop-/library-backdrop.jpg").assertExists()
+    }
+
+    @Test
+    fun movingLibraryFocusUpdatesFullscreenBackdrop() {
+        val first = summary().copy(backdropPath = "/library-first.jpg")
+        val second = summary().copy(
+            id = 202,
+            title = "下一项",
+            path = "/media/next",
+            backdropPath = "/library-second.jpg",
+        )
+        var currentState by mutableStateOf(libraryState(items = listOf(first, second)))
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = currentState,
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = LibraryRoute,
+                    libraryActions = LibraryActions(
+                        rememberFocusedMedia = { mediaId ->
+                            currentState = currentState.copy(focusedMediaId = mediaId)
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("detail-backdrop-/library-first.jpg").assertExists()
+        composeRule.onNodeWithTag("media-card-201")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithTag("media-card-202").assertIsFocused()
+        composeRule.onNodeWithTag("detail-backdrop-/library-second.jpg").assertExists()
+    }
+
+    @Test
+    fun libraryLoadingRetainsLastValidBackdrop() {
+        var currentState by mutableStateOf<LibraryUiState>(
+            libraryState(
+                items = listOf(
+                    summary().copy(backdropPath = "/retained-library.jpg"),
+                ),
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = currentState,
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = LibraryRoute,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("detail-backdrop-/retained-library.jpg").assertExists()
+        composeRule.runOnIdle {
+            currentState = libraryState().copy(items = LibraryItemsState.Loading)
+        }
+
+        composeRule.onNodeWithTag("library-fullscreen-backdrop").assertExists()
+        composeRule.onNodeWithTag("detail-backdrop-/retained-library.jpg").assertExists()
+    }
+
+    @Test
+    fun libraryBackdropIsScopedToLibraryRoute() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(
+                        items = listOf(
+                            summary().copy(backdropPath = "/scoped-library.jpg"),
+                        ),
+                    ),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = LibraryRoute,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-fullscreen-backdrop").assertExists()
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        composeRule.onNodeWithText("首页").assertIsSelected()
+        composeRule.onNodeWithTag("library-fullscreen-backdrop").assertDoesNotExist()
+    }
+
+    @Test
+    fun serverChangeClearsRetainedLibraryBackdrop() {
+        var currentSession by mutableStateOf(session(serverId = "server-one"))
+        var currentState by mutableStateOf<LibraryUiState>(
+            libraryState(
+                items = listOf(
+                    summary().copy(backdropPath = "/server-one-library.jpg"),
+                ),
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = currentSession,
+                    homeState = HomeUiState.Empty,
+                    libraryState = currentState,
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = LibraryRoute,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-fullscreen-backdrop").assertExists()
+        composeRule.runOnIdle {
+            currentSession = session(serverId = "server-two")
+            currentState = libraryState().copy(items = LibraryItemsState.Loading)
+        }
+
+        composeRule.onNodeWithTag("library-fullscreen-backdrop").assertDoesNotExist()
+        composeRule.onNodeWithTag("detail-backdrop-/server-one-library.jpg")
+            .assertDoesNotExist()
     }
 
     @Test
@@ -1246,8 +1403,8 @@ private fun Int.isWithin(
     tolerance: Int,
 ): Boolean = this in (expected - tolerance)..(expected + tolerance)
 
-private fun session() = Session(
-    server = SavedServer("server-id", "家庭服务器", "http://127.0.0.1:8000"),
+private fun session(serverId: String = "server-id") = Session(
+    server = SavedServer(serverId, "家庭服务器", "http://127.0.0.1:8000"),
     token = "token",
     user = SessionUser(1, "tv_user", "user"),
 )

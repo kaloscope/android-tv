@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
@@ -194,6 +195,268 @@ class LibraryScreenTest {
 
         composeRule.onNodeWithTag("media-rating-1", useUnmergedTree = true)
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun firstUsableMediaPublishesInitialBackdrop() {
+        var selectedBackdrop: LibraryBackdropPresentation? = null
+        val media = listOf(
+            mediaItems(1).single(),
+            mediaItems(2).last().copy(
+                title = "背景来源",
+                backdropPath = "/second-backdrop.jpg",
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(media = media),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                    onBackdropChanged = { selectedBackdrop = it },
+                )
+            }
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(
+                LibraryBackdropPresentation(
+                    path = "/second-backdrop.jpg",
+                    title = "背景来源",
+                ),
+                selectedBackdrop,
+            )
+        }
+    }
+
+    @Test
+    fun focusedMediaPublishesItsBackdrop() {
+        var currentState by mutableStateOf(
+            state(
+                media = mediaItems(2).map { media ->
+                    media.copy(backdropPath = "/backdrop-${media.id}.jpg")
+                },
+            ),
+        )
+        var selectedBackdrop: LibraryBackdropPresentation? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = currentState,
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = { focusedId ->
+                        currentState = currentState.copy(focusedMediaId = focusedId)
+                    },
+                    onOpenMedia = {},
+                    onBackdropChanged = { selectedBackdrop = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("media-card-1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithTag("media-card-2").assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(
+                LibraryBackdropPresentation(
+                    path = "/backdrop-2.jpg",
+                    title = "媒体2",
+                ),
+                selectedBackdrop,
+            )
+        }
+    }
+
+    @Test
+    fun restoredMediaPublishesItsBackdrop() {
+        var selectedBackdrop: LibraryBackdropPresentation? = null
+        val media = mediaItems(3).map { item ->
+            item.copy(backdropPath = "/backdrop-${item.id}.jpg")
+        }
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(media = media),
+                    restoreMediaId = 3,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                    onBackdropChanged = { selectedBackdrop = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("media-card-3").assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(
+                LibraryBackdropPresentation(
+                    path = "/backdrop-3.jpg",
+                    title = "媒体3",
+                ),
+                selectedBackdrop,
+            )
+        }
+    }
+
+    @Test
+    fun loadingAndImageLessContentDoNotPublishNull() {
+        var currentState by mutableStateOf<LibraryUiState>(
+            state(
+                media = listOf(
+                    mediaItems(1).single().copy(
+                        backdropPath = "/retained-backdrop.jpg",
+                    ),
+                ),
+            ),
+        )
+        val publishedBackdrops = mutableListOf<LibraryBackdropPresentation>()
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = currentState,
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                    onBackdropChanged = publishedBackdrops::add,
+                )
+            }
+        }
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(
+                    LibraryBackdropPresentation(
+                        path = "/retained-backdrop.jpg",
+                        title = "媒体1",
+                    ),
+                ),
+                publishedBackdrops,
+            )
+            currentState = state().copy(items = LibraryItemsState.Loading)
+        }
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            currentState = state(media = mediaItems(2))
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(
+                    LibraryBackdropPresentation(
+                        path = "/retained-backdrop.jpg",
+                        title = "媒体1",
+                    ),
+                ),
+                publishedBackdrops,
+            )
+        }
+    }
+
+    @Test
+    fun mediaTitleAndYearUseCenteredFullWidthSlots() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(
+                        media = listOf(
+                            mediaItems(1).single().copy(year = 2026),
+                        ),
+                    ),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        val cardBounds = composeRule.onNodeWithTag("media-card-1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val titleBounds = composeRule.onNodeWithText(
+            text = "媒体1",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val yearBounds = composeRule.onNodeWithText(
+            text = "2026",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+
+        assertEquals(cardBounds.center.x, titleBounds.center.x, 1f)
+        assertEquals(cardBounds.center.x, yearBounds.center.x, 1f)
+    }
+
+    @Test
+    fun missingYearKeepsCardsTheSameHeight() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(
+                        media = listOf(
+                            mediaItems(1).single().copy(year = 2026),
+                            mediaItems(2).last().copy(year = null),
+                        ),
+                    ),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        val datedCardHeight = composeRule.onNodeWithTag("media-card-1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .height
+        val undatedCardHeight = composeRule.onNodeWithTag("media-card-2")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .height
+
+        assertEquals(datedCardHeight, undatedCardHeight, 1f)
+        val emptyYearHeight = composeRule.onNodeWithTag(
+            testTag = "media-year-2",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.height
+        assertTrue(emptyYearHeight > 0f)
     }
 
     @Test

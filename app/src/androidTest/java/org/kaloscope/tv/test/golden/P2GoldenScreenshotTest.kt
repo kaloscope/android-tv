@@ -1,6 +1,8 @@
 package org.kaloscope.tv.test.golden
 
 import android.content.res.Resources
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -8,6 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
@@ -24,6 +28,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.app.RootFullscreenBackdropFrame
 import org.kaloscope.tv.app.ServerSetupScreen
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.ServerImagePlaceholder
@@ -56,20 +61,7 @@ class P2GoldenScreenshotTest {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             KaloscopeTheme {
-                KaloscopeBackground {
-                    LibraryScreen(
-                        session = session(),
-                        state = libraryState(),
-                        restoreMediaId = null,
-                        onSelectLibrary = {},
-                        onQueryChange = {},
-                        onSearch = {},
-                        onRetry = {},
-                        onLoadMore = {},
-                        onMediaFocused = {},
-                        onOpenMedia = {},
-                    )
-                }
+                GoldenLibrary()
             }
         }
         composeRule.mainClock.advanceTimeBy(1_000)
@@ -83,20 +75,7 @@ class P2GoldenScreenshotTest {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             KaloscopeTheme {
-                KaloscopeBackground {
-                    LibraryScreen(
-                        session = session(),
-                        state = libraryState(),
-                        restoreMediaId = null,
-                        onSelectLibrary = {},
-                        onQueryChange = {},
-                        onSearch = {},
-                        onRetry = {},
-                        onLoadMore = {},
-                        onMediaFocused = {},
-                        onOpenMedia = {},
-                    )
-                }
+                GoldenLibrary()
             }
         }
         composeRule.mainClock.advanceTimeBy(1_000)
@@ -299,6 +278,41 @@ class P2GoldenScreenshotTest {
 }
 
 @Composable
+private fun GoldenLibrary() {
+    KaloscopeBackground {
+        Box(modifier = Modifier.fillMaxSize()) {
+            RootFullscreenBackdropFrame(
+                testTag = "golden-library-backdrop",
+            ) { imageModifier ->
+                Box(
+                    modifier = imageModifier.background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF21445D),
+                                Color(0xFF77545B),
+                                Color(0xFF263954),
+                            ),
+                        ),
+                    ),
+                )
+            }
+            LibraryScreen(
+                session = session(),
+                state = libraryState(),
+                restoreMediaId = null,
+                onSelectLibrary = {},
+                onQueryChange = {},
+                onSearch = {},
+                onRetry = {},
+                onLoadMore = {},
+                onMediaFocused = {},
+                onOpenMedia = {},
+            )
+        }
+    }
+}
+
+@Composable
 private fun GoldenServerSetup() {
     ServerSetupScreen(
         savedServers = listOf(
@@ -325,7 +339,7 @@ private fun libraryState(): LibraryUiState.Content {
             path = "/media/$id",
             posterPath = null,
             backdropPath = "/unused/$id",
-            year = 2026,
+            year = 2026.takeUnless { id % 4 == 0 },
             rating = if (id % 3 == 0) 8.6 else null,
             season = null,
             episode = null,
