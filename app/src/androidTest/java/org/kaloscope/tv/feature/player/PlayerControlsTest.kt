@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -23,8 +24,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.core.model.NetworkDefinition
@@ -234,6 +238,43 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun downFromTransportOpensSettingsGroupAndUpReturnsToPlay() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("播放")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithContentDescription("字幕 关").assertIsFocused()
+        composeRule.onNodeWithContentDescription("字幕 关")
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithContentDescription("播放").assertIsFocused()
+    }
+
+    @Test
     fun unknownDurationKeepsProgressDisabled() {
         composeRule.setContent {
             MaterialTheme {
@@ -264,6 +305,38 @@ class PlayerControlsTest {
         composeRule.onNodeWithTag("player-progress")
             .assertIsDisplayed()
             .assertIsNotEnabled()
+    }
+
+    @Test
+    fun infoPreviewKeepsProgressAtBottomAndOmitsTransportActions() {
+        lateinit var density: Density
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerInfoPreview(state = controlsState())
+            }
+        }
+
+        composeRule.onNodeWithTag("player-info-preview").assertIsDisplayed()
+        composeRule.onNodeWithText("Episode 1").assertIsDisplayed()
+        composeRule.onNodeWithText("Network").assertIsDisplayed()
+        composeRule.onNodeWithText("1.0x").assertIsDisplayed()
+        composeRule.onNodeWithText("00:10").assertIsDisplayed()
+        composeRule.onNodeWithText("−00:50").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("播放").assertDoesNotExist()
+
+        val layerBounds = composeRule.onNodeWithTag("player-info-preview")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val trackBounds = composeRule.onNodeWithTag("player-preview-progress-track")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val maximumBottomGap = with(density) { 16.dp.toPx() }
+        assertTrue(
+            "Preview progress should stay at the bottom edge",
+            layerBounds.bottom - trackBounds.bottom <= maximumBottomGap,
+        )
     }
 
     @Test
@@ -309,7 +382,7 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun subtitleAndSpeedButtonsOpenDrawersAndKeepLabelsFocusOnly() {
+    fun subtitleAndSpeedButtonsOpenDrawersAndShowPersistentPlaybackStatus() {
         var subtitlesOpened = 0
         var speedOpened = 0
         composeRule.setContent {
@@ -338,11 +411,10 @@ class PlayerControlsTest {
             }
         }
 
-        composeRule.onNodeWithText("1.25x").assertDoesNotExist()
+        composeRule.onNodeWithText("1.25x").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("1.25x")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithText("1.25x").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("字幕 关")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }

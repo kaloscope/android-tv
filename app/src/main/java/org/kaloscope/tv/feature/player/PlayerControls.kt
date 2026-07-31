@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
@@ -99,9 +100,115 @@ internal data class PlayerControlsUiState(
 )
 
 @Composable
+internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
+    val progress = if (state.durationMillis > 0) {
+        (state.positionMillis.toFloat() / state.durationMillis).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(playerControlScrim())
+            .testTag("player-info-preview")
+            .padding(horizontal = 50.dp),
+    ) {
+        Spacer(Modifier.weight(1f))
+        PlayerPlaybackSummary(state)
+        Spacer(Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = formatPlayerDuration(state.positionMillis),
+                color = Muted,
+                fontSize = 14.sp,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = formatRemainingDuration(state.positionMillis, state.durationMillis),
+                color = Muted,
+                fontSize = 14.sp,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .background(Color(0xFF4A5060), RoundedCornerShape(9.dp))
+                .testTag("player-preview-progress-track"),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress)
+                    .fillMaxHeight()
+                    .background(Primary, RoundedCornerShape(9.dp)),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun PlayerPlaybackSummary(state: PlayerControlsUiState) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = state.title,
+                color = OnBackground,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (state.fallbackInProgress) {
+                Text(
+                    text = stringResource(R.string.switching_to_transcode),
+                    color = Muted,
+                    fontSize = 12.sp,
+                )
+            }
+        }
+        Spacer(Modifier.width(16.dp))
+        PlayerStatusChip(state.playbackModeLabel)
+        Spacer(Modifier.width(6.dp))
+        PlayerStatusChip(formatPlaybackSpeed(state.playbackSpeed))
+    }
+}
+
+@Composable
+private fun PlayerStatusChip(label: String) {
+    Text(
+        text = label,
+        color = OnBackground,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+        maxLines = 1,
+        modifier = Modifier
+            .background(Color(0xD9293040), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    )
+}
+
+private fun playerControlScrim(): Brush =
+    Brush.verticalGradient(
+        listOf(
+            Color.Transparent,
+            Color(0x14050810),
+            Color(0xF2050810),
+        ),
+    )
+
+private fun formatRemainingDuration(positionMillis: Long, durationMillis: Long): String =
+    "−${formatPlayerDuration((durationMillis - positionMillis).coerceAtLeast(0))}"
+
+@Composable
 internal fun PlayerControls(
     state: PlayerControlsUiState,
     playFocus: FocusRequester,
+    progressFocus: FocusRequester? = null,
     definitionFocus: FocusRequester,
     danmakuSettingsFocus: FocusRequester,
     subtitleFocus: FocusRequester,
@@ -122,7 +229,8 @@ internal fun PlayerControls(
     onRetrySubtitles: () -> Unit = {},
     onRetryDanmakus: () -> Unit = {},
 ) {
-    val progressFocus = remember { FocusRequester() }
+    val defaultProgressFocus = remember { FocusRequester() }
+    val resolvedProgressFocus = progressFocus ?: defaultProgressFocus
     val forwardFocus = remember { FocusRequester() }
     val nextFocus = remember { FocusRequester() }
     val episodeGroupEndFocus = if (state.nextEnabled) nextFocus else forwardFocus
@@ -130,41 +238,12 @@ internal fun PlayerControls(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xA6000000), Color.Transparent, Color(0xF0050810)),
-                ),
-            )
+            .background(playerControlScrim())
             .testTag("player-control-layer")
-            .padding(horizontal = 50.dp, vertical = 36.dp),
+            .padding(horizontal = 50.dp, vertical = 32.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Text(
-                text = state.title,
-                color = OnBackground,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = state.playbackModeLabel,
-                    color = OnBackground,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                if (state.fallbackInProgress) {
-                    Text(
-                        text = stringResource(R.string.switching_to_transcode),
-                        color = Muted,
-                        fontSize = 12.sp,
-                    )
-                }
-            }
-        }
+        Spacer(Modifier.weight(1f))
+        PlayerPlaybackSummary(state)
         if (state.progressSaveFailed) {
             Text(
                 text = stringResource(R.string.progress_save_failed),
@@ -172,36 +251,34 @@ internal fun PlayerControls(
                 fontSize = 13.sp,
             )
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(8.dp))
+        SeekablePlayerProgress(
+            positionMillis = state.positionMillis,
+            durationMillis = state.durationMillis,
+            chapters = state.chapters,
+            progressFocus = resolvedProgressFocus,
+            playFocus = playFocus,
+            onSeekTo = onSeekTo,
+            onHideControls = onHideControls,
+            onInteraction = onInteraction,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = formatPlayerDuration(state.positionMillis),
-                color = OnBackground,
+                color = Muted,
                 fontSize = 14.sp,
             )
-            Spacer(Modifier.width(14.dp))
-            SeekablePlayerProgress(
-                positionMillis = state.positionMillis,
-                durationMillis = state.durationMillis,
-                chapters = state.chapters,
-                progressFocus = progressFocus,
-                playFocus = playFocus,
-                onSeekTo = onSeekTo,
-                onHideControls = onHideControls,
-                onInteraction = onInteraction,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.weight(1f))
             Text(
-                text = formatPlayerDuration(state.durationMillis),
-                color = OnBackground,
+                text = formatRemainingDuration(state.positionMillis, state.durationMillis),
+                color = Muted,
                 fontSize = 14.sp,
             )
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
@@ -211,14 +288,16 @@ internal fun PlayerControls(
                 iconRes = R.drawable.ic_player_previous,
                 action = PlayerActionUiState(enabled = state.previousEnabled),
                 onClick = onPrevious,
-                upFocus = progressFocus,
+                upFocus = resolvedProgressFocus,
+                downFocus = supplementaryGroupStartFocus,
             )
             PlayerIconButton(
                 label = stringResource(R.string.rewind_seconds),
                 iconRes = R.drawable.ic_player_replay_10,
                 action = PlayerActionUiState(enabled = true),
                 onClick = onRewind,
-                upFocus = progressFocus,
+                upFocus = resolvedProgressFocus,
+                downFocus = supplementaryGroupStartFocus,
             )
             PlayerIconButton(
                 label = if (state.isPlaying) {
@@ -235,7 +314,8 @@ internal fun PlayerControls(
                 onClick = onPlayPause,
                 modifier = Modifier.focusRequester(playFocus),
                 primary = true,
-                upFocus = progressFocus,
+                upFocus = resolvedProgressFocus,
+                downFocus = supplementaryGroupStartFocus,
             )
             PlayerIconButton(
                 label = stringResource(R.string.forward_seconds),
@@ -243,7 +323,8 @@ internal fun PlayerControls(
                 action = PlayerActionUiState(enabled = true),
                 onClick = onForward,
                 modifier = Modifier.focusRequester(forwardFocus),
-                upFocus = progressFocus,
+                upFocus = resolvedProgressFocus,
+                downFocus = supplementaryGroupStartFocus,
                 rightFocus = if (state.nextEnabled) nextFocus else supplementaryGroupStartFocus,
             )
             PlayerIconButton(
@@ -252,7 +333,8 @@ internal fun PlayerControls(
                 action = PlayerActionUiState(enabled = state.nextEnabled),
                 onClick = onNext,
                 modifier = Modifier.focusRequester(nextFocus),
-                upFocus = progressFocus,
+                upFocus = resolvedProgressFocus,
+                downFocus = supplementaryGroupStartFocus,
                 rightFocus = supplementaryGroupStartFocus,
             )
             Spacer(Modifier.weight(1f))
@@ -266,7 +348,7 @@ internal fun PlayerControls(
                     onOpenSubtitles
                 },
                 modifier = Modifier.focusRequester(subtitleFocus),
-                upFocus = progressFocus,
+                upFocus = playFocus,
                 leftFocus = episodeGroupEndFocus,
             )
             PlayerIconButton(
@@ -275,7 +357,7 @@ internal fun PlayerControls(
                 action = PlayerActionUiState(enabled = true),
                 onClick = onOpenSpeed,
                 modifier = Modifier.focusRequester(speedFocus),
-                upFocus = progressFocus,
+                upFocus = playFocus,
                 leftFocus = if (state.subtitles.enabled) subtitleFocus else episodeGroupEndFocus,
             )
             PlayerIconButton(
@@ -287,7 +369,7 @@ internal fun PlayerControls(
                 } else {
                     onToggleDanmakus
                 },
-                upFocus = progressFocus,
+                upFocus = playFocus,
             )
             PlayerIconButton(
                 label = stringResource(R.string.player_danmaku_settings_button),
@@ -295,7 +377,7 @@ internal fun PlayerControls(
                 action = state.danmakuSettings,
                 onClick = onOpenDanmakuSettings,
                 modifier = Modifier.focusRequester(danmakuSettingsFocus),
-                upFocus = progressFocus,
+                upFocus = playFocus,
             )
             PlayerIconButton(
                 label = stringResource(R.string.playback_quality),
@@ -303,7 +385,7 @@ internal fun PlayerControls(
                 action = state.quality,
                 onClick = onOpenDefinitions,
                 modifier = Modifier.focusRequester(definitionFocus),
-                upFocus = progressFocus,
+                upFocus = playFocus,
             )
         }
     }
@@ -318,13 +400,14 @@ private fun PlayerIconButton(
     modifier: Modifier = Modifier,
     primary: Boolean = false,
     upFocus: FocusRequester,
+    downFocus: FocusRequester? = null,
     leftFocus: FocusRequester? = null,
     rightFocus: FocusRequester? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.width(76.dp),
+        modifier = Modifier.width(64.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(contentAlignment = Alignment.TopEnd) {
@@ -335,9 +418,10 @@ private fun PlayerIconButton(
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
                 modifier = modifier
-                    .size(if (primary) 54.dp else 50.dp)
+                    .size(if (primary) 48.dp else 42.dp)
                     .focusProperties {
                         up = upFocus
+                        downFocus?.let { down = it }
                         leftFocus?.let { left = it }
                         rightFocus?.let { right = it }
                     }
@@ -353,7 +437,7 @@ private fun PlayerIconButton(
                 Icon(
                     painter = painterResource(iconRes),
                     contentDescription = null,
-                    modifier = Modifier.size(if (primary) 29.dp else 26.dp),
+                    modifier = Modifier.size(if (primary) 24.dp else 22.dp),
                 )
             }
             if (action.error) {
@@ -365,7 +449,7 @@ private fun PlayerIconButton(
             }
         }
         Box(
-            modifier = Modifier.height(22.dp),
+            modifier = Modifier.height(20.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             if (focused) {
@@ -373,7 +457,7 @@ private fun PlayerIconButton(
                     text = label,
                     color = OnBackground,
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                 )
             }

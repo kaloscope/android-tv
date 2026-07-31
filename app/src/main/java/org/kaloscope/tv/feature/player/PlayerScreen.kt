@@ -159,7 +159,10 @@ private fun PlayerContent(
         failure = status.failure,
     )
     var positionMillis by remember(playbackIdentity) { mutableLongStateOf(0) }
-    var controlsVisible by remember { mutableStateOf(true) }
+    var controlLayer by remember { mutableStateOf(PlayerControlLayer.Controls) }
+    var requestedControlsFocus by remember {
+        mutableStateOf(PlayerControlFocusTarget.PlayPause)
+    }
     var sessionSubtitleSettings by remember(state.request.requestId) {
         mutableStateOf(state.request.subtitleSettings)
     }
@@ -190,6 +193,7 @@ private fun PlayerContent(
     var restoreSpeedFocus by remember { mutableStateOf(false) }
     var interactionVersion by remember { mutableLongStateOf(0) }
     val playerFocus = remember { FocusRequester() }
+    val progressFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
     val definitionFocus = remember { FocusRequester() }
     val danmakuSettingsFocus = remember { FocusRequester() }
@@ -203,7 +207,7 @@ private fun PlayerContent(
             speedDrawerOpen -> PlayerBackContext.SpeedDrawer
             danmakuDrawerOpen -> PlayerBackContext.DanmakuDrawer
             definitionDrawerOpen -> PlayerBackContext.DefinitionDrawer
-            controlsVisible &&
+            controlLayer != PlayerControlLayer.Hidden &&
                 feedback in setOf(
                     PlaybackFeedback.Ready,
                     PlaybackFeedback.Rebuffering,
@@ -234,7 +238,7 @@ private fun PlayerContent(
                 restoreDefinitionFocus = true
             }
 
-            PlayerControlCommand.HideControls -> controlsVisible = false
+            PlayerControlCommand.HideControls -> controlLayer = PlayerControlLayer.Hidden
             PlayerControlCommand.ExitPlayer -> onBack()
             else -> Unit
         }
@@ -274,7 +278,7 @@ private fun PlayerContent(
         }
     }
     LaunchedEffect(
-        controlsVisible,
+        controlLayer,
         interactionVersion,
         status.failure,
         status.fallbackInProgress,
@@ -284,25 +288,28 @@ private fun PlayerContent(
         speedDrawerOpen,
         feedback,
     ) {
+        val autoHideDelayMillis = PlayerControlLayerPolicy.autoHideDelayMillis(controlLayer)
         if (
-            controlsVisible &&
+            autoHideDelayMillis != null &&
             !definitionDrawerOpen &&
             !danmakuDrawerOpen &&
             !subtitleDrawerOpen &&
             !speedDrawerOpen &&
             feedback == PlaybackFeedback.Ready
         ) {
-            delay(4_000)
-            controlsVisible = false
+            delay(autoHideDelayMillis)
+            controlLayer = PlayerControlLayer.Hidden
         }
     }
     LaunchedEffect(status.fallbackInProgress) {
         if (status.fallbackInProgress) {
-            controlsVisible = true
+            controlLayer = PlayerControlLayer.Controls
+            requestedControlsFocus = PlayerControlFocusTarget.PlayPause
         }
     }
     LaunchedEffect(
-        controlsVisible,
+        controlLayer,
+        requestedControlsFocus,
         definitionDrawerOpen,
         danmakuDrawerOpen,
         subtitleDrawerOpen,
@@ -310,7 +317,7 @@ private fun PlayerContent(
         feedback,
     ) {
         if (
-            controlsVisible &&
+            controlLayer == PlayerControlLayer.Controls &&
             feedback in setOf(
                 PlaybackFeedback.Ready,
                 PlaybackFeedback.Rebuffering,
@@ -325,9 +332,12 @@ private fun PlayerContent(
             !restoreSubtitleFocus &&
             !restoreSpeedFocus
         ) {
-            playFocus.requestFocus()
+            when (requestedControlsFocus) {
+                PlayerControlFocusTarget.Progress -> progressFocus.requestFocus()
+                PlayerControlFocusTarget.PlayPause -> playFocus.requestFocus()
+            }
         } else if (
-            !controlsVisible &&
+            controlLayer != PlayerControlLayer.Controls &&
             !definitionDrawerOpen &&
             !danmakuDrawerOpen &&
             !subtitleDrawerOpen &&
@@ -392,7 +402,7 @@ private fun PlayerContent(
             .focusRequester(playerFocus)
             .focusable(
                 enabled =
-                    !controlsVisible &&
+                    controlLayer != PlayerControlLayer.Controls &&
                         !definitionDrawerOpen &&
                         !danmakuDrawerOpen &&
                         !subtitleDrawerOpen &&
@@ -400,7 +410,7 @@ private fun PlayerContent(
             )
             .onPreviewKeyEvent { event ->
                 if (
-                    controlsVisible ||
+                    controlLayer == PlayerControlLayer.Controls ||
                     definitionDrawerOpen ||
                     danmakuDrawerOpen ||
                     subtitleDrawerOpen ||
@@ -411,9 +421,13 @@ private fun PlayerContent(
                     }
                     return@onPreviewKeyEvent false
                 }
-                // Hidden controls reserve D-pad playback shortcuts at the page root.
+                // Immersive and preview layers reserve D-pad playback shortcuts at the page root.
                 val command = PlayerControlKeyPolicy.command(
-                    context = PlayerControlContext.HiddenControls,
+                    context = when (controlLayer) {
+                        PlayerControlLayer.Hidden -> PlayerControlContext.HiddenControls
+                        PlayerControlLayer.Preview -> PlayerControlContext.Preview
+                        PlayerControlLayer.Controls -> return@onPreviewKeyEvent false
+                    },
                     key = event.key.toPlayerRemoteKey() ?: return@onPreviewKeyEvent false,
                     phase = when (event.type) {
                         KeyEventType.KeyDown -> PlayerKeyPhase.Down
@@ -421,26 +435,34 @@ private fun PlayerContent(
                         else -> return@onPreviewKeyEvent false
                     },
                 ) ?: return@onPreviewKeyEvent false
-                when (command) {
+                val handled = when (command) {
                     PlayerControlCommand.TogglePlaybackAndShowControls -> {
                         controller.togglePlayPause()
-                        controlsVisible = true
                         true
                     }
 
-                    is PlayerControlCommand.SeekAndShowControls -> {
+                    is PlayerControlCommand.SeekAndShowPreview -> {
                         controller.seekBy(command.offsetMillis)
-                        controlsVisible = true
                         true
                     }
 
-                    PlayerControlCommand.ShowControls -> {
-                        controlsVisible = true
-                        true
-                    }
+                    PlayerControlCommand.ShowPreview,
+                    is PlayerControlCommand.ShowFullControls,
+                    PlayerControlCommand.HideControls,
+                    -> true
 
                     else -> false
                 }
+                if (handled) {
+                    PlayerControlLayerPolicy.transition(command)?.let { transition ->
+                        controlLayer = transition.layer
+                        transition.focusTarget?.let { requestedControlsFocus = it }
+                    }
+                    if (event.type == KeyEventType.KeyDown) {
+                        interactionVersion += 1
+                    }
+                }
+                handled
             },
     ) {
         ContentFrame(
@@ -470,7 +492,7 @@ private fun PlayerContent(
             )
         }
         if (
-            controlsVisible &&
+            controlLayer != PlayerControlLayer.Hidden &&
             feedback in setOf(
                 PlaybackFeedback.Ready,
                 PlaybackFeedback.Rebuffering,
@@ -490,128 +512,134 @@ private fun PlayerContent(
             val danmakusFailed = PlayerExtra.Danmakus in state.extraErrors
             val danmakusAvailable =
                 state.danmakus.isNotEmpty() && danmakuRuntimeAvailable && !danmakusFailed
-            PlayerControls(
-                state = PlayerControlsUiState(
-                    title = state.request.title,
-                    isPlaying = status.isPlaying,
-                    positionMillis = positionMillis,
-                    durationMillis = status.effectiveDurationMillis,
-                    playbackModeLabel = playbackModeLabel(
-                        mode = (state.request as? PlaybackRequest.LocalMedia)?.playbackMode,
-                        sourceKind = status.sourceKind,
-                        resolution =
-                            (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
-                    ),
-                    playbackSpeed = playbackSpeed,
-                    fallbackInProgress = status.fallbackInProgress,
-                    progressSaveFailed = state.progressError != null,
-                    previousEnabled =
-                        PlaybackRequestNavigator.hasPrevious(state.request) &&
-                            !state.switchingItem,
-                    nextEnabled = hasNext && !state.switchingItem,
-                    subtitles = PlayerActionUiState(
-                        enabled = subtitlesFailed || state.subtitles.isNotEmpty(),
-                        active =
-                            state.subtitles.isNotEmpty() &&
-                                !subtitlesFailed &&
-                                selectedSubtitleTrackId != null,
-                        error = subtitlesFailed,
-                    ),
-                    danmakus = PlayerActionUiState(
-                        enabled = danmakusFailed || danmakusAvailable,
-                        active = danmakusAvailable && sessionDanmakuSettings.enabled,
-                        error = danmakusFailed,
-                    ),
-                    danmakuSettings = PlayerActionUiState(
-                        enabled = danmakusAvailable,
-                        error = danmakusFailed,
-                    ),
-                    quality = PlayerActionUiState(enabled = definitions.size > 1),
-                    subtitleLabel = state.subtitles
-                        .firstOrNull { it.id == selectedSubtitleTrackId }
-                        ?.label,
-                    chapters = state.mediaProbe?.chapters.orEmpty(),
+            val controlsState = PlayerControlsUiState(
+                title = state.request.title,
+                isPlaying = status.isPlaying,
+                positionMillis = positionMillis,
+                durationMillis = status.effectiveDurationMillis,
+                playbackModeLabel = playbackModeLabel(
+                    mode = (state.request as? PlaybackRequest.LocalMedia)?.playbackMode,
+                    sourceKind = status.sourceKind,
+                    resolution =
+                        (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
                 ),
-                definitionFocus = definitionFocus,
-                danmakuSettingsFocus = danmakuSettingsFocus,
-                subtitleFocus = subtitleFocus,
-                speedFocus = speedFocus,
-                playFocus = playFocus,
-                onPrevious = {
-                    interactionVersion += 1
-                    controller.recordItemSwitchProgress()
-                    onPrevious()
-                },
-                onRewind = {
-                    interactionVersion += 1
-                    controller.seekBy(-10_000)
-                },
-                onPlayPause = {
-                    interactionVersion += 1
-                    controller.togglePlayPause()
-                },
-                onForward = {
-                    interactionVersion += 1
-                    controller.seekBy(10_000)
-                },
-                onNext = {
-                    interactionVersion += 1
-                    controller.recordItemSwitchProgress()
-                    onNext()
-                },
-                onOpenSubtitles = {
-                    interactionVersion += 1
-                    subtitleDrawerOpen = true
-                    speedDrawerOpen = false
-                    definitionDrawerOpen = false
-                    danmakuDrawerOpen = false
-                },
-                onOpenSpeed = {
-                    interactionVersion += 1
-                    speedDrawerOpen = true
-                    subtitleDrawerOpen = false
-                    definitionDrawerOpen = false
-                    danmakuDrawerOpen = false
-                },
-                onToggleDanmakus = {
-                    interactionVersion += 1
-                    sessionDanmakuSettings = sessionDanmakuSettings.copy(
-                        enabled = !sessionDanmakuSettings.enabled,
-                    )
-                },
-                onOpenDanmakuSettings = {
-                    interactionVersion += 1
-                    danmakuDrawerOpen = true
-                    definitionDrawerOpen = false
-                    subtitleDrawerOpen = false
-                    speedDrawerOpen = false
-                },
-                onOpenDefinitions = {
-                    interactionVersion += 1
-                    definitionDrawerOpen = true
-                    danmakuDrawerOpen = false
-                    subtitleDrawerOpen = false
-                    speedDrawerOpen = false
-                },
-                onSeekTo = { position ->
-                    interactionVersion += 1
-                    controller.seekTo(position)
-                },
-                onHideControls = {
-                    controlsVisible = false
-                },
-                onInteraction = {
-                    interactionVersion += 1
-                },
-                onRetrySubtitles = {
-                    interactionVersion += 1
-                    onRetryExtra(PlayerExtra.Subtitles)
-                },
-                onRetryDanmakus = {
-                    interactionVersion += 1
-                    onRetryExtra(PlayerExtra.Danmakus)
-                },
+                playbackSpeed = playbackSpeed,
+                fallbackInProgress = status.fallbackInProgress,
+                progressSaveFailed = state.progressError != null,
+                previousEnabled =
+                    PlaybackRequestNavigator.hasPrevious(state.request) &&
+                        !state.switchingItem,
+                nextEnabled = hasNext && !state.switchingItem,
+                subtitles = PlayerActionUiState(
+                    enabled = subtitlesFailed || state.subtitles.isNotEmpty(),
+                    active =
+                        state.subtitles.isNotEmpty() &&
+                            !subtitlesFailed &&
+                            selectedSubtitleTrackId != null,
+                    error = subtitlesFailed,
+                ),
+                danmakus = PlayerActionUiState(
+                    enabled = danmakusFailed || danmakusAvailable,
+                    active = danmakusAvailable && sessionDanmakuSettings.enabled,
+                    error = danmakusFailed,
+                ),
+                danmakuSettings = PlayerActionUiState(
+                    enabled = danmakusAvailable,
+                    error = danmakusFailed,
+                ),
+                quality = PlayerActionUiState(enabled = definitions.size > 1),
+                subtitleLabel = state.subtitles
+                    .firstOrNull { it.id == selectedSubtitleTrackId }
+                    ?.label,
+                chapters = state.mediaProbe?.chapters.orEmpty(),
             )
+            when (controlLayer) {
+                PlayerControlLayer.Hidden -> Unit
+                PlayerControlLayer.Preview -> PlayerInfoPreview(controlsState)
+                PlayerControlLayer.Controls -> PlayerControls(
+                    state = controlsState,
+                    progressFocus = progressFocus,
+                    definitionFocus = definitionFocus,
+                    danmakuSettingsFocus = danmakuSettingsFocus,
+                    subtitleFocus = subtitleFocus,
+                    speedFocus = speedFocus,
+                    playFocus = playFocus,
+                    onPrevious = {
+                        interactionVersion += 1
+                        controller.recordItemSwitchProgress()
+                        onPrevious()
+                    },
+                    onRewind = {
+                        interactionVersion += 1
+                        controller.seekBy(-10_000)
+                    },
+                    onPlayPause = {
+                        interactionVersion += 1
+                        controller.togglePlayPause()
+                    },
+                    onForward = {
+                        interactionVersion += 1
+                        controller.seekBy(10_000)
+                    },
+                    onNext = {
+                        interactionVersion += 1
+                        controller.recordItemSwitchProgress()
+                        onNext()
+                    },
+                    onOpenSubtitles = {
+                        interactionVersion += 1
+                        subtitleDrawerOpen = true
+                        speedDrawerOpen = false
+                        definitionDrawerOpen = false
+                        danmakuDrawerOpen = false
+                    },
+                    onOpenSpeed = {
+                        interactionVersion += 1
+                        speedDrawerOpen = true
+                        subtitleDrawerOpen = false
+                        definitionDrawerOpen = false
+                        danmakuDrawerOpen = false
+                    },
+                    onToggleDanmakus = {
+                        interactionVersion += 1
+                        sessionDanmakuSettings = sessionDanmakuSettings.copy(
+                            enabled = !sessionDanmakuSettings.enabled,
+                        )
+                    },
+                    onOpenDanmakuSettings = {
+                        interactionVersion += 1
+                        danmakuDrawerOpen = true
+                        definitionDrawerOpen = false
+                        subtitleDrawerOpen = false
+                        speedDrawerOpen = false
+                    },
+                    onOpenDefinitions = {
+                        interactionVersion += 1
+                        definitionDrawerOpen = true
+                        danmakuDrawerOpen = false
+                        subtitleDrawerOpen = false
+                        speedDrawerOpen = false
+                    },
+                    onSeekTo = { position ->
+                        interactionVersion += 1
+                        controller.seekTo(position)
+                    },
+                    onHideControls = {
+                        controlLayer = PlayerControlLayer.Hidden
+                    },
+                    onInteraction = {
+                        interactionVersion += 1
+                    },
+                    onRetrySubtitles = {
+                        interactionVersion += 1
+                        onRetryExtra(PlayerExtra.Subtitles)
+                    },
+                    onRetryDanmakus = {
+                        interactionVersion += 1
+                        onRetryExtra(PlayerExtra.Danmakus)
+                    },
+                )
+            }
         }
         if (definitionDrawerOpen) {
             PlayerDefinitionDrawer(
@@ -688,7 +716,8 @@ private fun PlayerContent(
             failure = status.failure,
             sourceKind = status.sourceKind,
             onRetry = {
-                controlsVisible = true
+                controlLayer = PlayerControlLayer.Controls
+                requestedControlsFocus = PlayerControlFocusTarget.PlayPause
                 interactionVersion += 1
                 controller.retry()
             },

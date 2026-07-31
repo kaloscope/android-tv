@@ -6,26 +6,58 @@ import org.junit.Test
 
 class PlayerControlKeyPolicyTest {
     @Test
-    fun `hidden controls map playback keys on key down`() {
+    fun `hidden controls map playback keys to the preview layer on key down`() {
         assertEquals(
             PlayerControlCommand.TogglePlaybackAndShowControls,
             command(PlayerRemoteKey.Center),
         )
         assertEquals(
-            PlayerControlCommand.SeekAndShowControls(-10_000),
+            PlayerControlCommand.SeekAndShowPreview(-10_000),
             command(PlayerRemoteKey.Left),
         )
         assertEquals(
-            PlayerControlCommand.SeekAndShowControls(10_000),
+            PlayerControlCommand.SeekAndShowPreview(10_000),
             command(PlayerRemoteKey.Right),
         )
         assertEquals(
-            PlayerControlCommand.ShowControls,
+            PlayerControlCommand.ShowPreview,
             command(PlayerRemoteKey.Up),
         )
         assertEquals(
-            PlayerControlCommand.ShowControls,
+            PlayerControlCommand.ShowPreview,
             command(PlayerRemoteKey.Down),
+        )
+    }
+
+    @Test
+    fun `preview escalates vertical keys to the matching full controls focus`() {
+        assertEquals(
+            PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.Progress),
+            previewCommand(PlayerRemoteKey.Up),
+        )
+        assertEquals(
+            PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause),
+            previewCommand(PlayerRemoteKey.Down),
+        )
+    }
+
+    @Test
+    fun `preview keeps playback shortcuts lightweight and back hides it`() {
+        assertEquals(
+            PlayerControlCommand.TogglePlaybackAndShowControls,
+            previewCommand(PlayerRemoteKey.Center),
+        )
+        assertEquals(
+            PlayerControlCommand.SeekAndShowPreview(-10_000),
+            previewCommand(PlayerRemoteKey.Left),
+        )
+        assertEquals(
+            PlayerControlCommand.SeekAndShowPreview(10_000),
+            previewCommand(PlayerRemoteKey.Right),
+        )
+        assertEquals(
+            PlayerControlCommand.HideControls,
+            previewCommand(PlayerRemoteKey.Back),
         )
     }
 
@@ -158,6 +190,13 @@ class PlayerControlKeyPolicyTest {
     private fun progressCommand(key: PlayerRemoteKey): PlayerControlCommand? =
         PlayerControlKeyPolicy.command(
             context = PlayerControlContext.Progress,
+            key = key,
+            phase = PlayerKeyPhase.Down,
+        )
+
+    private fun previewCommand(key: PlayerRemoteKey): PlayerControlCommand? =
+        PlayerControlKeyPolicy.command(
+            context = PlayerControlContext.Preview,
             key = key,
             phase = PlayerKeyPhase.Down,
         )

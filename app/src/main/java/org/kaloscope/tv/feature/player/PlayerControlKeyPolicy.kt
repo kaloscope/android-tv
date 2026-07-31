@@ -16,7 +16,13 @@ internal enum class PlayerKeyPhase {
 
 internal enum class PlayerControlContext {
     HiddenControls,
+    Preview,
     Progress,
+}
+
+internal enum class PlayerControlFocusTarget {
+    Progress,
+    PlayPause,
 }
 
 internal enum class PlayerBackContext {
@@ -31,11 +37,15 @@ internal enum class PlayerBackContext {
 internal sealed interface PlayerControlCommand {
     data object TogglePlaybackAndShowControls : PlayerControlCommand
 
-    data class SeekAndShowControls(
+    data class SeekAndShowPreview(
         val offsetMillis: Long,
     ) : PlayerControlCommand
 
-    data object ShowControls : PlayerControlCommand
+    data object ShowPreview : PlayerControlCommand
+
+    data class ShowFullControls(
+        val focusTarget: PlayerControlFocusTarget,
+    ) : PlayerControlCommand
 
     data class PreviewSeek(
         val offsetMillis: Long,
@@ -68,6 +78,7 @@ internal object PlayerControlKeyPolicy {
     ): PlayerControlCommand? =
         when (context) {
             PlayerControlContext.HiddenControls -> hiddenControlsCommand(key, phase)
+            PlayerControlContext.Preview -> previewCommand(key, phase)
             PlayerControlContext.Progress -> progressCommand(key, phase)
         }
 
@@ -104,16 +115,43 @@ internal object PlayerControlKeyPolicy {
                 PlayerControlCommand.TogglePlaybackAndShowControls
 
             PlayerRemoteKey.Left ->
-                PlayerControlCommand.SeekAndShowControls(-SEEK_INCREMENT_MILLIS)
+                PlayerControlCommand.SeekAndShowPreview(-SEEK_INCREMENT_MILLIS)
 
             PlayerRemoteKey.Right ->
-                PlayerControlCommand.SeekAndShowControls(SEEK_INCREMENT_MILLIS)
+                PlayerControlCommand.SeekAndShowPreview(SEEK_INCREMENT_MILLIS)
 
             PlayerRemoteKey.Up,
             PlayerRemoteKey.Down,
-            -> PlayerControlCommand.ShowControls
+            -> PlayerControlCommand.ShowPreview
 
             PlayerRemoteKey.Back -> null
+        }
+    }
+
+    private fun previewCommand(
+        key: PlayerRemoteKey,
+        phase: PlayerKeyPhase,
+    ): PlayerControlCommand? {
+        if (phase != PlayerKeyPhase.Down) {
+            return null
+        }
+        return when (key) {
+            PlayerRemoteKey.Center ->
+                PlayerControlCommand.TogglePlaybackAndShowControls
+
+            PlayerRemoteKey.Left ->
+                PlayerControlCommand.SeekAndShowPreview(-SEEK_INCREMENT_MILLIS)
+
+            PlayerRemoteKey.Right ->
+                PlayerControlCommand.SeekAndShowPreview(SEEK_INCREMENT_MILLIS)
+
+            PlayerRemoteKey.Up ->
+                PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.Progress)
+
+            PlayerRemoteKey.Down ->
+                PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause)
+
+            PlayerRemoteKey.Back -> PlayerControlCommand.HideControls
         }
     }
 
