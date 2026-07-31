@@ -588,7 +588,62 @@ class SearchScreenTest {
     }
 
     @Test
-    fun rightFromSearchFieldMovesThroughSearchAndFilterActions() {
+    fun searchActionsMatchSearchFieldHeightInWebUiOrder() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(filters = listOf(regionFilter())),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val filterBounds = composeRule.onNodeWithTag("search-filter-button")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val searchBounds = composeRule.onNodeWithTag("search-action-button")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val filterIconBounds = composeRule.onNodeWithTag(
+            testTag = "search-filter-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val searchIconBounds = composeRule.onNodeWithTag(
+            testTag = "search-action-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+
+        listOf(filterBounds, searchBounds).forEach { bounds ->
+            assertEquals(52f * density, bounds.width, 1f)
+            assertEquals(52f * density, bounds.height, 1f)
+        }
+        listOf(filterIconBounds, searchIconBounds).forEach { bounds ->
+            assertEquals(24f * density, bounds.width, 1f)
+            assertEquals(24f * density, bounds.height, 1f)
+        }
+        assertTrue(filterBounds.right < searchBounds.left)
+        composeRule.onNodeWithText("筛选", useUnmergedTree = true)
+            .assertDoesNotExist()
+        composeRule.onNodeWithText("搜索", useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun rightFromSearchFieldMovesThroughFilterAndSearchActions() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -613,9 +668,47 @@ class SearchScreenTest {
         composeRule.onNodeWithTag("network-search-input")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithTag("search-action-button").assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("search-action-button").assertIsFocused()
+    }
+
+    @Test
+    fun iconSearchAndFilterActionsInvokeExistingCallbacks() {
+        var searches = 0
+        var filterOpens = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(filters = listOf(regionFilter())),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = { searches += 1 },
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = { filterOpens += 1 },
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-filter-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("search-action-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(1, filterOpens)
+            assertEquals(1, searches)
+        }
     }
 
     @Test

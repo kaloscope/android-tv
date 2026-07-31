@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -99,10 +100,103 @@ class LibraryScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("搜索")
+        composeRule.onNodeWithTag("library-search-action-button")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
         composeRule.onNodeWithText("剧集库").assertIsSelected()
+    }
+
+    @Test
+    fun librarySearchActionMatchesSearchFieldHeight() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val buttonBounds = composeRule.onNodeWithTag("library-search-action-button")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val iconBounds = composeRule.onNodeWithTag(
+            testTag = "library-search-action-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+
+        assertEquals(52f * density, buttonBounds.width, 1f)
+        assertEquals(52f * density, buttonBounds.height, 1f)
+        assertEquals(24f * density, iconBounds.width, 1f)
+        assertEquals(24f * density, iconBounds.height, 1f)
+        composeRule.onNodeWithText("搜索", useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun librarySearchActionSubmitsSearch() {
+        var searches = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = { searches += 1 },
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-search-action-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(1, searches)
+        }
+    }
+
+    @Test
+    fun rightFromLibrarySearchFieldMovesToSearchAction() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithTag("library-search-action-button")
+            .assertIsFocused()
     }
 
     @Test

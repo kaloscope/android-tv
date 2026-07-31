@@ -42,6 +42,9 @@ import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.SavedServer
+import org.kaloscope.tv.core.model.SearchFilterDefinition
+import org.kaloscope.tv.core.model.SearchFilterType
+import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.feature.library.LibraryItemsState
@@ -100,6 +103,23 @@ class P2GoldenScreenshotTest {
 
         assertGolden(
             "local-navigation-icons-1920",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
+    fun localActionIconsMatch1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeBackground {
+                    LocalActionIconGoldenSheet()
+                }
+            }
+        }
+
+        assertGolden(
+            "local-action-icons-1920",
             composeRule.onRoot().captureToImage().asAndroidBitmap(),
         )
     }
@@ -400,11 +420,21 @@ private fun searchState(): SearchUiState.Content {
                 indexer = NetworkIndexer(11, "固定测试站点", null),
                 pageSize = 20,
                 keywordRequired = true,
+                filters = listOf(
+                    SearchFilterDefinition(
+                        key = "region",
+                        label = "地区",
+                        type = SearchFilterType.Text,
+                    ),
+                ),
             ),
         ),
         selectedIndexerId = 11,
         query = "Kaloscope",
         submittedKeyword = "Kaloscope",
+        appliedFilters = mapOf(
+            "region" to SearchFilterValue.Scalar("cn"),
+        ),
         focusedResultId = "ranked",
         gridViewport = GridViewportSnapshot.Top,
         results = SearchResultsState.Content(

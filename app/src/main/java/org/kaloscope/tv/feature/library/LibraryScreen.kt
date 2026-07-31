@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -39,6 +40,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
@@ -47,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.kaloscope.tv.R
@@ -56,6 +59,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
 import org.kaloscope.tv.core.designsystem.Muted
@@ -302,6 +306,7 @@ private fun LibrarySearch(
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
 ) {
+    val searchActionFocus = remember { FocusRequester() }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -315,20 +320,32 @@ private fun LibrarySearch(
             onMoveUp = topNavigationFocusRequester?.let { requester ->
                 { requester.requestFocus() }
             },
+            onMoveRight = searchActionFocus::requestFocus,
             modifier = Modifier
                 .weight(1f)
                 .height(52.dp)
+                .focusProperties { right = searchActionFocus }
                 .testTag("library-search-input"),
         )
-        KaloscopeButton(
+        KaloscopeIconButton(
             onClick = onSearch,
-            modifier = Modifier.focusProperties {
-                topNavigationFocusRequester?.let { up = it }
-            },
+            modifier = Modifier
+                .size(52.dp)
+                .focusRequester(searchActionFocus)
+                .focusProperties {
+                    topNavigationFocusRequester?.let { up = it }
+                }
+                .testTag("library-search-action-button"),
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Compact,
         ) {
-            Text(stringResource(R.string.search_action))
+            Icon(
+                painter = painterResource(R.drawable.ic_action_search),
+                contentDescription = stringResource(R.string.search_action),
+                modifier = Modifier
+                    .size(24.dp)
+                    .testTag("library-search-action-icon"),
+            )
         }
     }
 }

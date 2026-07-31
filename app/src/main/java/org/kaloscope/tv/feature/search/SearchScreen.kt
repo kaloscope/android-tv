@@ -46,6 +46,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.kaloscope.tv.R
@@ -63,6 +65,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
+import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
@@ -353,6 +356,11 @@ private fun SearchInput(
     onOpenFilters: () -> Unit,
 ) {
     val searchActionFocus = remember { FocusRequester() }
+    val firstActionFocus = if (filtersAvailable) {
+        filterFocusRequester
+    } else {
+        searchActionFocus
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -366,54 +374,63 @@ private fun SearchInput(
             onMoveUp = topNavigationFocusRequester?.let { requester ->
                 { requester.requestFocus() }
             },
-            onMoveRight = searchActionFocus::requestFocus,
+            onMoveRight = firstActionFocus::requestFocus,
             modifier = Modifier
                 .weight(1f)
                 .height(52.dp)
-                .focusProperties { right = searchActionFocus }
+                .focusProperties { right = firstActionFocus }
                 .testTag("network-search-input"),
         )
-        KaloscopeButton(
-            onClick = onSearch,
-            modifier = Modifier
-                .focusRequester(searchActionFocus)
-                .focusProperties {
-                    topNavigationFocusRequester?.let { up = it }
-                    right = if (filtersAvailable) {
-                        filterFocusRequester
-                    } else {
-                        FocusRequester.Cancel
-                    }
-                }
-                .testTag("search-action-button"),
-            variant = KaloscopeControlVariant.Filled,
-            size = KaloscopeControlSize.Compact,
-        ) {
-            Text(stringResource(R.string.search_action))
-        }
         if (filtersAvailable) {
-            KaloscopeButton(
+            KaloscopeIconButton(
                 onClick = onOpenFilters,
                 selected = filtersActive,
                 modifier = Modifier
+                    .size(52.dp)
                     .focusRequester(filterFocusRequester)
                     .focusProperties {
                         topNavigationFocusRequester?.let { up = it }
+                        right = searchActionFocus
                     }
                     .testTag("search-filter-button"),
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
             ) {
-                Text(
-                    stringResource(
+                Icon(
+                    painter = painterResource(R.drawable.ic_action_filter),
+                    contentDescription = stringResource(
                         if (filtersActive) {
                             R.string.search_filters_active
                         } else {
                             R.string.search_filters
                         },
                     ),
+                    modifier = Modifier
+                        .size(24.dp)
+                        .testTag("search-filter-icon"),
                 )
             }
+        }
+        KaloscopeIconButton(
+            onClick = onSearch,
+            modifier = Modifier
+                .size(52.dp)
+                .focusRequester(searchActionFocus)
+                .focusProperties {
+                    topNavigationFocusRequester?.let { up = it }
+                    right = FocusRequester.Cancel
+                }
+                .testTag("search-action-button"),
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_action_search),
+                contentDescription = stringResource(R.string.search_action),
+                modifier = Modifier
+                    .size(24.dp)
+                    .testTag("search-action-icon"),
+            )
         }
     }
 }
