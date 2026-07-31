@@ -157,6 +157,14 @@ private fun SearchContent(
     val internalFirstIndexerFocus = remember { FocusRequester() }
     val firstIndexerFocus =
         firstIndexerFocusRequester ?: internalFirstIndexerFocus
+    val internalSelectedIndexerFocus = remember { FocusRequester() }
+    val selectedIndexerFocus = if (
+        state.selectedIndexerId == state.indexers.firstOrNull()?.id
+    ) {
+        firstIndexerFocus
+    } else {
+        internalSelectedIndexerFocus
+    }
     val filterButtonFocus = remember { FocusRequester() }
     var restoreFilterFocus by remember { mutableStateOf(false) }
     LaunchedEffect(
@@ -184,6 +192,7 @@ private fun SearchContent(
             indexers = state.indexers,
             selectedIndexerId = state.selectedIndexerId,
             firstIndexerFocus = firstIndexerFocus,
+            selectedIndexerFocus = selectedIndexerFocus,
             topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectIndexer = onSelectIndexer,
         )
@@ -211,7 +220,10 @@ private fun SearchContent(
                 state = state,
                 coverRatio = state.selectedProfile.coverRatio,
                 requestInitialFocus = requestInitialFocus,
-                onRetry = onRetry,
+                onRetry = {
+                    selectedIndexerFocus.requestFocus()
+                    onRetry()
+                },
                 onLoadMore = onLoadMore,
                 onResultFocused = onResultFocused,
                 onGridViewportChanged = onGridViewportChanged,
@@ -268,6 +280,7 @@ private fun IndexerSidebar(
     indexers: List<NetworkIndexer>,
     selectedIndexerId: Long,
     firstIndexerFocus: FocusRequester,
+    selectedIndexerFocus: FocusRequester,
     topNavigationFocusRequester: FocusRequester?,
     onSelectIndexer: (Long) -> Unit,
 ) {
@@ -282,6 +295,7 @@ private fun IndexerSidebar(
     ) {
         items(indexers, key = NetworkIndexer::id) { indexer ->
             val isFirstIndexer = indexer.id == firstIndexerId
+            val isSelectedIndexer = indexer.id == selectedIndexerId
             KaloscopeButton(
                 onClick = { onSelectIndexer(indexer.id) },
                 selected = indexer.id == selectedIndexerId,
@@ -294,10 +308,10 @@ private fun IndexerSidebar(
                     .height(58.dp)
                     .testTag("indexer-${indexer.id}")
                     .then(
-                        if (isFirstIndexer) {
-                            Modifier.focusRequester(firstIndexerFocus)
-                        } else {
-                            Modifier
+                        when {
+                            isFirstIndexer -> Modifier.focusRequester(firstIndexerFocus)
+                            isSelectedIndexer -> Modifier.focusRequester(selectedIndexerFocus)
+                            else -> Modifier
                         },
                     )
                     .then(

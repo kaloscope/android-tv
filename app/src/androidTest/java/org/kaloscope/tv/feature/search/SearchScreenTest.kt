@@ -102,6 +102,56 @@ class SearchScreenTest {
     }
 
     @Test
+    fun retryingSearchFailureFocusesSelectedIndexer() {
+        val firstProfile = state().profiles.single()
+        val errorState = state().copy(
+            profiles = listOf(
+                firstProfile,
+                firstProfile.copy(
+                    indexer = NetworkIndexer(22, "云端站", null),
+                ),
+            ),
+            selectedIndexerId = 22,
+            results = SearchResultsState.Error(AppError.Offline),
+        )
+        var currentState by mutableStateOf<SearchUiState>(errorState)
+        var retries = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = currentState,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {
+                        retries += 1
+                        currentState = errorState.copy(results = SearchResultsState.Loading)
+                    },
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("重试")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("indexer-22").assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(1, retries)
+        }
+    }
+
+    @Test
     fun firstRealIndexerReceivesInitialFocus() {
         composeRule.setContent {
             KaloscopeTheme {
