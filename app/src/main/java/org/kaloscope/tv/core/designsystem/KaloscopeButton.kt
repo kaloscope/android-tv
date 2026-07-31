@@ -1,7 +1,6 @@
 package org.kaloscope.tv.core.designsystem
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -71,7 +70,7 @@ internal fun rememberKaloscopeControlVisuals(
         targetValue = state.baseMaterial.color(),
         animationSpec = tween(
             durationMillis = duration,
-            easing = LinearOutSlowInEasing,
+            easing = KaloscopeMotion.ControlEasing,
         ),
         label = "control-base",
     )
@@ -79,7 +78,7 @@ internal fun rememberKaloscopeControlVisuals(
         targetValue = state.focusMaterial.color(),
         animationSpec = tween(
             durationMillis = duration,
-            easing = LinearOutSlowInEasing,
+            easing = KaloscopeMotion.ControlEasing,
         ),
         label = "control-focus",
     )
@@ -87,7 +86,7 @@ internal fun rememberKaloscopeControlVisuals(
         targetValue = state.contentColor,
         animationSpec = tween(
             durationMillis = duration,
-            easing = LinearOutSlowInEasing,
+            easing = KaloscopeMotion.ControlEasing,
         ),
         label = "control-content",
     )
@@ -99,7 +98,7 @@ internal fun rememberKaloscopeControlVisuals(
         },
         animationSpec = tween(
             durationMillis = duration,
-            easing = LinearOutSlowInEasing,
+            easing = KaloscopeMotion.ControlEasing,
         ),
         label = "control-pressed-shade",
     )
@@ -107,7 +106,7 @@ internal fun rememberKaloscopeControlVisuals(
         targetValue = state.elevation,
         animationSpec = tween(
             durationMillis = duration,
-            easing = LinearOutSlowInEasing,
+            easing = KaloscopeMotion.ControlEasing,
         ),
         label = "control-elevation",
     )
@@ -115,7 +114,7 @@ internal fun rememberKaloscopeControlVisuals(
         targetValue = state.scale,
         animationSpec = tween(
             durationMillis = duration,
-            easing = LinearOutSlowInEasing,
+            easing = KaloscopeMotion.ControlEasing,
         ),
         label = "control-scale",
     )

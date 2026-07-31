@@ -1,6 +1,8 @@
 package org.kaloscope.tv.core.designsystem
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -23,6 +25,28 @@ fun KaloscopeNavigationIcon(
             painter = painterResource(iconRes),
             contentDescription = null,
             modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+fun KaloscopeSelectableNavigationIcon(
+    @DrawableRes iconRes: Int,
+    @DrawableRes selectedIconRes: Int,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Crossfade(
+        targetState = selected,
+        modifier = modifier,
+        animationSpec = tween(
+            durationMillis = KaloscopeMotion.FocusMillis,
+            easing = KaloscopeMotion.ControlEasing,
+        ),
+        label = "navigation-icon-selection",
+    ) { targetSelected ->
+        KaloscopeNavigationIcon(
+            iconRes = if (targetSelected) selectedIconRes else iconRes,
         )
     }
 }

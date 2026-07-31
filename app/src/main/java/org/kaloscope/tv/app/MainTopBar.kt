@@ -49,7 +49,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
-import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
+import org.kaloscope.tv.core.designsystem.KaloscopeSelectableNavigationIcon
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 
@@ -183,8 +183,10 @@ private fun MainNavButton(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
     ) {
         val displayedVariant = if (selected) "filled" else "regular"
-        KaloscopeNavigationIcon(
-            iconRes = if (selected) selectedIconRes else iconRes,
+        KaloscopeSelectableNavigationIcon(
+            iconRes = iconRes,
+            selectedIconRes = selectedIconRes,
+            selected = selected,
             modifier = Modifier.testTag("$iconTag-$displayedVariant"),
         )
         Spacer(Modifier.width(10.dp))
@@ -226,12 +228,10 @@ private fun SettingsButton(
             contentAlignment = Alignment.Center,
         ) {
             val displayedVariant = if (selected) "filled" else "regular"
-            KaloscopeNavigationIcon(
-                iconRes = if (selected) {
-                    R.drawable.ic_nav_settings_filled
-                } else {
-                    R.drawable.ic_nav_settings
-                },
+            KaloscopeSelectableNavigationIcon(
+                iconRes = R.drawable.ic_nav_settings,
+                selectedIconRes = R.drawable.ic_nav_settings_filled,
+                selected = selected,
                 modifier = Modifier.testTag(
                     "main-nav-icon-settings-$displayedVariant",
                 ),

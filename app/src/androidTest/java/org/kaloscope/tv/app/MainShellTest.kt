@@ -1,5 +1,6 @@
 package org.kaloscope.tv.app
 
+import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
@@ -51,6 +53,8 @@ import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.KaloscopeMotion
+import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
@@ -304,6 +308,89 @@ class MainShellTest {
             useUnmergedTree = true,
         ).assertExists()
         composeRule.onNodeWithContentDescription("设置").assertExists()
+    }
+
+    @Test
+    fun topNavigationIconIsStillCrossfadingHalfwayThroughFocusMotion() {
+        var route by mutableStateOf<NavKey>(HomeRoute)
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                val homeFocus = remember { FocusRequester() }
+                val searchFocus = remember { FocusRequester() }
+                val libraryFocus = remember { FocusRequester() }
+                val settingsFocus = remember { FocusRequester() }
+                val searchMenuFocus = remember { FocusRequester() }
+                val libraryMenuFocus = remember { FocusRequester() }
+                val settingsMenuFocus = remember { FocusRequester() }
+                MainTopBar(
+                    currentRoute = route,
+                    onHome = {},
+                    onSearch = {},
+                    onLibrary = {},
+                    onSettings = {},
+                    onDestinationFocused = {},
+                    homeFocus = homeFocus,
+                    searchFocus = searchFocus,
+                    libraryFocus = libraryFocus,
+                    settingsFocus = settingsFocus,
+                    searchMenuFocus = searchMenuFocus,
+                    libraryMenuFocus = libraryMenuFocus,
+                    settingsMenuFocus = settingsMenuFocus,
+                )
+            }
+        }
+
+        val start = composeRule.onNodeWithTag(
+            "main-nav-icon-search-regular",
+            useUnmergedTree = true,
+        ).captureToImage().asAndroidBitmap()
+
+        composeRule.runOnIdle { route = SearchRoute }
+        composeRule.mainClock.advanceTimeBy(
+            KaloscopeMotion.FocusMillis.toLong() / 2,
+        )
+        val inProgress = composeRule.onNodeWithTag(
+            "main-nav-icon-search-filled",
+            useUnmergedTree = true,
+        ).captureToImage().asAndroidBitmap()
+
+        composeRule.mainClock.advanceTimeBy(
+            KaloscopeMotion.FocusMillis.toLong() / 2 + 20,
+        )
+        val settled = composeRule.onNodeWithTag(
+            "main-nav-icon-search-filled",
+            useUnmergedTree = true,
+        ).captureToImage().asAndroidBitmap()
+
+        val foreground = OnBackground.toArgb()
+        var selectedOnlyPixels = 0
+        var unfinishedPixels = 0
+        settled.forEachPixel { x, y, settledPixel ->
+            val startPixel = start.getPixel(x, y)
+            if (
+                settledPixel.isNearColor(foreground, tolerance = 8) &&
+                !startPixel.isNearColor(foreground, tolerance = 24)
+            ) {
+                selectedOnlyPixels += 1
+                if (
+                    !inProgress.getPixel(x, y)
+                        .isNearColor(settledPixel, tolerance = 8)
+                ) {
+                    unfinishedPixels += 1
+                }
+            }
+        }
+
+        assertTrue(
+            "The fixture did not isolate enough selected-icon pixels",
+            selectedOnlyPixels >= 12,
+        )
+        assertTrue(
+            "The icon switched before the focus motion completed: " +
+                "$unfinishedPixels/$selectedOnlyPixels pixels still animating",
+            unfinishedPixels >= selectedOnlyPixels / 3,
+        )
     }
 
     @Test
@@ -1125,6 +1212,39 @@ private fun TestMainShell(
         playerActions = PlayerActions(),
     )
 }
+
+private inline fun Bitmap.forEachPixel(
+    block: (x: Int, y: Int, color: Int) -> Unit,
+) {
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            block(x, y, getPixel(x, y))
+        }
+    }
+}
+
+private fun Int.isNearColor(
+    expected: Int,
+    tolerance: Int,
+): Boolean {
+    return AndroidColor.red(this).isWithin(
+        AndroidColor.red(expected),
+        tolerance,
+    ) &&
+        AndroidColor.green(this).isWithin(
+            AndroidColor.green(expected),
+            tolerance,
+        ) &&
+        AndroidColor.blue(this).isWithin(
+            AndroidColor.blue(expected),
+            tolerance,
+        )
+}
+
+private fun Int.isWithin(
+    expected: Int,
+    tolerance: Int,
+): Boolean = this in (expected - tolerance)..(expected + tolerance)
 
 private fun session() = Session(
     server = SavedServer("server-id", "家庭服务器", "http://127.0.0.1:8000"),
