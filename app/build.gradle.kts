@@ -12,7 +12,7 @@ kotlin {
 
 android {
     namespace = "org.kaloscope.tv"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "org.kaloscope.tv"
