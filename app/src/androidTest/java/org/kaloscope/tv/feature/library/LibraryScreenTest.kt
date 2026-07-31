@@ -4,8 +4,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -13,7 +15,9 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -28,10 +32,86 @@ import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.test.assertFocusedContentCardScale
+import org.kaloscope.tv.test.assertFocusedContentCardSurface
 
 class LibraryScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun focusedMediaCardUsesLighterBlueSurface() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("media-card-1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val focused = composeRule.onNodeWithTag("media-card-1")
+            .captureToImage()
+            .asAndroidBitmap()
+        val sampleInset = with(composeRule.density) { 12.dp.roundToPx() }
+
+        assertFocusedContentCardSurface(
+            label = "Library media card",
+            bitmap = focused,
+            sampleX = sampleInset,
+            sampleY = focused.height - sampleInset,
+        )
+    }
+
+    @Test
+    fun focusedMediaCardUsesThreePercentScale() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-search-action-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val resting = composeRule.onRoot()
+            .captureToImage()
+            .asAndroidBitmap()
+        composeRule.onNodeWithTag("media-card-1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val focused = composeRule.onRoot()
+            .captureToImage()
+            .asAndroidBitmap()
+
+        assertFocusedContentCardScale("Library media card", resting, focused)
+    }
 
     @Test
     fun initialLoadingUsesCenteredIndicator() {

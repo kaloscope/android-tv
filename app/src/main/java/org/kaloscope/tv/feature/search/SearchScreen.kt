@@ -70,7 +70,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
+import org.kaloscope.tv.core.designsystem.ContentCardFocused
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
@@ -636,8 +636,8 @@ private fun NetworkResultCard(
         enabled = enabled,
         shape = RoundedCornerShape(15.dp),
         containerColor = Panel.copy(alpha = 0.65f),
-        focusedContainerColor = PanelElevated,
-        focusScale = 1.04f,
+        focusedContainerColor = ContentCardFocused,
+        focusScale = 1.03f,
         modifier = Modifier
             .fillMaxWidth()
             .testTag("network-result-${result.id}")
@@ -910,6 +910,14 @@ private fun SearchError(
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Compact,
         ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_refresh),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(24.dp)
+                    .testTag("search-retry-refresh-icon"),
+            )
+            Spacer(Modifier.width(7.dp))
             Text(stringResource(R.string.retry))
         }
     }

@@ -4,15 +4,18 @@ import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
@@ -21,6 +24,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,10 +43,94 @@ import org.kaloscope.tv.core.model.SearchFilterType
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.test.assertFocusedContentCardScale
+import org.kaloscope.tv.test.assertFocusedContentCardSurface
 
 class SearchScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun focusedNetworkResultUsesLighterBlueSurface() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("network-result-v1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val focused = composeRule.onNodeWithTag("network-result-v1")
+            .captureToImage()
+            .asAndroidBitmap()
+        val sampleInset = with(composeRule.density) { 12.dp.roundToPx() }
+
+        assertFocusedContentCardSurface(
+            label = "Network result card",
+            bitmap = focused,
+            sampleX = focused.width / 2,
+            sampleY = focused.height - sampleInset,
+        )
+    }
+
+    @Test
+    fun focusedNetworkResultUsesThreePercentScale() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-action-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val resting = composeRule.onRoot()
+            .captureToImage()
+            .asAndroidBitmap()
+        composeRule.onNodeWithTag("network-result-v1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val focused = composeRule.onRoot()
+            .captureToImage()
+            .asAndroidBitmap()
+
+        assertFocusedContentCardScale("Network result card", resting, focused)
+    }
 
     @Test
     fun initialLoadingUsesCenteredIndicator() {
@@ -99,6 +187,39 @@ class SearchScreenTest {
         composeRule.onNodeWithTag("network-search-input").assertExists()
         composeRule.onNodeWithTag("search-results-loading-indicator").assertExists()
         composeRule.onNodeWithTag("search-results-loading-skeleton").assertDoesNotExist()
+    }
+
+    @Test
+    fun searchFailureUsesCompactRetryPresentation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state().copy(
+                        results = SearchResultsState.Error(AppError.Offline),
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("加载失败").assertExists()
+        composeRule.onNodeWithText("无法加载网络搜索").assertDoesNotExist()
+        composeRule.onNodeWithTag(
+            testTag = "search-retry-refresh-icon",
+            useUnmergedTree = true,
+        ).assertExists()
     }
 
     @Test

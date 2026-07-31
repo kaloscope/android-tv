@@ -65,7 +65,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.PanelElevated
+import org.kaloscope.tv.core.designsystem.ContentCardFocused
 import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
@@ -512,8 +512,8 @@ private fun MediaCard(
         onClick = onClick,
         shape = RoundedCornerShape(15.dp),
         containerColor = Panel.copy(alpha = 0.65f),
-        focusedContainerColor = PanelElevated,
-        focusScale = 1.04f,
+        focusedContainerColor = ContentCardFocused,
+        focusScale = 1.03f,
         modifier = Modifier
             .fillMaxWidth()
             .testTag("media-card-${media.id}")
