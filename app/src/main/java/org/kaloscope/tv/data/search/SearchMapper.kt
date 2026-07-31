@@ -1,7 +1,9 @@
 package org.kaloscope.tv.data.search
 
-import kotlinx.serialization.json.doubleOrNull
+import kotlin.math.roundToInt
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.NetworkChapter
@@ -187,7 +189,15 @@ private fun IndexerResourceData.toSearchResult(): NetworkSearchResult? {
         category = category.clean(),
         uploader = uploader.clean(),
         uploadedAt = uploadedAt.clean(),
+        ranking = ranking.toRankingOrNull(),
+        misc = misc.clean(),
+        size = size.clean(),
     )
+}
+
+private fun JsonElement?.toRankingOrNull(): Int? {
+    val value = this?.jsonPrimitive?.doubleOrNull ?: return null
+    return value.takeIf { it.isFinite() && it in 1.0..100.0 }?.roundToInt()
 }
 
 private fun String?.isVideo(): Boolean =

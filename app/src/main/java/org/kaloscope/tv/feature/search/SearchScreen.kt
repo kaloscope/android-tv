@@ -3,11 +3,13 @@ package org.kaloscope.tv.feature.search
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,10 +41,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
@@ -60,6 +67,7 @@ import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.designsystem.appErrorText
@@ -67,6 +75,7 @@ import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
+import org.kaloscope.tv.core.model.RatingDisplayPolicy
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.network.ServerImagePolicy
@@ -477,7 +486,7 @@ private fun SearchResults(
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Adaptive(
-                        minSize = if (coverRatio >= 1f) 238.dp else 172.dp,
+                        minSize = if (coverRatio >= 1f) 220.dp else 172.dp,
                     ),
                     modifier = Modifier
                         .weight(1f)
@@ -607,39 +616,221 @@ private fun NetworkResultCard(
             }
             .semantics(mergeDescendants = true) {},
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            ServerImage(
-                session = session,
-                rawValue = result.coverPath,
-                fallbackText = result.title,
-                contentDescription = null,
-                policy = ServerImagePolicy.Auto,
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box {
+                ServerImage(
+                    session = session,
+                    rawValue = result.coverPath,
+                    fallbackText = result.title,
+                    contentDescription = null,
+                    policy = ServerImagePolicy.Auto,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(coverRatio)
+                        .clip(
+                            RoundedCornerShape(
+                                topStart = 15.dp,
+                                topEnd = 15.dp,
+                            ),
+                        ),
+                )
+                SearchResultBadge(result)
+                SearchResultCoverMetadata(result)
+            }
+            Column(
+                modifier = Modifier.padding(
+                    start = 10.dp,
+                    top = 9.dp,
+                    end = 10.dp,
+                    bottom = 8.dp,
+                ),
+            ) {
+                Text(
+                    text = result.title,
+                    color = OnBackground,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 18.sp,
+                    minLines = 2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(7.dp))
+                SearchResultFooter(
+                    result = result,
+                    resolving = resolving,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.SearchResultBadge(result: NetworkSearchResult) {
+    val ranking = result.ranking
+    if (ranking != null) {
+        SearchRankingBadge(
+            ranking = ranking,
+            modifier = Modifier.align(Alignment.TopStart),
+            testTag = "search-result-ranking-${result.id}",
+        )
+    } else {
+        RatingDisplayPolicy.format(result.rating)?.let { rating ->
+            RatingBadge(
+                rating = rating,
+                testTag = "search-result-rating-${result.id}",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(coverRatio)
-                    .clip(RoundedCornerShape(11.dp)),
+                    .align(Alignment.TopStart)
+                    .padding(7.dp),
             )
-            Spacer(Modifier.height(9.dp))
+        }
+    }
+}
+
+@Composable
+private fun SearchRankingBadge(
+    ranking: Int,
+    modifier: Modifier = Modifier,
+    testTag: String,
+) {
+    val colors = when (ranking) {
+        1 -> listOf(Color(0xFFFFD84D), Color(0xFFFF9F1C))
+        2 -> listOf(Color(0xFF9EE7FF), Color(0xFF5BA8FF))
+        3 -> listOf(Color(0xFFFFCFBC), Color(0xFFFF8F70))
+        else -> listOf(Color(0xFF9AA6B8), Color(0xFF6F7D95))
+    }
+    Box(
+        modifier = modifier
+            .testTag(testTag)
+            .defaultMinSize(minWidth = 28.dp, minHeight = 24.dp)
+            .background(
+                brush = Brush.linearGradient(colors),
+                shape = RoundedCornerShape(bottomEnd = 7.dp),
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = ranking.toString(),
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.SearchResultCoverMetadata(result: NetworkSearchResult) {
+    if (result.category == null && result.misc == null) {
+        return
+    }
+    Row(
+        modifier = Modifier
+            .align(Alignment.BottomStart)
+            .fillMaxWidth()
+            .height(34.dp)
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.Transparent, Color(0xCC000000)),
+                ),
+            )
+            .padding(start = 9.dp, top = 10.dp, end = 9.dp, bottom = 5.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        result.category?.let { category ->
             Text(
-                text = result.title,
-                color = OnBackground,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
+                text = category,
+                color = Color.White,
+                fontSize = 11.sp,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+        }
+        if (result.category != null && result.misc != null) {
+            Spacer(Modifier.width(8.dp))
+        }
+        result.misc?.let { misc ->
+            if (result.category == null) {
+                Spacer(Modifier.weight(1f))
+            }
             Text(
-                text = if (resolving) {
-                    stringResource(R.string.resolving_playback)
-                } else {
-                    listOfNotNull(
-                        result.category,
-                        result.rating?.let { stringResource(R.string.rating, it) },
-                    ).joinToString(" · ")
-                },
-                color = if (resolving) Primary else Muted,
+                text = misc,
+                color = Color.White,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchResultFooter(
+    result: NetworkSearchResult,
+    resolving: Boolean,
+) {
+    val uploader = result.uploader?.let {
+        stringResource(R.string.search_result_uploader, it)
+    }
+    val source = listOfNotNull(uploader, result.uploadedAt)
+        .joinToString(" · ")
+        .takeIf(String::isNotEmpty)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(34.dp)
+            .testTag("search-result-footer-${result.id}"),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        if (resolving) {
+            Text(
+                text = stringResource(R.string.resolving_playback),
+                color = Primary,
                 fontSize = 12.sp,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (source != null) {
+                    Text(
+                        text = source,
+                        color = Muted,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else if (result.size != null) {
+                    Spacer(Modifier.weight(1f))
+                }
+                result.size?.let { size ->
+                    if (source != null) {
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.CenterEnd,
+                    ) {
+                        Text(
+                            text = size,
+                            color = Muted.copy(alpha = 0.8f),
+                            fontSize = 11.sp,
+                            fontStyle = FontStyle.Italic,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.End,
+                        )
+                    }
+                }
+            }
         }
     }
 }

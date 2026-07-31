@@ -103,6 +103,31 @@ class DefaultSearchRepositoryTest {
     }
 
     @Test
+    fun `cover ratio defaults to web grid landscape`() {
+        val expected = 16f / 9f
+
+        assertEquals(expected, null.toCoverAspectRatio(), 0f)
+        assertEquals(expected, "auto".toCoverAspectRatio(), 0f)
+    }
+
+    @Test
+    fun `search decodes web grid metadata`() = runTest {
+        server.enqueue(jsonResponse(fixture("indexer-search-success.json")))
+        val profile = org.kaloscope.tv.core.model.IndexerSourceProfile(
+            indexer = indexer(),
+            pageSize = 20,
+            keywordRequired = true,
+        )
+
+        val page = repository.search(session(), profile, "星际", emptyMap(), 1)
+        val result = (page as AppResult.Success).value.items.single()
+
+        assertEquals(4, result.ranking)
+        assertEquals("1:30:00", result.misc)
+        assertEquals("1GB", result.size)
+    }
+
+    @Test
     fun `search and details map real resources into network playback`() = runTest {
         server.enqueue(jsonResponse(fixture("indexer-search-success.json")))
         server.enqueue(jsonResponse(fixture("indexer-details-video-success.json")))

@@ -30,15 +30,21 @@ import org.kaloscope.tv.core.designsystem.ServerImagePlaceholder
 import org.kaloscope.tv.core.designsystem.ServerImageVisualState
 import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.model.GridViewportSnapshot
+import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
 import org.kaloscope.tv.core.model.MediaSummary
+import org.kaloscope.tv.core.model.NetworkIndexer
+import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
+import org.kaloscope.tv.feature.search.SearchResultsState
+import org.kaloscope.tv.feature.search.SearchScreen
+import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.server.ServerSetupState
 
 class P2GoldenScreenshotTest {
@@ -115,6 +121,43 @@ class P2GoldenScreenshotTest {
 
         assertGolden(
             "local-navigation-icons-1920",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
+    fun searchResultsMatch1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeBackground {
+                    SearchScreen(
+                        session = session(),
+                        state = searchState(),
+                        requestInitialFocus = false,
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = {},
+                        onPlay = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
+            }
+        }
+        composeRule.onNodeWithTag("network-result-ranked")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+
+        assertGolden(
+            "search-results-1920",
             composeRule.onRoot().captureToImage().asAndroidBitmap(),
         )
     }
@@ -299,6 +342,63 @@ private fun libraryState(): LibraryUiState.Content {
         ),
         focusedMediaId = 1,
         gridViewport = GridViewportSnapshot.Top,
+    )
+}
+
+private fun searchState(): SearchUiState.Content {
+    val results = listOf(
+        NetworkSearchResult(
+            id = "ranked",
+            title = "完整信息的网络搜索结果",
+            coverPath = null,
+            rating = 9.5,
+            category = "电影",
+            uploader = "Admin",
+            uploadedAt = "10 Hours Ago",
+            ranking = 1,
+            misc = "1:30:00",
+            size = "1GB",
+        ),
+        NetworkSearchResult(
+            id = "rated",
+            title = "没有排名时显示评分的较长网络搜索结果标题",
+            coverPath = null,
+            rating = 8.6,
+            category = "剧集",
+            uploader = "Uploader",
+            uploadedAt = "Yesterday",
+            misc = "1080P",
+            size = "12.4GB",
+        ),
+        NetworkSearchResult(
+            id = "sparse",
+            title = "缺少可选字段的结果",
+            coverPath = null,
+            rating = null,
+            category = null,
+            uploader = null,
+            uploadedAt = null,
+        ),
+    )
+    return SearchUiState.Content(
+        profiles = listOf(
+            IndexerSourceProfile(
+                indexer = NetworkIndexer(11, "固定测试站点", null),
+                pageSize = 20,
+                keywordRequired = true,
+            ),
+        ),
+        selectedIndexerId = 11,
+        query = "Kaloscope",
+        submittedKeyword = "Kaloscope",
+        focusedResultId = "ranked",
+        gridViewport = GridViewportSnapshot.Top,
+        results = SearchResultsState.Content(
+            items = results,
+            total = results.size,
+            pageNumber = 1,
+            hasNext = false,
+        ),
     )
 }
 

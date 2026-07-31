@@ -153,10 +153,13 @@ data class IndexerResourceData(
     val title: String? = null,
     val cover: String? = null,
     val rating: JsonElement? = null,
+    val ranking: JsonElement? = null,
     val category: String? = null,
+    val misc: String? = null,
     val uploader: String? = null,
     @SerialName("uploaded_at")
     val uploadedAt: String? = null,
+    val size: String? = null,
     @SerialName("media_type")
     val mediaType: String? = null,
     val url: String? = null,

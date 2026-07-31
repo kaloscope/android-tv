@@ -225,6 +225,219 @@ class SearchScreenTest {
     }
 
     @Test
+    fun completeResultRendersWebGridMetadata() {
+        val completeResult = result("v1").copy(
+            misc = "1:30:00",
+            uploader = "Admin",
+            uploadedAt = "10 Hours Ago",
+            size = "1GB",
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(results = listOf(completeResult)),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            text = "1:30:00",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithText(
+            text = "UP: Admin · 10 Hours Ago",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithText(
+            text = "1GB",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithText(
+            text = "科幻",
+            useUnmergedTree = true,
+        ).assertExists()
+    }
+
+    @Test
+    fun rankingReplacesRatingBadge() {
+        val rankedResult = result("v1").copy(ranking = 2)
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(results = listOf(rankedResult)),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            testTag = "search-result-ranking-v1",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "search-result-rating-v1",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+    }
+
+    @Test
+    fun unrankedResultUsesRatingBadge() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            testTag = "search-result-rating-v1",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "search-result-ranking-v1",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+    }
+
+    @Test
+    fun resolvingResultKeepsMetadataCardBounds() {
+        val completeResult = result("v1").copy(
+            misc = "1:30:00",
+            uploader = "Admin",
+            uploadedAt = "10 Hours Ago",
+            size = "1GB",
+        )
+        var screenState by mutableStateOf(
+            state(results = listOf(completeResult)),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = screenState,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val initialBounds = composeRule.onNodeWithTag("network-result-v1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        composeRule.runOnIdle {
+            screenState = screenState.copy(resolvingResultId = "v1")
+        }
+        val resolvingBounds = composeRule.onNodeWithTag("network-result-v1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertEquals(initialBounds, resolvingBounds)
+        composeRule.onNodeWithText(
+            text = "正在获取播放地址…",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithText(
+            text = "UP: Admin · 10 Hours Ago",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+    }
+
+    @Test
+    fun landscapeGridFitsThreeResultsPerRowAt1080p() {
+        val width = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.widthPixels
+        if (width != 1920) return
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = listOf(
+                            result("v1"),
+                            result("v2"),
+                            result("v3"),
+                        ),
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val firstTop = composeRule.onNodeWithTag("network-result-v1")
+            .fetchSemanticsNode()
+            .boundsInRoot.top
+        val secondTop = composeRule.onNodeWithTag("network-result-v2")
+            .fetchSemanticsNode()
+            .boundsInRoot.top
+        val thirdTop = composeRule.onNodeWithTag("network-result-v3")
+            .fetchSemanticsNode()
+            .boundsInRoot.top
+
+        assertEquals(firstTop, secondTop, 0.5f)
+        assertEquals(firstTop, thirdTop, 0.5f)
+    }
+
+    @Test
     fun emptyIndexerStateOffersRefresh() {
         var refreshes = 0
         composeRule.setContent {

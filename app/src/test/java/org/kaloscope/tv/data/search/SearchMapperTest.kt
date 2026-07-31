@@ -120,6 +120,61 @@ class SearchMapperTest {
     }
 
     @Test
+    fun `search result maps web grid metadata`() {
+        val model = IndexerResourcePageData(
+            items = listOf(
+                IndexerResourceData(
+                    id = "v1",
+                    title = "视频",
+                    mediaType = "video",
+                    rating = JsonPrimitive(8.6),
+                    ranking = JsonPrimitive(2),
+                    category = " 电影 ",
+                    misc = " 1:30:00 ",
+                    uploader = " Admin ",
+                    uploadedAt = " 10 Hours Ago ",
+                    size = " 1GB ",
+                ),
+            ),
+        ).toModel(pageNumber = 1, pageSize = 20)
+
+        val result = model.items.single()
+        assertEquals(2, result.ranking)
+        assertEquals(8.6, result.rating)
+        assertEquals("电影", result.category)
+        assertEquals("1:30:00", result.misc)
+        assertEquals("Admin", result.uploader)
+        assertEquals("10 Hours Ago", result.uploadedAt)
+        assertEquals("1GB", result.size)
+    }
+
+    @Test
+    fun `search ranking normalizes web grid values`() {
+        val rankings = listOf(
+            JsonPrimitive("3"),
+            JsonPrimitive(2.6),
+            JsonPrimitive(0),
+            JsonPrimitive(101),
+            JsonPrimitive("not-a-rank"),
+        )
+        val model = IndexerResourcePageData(
+            items = rankings.mapIndexed { index, ranking ->
+                IndexerResourceData(
+                    id = "v$index",
+                    title = "视频$index",
+                    mediaType = "video",
+                    ranking = ranking,
+                )
+            },
+        ).toModel(pageNumber = 1, pageSize = 20)
+
+        assertEquals(
+            listOf(3, 3, null, null, null),
+            model.items.map { it.ranking },
+        )
+    }
+
+    @Test
     fun `simple search page stops when page is short`() {
         val model = IndexerResourcePageData(
             items = listOf(resource("v1", "视频", "video")),
