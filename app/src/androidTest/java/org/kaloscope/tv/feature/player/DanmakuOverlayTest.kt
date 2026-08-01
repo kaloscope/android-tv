@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.media3.exoplayer.ExoPlayer
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.core.model.DanmakuComment
@@ -30,7 +31,7 @@ class DanmakuOverlayTest {
     }
 
     @Test
-    fun akDanmakuHostIsDisplayed() {
+    fun akDanmakuHostStartsAtPlayerTop() {
         composeRule.setContent {
             Box(Modifier.fillMaxSize()) {
                 val context = LocalContext.current
@@ -55,6 +56,11 @@ class DanmakuOverlayTest {
             }
         }
 
-        composeRule.onNodeWithTag("ak-danmaku-overlay").assertIsDisplayed()
+        val host = composeRule
+            .onNodeWithTag("ak-danmaku-overlay")
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+
+        assertEquals(0f, host.boundsInRoot.top, 0.5f)
     }
 }

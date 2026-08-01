@@ -70,7 +70,7 @@ internal fun AkDanmakuOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 48.dp, bottom = 128.dp)
+            .padding(bottom = 128.dp)
             .testTag("ak-danmaku-overlay"),
     ) {
         if (runtime != null) {
