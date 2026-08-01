@@ -1,9 +1,13 @@
 package org.kaloscope.tv.feature.search
 
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.SemanticsMatcher
@@ -33,6 +37,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
@@ -46,10 +51,65 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
+import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
 
 class SearchScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun indexerSidebarUsesApprovedRestingSurfaces() {
+        val firstProfile = state().profiles.single()
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background),
+                ) {
+                    SearchScreen(
+                        session = session(),
+                        state = state().copy(
+                            profiles = listOf(
+                                firstProfile,
+                                firstProfile.copy(
+                                    indexer = NetworkIndexer(22, "云端站", null),
+                                ),
+                            ),
+                        ),
+                        requestInitialFocus = false,
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = {},
+                        onPlay = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
+            }
+        }
+
+        val selected = composeRule.onNodeWithTag("indexer-11")
+            .captureToImage()
+            .asAndroidBitmap()
+        val unselected = composeRule.onNodeWithTag("indexer-22")
+            .captureToImage()
+            .asAndroidBitmap()
+        val sampleInset = with(composeRule.density) { 16.dp.roundToPx() }
+
+        assertSidebarNavigationSurfaces(
+            label = "Indexer sidebar",
+            selected = selected,
+            unselected = unselected,
+            sampleInset = sampleInset,
+        )
+    }
 
     @Test
     fun focusedNetworkResultUsesLighterBlueSurface() {

@@ -39,6 +39,50 @@ class KaloscopeControlStyleTest {
     }
 
     @Test
+    fun sidebarVariantOnlyChangesRestingBaseMaterial() {
+        val unselected = resolveKaloscopeControlState(
+            variant = KaloscopeControlVariant.Sidebar,
+            size = KaloscopeControlSize.Row,
+            tone = KaloscopeControlTone.Default,
+            selected = false,
+            enabled = true,
+            focused = false,
+            pressed = false,
+        )
+        val selected = resolveKaloscopeControlState(
+            variant = KaloscopeControlVariant.Sidebar,
+            size = KaloscopeControlSize.Row,
+            tone = KaloscopeControlTone.Default,
+            selected = true,
+            enabled = true,
+            focused = false,
+            pressed = false,
+        )
+        val focused = resolveKaloscopeControlState(
+            variant = KaloscopeControlVariant.Sidebar,
+            size = KaloscopeControlSize.Row,
+            tone = KaloscopeControlTone.Default,
+            selected = true,
+            enabled = true,
+            focused = true,
+            pressed = false,
+        )
+
+        assertEquals(KaloscopeControlBaseMaterial.Ghost, unselected.baseMaterial)
+        assertEquals(
+            KaloscopeControlBaseMaterial.SidebarSelected,
+            selected.baseMaterial,
+        )
+        assertEquals(
+            KaloscopeControlFocusMaterial.Focused,
+            focused.focusMaterial,
+        )
+        assertEquals(6.dp, focused.elevation)
+        assertEquals(1.02f, focused.scale)
+        assertEquals(Color(0xFF101725), focused.contentColor)
+    }
+
+    @Test
     fun focusedSelectionUsesDarkContentAndKeepsDepth() {
         val state = resolveKaloscopeControlState(
             variant = KaloscopeControlVariant.Ghost,

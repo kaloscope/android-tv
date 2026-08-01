@@ -135,6 +135,8 @@ private fun KaloscopeControlBaseMaterial.color(): Color =
         KaloscopeControlBaseMaterial.Ghost -> Color.Transparent
         KaloscopeControlBaseMaterial.Filled -> PanelElevated
         KaloscopeControlBaseMaterial.Selected -> KaloscopeControlTokens.SelectedSurface
+        KaloscopeControlBaseMaterial.SidebarSelected ->
+            KaloscopeControlTokens.SidebarSelectedSurface
     }
 
 private fun KaloscopeControlFocusMaterial.color(): Color =

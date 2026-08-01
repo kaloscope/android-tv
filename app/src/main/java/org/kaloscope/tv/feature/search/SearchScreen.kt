@@ -361,7 +361,7 @@ private fun IndexerSidebar(
             KaloscopeButton(
                 onClick = { onSelectIndexer(indexer.id) },
                 selected = indexer.id == selectedIndexerId,
-                variant = KaloscopeControlVariant.Filled,
+                variant = KaloscopeControlVariant.Sidebar,
                 size = KaloscopeControlSize.Row,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),

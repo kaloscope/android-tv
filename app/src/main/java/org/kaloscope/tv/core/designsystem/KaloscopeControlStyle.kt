@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.dp
 enum class KaloscopeControlVariant {
     Ghost,
     Filled,
+    Sidebar,
 }
 
 enum class KaloscopeControlSize {
@@ -21,6 +22,7 @@ enum class KaloscopeControlTone {
 
 object KaloscopeControlTokens {
     val SelectedSurface = ControlSelected
+    val SidebarSelectedSurface = SidebarSelected
     val FocusedSurface = ControlFocused
     val PressedShade = Color(0x14000000)
     val FocusShadow = Color(0x52000000)
@@ -37,6 +39,7 @@ internal enum class KaloscopeControlBaseMaterial {
     Ghost,
     Filled,
     Selected,
+    SidebarSelected,
 }
 
 internal enum class KaloscopeControlFocusMaterial {
@@ -67,8 +70,14 @@ internal fun resolveKaloscopeControlState(
 ): KaloscopeResolvedControlState {
     val effectivelyFocused = enabled && focused
     val baseMaterial = when {
+        selected && variant == KaloscopeControlVariant.Sidebar ->
+            KaloscopeControlBaseMaterial.SidebarSelected
+
         selected -> KaloscopeControlBaseMaterial.Selected
-        variant == KaloscopeControlVariant.Ghost -> KaloscopeControlBaseMaterial.Ghost
+        variant == KaloscopeControlVariant.Ghost ||
+            variant == KaloscopeControlVariant.Sidebar ->
+            KaloscopeControlBaseMaterial.Ghost
+
         else -> KaloscopeControlBaseMaterial.Filled
     }
     val focusMaterial = when {

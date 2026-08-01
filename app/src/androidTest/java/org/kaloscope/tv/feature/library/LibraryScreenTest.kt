@@ -1,10 +1,14 @@
 package org.kaloscope.tv.feature.library
 
-import androidx.compose.ui.input.key.Key
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
@@ -27,6 +31,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
@@ -36,10 +41,60 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
+import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
 
 class LibraryScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun librarySidebarUsesApprovedRestingSurfaces() {
+        val libraries = listOf(
+            MediaLibrary(21, "剧集库", MediaLibraryType.TvShow),
+            MediaLibrary(22, "电影库", MediaLibraryType.Movie),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background),
+                ) {
+                    LibraryScreen(
+                        session = session(),
+                        state = state().copy(
+                            libraries = libraries,
+                            selectedLibraryId = 21,
+                        ),
+                        restoreMediaId = null,
+                        requestInitialFocus = false,
+                        onSelectLibrary = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onMediaFocused = {},
+                        onOpenMedia = {},
+                    )
+                }
+            }
+        }
+
+        val selected = composeRule.onNodeWithTag("library-sidebar-item-21")
+            .captureToImage()
+            .asAndroidBitmap()
+        val unselected = composeRule.onNodeWithTag("library-sidebar-item-22")
+            .captureToImage()
+            .asAndroidBitmap()
+        val sampleInset = with(composeRule.density) { 16.dp.roundToPx() }
+
+        assertSidebarNavigationSurfaces(
+            label = "Library sidebar",
+            selected = selected,
+            unselected = unselected,
+            sampleInset = sampleInset,
+        )
+    }
 
     @Test
     fun focusedMediaCardUsesLighterBlueSurface() {

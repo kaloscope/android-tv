@@ -309,7 +309,7 @@ private fun LibrarySidebar(
             KaloscopeButton(
                 onClick = { onSelectLibrary(library.id) },
                 selected = library.id == selectedLibraryId,
-                variant = KaloscopeControlVariant.Filled,
+                variant = KaloscopeControlVariant.Sidebar,
                 size = KaloscopeControlSize.Row,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
