@@ -127,6 +127,7 @@ private fun TvTextFieldSurface(
 ) {
     var editing by remember { mutableStateOf(false) }
     var fieldFocused by remember { mutableStateOf(false) }
+    var pendingActivationKey by remember { mutableStateOf<Key?>(null) }
     var fieldValue by remember {
         mutableStateOf(
             TextFieldValue(
@@ -231,7 +232,12 @@ private fun TvTextFieldSurface(
             .heightIn(min = 48.dp)
             .focusRequester(fieldFocus)
             .optionalTestTag(if (editing) editorTestTag else selectorTestTag)
-            .onFocusChanged { fieldFocused = it.isFocused }
+            .onFocusChanged {
+                fieldFocused = it.isFocused
+                if (!it.isFocused) {
+                    pendingActivationKey = null
+                }
+            }
             .onPreInterceptKeyBeforeSoftKeyboard { event ->
                 if (editing && event.key == Key.Back) {
                     if (event.type == KeyEventType.KeyDown) {
@@ -243,7 +249,21 @@ private fun TvTextFieldSurface(
                 }
             }
             .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) {
+                val isActivationKey = event.key == Key.DirectionCenter ||
+                    event.key == Key.Enter ||
+                    event.key == Key.NumPadEnter
+                if (!editing && isActivationKey && event.type == KeyEventType.KeyDown) {
+                    pendingActivationKey = event.key
+                    true
+                } else if (
+                    !editing &&
+                    event.type == KeyEventType.KeyUp &&
+                    event.key == pendingActivationKey
+                ) {
+                    pendingActivationKey = null
+                    enterEditing()
+                    true
+                } else if (event.type != KeyEventType.KeyDown) {
                     false
                 } else if (editing) {
                     when (event.key) {
@@ -266,14 +286,6 @@ private fun TvTextFieldSurface(
                     }
                 } else {
                     when (event.key) {
-                        Key.DirectionCenter,
-                        Key.Enter,
-                        Key.NumPadEnter,
-                        -> {
-                            enterEditing()
-                            true
-                        }
-
                         Key.DirectionUp -> onMoveUp?.let { move ->
                             move()
                             true
@@ -302,6 +314,7 @@ private fun TvTextFieldSurface(
                 if (!editing) {
                     role = Role.Button
                     onClick {
+                        pendingActivationKey = null
                         enterEditing()
                         true
                     }

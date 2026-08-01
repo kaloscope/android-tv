@@ -47,6 +47,23 @@ class TvTextFieldTest {
     }
 
     @Test
+    fun enterWaitsForReleaseBeforeEditing() {
+        showField(imeAction = ImeAction.Next)
+
+        composeRule.onNodeWithTag(SelectorTag)
+            .performKeyInput { keyDown(Key.Enter) }
+
+        composeRule.onNodeWithTag(SelectorTag).assertIsFocused()
+        composeRule.onNodeWithTag(EditorTag).assertDoesNotExist()
+
+        composeRule.onNodeWithTag(SelectorTag)
+            .performKeyInput { keyUp(Key.Enter) }
+
+        composeRule.onNodeWithTag(SelectorTag).assertDoesNotExist()
+        composeRule.onNodeWithTag(EditorTag).assertIsFocused()
+    }
+
+    @Test
     fun backLeavesEditingAndRestoresSelectorFocus() {
         showField()
 
