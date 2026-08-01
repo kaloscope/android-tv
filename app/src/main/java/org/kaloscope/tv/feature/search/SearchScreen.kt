@@ -1,6 +1,7 @@
 package org.kaloscope.tv.feature.search
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -33,12 +35,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -57,7 +61,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Danger
@@ -90,7 +96,7 @@ fun SearchScreen(
     session: Session,
     state: SearchUiState,
     requestInitialFocus: Boolean = true,
-    firstIndexerFocusRequester: FocusRequester? = null,
+    indexerEntryFocusRequester: FocusRequester? = null,
     topNavigationFocusRequester: FocusRequester? = null,
     onRefreshIndexers: () -> Unit,
     onSelectIndexer: (Long) -> Unit,
@@ -116,7 +122,7 @@ fun SearchScreen(
             session = session,
             state = state,
             requestInitialFocus = requestInitialFocus,
-            firstIndexerFocusRequester = firstIndexerFocusRequester,
+            indexerEntryFocusRequester = indexerEntryFocusRequester,
             topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectIndexer = onSelectIndexer,
             onQueryChange = onQueryChange,
@@ -139,7 +145,7 @@ private fun SearchContent(
     session: Session,
     state: SearchUiState.Content,
     requestInitialFocus: Boolean,
-    firstIndexerFocusRequester: FocusRequester?,
+    indexerEntryFocusRequester: FocusRequester?,
     topNavigationFocusRequester: FocusRequester?,
     onSelectIndexer: (Long) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -154,16 +160,27 @@ private fun SearchContent(
     onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
     onClearFilters: () -> Unit,
 ) {
-    val internalFirstIndexerFocus = remember { FocusRequester() }
-    val firstIndexerFocus =
-        firstIndexerFocusRequester ?: internalFirstIndexerFocus
+    val internalIndexerEntryFocus = remember { FocusRequester() }
+    val indexerEntryFocus =
+        indexerEntryFocusRequester ?: internalIndexerEntryFocus
+    val hasMultipleIndexers = state.indexers.size > 1
+    val firstIndexerFocus = remember { FocusRequester() }
     val internalSelectedIndexerFocus = remember { FocusRequester() }
-    val selectedIndexerFocus = if (
-        state.selectedIndexerId == state.indexers.firstOrNull()?.id
-    ) {
+    val selectedIndexerIndex = state.indexers
+        .indexOfFirst { it.id == state.selectedIndexerId }
+        .takeIf { it >= 0 }
+        ?: state.indexers.indices.firstOrNull()
+        ?: -1
+    val selectedIndexerFocus = if (selectedIndexerIndex == 0) {
         firstIndexerFocus
     } else {
         internalSelectedIndexerFocus
+    }
+    val internalSearchInputFocus = remember { FocusRequester() }
+    val searchInputFocus = if (hasMultipleIndexers) {
+        internalSearchInputFocus
+    } else {
+        indexerEntryFocus
     }
     val filterButtonFocus = remember { FocusRequester() }
     var restoreFilterFocus by remember { mutableStateOf(false) }
@@ -173,7 +190,11 @@ private fun SearchContent(
         requestInitialFocus,
     ) {
         if (requestInitialFocus && state.focusedResultId == null) {
-            firstIndexerFocus.requestFocus()
+            if (hasMultipleIndexers) {
+                firstIndexerFocus.requestFocus()
+            } else {
+                searchInputFocus.requestFocus()
+            }
         }
     }
     LaunchedEffect(state.filterDrawerOpen) {
@@ -191,8 +212,11 @@ private fun SearchContent(
             session = session,
             indexers = state.indexers,
             selectedIndexerId = state.selectedIndexerId,
+            selectedIndexerIndex = selectedIndexerIndex,
+            sidebarFocus = indexerEntryFocus.takeIf { hasMultipleIndexers },
             firstIndexerFocus = firstIndexerFocus,
             selectedIndexerFocus = selectedIndexerFocus,
+            menuItemsAreFocusable = hasMultipleIndexers,
             topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectIndexer = onSelectIndexer,
         )
@@ -205,6 +229,7 @@ private fun SearchContent(
                 value = state.query,
                 filtersAvailable = state.selectedProfile.filters.isNotEmpty(),
                 filtersActive = state.appliedFilters.isNotEmpty(),
+                inputFocusRequester = searchInputFocus,
                 filterFocusRequester = filterButtonFocus,
                 topNavigationFocusRequester = topNavigationFocusRequester,
                 onValueChange = onQueryChange,
@@ -221,7 +246,11 @@ private fun SearchContent(
                 coverRatio = state.selectedProfile.coverRatio,
                 requestInitialFocus = requestInitialFocus,
                 onRetry = {
-                    selectedIndexerFocus.requestFocus()
+                    if (hasMultipleIndexers) {
+                        selectedIndexerFocus.requestFocus()
+                    } else {
+                        searchInputFocus.requestFocus()
+                    }
                     onRetry()
                 },
                 onLoadMore = onLoadMore,
@@ -279,14 +308,47 @@ private fun IndexerSidebar(
     session: Session,
     indexers: List<NetworkIndexer>,
     selectedIndexerId: Long,
+    selectedIndexerIndex: Int,
+    sidebarFocus: FocusRequester?,
     firstIndexerFocus: FocusRequester,
     selectedIndexerFocus: FocusRequester,
+    menuItemsAreFocusable: Boolean,
     topNavigationFocusRequester: FocusRequester?,
     onSelectIndexer: (Long) -> Unit,
 ) {
     val firstIndexerId = indexers.firstOrNull()?.id
+    val listState = rememberLazyListState()
+    val focusScope = rememberCoroutineScope()
+    var focusEntryJob by remember { mutableStateOf<Job?>(null) }
     LazyColumn(
+        state = listState,
         modifier = Modifier
+            .then(
+                sidebarFocus?.let { Modifier.focusRequester(it) } ?: Modifier,
+            )
+            .focusProperties {
+                onEnter = {
+                    if (
+                        requestedFocusDirection == FocusDirection.Down &&
+                        selectedIndexerIndex >= 0 &&
+                        menuItemsAreFocusable
+                    ) {
+                        cancelFocusChange()
+                        focusEntryJob?.cancel()
+                        focusEntryJob = focusScope.launch {
+                            val targetIsVisible = listState.layoutInfo
+                                .visibleItemsInfo
+                                .any { it.index == selectedIndexerIndex }
+                            if (!targetIsVisible) {
+                                listState.scrollToItem(selectedIndexerIndex)
+                            }
+                            withFrameNanos { }
+                            selectedIndexerFocus.requestFocus()
+                        }
+                    }
+                }
+            }
+            .focusGroup()
             .width(220.dp)
             .fillMaxHeight()
             .background(Panel.copy(alpha = 0.78f), RoundedCornerShape(18.dp))
@@ -307,6 +369,7 @@ private fun IndexerSidebar(
                     .fillMaxWidth()
                     .height(58.dp)
                     .testTag("indexer-${indexer.id}")
+                    .focusProperties { canFocus = menuItemsAreFocusable }
                     .then(
                         when {
                             isFirstIndexer -> Modifier.focusRequester(firstIndexerFocus)
@@ -363,6 +426,7 @@ private fun SearchInput(
     value: String,
     filtersAvailable: Boolean,
     filtersActive: Boolean,
+    inputFocusRequester: FocusRequester,
     filterFocusRequester: FocusRequester,
     topNavigationFocusRequester: FocusRequester?,
     onValueChange: (String) -> Unit,
@@ -385,6 +449,7 @@ private fun SearchInput(
             hint = stringResource(R.string.search_indexer_hint),
             onValueChange = onValueChange,
             onSearch = onSearch,
+            focusRequester = inputFocusRequester,
             onMoveUp = topNavigationFocusRequester?.let { requester ->
                 { requester.requestFocus() }
             },

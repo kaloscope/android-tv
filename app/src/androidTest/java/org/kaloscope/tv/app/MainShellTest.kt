@@ -1036,7 +1036,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionDownFromSearchNavigationFocusesFirstIndexer() {
+    fun directionDownFromSearchNavigationSkipsSingleIndexer() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -1054,19 +1054,77 @@ class MainShellTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionDown) }
 
-        composeRule.onNodeWithText("网络搜索").assertIsNotFocused()
-        composeRule.onNodeWithTag("indexer-11").assertIsFocused()
-        composeRule.onNodeWithTag("network-search-input").assertIsNotFocused()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("network-search-input") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("network-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("indexer-11")
+            .assertIsNotFocused()
+            .assertIsSelected()
     }
 
     @Test
-    fun directionUpFromFirstIndexerFocusesActiveSearchNavigation() {
+    fun directionDownFromSearchNavigationFocusesOffscreenSelectedIndexer() {
+        val baseProfile = deepSearchState().profiles.single()
+        val searchState = deepSearchState().copy(
+            profiles = (1L..30L).map { id ->
+                baseProfile.copy(
+                    indexer = NetworkIndexer(id, "站点$id", null),
+                )
+            },
+            selectedIndexerId = 30,
+            focusedResultId = null,
+        )
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
-                    searchState = deepSearchState().copy(focusedResultId = null),
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("网络搜索")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.onNodeWithTag("indexer-1").assertExists()
+        composeRule.onNodeWithTag("indexer-30").assertDoesNotExist()
+
+        composeRule.onNodeWithText("网络搜索")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("indexer-30") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("indexer-30").assertIsFocused()
+        composeRule.onNodeWithText("网络搜索").assertIsNotFocused()
+        composeRule.onNodeWithTag("network-search-input").assertIsNotFocused()
+    }
+
+    @Test
+    fun directionUpFromFirstIndexerFocusesActiveSearchNavigation() {
+        val firstProfile = deepSearchState().profiles.single()
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(
+                        profiles = listOf(
+                            firstProfile,
+                            firstProfile.copy(
+                                indexer = NetworkIndexer(22, "云端站", null),
+                            ),
+                        ),
+                        focusedResultId = null,
+                    ),
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
                 )
@@ -1157,7 +1215,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionDownFromLibraryNavigationFocusesFirstLibrary() {
+    fun directionDownFromLibraryNavigationSkipsSingleLibrary() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -1174,19 +1232,69 @@ class MainShellTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionDown) }
 
-        composeRule.onNodeWithText("媒体库").assertIsNotFocused()
-        composeRule.onNodeWithText("剧集库").assertIsFocused()
-        composeRule.onNodeWithTag("library-search-input").assertIsNotFocused()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("library-search-input") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("library-sidebar-item-21")
+            .assertIsNotFocused()
+            .assertIsSelected()
     }
 
     @Test
-    fun directionUpFromFirstLibraryFocusesActiveLibraryNavigation() {
+    fun directionDownFromLibraryNavigationFocusesOffscreenSelectedLibrary() {
+        val selectedLibraryState = libraryState().copy(
+            libraries = (1L..30L).map { id ->
+                MediaLibrary(id, "媒体库$id", MediaLibraryType.TvShow)
+            },
+            selectedLibraryId = 30,
+        )
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
-                    libraryState = libraryState(),
+                    libraryState = selectedLibraryState,
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.onNodeWithTag("library-sidebar-item-1").assertExists()
+        composeRule.onNodeWithTag("library-sidebar-item-30").assertDoesNotExist()
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("library-sidebar-item-30") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("library-sidebar-item-30").assertIsFocused()
+        composeRule.onNodeWithText("媒体库").assertIsNotFocused()
+        composeRule.onNodeWithTag("library-search-input").assertIsNotFocused()
+    }
+
+    @Test
+    fun directionUpFromFirstLibraryFocusesActiveLibraryNavigation() {
+        val multipleLibraryState = libraryState().copy(
+            libraries = listOf(
+                MediaLibrary(21, "剧集库", MediaLibraryType.TvShow),
+                MediaLibrary(22, "电影库", MediaLibraryType.Movie),
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = multipleLibraryState,
                     detailState = MediaDetailUiState.Content(detail()),
                 )
             }

@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
@@ -273,7 +274,52 @@ class SearchScreenTest {
     }
 
     @Test
-    fun firstRealIndexerReceivesInitialFocus() {
+    fun retryingSearchFailureWithSingleIndexerFocusesSearchInput() {
+        val errorState = state().copy(
+            results = SearchResultsState.Error(AppError.Offline),
+        )
+        var currentState by mutableStateOf<SearchUiState>(errorState)
+        var retries = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = currentState,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {
+                        retries += 1
+                        currentState = errorState.copy(results = SearchResultsState.Loading)
+                    },
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("重试")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("network-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("indexer-11")
+            .assertIsNotFocused()
+            .assertIsSelected()
+        composeRule.runOnIdle {
+            assertEquals(1, retries)
+        }
+    }
+
+    @Test
+    fun singleIndexerInitialFocusesSearchInput() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -295,7 +341,78 @@ class SearchScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("network-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("indexer-11")
+            .assertIsNotFocused()
+            .assertIsSelected()
+    }
+
+    @Test
+    fun movingLeftFromSearchInputSkipsSingleIndexer() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("network-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithTag("network-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("indexer-11").assertIsNotFocused()
+    }
+
+    @Test
+    fun multipleIndexersInitialFocusesFirstIndexer() {
+        val firstProfile = state().profiles.single()
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state().copy(
+                        profiles = listOf(
+                            firstProfile,
+                            firstProfile.copy(
+                                indexer = NetworkIndexer(22, "云端站", null),
+                            ),
+                        ),
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
         composeRule.onNodeWithTag("indexer-11").assertIsFocused()
+        composeRule.onNodeWithTag("network-search-input").assertIsNotFocused()
     }
 
     @Test

@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithText
@@ -184,6 +185,88 @@ class LibraryScreenTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
         composeRule.onNodeWithText("剧集库").assertIsSelected()
+    }
+
+    @Test
+    fun singleLibraryInitialFocusesSearchInput() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("library-sidebar-item-21")
+            .assertIsNotFocused()
+            .assertIsSelected()
+    }
+
+    @Test
+    fun movingLeftFromLibrarySearchInputSkipsSingleLibrary() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("library-sidebar-item-21").assertIsNotFocused()
+    }
+
+    @Test
+    fun multipleLibrariesInitialFocusesFirstLibrary() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state().copy(
+                        libraries = listOf(
+                            MediaLibrary(21, "剧集库", MediaLibraryType.TvShow),
+                            MediaLibrary(22, "电影库", MediaLibraryType.Movie),
+                        ),
+                    ),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-sidebar-item-21").assertIsFocused()
+        composeRule.onNodeWithTag("library-search-input").assertIsNotFocused()
     }
 
     @Test
