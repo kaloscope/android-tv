@@ -104,7 +104,7 @@ class PlayerControlKeyPolicyTest {
     @Test
     fun `focused progress maps down and back without handling center`() {
         assertEquals(
-            PlayerControlCommand.FocusPlayPause,
+            PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause),
             progressCommand(PlayerRemoteKey.Down),
         )
         assertEquals(

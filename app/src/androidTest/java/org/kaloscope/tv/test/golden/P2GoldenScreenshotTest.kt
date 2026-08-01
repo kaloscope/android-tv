@@ -282,6 +282,25 @@ class P2GoldenScreenshotTest {
     }
 
     @Test
+    fun playerTimelineFocusMatches1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                GoldenPlayerControls()
+            }
+        }
+        composeRule.onNodeWithTag("player-progress")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(220)
+
+        assertGolden(
+            "player-controls-timeline-focus-1920",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
     fun playerAuxiliaryFocusMatches1080p() {
         if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
         composeRule.mainClock.autoAdvance = false

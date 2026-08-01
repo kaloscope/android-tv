@@ -100,6 +100,9 @@ internal fun MainShell(
     var destinationEntryKeepsTopFocus by remember {
         mutableStateOf(false)
     }
+    var restoringSearchFocusAfterPlayer by remember {
+        mutableStateOf(false)
+    }
     var homeBackdrop by remember(session.server.id) {
         mutableStateOf<HomeBackdropPresentation?>(null)
     }
@@ -139,6 +142,7 @@ internal fun MainShell(
         route: NavKey,
         keepTopBarFocus: Boolean,
     ) {
+        restoringSearchFocusAfterPlayer = false
         if (route == currentRoute) {
             return
         }
@@ -170,6 +174,9 @@ internal fun MainShell(
     fun goBack() {
         val leavingRoute = currentRoute
         val returnRoute = backStack.getOrNull(backStack.lastIndex - 1) ?: HomeRoute
+        // Releasing player focus can briefly focus Home before Search restores its result.
+        restoringSearchFocusAfterPlayer =
+            leavingRoute is PlayerRoute && returnRoute == SearchRoute
         if (leavingRoute is MediaDetailRoute &&
             returnRoute in setOf(HomeRoute, LibraryRoute)
         ) {
@@ -280,7 +287,10 @@ internal fun MainShell(
                                 onSearch = searchActions.search,
                                 onRetry = searchActions.retry,
                                 onLoadMore = searchActions.loadMore,
-                                onResultFocused = searchActions.rememberFocusedResult,
+                                onResultFocused = { resultId ->
+                                    restoringSearchFocusAfterPlayer = false
+                                    searchActions.rememberFocusedResult(resultId)
+                                },
                                 onGridViewportChanged = searchActions.rememberGridViewport,
                                 onPlay = searchActions.play,
                                 onOpenFilters = searchActions.openFilters,
@@ -416,7 +426,9 @@ internal fun MainShell(
                             activateTopDestination(SettingsRoute, keepTopBarFocus = false)
                         },
                         onDestinationFocused = { route ->
-                            activateTopDestination(route, keepTopBarFocus = true)
+                            if (!restoringSearchFocusAfterPlayer || route == SearchRoute) {
+                                activateTopDestination(route, keepTopBarFocus = true)
+                            }
                         },
                         homeFocus = homeFocus,
                         searchFocus = searchFocus,

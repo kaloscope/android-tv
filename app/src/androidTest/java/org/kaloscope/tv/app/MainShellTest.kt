@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
@@ -70,10 +71,15 @@ import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
 import org.kaloscope.tv.core.model.MediaSummary
+import org.kaloscope.tv.core.model.NetworkPlaybackSource
+import org.kaloscope.tv.core.model.NetworkVideoType
+import org.kaloscope.tv.core.player.PlaybackControllerFactory
+import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryUiState
+import org.kaloscope.tv.feature.player.PlayerUiState
 import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.settings.SettingsConnection
@@ -1419,6 +1425,118 @@ class MainShellTest {
     }
 
     @Test
+    fun playerOpenedFromSearchReturnsToFocusedSearchResult() {
+        var searchState by mutableStateOf(
+            deepSearchState().copy(
+                results = SearchResultsState.Content(
+                    items = listOf(
+                        NetworkSearchResult(
+                            id = "v1",
+                            title = "视频1",
+                            coverPath = null,
+                            rating = null,
+                            category = null,
+                            uploader = null,
+                            uploadedAt = null,
+                        ),
+                    ),
+                    total = 1,
+                    pageNumber = 1,
+                    hasNext = false,
+                ),
+                focusedResultId = "v1",
+                gridViewport = GridViewportSnapshot.Top,
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                val context = LocalContext.current
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    searchActions = SearchActions(
+                        consumePlaybackRequest = { requestId ->
+                            if (searchState.pendingPlaybackRequestId == requestId) {
+                                searchState = searchState.copy(
+                                    pendingPlaybackRequestId = null,
+                                )
+                            }
+                        },
+                    ),
+                    playerState = PlayerUiState.Content(
+                        request = PlaybackRequest.NetworkVideo(
+                            requestId = "network-request",
+                            serverId = "server-id",
+                            title = "视频1",
+                            source = NetworkPlaybackSource(
+                                indexerId = 11,
+                                resourceId = "v1",
+                                title = "视频1",
+                                url = "data:audio/wav;base64," +
+                                    "UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgA" +
+                                    "ZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICA" +
+                                    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==",
+                                videoType = NetworkVideoType.Unknown,
+                                danmakus = emptyList(),
+                            ),
+                        ),
+                        subtitles = emptyList(),
+                        danmakus = emptyList(),
+                        extraFailures = emptyMap(),
+                    ),
+                    playbackControllerFactory = remember(context) {
+                        PlaybackControllerFactory(context.applicationContext)
+                    },
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("network-result-v1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.runOnIdle {
+            searchState = searchState.copy(
+                pendingPlaybackRequestId = "network-request",
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("player-play-pause") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("player-play-pause"))
+                .fetchSemanticsNodes().isEmpty()
+        }
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("network-result-v1"))
+                .fetchSemanticsNodes().isNotEmpty() ||
+                composeRule.onAllNodes(hasText("进入媒体库"))
+                    .fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("进入媒体库").assertDoesNotExist()
+        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+            .assertIsSelected()
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .assertIsNotSelected()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("network-result-v1") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+    }
+
+    @Test
     fun topLevelRoundTripKeepsLibraryFocusAndDeepViewport() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -1498,6 +1616,8 @@ private fun TestMainShell(
     searchActions: SearchActions = SearchActions(),
     libraryActions: LibraryActions = LibraryActions(),
     settingsActions: SettingsActions = SettingsActions(),
+    playerState: PlayerUiState = PlayerUiState.Loading,
+    playbackControllerFactory: PlaybackControllerFactory? = null,
 ) {
     MainShell(
         session = session,
@@ -1512,6 +1632,8 @@ private fun TestMainShell(
         settingsState = settingsState,
         initialRoute = initialRoute,
         settingsActions = settingsActions,
+        playerState = playerState,
+        playbackControllerFactory = playbackControllerFactory,
         playerActions = PlayerActions(),
     )
 }

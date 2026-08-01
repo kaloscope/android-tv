@@ -22,6 +22,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -574,6 +575,137 @@ class PlayerControlsTest {
         composeRule.runOnIdle {
             assertEquals(1, subtitleRetries)
         }
+    }
+
+    @Test
+    fun progressFocusHidesActionRowAndMovesInformationGroupToBottom() {
+        lateinit var density: Density
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithContentDescription("播放")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        val timelineBoundsBefore = composeRule.onNodeWithTag("player-progress-track")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val titleBoundsBefore = composeRule.onNodeWithText("Episode 1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        composeRule.onNodeWithContentDescription("播放")
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithTag("player-progress").assertIsFocused()
+        composeRule.mainClock.advanceTimeBy(100)
+        val timelineBoundsDuringMotion = composeRule.onNodeWithTag("player-progress-track")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val titleBoundsDuringMotion = composeRule.onNodeWithText("Episode 1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        composeRule.onAllNodesWithTag("player-control-row").assertCountEquals(1)
+
+        composeRule.mainClock.advanceTimeBy(140)
+        composeRule.onAllNodesWithTag("player-control-row").assertCountEquals(0)
+        val timelineBoundsAfter = composeRule.onNodeWithTag("player-progress-track")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val titleBoundsAfter = composeRule.onNodeWithText("Episode 1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val expectedShift = with(density) { 60.dp.toPx() }
+        val tolerance = with(density) { 1.dp.toPx() }
+        assertTrue(
+            "Timeline should be moving after 100 ms",
+            timelineBoundsDuringMotion.center.y > timelineBoundsBefore.center.y &&
+                timelineBoundsDuringMotion.center.y < timelineBoundsAfter.center.y,
+        )
+        assertTrue(
+            "Playback information should move continuously with the timeline",
+            titleBoundsDuringMotion.center.y > titleBoundsBefore.center.y &&
+                titleBoundsDuringMotion.center.y < titleBoundsAfter.center.y,
+        )
+        assertEquals(
+            "Timeline should move into the hidden action section",
+            timelineBoundsBefore.center.y + expectedShift,
+            timelineBoundsAfter.center.y,
+            tolerance,
+        )
+        assertEquals(
+            "Playback information should move with the timeline",
+            titleBoundsBefore.center.y + expectedShift,
+            titleBoundsAfter.center.y,
+            tolerance,
+        )
+    }
+
+    @Test
+    fun downFromProgressRevealsActionRowAndFocusesPlayPause() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("播放")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("player-progress").assertIsFocused()
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithTag("player-control-row").assertCountEquals(0)
+
+        composeRule.onNodeWithTag("player-progress")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithTag("player-control-row").assertCountEquals(1)
+        composeRule.onNodeWithContentDescription("播放").assertIsFocused()
     }
 
     @Test

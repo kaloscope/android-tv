@@ -1,6 +1,11 @@
 package org.kaloscope.tv.feature.player
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
@@ -34,9 +39,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -340,6 +347,8 @@ internal fun PlayerControls(
     onRetrySubtitles: () -> Unit = {},
     onRetryDanmakus: () -> Unit = {},
 ) {
+    var actionRowVisible by remember { mutableStateOf(true) }
+    var playFocusRequestVersion by remember { mutableLongStateOf(0) }
     val defaultProgressFocus = remember { FocusRequester() }
     val resolvedProgressFocus = progressFocus ?: defaultProgressFocus
     val forwardFocus = remember { FocusRequester() }
@@ -350,6 +359,12 @@ internal fun PlayerControls(
         state.subtitles.enabled -> subtitleFocus
         state.danmakus.enabled -> danmakuFocus
         else -> speedFocus
+    }
+    LaunchedEffect(playFocusRequestVersion) {
+        if (playFocusRequestVersion > 0) {
+            withFrameNanos { }
+            playFocus.requestFocus()
+        }
     }
     Column(
         modifier = Modifier
@@ -385,6 +400,11 @@ internal fun PlayerControls(
             progressFocus = resolvedProgressFocus,
             playFocus = playFocus,
             qualityFocus = definitionFocus.takeIf { state.quality.enabled },
+            onProgressFocused = { actionRowVisible = false },
+            onShowActions = {
+                actionRowVisible = true
+                playFocusRequestVersion += 1
+            },
             onSeekTo = onSeekTo,
             onHideControls = onHideControls,
             onInteraction = onInteraction,
@@ -405,170 +425,210 @@ internal fun PlayerControls(
                 fontSize = 14.sp,
             )
         }
-        Spacer(Modifier.height(12.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("player-control-row"),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PlayerCircleButton(
-                    label = stringResource(R.string.previous_episode),
-                    iconRes = R.drawable.ic_action_previous,
-                    action = PlayerActionUiState(enabled = state.previousEnabled),
-                    onClick = onPrevious,
-                    modifier = Modifier.testTag("player-previous"),
-                    upFocus = resolvedProgressFocus,
-                    downFocus = supplementaryGroupStartFocus,
-                )
-                PlayerPillButton(
-                    visibleLabel = stringResource(R.string.seek_seconds_short),
-                    accessibilityLabel = stringResource(R.string.rewind_seconds),
-                    iconRes = R.drawable.ic_action_seek_backward,
-                    action = PlayerActionUiState(enabled = true),
-                    onClick = onRewind,
-                    modifier = Modifier.testTag("player-rewind"),
-                    upFocus = resolvedProgressFocus,
-                    downFocus = supplementaryGroupStartFocus,
-                )
-                val playPauseLabel = if (state.isPlaying) {
-                    stringResource(R.string.pause)
-                } else {
-                    stringResource(R.string.play)
+            PlayerActionRowVisibility(
+                visible = actionRowVisible,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("player-control-row"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PlayerCircleButton(
+                            label = stringResource(R.string.previous_episode),
+                            iconRes = R.drawable.ic_action_previous,
+                            action = PlayerActionUiState(enabled = state.previousEnabled),
+                            onClick = onPrevious,
+                            modifier = Modifier.testTag("player-previous"),
+                            upFocus = resolvedProgressFocus,
+                            downFocus = supplementaryGroupStartFocus,
+                        )
+                        PlayerPillButton(
+                            visibleLabel = stringResource(R.string.seek_seconds_short),
+                            accessibilityLabel = stringResource(R.string.rewind_seconds),
+                            iconRes = R.drawable.ic_action_seek_backward,
+                            action = PlayerActionUiState(enabled = true),
+                            onClick = onRewind,
+                            modifier = Modifier.testTag("player-rewind"),
+                            upFocus = resolvedProgressFocus,
+                            downFocus = supplementaryGroupStartFocus,
+                        )
+                        val playPauseLabel = if (state.isPlaying) {
+                            stringResource(R.string.pause)
+                        } else {
+                            stringResource(R.string.play)
+                        }
+                        PlayerPillButton(
+                            visibleLabel = playPauseLabel,
+                            accessibilityLabel = playPauseLabel,
+                            iconRes = if (state.isPlaying) {
+                                R.drawable.ic_action_pause
+                            } else {
+                                R.drawable.ic_action_play
+                            },
+                            action = PlayerActionUiState(enabled = true),
+                            onClick = onPlayPause,
+                            modifier = Modifier
+                                .focusRequester(playFocus)
+                                .testTag("player-play-pause"),
+                            height = 48.dp,
+                            minWidth = 96.dp,
+                            primary = true,
+                            upFocus = resolvedProgressFocus,
+                            downFocus = supplementaryGroupStartFocus,
+                        )
+                        PlayerPillButton(
+                            visibleLabel = stringResource(R.string.seek_seconds_short),
+                            accessibilityLabel = stringResource(R.string.forward_seconds),
+                            iconRes = R.drawable.ic_action_seek_forward,
+                            action = PlayerActionUiState(enabled = true),
+                            onClick = onForward,
+                            modifier = Modifier
+                                .focusRequester(forwardFocus)
+                                .testTag("player-forward"),
+                            upFocus = resolvedProgressFocus,
+                            downFocus = supplementaryGroupStartFocus,
+                            rightFocus = if (state.nextEnabled) {
+                                nextFocus
+                            } else {
+                                supplementaryGroupStartFocus
+                            },
+                        )
+                        PlayerCircleButton(
+                            label = stringResource(R.string.next_episode),
+                            iconRes = R.drawable.ic_action_next,
+                            action = PlayerActionUiState(enabled = state.nextEnabled),
+                            onClick = onNext,
+                            modifier = Modifier
+                                .focusRequester(nextFocus)
+                                .testTag("player-next"),
+                            upFocus = resolvedProgressFocus,
+                            downFocus = supplementaryGroupStartFocus,
+                            rightFocus = supplementaryGroupStartFocus,
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PlayerAuxiliaryButton(
+                            visibleLabel = if (state.subtitles.error) {
+                                stringResource(R.string.retry)
+                            } else {
+                                stringResource(R.string.subtitle)
+                            },
+                            accessibilityLabel = subtitleButtonLabel(
+                                state.subtitles,
+                                state.subtitleLabel,
+                            ),
+                            labelTag = "player-subtitles-label",
+                            iconRes = R.drawable.ic_settings_subtitle,
+                            action = state.subtitles,
+                            onClick = if (state.subtitles.error) {
+                                onRetrySubtitles
+                            } else {
+                                onOpenSubtitles
+                            },
+                            modifier = Modifier
+                                .focusRequester(subtitleFocus)
+                                .testTag("player-subtitles"),
+                            upFocus = playFocus,
+                            leftFocus = episodeGroupEndFocus,
+                            rightFocus = if (state.danmakus.enabled) danmakuFocus else speedFocus,
+                        )
+                        PlayerAuxiliaryButton(
+                            visibleLabel = if (state.danmakus.error) {
+                                stringResource(R.string.retry)
+                            } else {
+                                stringResource(R.string.danmaku)
+                            },
+                            accessibilityLabel = danmakuButtonLabel(state.danmakus),
+                            labelTag = "player-danmaku-label",
+                            iconRes = R.drawable.ic_settings_danmaku,
+                            action = state.danmakus,
+                            onClick = if (state.danmakus.error) {
+                                onRetryDanmakus
+                            } else {
+                                onToggleDanmakus
+                            },
+                            modifier = Modifier
+                                .focusRequester(danmakuFocus)
+                                .testTag("player-danmaku"),
+                            upFocus = playFocus,
+                            leftFocus = if (state.subtitles.enabled) {
+                                subtitleFocus
+                            } else {
+                                episodeGroupEndFocus
+                            },
+                            rightFocus = speedFocus,
+                        )
+                        PlayerAuxiliaryButton(
+                            visibleLabel = formatPlaybackSpeed(state.playbackSpeed),
+                            accessibilityLabel = formatPlaybackSpeed(state.playbackSpeed),
+                            labelTag = "player-speed-label",
+                            iconRes = R.drawable.ic_action_playback_speed,
+                            action = PlayerActionUiState(enabled = true),
+                            onClick = onOpenSpeed,
+                            modifier = Modifier
+                                .focusRequester(speedFocus)
+                                .testTag("player-speed"),
+                            upFocus = playFocus,
+                            leftFocus = when {
+                                state.danmakus.enabled -> danmakuFocus
+                                state.subtitles.enabled -> subtitleFocus
+                                else -> episodeGroupEndFocus
+                            },
+                            rightFocus = danmakuSettingsFocus,
+                        )
+                        PlayerAuxiliaryButton(
+                            visibleLabel = if (state.danmakuSettings.error) {
+                                stringResource(R.string.retry)
+                            } else {
+                                stringResource(R.string.settings)
+                            },
+                            accessibilityLabel = stringResource(
+                                R.string.player_danmaku_settings_button,
+                            ),
+                            labelTag = "player-danmaku-settings-label",
+                            iconRes = R.drawable.ic_action_filter,
+                            action = state.danmakuSettings,
+                            onClick = onOpenDanmakuSettings,
+                            modifier = Modifier
+                                .focusRequester(danmakuSettingsFocus)
+                                .testTag("player-danmaku-settings"),
+                            upFocus = playFocus,
+                            leftFocus = speedFocus,
+                        )
+                    }
                 }
-                PlayerPillButton(
-                    visibleLabel = playPauseLabel,
-                    accessibilityLabel = playPauseLabel,
-                    iconRes = if (state.isPlaying) {
-                        R.drawable.ic_action_pause
-                    } else {
-                        R.drawable.ic_action_play
-                    },
-                    action = PlayerActionUiState(enabled = true),
-                    onClick = onPlayPause,
-                    modifier = Modifier
-                        .focusRequester(playFocus)
-                        .testTag("player-play-pause"),
-                    height = 48.dp,
-                    minWidth = 96.dp,
-                    primary = true,
-                    upFocus = resolvedProgressFocus,
-                    downFocus = supplementaryGroupStartFocus,
-                )
-                PlayerPillButton(
-                    visibleLabel = stringResource(R.string.seek_seconds_short),
-                    accessibilityLabel = stringResource(R.string.forward_seconds),
-                    iconRes = R.drawable.ic_action_seek_forward,
-                    action = PlayerActionUiState(enabled = true),
-                    onClick = onForward,
-                    modifier = Modifier
-                        .focusRequester(forwardFocus)
-                        .testTag("player-forward"),
-                    upFocus = resolvedProgressFocus,
-                    downFocus = supplementaryGroupStartFocus,
-                    rightFocus = if (state.nextEnabled) nextFocus else supplementaryGroupStartFocus,
-                )
-                PlayerCircleButton(
-                    label = stringResource(R.string.next_episode),
-                    iconRes = R.drawable.ic_action_next,
-                    action = PlayerActionUiState(enabled = state.nextEnabled),
-                    onClick = onNext,
-                    modifier = Modifier
-                        .focusRequester(nextFocus)
-                        .testTag("player-next"),
-                    upFocus = resolvedProgressFocus,
-                    downFocus = supplementaryGroupStartFocus,
-                    rightFocus = supplementaryGroupStartFocus,
-                )
             }
-            Spacer(Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PlayerAuxiliaryButton(
-                    visibleLabel = if (state.subtitles.error) {
-                        stringResource(R.string.retry)
-                    } else {
-                        stringResource(R.string.subtitle)
-                    },
-                    accessibilityLabel = subtitleButtonLabel(
-                        state.subtitles,
-                        state.subtitleLabel,
-                    ),
-                    labelTag = "player-subtitles-label",
-                    iconRes = R.drawable.ic_settings_subtitle,
-                    action = state.subtitles,
-                    onClick = if (state.subtitles.error) {
-                        onRetrySubtitles
-                    } else {
-                        onOpenSubtitles
-                    },
-                    modifier = Modifier
-                        .focusRequester(subtitleFocus)
-                        .testTag("player-subtitles"),
-                    upFocus = playFocus,
-                    leftFocus = episodeGroupEndFocus,
-                    rightFocus = if (state.danmakus.enabled) danmakuFocus else speedFocus,
-                )
-                PlayerAuxiliaryButton(
-                    visibleLabel = if (state.danmakus.error) {
-                        stringResource(R.string.retry)
-                    } else {
-                        stringResource(R.string.danmaku)
-                    },
-                    accessibilityLabel = danmakuButtonLabel(state.danmakus),
-                    labelTag = "player-danmaku-label",
-                    iconRes = R.drawable.ic_settings_danmaku,
-                    action = state.danmakus,
-                    onClick = if (state.danmakus.error) {
-                        onRetryDanmakus
-                    } else {
-                        onToggleDanmakus
-                    },
-                    modifier = Modifier
-                        .focusRequester(danmakuFocus)
-                        .testTag("player-danmaku"),
-                    upFocus = playFocus,
-                    leftFocus = if (state.subtitles.enabled) subtitleFocus else episodeGroupEndFocus,
-                    rightFocus = speedFocus,
-                )
-                PlayerAuxiliaryButton(
-                    visibleLabel = formatPlaybackSpeed(state.playbackSpeed),
-                    accessibilityLabel = formatPlaybackSpeed(state.playbackSpeed),
-                    labelTag = "player-speed-label",
-                    iconRes = R.drawable.ic_action_playback_speed,
-                    action = PlayerActionUiState(enabled = true),
-                    onClick = onOpenSpeed,
-                    modifier = Modifier
-                        .focusRequester(speedFocus)
-                        .testTag("player-speed"),
-                    upFocus = playFocus,
-                    leftFocus = when {
-                        state.danmakus.enabled -> danmakuFocus
-                        state.subtitles.enabled -> subtitleFocus
-                        else -> episodeGroupEndFocus
-                    },
-                    rightFocus = danmakuSettingsFocus,
-                )
-                PlayerAuxiliaryButton(
-                    visibleLabel = if (state.danmakuSettings.error) {
-                        stringResource(R.string.retry)
-                    } else {
-                        stringResource(R.string.settings)
-                    },
-                    accessibilityLabel = stringResource(
-                        R.string.player_danmaku_settings_button,
-                    ),
-                    labelTag = "player-danmaku-settings-label",
-                    iconRes = R.drawable.ic_action_filter,
-                    action = state.danmakuSettings,
-                    onClick = onOpenDanmakuSettings,
-                    modifier = Modifier
-                        .focusRequester(danmakuSettingsFocus)
-                        .testTag("player-danmaku-settings"),
-                    upFocus = playFocus,
-                    leftFocus = speedFocus,
-                )
-            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerActionRowVisibility(
+    visible: Boolean,
+    content: @Composable () -> Unit,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(KaloscopeMotion.ContentMillis)) +
+            expandVertically(
+                animationSpec = tween(KaloscopeMotion.ContentMillis),
+                expandFrom = Alignment.Bottom,
+            ),
+        exit = fadeOut(tween(KaloscopeMotion.ContentMillis)) +
+            shrinkVertically(
+                animationSpec = tween(KaloscopeMotion.ContentMillis),
+                shrinkTowards = Alignment.Bottom,
+            ),
+    ) {
+        Column {
+            Spacer(Modifier.height(12.dp))
+            content()
         }
     }
 }
@@ -817,6 +877,8 @@ private fun SeekablePlayerProgress(
     progressFocus: FocusRequester,
     playFocus: FocusRequester,
     qualityFocus: FocusRequester?,
+    onProgressFocused: () -> Unit,
+    onShowActions: () -> Unit,
     onSeekTo: (Long) -> Unit,
     onHideControls: () -> Unit,
     onInteraction: () -> Unit,
@@ -849,7 +911,12 @@ private fun SeekablePlayerProgress(
                 qualityFocus?.let { up = it }
                 down = playFocus
             }
-            .onFocusChanged { focused = it.isFocused }
+            .onFocusChanged {
+                focused = it.isFocused
+                if (focused) {
+                    onProgressFocused()
+                }
+            }
             .onPreviewKeyEvent { event ->
                 val command = PlayerControlKeyPolicy.command(
                     context = PlayerControlContext.Progress,
@@ -874,7 +941,12 @@ private fun SeekablePlayerProgress(
                         previewMillis = null
                     }
 
-                    PlayerControlCommand.FocusPlayPause -> playFocus.requestFocus()
+                    is PlayerControlCommand.ShowFullControls -> {
+                        if (command.focusTarget != PlayerControlFocusTarget.PlayPause) {
+                            return@onPreviewKeyEvent false
+                        }
+                        onShowActions()
+                    }
                     PlayerControlCommand.HideControls -> onHideControls()
                     else -> return@onPreviewKeyEvent false
                 }

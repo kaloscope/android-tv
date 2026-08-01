@@ -53,8 +53,6 @@ internal sealed interface PlayerControlCommand {
 
     data object SubmitSeekPreview : PlayerControlCommand
 
-    data object FocusPlayPause : PlayerControlCommand
-
     data object HideControls : PlayerControlCommand
 
     data object CloseDanmakuDrawer : PlayerControlCommand
@@ -171,7 +169,7 @@ internal object PlayerControlKeyPolicy {
                 PlayerControlCommand.SubmitSeekPreview
 
             phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Down ->
-                PlayerControlCommand.FocusPlayPause
+                PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause)
 
             phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Back ->
                 PlayerControlCommand.HideControls
