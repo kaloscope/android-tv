@@ -22,8 +22,13 @@ fun assertSidebarNavigationSurfaces(
 
     assertColorNear(
         label = "$label transparent resting surface",
-        expected = Color.rgb(0x0E, 0x14, 0x21),
+        expected = Color.rgb(0x0D, 0x13, 0x20),
         actual = unselectedPixel,
+    )
+    assertTrue(
+        "$label transparent resting surface blue channel expected 31..32 " +
+            "but was ${Color.blue(unselectedPixel)}",
+        Color.blue(unselectedPixel) in 0x1F..0x20,
     )
     assertColorNear(
         label = "$label selected surface",

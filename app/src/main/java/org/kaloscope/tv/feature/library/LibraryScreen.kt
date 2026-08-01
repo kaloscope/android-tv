@@ -296,7 +296,7 @@ private fun LibrarySidebar(
             .focusGroup()
             .width(220.dp)
             .fillMaxHeight()
-            .background(Panel.copy(alpha = 0.78f), RoundedCornerShape(18.dp))
+            .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
