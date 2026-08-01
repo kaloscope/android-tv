@@ -1,6 +1,7 @@
 package org.kaloscope.tv.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
@@ -9,7 +10,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -189,27 +189,218 @@ internal fun MainShell(
 
     KaloscopeBackground {
         Box(modifier = Modifier.fillMaxSize()) {
-            when (currentRoute) {
-                HomeRoute -> homeBackdrop?.let { backdrop ->
-                    RootFullscreenBackdrop(
-                        session = session,
-                        path = backdrop.path,
-                        title = backdrop.title,
-                        testTag = "home-fullscreen-backdrop",
-                    )
-                }
-
-                LibraryRoute -> libraryBackdrop?.let { backdrop ->
-                    RootFullscreenBackdrop(
-                        session = session,
-                        path = backdrop.path,
-                        title = backdrop.title,
-                        testTag = "library-fullscreen-backdrop",
-                    )
-                }
-            }
-            Column(modifier = Modifier.fillMaxSize()) {
-                if (currentRoute !is MediaDetailRoute && currentRoute !is PlayerRoute) {
+            NavDisplay(
+                backStack = backStack,
+                onBack = ::goBack,
+                transitionSpec = {
+                    if (initialState.key is PlayerRoute || targetState.key is PlayerRoute) {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    } else {
+                        fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
+                            fadeOut(tween(KaloscopeMotion.ContentMillis))
+                    }
+                },
+                popTransitionSpec = {
+                    if (initialState.key is PlayerRoute || targetState.key is PlayerRoute) {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    } else {
+                        fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
+                            fadeOut(tween(KaloscopeMotion.ContentMillis))
+                    }
+                },
+                entryProvider = entryProvider {
+                    entry<HomeRoute> {
+                        RootDestinationFrame(
+                            backdrop = {
+                                homeBackdrop?.let { backdrop ->
+                                    RootFullscreenBackdrop(
+                                        session = session,
+                                        path = backdrop.path,
+                                        title = backdrop.title,
+                                        testTag = "home-fullscreen-backdrop",
+                                    )
+                                }
+                            },
+                        ) {
+                            HomeScreen(
+                                session = session,
+                                state = homeState,
+                                onRefresh = homeActions.refresh,
+                                restoreMediaId = restoreMediaId,
+                                topNavigationFocusRequester = homeFocus,
+                                onOpenLibrary = {
+                                    activateTopDestination(
+                                        LibraryRoute,
+                                        keepTopBarFocus = false,
+                                    )
+                                },
+                                onOpenMedia = { mediaId ->
+                                    destinationEntryKeepsTopFocus = false
+                                    restoreMediaId = null
+                                    backStack.openMediaDetail(mediaId)
+                                    currentRoute = MediaDetailRoute(mediaId)
+                                    detailActions.open(mediaId)
+                                },
+                                onPlayHistory = { item ->
+                                    destinationEntryKeepsTopFocus = false
+                                    restoreMediaId = item.mediaId
+                                    homeActions.play(item)?.let { requestId ->
+                                        backStack.openPlayer(requestId)
+                                        currentRoute = PlayerRoute(requestId)
+                                        playerActions.load(requestId)
+                                    }
+                                },
+                                onBackdropChanged = { homeBackdrop = it },
+                            )
+                        }
+                    }
+                    entry<SearchRoute> {
+                        RootDestinationFrame {
+                            val pendingRequestId = (
+                                searchState as? SearchUiState.Content
+                            )?.pendingPlaybackRequestId
+                            LaunchedEffect(pendingRequestId) {
+                                pendingRequestId?.let { requestId ->
+                                    destinationEntryKeepsTopFocus = false
+                                    backStack.openPlayer(requestId)
+                                    currentRoute = PlayerRoute(requestId)
+                                    playerActions.load(requestId)
+                                    searchActions.consumePlaybackRequest(requestId)
+                                }
+                            }
+                            SearchScreen(
+                                session = session,
+                                state = searchState,
+                                requestInitialFocus = !destinationEntryKeepsTopFocus,
+                                indexerEntryFocusRequester = searchContentEntryFocus,
+                                topNavigationFocusRequester = searchFocus,
+                                onRefreshIndexers = searchActions.refreshIndexers,
+                                onSelectIndexer = searchActions.selectIndexer,
+                                onQueryChange = searchActions.updateQuery,
+                                onSearch = searchActions.search,
+                                onRetry = searchActions.retry,
+                                onLoadMore = searchActions.loadMore,
+                                onResultFocused = searchActions.rememberFocusedResult,
+                                onGridViewportChanged = searchActions.rememberGridViewport,
+                                onPlay = searchActions.play,
+                                onOpenFilters = searchActions.openFilters,
+                                onDismissFilters = searchActions.dismissFilters,
+                                onApplyFilters = searchActions.applyFilters,
+                                onClearFilters = searchActions.clearFilters,
+                            )
+                        }
+                    }
+                    entry<LibraryRoute> {
+                        RootDestinationFrame(
+                            backdrop = {
+                                libraryBackdrop?.let { backdrop ->
+                                    RootFullscreenBackdrop(
+                                        session = session,
+                                        path = backdrop.path,
+                                        title = backdrop.title,
+                                        testTag = "library-fullscreen-backdrop",
+                                    )
+                                }
+                            },
+                        ) {
+                            LibraryScreen(
+                                session = session,
+                                state = libraryState,
+                                restoreMediaId = restoreMediaId,
+                                requestInitialFocus = !destinationEntryKeepsTopFocus,
+                                libraryEntryFocusRequester = libraryContentEntryFocus,
+                                topNavigationFocusRequester = libraryFocus,
+                                onSelectLibrary = libraryActions.select,
+                                onQueryChange = libraryActions.updateQuery,
+                                onSearch = libraryActions.search,
+                                onRetry = libraryActions.retry,
+                                onLoadMore = libraryActions.loadMore,
+                                onMediaFocused = libraryActions.rememberFocusedMedia,
+                                onGridViewportChanged = libraryActions.rememberGridViewport,
+                                onBackdropChanged = { libraryBackdrop = it },
+                                onOpenMedia = { mediaId ->
+                                    destinationEntryKeepsTopFocus = false
+                                    restoreMediaId = null
+                                    backStack.openMediaDetail(mediaId)
+                                    currentRoute = MediaDetailRoute(mediaId)
+                                    detailActions.open(mediaId)
+                                },
+                            )
+                        }
+                    }
+                    entry<SettingsRoute> {
+                        RootDestinationFrame {
+                            SettingsScreen(
+                                session = session,
+                                state = settingsState,
+                                requestInitialFocus = !destinationEntryKeepsTopFocus,
+                                selectedSectionFocusRequester =
+                                    selectedSettingsSectionFocus,
+                                topNavigationFocusRequester = settingsFocus,
+                                onRetry = settingsActions.retry,
+                                onSelectSection = settingsActions.selectSection,
+                                onPlaybackMode = settingsActions.setPlaybackMode,
+                                onTranscodeResolution =
+                                    settingsActions.setTranscodeResolution,
+                                onAutoplayNext = settingsActions.setAutoplayNext,
+                                onDanmakuSettings = settingsActions.setDanmaku,
+                                onSubtitleSettings = settingsActions.setSubtitles,
+                                onStartPage = settingsActions.setStartPage,
+                                onTestConnection = settingsActions.testConnection,
+                                onManageServers = settingsActions.manageServers,
+                                onLogout = settingsActions.logout,
+                            )
+                        }
+                    }
+                    entry<MediaDetailRoute> {
+                        val displayedId = (detailState as? MediaDetailUiState.Content)?.let {
+                            (it.selectedChild ?: it.parent).id
+                        }
+                        val resumePosition = (homeState as? HomeUiState.Content)
+                            ?.items
+                            ?.firstOrNull { it.mediaId == displayedId }
+                            ?.positionSeconds
+                        MediaDetailScreen(
+                            session = session,
+                            state = detailState,
+                            resumePositionSeconds = resumePosition,
+                            onBack = ::goBack,
+                            onRetry = detailActions.retry,
+                            onSelectChild = detailActions.selectChild,
+                            onPlay = { detail, resume ->
+                                destinationEntryKeepsTopFocus = false
+                                detailActions.play(detail, resume)?.let { requestId ->
+                                    backStack.openPlayer(requestId)
+                                    currentRoute = PlayerRoute(requestId)
+                                    playerActions.load(requestId)
+                                }
+                            },
+                        )
+                    }
+                    entry<PlayerRoute> {
+                        val factory = checkNotNull(playbackControllerFactory) {
+                            "PlaybackControllerFactory is required for PlayerRoute"
+                        }
+                        PlayerScreen(
+                            session = session,
+                            state = playerState,
+                            controllerFactory = factory,
+                            onProgress = playerActions.recordProgress,
+                            onSelectDefinition = playerActions.selectDefinition,
+                            onPrevious = { playerActions.switchItem(-1) },
+                            onNext = { playerActions.switchItem(1) },
+                            onRetryExtra = playerActions.retryExtra,
+                            onBack = ::goBack,
+                        )
+                    }
+                },
+            )
+            if (currentRoute !is PlayerRoute) {
+                AnimatedVisibility(
+                    visible = currentRoute !is MediaDetailRoute,
+                    enter = fadeIn(tween(KaloscopeMotion.ContentMillis)),
+                    exit = fadeOut(tween(KaloscopeMotion.ContentMillis)),
+                ) {
                     MainTopBar(
                         currentRoute = currentRoute,
                         onHome = {
@@ -236,194 +427,29 @@ internal fun MainShell(
                         settingsMenuFocus = selectedSettingsSectionFocus,
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(
-                            if (currentRoute is MediaDetailRoute || currentRoute is PlayerRoute) {
-                                Modifier
-                            } else {
-                                Modifier.padding(horizontal = 44.dp, vertical = 24.dp)
-                            },
-                        ),
-                ) {
-                    NavDisplay(
-                        backStack = backStack,
-                        onBack = ::goBack,
-                        transitionSpec = {
-                            if (initialState.key is PlayerRoute || targetState.key is PlayerRoute) {
-                                EnterTransition.None togetherWith ExitTransition.None
-                            } else {
-                                fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
-                                    fadeOut(tween(KaloscopeMotion.ContentMillis))
-                            }
-                        },
-                        popTransitionSpec = {
-                            if (initialState.key is PlayerRoute || targetState.key is PlayerRoute) {
-                                EnterTransition.None togetherWith ExitTransition.None
-                            } else {
-                                fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
-                                    fadeOut(tween(KaloscopeMotion.ContentMillis))
-                            }
-                        },
-                        entryProvider = entryProvider {
-                            entry<HomeRoute> {
-                                HomeScreen(
-                                    session = session,
-                                    state = homeState,
-                                    onRefresh = homeActions.refresh,
-                                    restoreMediaId = restoreMediaId,
-                                    topNavigationFocusRequester = homeFocus,
-                                    onOpenLibrary = {
-                                        activateTopDestination(
-                                            LibraryRoute,
-                                            keepTopBarFocus = false,
-                                        )
-                                    },
-                                    onOpenMedia = { mediaId ->
-                                        destinationEntryKeepsTopFocus = false
-                                        restoreMediaId = null
-                                        backStack.openMediaDetail(mediaId)
-                                        currentRoute = MediaDetailRoute(mediaId)
-                                        detailActions.open(mediaId)
-                                    },
-                                    onPlayHistory = { item ->
-                                        destinationEntryKeepsTopFocus = false
-                                        restoreMediaId = item.mediaId
-                                        homeActions.play(item)?.let { requestId ->
-                                            backStack.openPlayer(requestId)
-                                            currentRoute = PlayerRoute(requestId)
-                                            playerActions.load(requestId)
-                                        }
-                                    },
-                                    onBackdropChanged = { homeBackdrop = it },
-                                )
-                            }
-                            entry<SearchRoute> {
-                                val pendingRequestId = (
-                                    searchState as? SearchUiState.Content
-                                )?.pendingPlaybackRequestId
-                                LaunchedEffect(pendingRequestId) {
-                                    pendingRequestId?.let { requestId ->
-                                        destinationEntryKeepsTopFocus = false
-                                        backStack.openPlayer(requestId)
-                                        currentRoute = PlayerRoute(requestId)
-                                        playerActions.load(requestId)
-                                        searchActions.consumePlaybackRequest(requestId)
-                                    }
-                                }
-                                SearchScreen(
-                                    session = session,
-                                    state = searchState,
-                                    requestInitialFocus = !destinationEntryKeepsTopFocus,
-                                    indexerEntryFocusRequester = searchContentEntryFocus,
-                                    topNavigationFocusRequester = searchFocus,
-                                    onRefreshIndexers = searchActions.refreshIndexers,
-                                    onSelectIndexer = searchActions.selectIndexer,
-                                    onQueryChange = searchActions.updateQuery,
-                                    onSearch = searchActions.search,
-                                    onRetry = searchActions.retry,
-                                    onLoadMore = searchActions.loadMore,
-                                    onResultFocused = searchActions.rememberFocusedResult,
-                                    onGridViewportChanged = searchActions.rememberGridViewport,
-                                    onPlay = searchActions.play,
-                                    onOpenFilters = searchActions.openFilters,
-                                    onDismissFilters = searchActions.dismissFilters,
-                                    onApplyFilters = searchActions.applyFilters,
-                                    onClearFilters = searchActions.clearFilters,
-                                )
-                            }
-                            entry<LibraryRoute> {
-                                LibraryScreen(
-                                    session = session,
-                                    state = libraryState,
-                                    restoreMediaId = restoreMediaId,
-                                    requestInitialFocus = !destinationEntryKeepsTopFocus,
-                                    libraryEntryFocusRequester = libraryContentEntryFocus,
-                                    topNavigationFocusRequester = libraryFocus,
-                                    onSelectLibrary = libraryActions.select,
-                                    onQueryChange = libraryActions.updateQuery,
-                                    onSearch = libraryActions.search,
-                                    onRetry = libraryActions.retry,
-                                    onLoadMore = libraryActions.loadMore,
-                                    onMediaFocused = libraryActions.rememberFocusedMedia,
-                                    onGridViewportChanged = libraryActions.rememberGridViewport,
-                                    onBackdropChanged = { libraryBackdrop = it },
-                                    onOpenMedia = { mediaId ->
-                                        destinationEntryKeepsTopFocus = false
-                                        restoreMediaId = null
-                                        backStack.openMediaDetail(mediaId)
-                                        currentRoute = MediaDetailRoute(mediaId)
-                                        detailActions.open(mediaId)
-                                    },
-                                )
-                            }
-                            entry<SettingsRoute> {
-                                SettingsScreen(
-                                    session = session,
-                                    state = settingsState,
-                                    requestInitialFocus = !destinationEntryKeepsTopFocus,
-                                    selectedSectionFocusRequester =
-                                        selectedSettingsSectionFocus,
-                                    topNavigationFocusRequester = settingsFocus,
-                                    onRetry = settingsActions.retry,
-                                    onSelectSection = settingsActions.selectSection,
-                                    onPlaybackMode = settingsActions.setPlaybackMode,
-                                    onTranscodeResolution = settingsActions.setTranscodeResolution,
-                                    onAutoplayNext = settingsActions.setAutoplayNext,
-                                    onDanmakuSettings = settingsActions.setDanmaku,
-                                    onSubtitleSettings = settingsActions.setSubtitles,
-                                    onStartPage = settingsActions.setStartPage,
-                                    onTestConnection = settingsActions.testConnection,
-                                    onManageServers = settingsActions.manageServers,
-                                    onLogout = settingsActions.logout,
-                                )
-                            }
-                            entry<MediaDetailRoute> {
-                                val displayedId = (detailState as? MediaDetailUiState.Content)?.let {
-                                    (it.selectedChild ?: it.parent).id
-                                }
-                                val resumePosition = (homeState as? HomeUiState.Content)
-                                    ?.items
-                                    ?.firstOrNull { it.mediaId == displayedId }
-                                    ?.positionSeconds
-                                MediaDetailScreen(
-                                    session = session,
-                                    state = detailState,
-                                    resumePositionSeconds = resumePosition,
-                                    onBack = ::goBack,
-                                    onRetry = detailActions.retry,
-                                    onSelectChild = detailActions.selectChild,
-                                    onPlay = { detail, resume ->
-                                        destinationEntryKeepsTopFocus = false
-                                        detailActions.play(detail, resume)?.let { requestId ->
-                                            backStack.openPlayer(requestId)
-                                            currentRoute = PlayerRoute(requestId)
-                                            playerActions.load(requestId)
-                                        }
-                                    },
-                                )
-                            }
-                            entry<PlayerRoute> {
-                                val factory = checkNotNull(playbackControllerFactory) {
-                                    "PlaybackControllerFactory is required for PlayerRoute"
-                                }
-                                PlayerScreen(
-                                    session = session,
-                                    state = playerState,
-                                    controllerFactory = factory,
-                                    onProgress = playerActions.recordProgress,
-                                    onSelectDefinition = playerActions.selectDefinition,
-                                    onPrevious = { playerActions.switchItem(-1) },
-                                    onNext = { playerActions.switchItem(1) },
-                                    onRetryExtra = playerActions.retryExtra,
-                                    onBack = ::goBack,
-                                )
-                            }
-                        },
-                    )
-                }
             }
+        }
+    }
+}
+
+@Composable
+private fun RootDestinationFrame(
+    backdrop: @Composable () -> Unit = {},
+    content: @Composable () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        backdrop()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = 44.dp,
+                    top = 100.dp,
+                    end = 44.dp,
+                    bottom = 24.dp,
+                ),
+        ) {
+            content()
         }
     }
 }

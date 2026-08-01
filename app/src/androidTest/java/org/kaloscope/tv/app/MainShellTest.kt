@@ -1338,6 +1338,44 @@ class MainShellTest {
     }
 
     @Test
+    fun openingDetailKeepsOutgoingLibraryFrameStableDuringFade() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(
+                        items = listOf(
+                            summary().copy(backdropPath = "/stable-library.jpg"),
+                        ),
+                    ),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = LibraryRoute,
+                )
+            }
+        }
+
+        val contentBoundsBefore = composeRule.onNodeWithTag("library-content")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        composeRule.onNodeWithTag("media-card-201")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.mainClock.advanceTimeBy(
+            KaloscopeMotion.ContentMillis.toLong() / 2,
+        )
+
+        val contentBoundsDuring = composeRule.onNodeWithTag("library-content")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        assertEquals(contentBoundsBefore, contentBoundsDuring)
+        composeRule.onNodeWithTag("library-fullscreen-backdrop").assertExists()
+        composeRule.onNode(hasText("媒体库") and hasClickAction()).assertExists()
+    }
+
+    @Test
     fun mediaCardOpensDetailAndBackRestoresCardFocus() {
         val libraryItems = listOf(
             summary(),
