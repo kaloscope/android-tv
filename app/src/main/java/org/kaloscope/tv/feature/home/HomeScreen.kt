@@ -365,7 +365,7 @@ private fun SelectedHistoryDetails(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_player_play),
+                    painter = painterResource(R.drawable.ic_action_play),
                     contentDescription = null,
                     modifier = Modifier
                         .size(24.dp)

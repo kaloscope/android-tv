@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
@@ -16,8 +17,12 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -39,7 +44,7 @@ class PlayerControlsTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun focusedIconShowsItsLabelAndInvokesItsAction() {
+    fun playPausePillKeepsItsLabelVisibleAndInvokesItsAction() {
         var playClicks = 0
 
         composeRule.setContent {
@@ -68,7 +73,7 @@ class PlayerControlsTest {
             }
         }
 
-        composeRule.onNodeWithText("播放").assertDoesNotExist()
+        composeRule.onNodeWithText("播放").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("播放")
             .assertIsDisplayed()
             .assertIsEnabled()
@@ -80,6 +85,386 @@ class PlayerControlsTest {
         composeRule.runOnIdle {
             assertEquals(1, playClicks)
         }
+    }
+
+    @Test
+    fun playPauseContentAndLabelAreCenteredInsidePrimaryPill() {
+        lateinit var density: Density
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState().copy(isPlaying = true),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val buttonBounds = composeRule.onNodeWithTag("player-play-pause")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val contentBounds = composeRule.onNodeWithTag(
+            testTag = "player-play-pause-content",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val labelBounds = composeRule.onNodeWithTag(
+            testTag = "player-play-pause-label",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val tolerance = with(density) { 1.dp.toPx() }
+
+        assertEquals(buttonBounds.center.x, contentBounds.center.x, tolerance)
+        assertEquals(buttonBounds.center.y, contentBounds.center.y, tolerance)
+        assertEquals(buttonBounds.center.y, labelBounds.center.y, tolerance)
+    }
+
+    @Test
+    fun transportAndCollapsedAuxiliaryControlsMatchApprovedShapes() {
+        lateinit var density: Density
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val playBounds = composeRule.onNodeWithTag("player-play-pause")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val rewindBounds = composeRule.onNodeWithTag("player-rewind")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val previousBounds = composeRule.onNodeWithTag("player-previous")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val subtitleBounds = composeRule.onNodeWithTag("player-subtitles")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val danmakuBounds = composeRule.onNodeWithTag("player-danmaku")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val expectedPrimaryHeight = with(density) { 48.dp.toPx() }
+        val tolerance = with(density) { 1.dp.toPx() }
+
+        assertEquals(expectedPrimaryHeight, playBounds.height, tolerance)
+        assertTrue("Play/pause should be a pill", playBounds.width > playBounds.height)
+        assertTrue("Rewind should be a pill", rewindBounds.width > rewindBounds.height)
+        assertEquals(previousBounds.height, previousBounds.width, tolerance)
+        assertEquals(subtitleBounds.height, subtitleBounds.width, tolerance)
+        assertEquals(danmakuBounds.height, danmakuBounds.width, tolerance)
+        composeRule.onAllNodesWithText("10").assertCountEquals(2)
+        composeRule.onNodeWithText("字幕").assertDoesNotExist()
+    }
+
+    @Test
+    fun disabledSubtitlesStayIconOnlyAndCannotReceiveFocus() {
+        lateinit var density: Density
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(
+                        subtitles = PlayerActionUiState(enabled = false),
+                    ),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("字幕").assertDoesNotExist()
+        val subtitle = composeRule.onNodeWithTag("player-subtitles")
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
+        subtitle.performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsNotFocused()
+        val bounds = subtitle.fetchSemanticsNode().boundsInRoot
+        val expectedSize = with(density) { 42.dp.toPx() }
+        val tolerance = with(density) { 1.dp.toPx() }
+
+        assertEquals(expectedSize, bounds.width, tolerance)
+        assertEquals(expectedSize, bounds.height, tolerance)
+    }
+
+    @Test
+    fun auxiliaryControlsExpandOnlyTheFocusedLabelInDpadOrder() {
+        lateinit var density: Density
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val collapsedSize = with(density) { 42.dp.toPx() }
+        val expandedWidth = with(density) { 92.dp.toPx() }
+        val collapsedTolerance = with(density) { 1.dp.toPx() }
+        val focusedTolerance = with(density) { 5.dp.toPx() }
+
+        fun assertCollapsed(tag: String) {
+            val bounds = composeRule.onNodeWithTag(tag)
+                .fetchSemanticsNode()
+                .boundsInRoot
+            assertEquals(collapsedSize, bounds.width, collapsedTolerance)
+            assertEquals(collapsedSize, bounds.height, collapsedTolerance)
+        }
+
+        fun assertFocusedAndExpanded(controlTag: String, labelTag: String) {
+            val bounds = composeRule.onNodeWithTag(controlTag)
+                .assertIsFocused()
+                .fetchSemanticsNode()
+                .boundsInRoot
+            assertEquals(expandedWidth, bounds.width, focusedTolerance)
+            composeRule.onNodeWithTag(labelTag, useUnmergedTree = true)
+                .assertIsDisplayed()
+        }
+
+        composeRule.mainClock.advanceTimeByFrame()
+        assertCollapsed("player-subtitles")
+        assertCollapsed("player-danmaku")
+        assertCollapsed("player-speed")
+        assertCollapsed("player-danmaku-settings")
+        composeRule.onNodeWithText("字幕").assertDoesNotExist()
+        composeRule.onNodeWithText("弹幕").assertDoesNotExist()
+        composeRule.onNodeWithText("设置").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("player-subtitles")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(200)
+        assertFocusedAndExpanded("player-subtitles", "player-subtitles-label")
+
+        composeRule.onNodeWithTag("player-subtitles")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.advanceTimeBy(200)
+        assertCollapsed("player-subtitles")
+        composeRule.onNodeWithTag("player-subtitles-label", useUnmergedTree = true)
+            .assertDoesNotExist()
+        assertFocusedAndExpanded("player-danmaku", "player-danmaku-label")
+
+        composeRule.onNodeWithTag("player-danmaku")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.advanceTimeBy(200)
+        assertCollapsed("player-danmaku")
+        assertFocusedAndExpanded("player-speed", "player-speed-label")
+
+        composeRule.onNodeWithTag("player-speed")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.advanceTimeBy(200)
+        assertCollapsed("player-speed")
+        assertFocusedAndExpanded(
+            "player-danmaku-settings",
+            "player-danmaku-settings-label",
+        )
+    }
+
+    @Test
+    fun controlsShowSeriesAndEpisodeHierarchyWhenAvailable() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState().copy(
+                        title = "星海纪行",
+                        secondaryTitle = "第 4 集 · 穿越静默海",
+                    ),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("星海纪行").assertIsDisplayed()
+        composeRule.onNodeWithText("第 4 集 · 穿越静默海").assertIsDisplayed()
+    }
+
+    @Test
+    fun qualityControlStaysAboveProgressAndOpensDefinitions() {
+        var qualityClicks = 0
+
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = { qualityClicks += 1 },
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val qualityBounds = composeRule.onNodeWithTag("player-quality")
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val progressBounds = composeRule.onNodeWithTag("player-progress-track")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val controlsBounds = composeRule.onNodeWithTag("player-control-row")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue("Quality should sit above progress", qualityBounds.bottom < progressBounds.top)
+        assertTrue("The control row should sit below progress", controlsBounds.top > progressBounds.bottom)
+        composeRule.onNodeWithTag("player-quality")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, qualityClicks)
+        }
+    }
+
+    @Test
+    fun playbackStatusChipsShareHeightAndVerticalCenter() {
+        lateinit var density: Density
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val qualityBounds = composeRule.onNodeWithTag("player-quality")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val speedBounds = composeRule.onNodeWithTag("player-playback-speed-status")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val expectedHeight = with(density) { 36.dp.toPx() }
+        val tolerance = with(density) { 1.dp.toPx() }
+
+        assertEquals(expectedHeight, qualityBounds.height, tolerance)
+        assertEquals(expectedHeight, speedBounds.height, tolerance)
+        assertEquals(qualityBounds.center.y, speedBounds.center.y, tolerance)
     }
 
     @Test
@@ -235,6 +620,146 @@ class PlayerControlsTest {
         composeRule.onNodeWithTag("player-progress")
             .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithContentDescription("播放").assertIsFocused()
+    }
+
+    @Test
+    fun focusedProgressThumbIsVerticallyCenteredOnTrack() {
+        lateinit var density: Density
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-progress")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        val trackCenterY = composeRule.onNodeWithTag("player-progress-track")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .center
+            .y
+        val thumbCenterY = composeRule.onNodeWithTag("player-progress-thumb")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .center
+            .y
+        val tolerance = with(density) { 1.dp.toPx() }
+
+        assertEquals(
+            "Focused progress thumb and track should share a center line",
+            trackCenterY,
+            thumbCenterY,
+            tolerance,
+        )
+    }
+
+    @Test
+    fun progressThumbHasAContrastingBorderAtRest() {
+        lateinit var density: Density
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val thumb = composeRule.onNodeWithTag("player-progress-thumb-ring")
+            .captureToImage()
+            .asAndroidBitmap()
+        val borderInset = with(density) { 1.dp.roundToPx() }
+        val borderPixel = thumb.getPixel(borderInset, thumb.height / 2)
+        val centerPixel = thumb.getPixel(thumb.width / 2, thumb.height / 2)
+        val borderIsNearWhite = android.graphics.Color.red(borderPixel) > 220 &&
+            android.graphics.Color.green(borderPixel) > 220 &&
+            android.graphics.Color.blue(borderPixel) > 220
+        val centerDiffersFromBorder =
+            kotlin.math.abs(
+                android.graphics.Color.red(borderPixel) - android.graphics.Color.red(centerPixel),
+            ) + kotlin.math.abs(
+                android.graphics.Color.green(borderPixel) - android.graphics.Color.green(centerPixel),
+            ) + kotlin.math.abs(
+                android.graphics.Color.blue(borderPixel) - android.graphics.Color.blue(centerPixel),
+            ) > 100
+
+        assertTrue("Progress thumb should have a near-white border", borderIsNearWhite)
+        assertTrue("Progress thumb border should contrast with its center", centerDiffersFromBorder)
+    }
+
+    @Test
+    fun progressThumbRemainsVisibleWhenPlayPauseHasFocus() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("播放")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("player-progress-thumb").assertIsDisplayed()
     }
 
     @Test
@@ -425,7 +950,7 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun rightSkipsUnavailableNextAndSubtitlesToReachSpeed() {
+    fun rightSkipsUnavailableNextAndSubtitlesToReachDanmaku() {
         composeRule.setContent {
             MaterialTheme {
                 PlayerControls(
@@ -458,7 +983,7 @@ class PlayerControlsTest {
         composeRule.onNodeWithContentDescription("+10 秒")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithContentDescription("1.0x").assertIsFocused()
+        composeRule.onNodeWithContentDescription("弹幕 关").assertIsFocused()
     }
 
     @Test

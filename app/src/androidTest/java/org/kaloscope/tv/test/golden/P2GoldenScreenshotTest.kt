@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -19,6 +21,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -50,6 +53,9 @@ import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
+import org.kaloscope.tv.feature.player.PlayerActionUiState
+import org.kaloscope.tv.feature.player.PlayerControls
+import org.kaloscope.tv.feature.player.PlayerControlsUiState
 import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchScreen
 import org.kaloscope.tv.feature.search.SearchUiState
@@ -257,6 +263,44 @@ class P2GoldenScreenshotTest {
     }
 
     @Test
+    fun playerControlsMatch1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                GoldenPlayerControls()
+            }
+        }
+        composeRule.onNodeWithContentDescription("暂停")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(220)
+
+        assertGolden(
+            "player-controls-1920",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
+    fun playerAuxiliaryFocusMatches1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                GoldenPlayerControls()
+            }
+        }
+        composeRule.onNodeWithTag("player-danmaku")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(220)
+
+        assertGolden(
+            "player-controls-auxiliary-focus-1920",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
     fun serverDeleteFocusMatches1080p() {
         if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
         composeRule.setContent {
@@ -293,6 +337,62 @@ class P2GoldenScreenshotTest {
         assertGolden(
             "server-deletion-dialog-1920",
             InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot(),
+        )
+    }
+}
+
+@Composable
+private fun GoldenPlayerControls() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF6F8797),
+                        Color(0xFF385064),
+                        Color(0xFF17283B),
+                    ),
+                ),
+            ),
+    ) {
+        PlayerControls(
+            state = PlayerControlsUiState(
+                title = "星海纪行",
+                secondaryTitle = "第 4 集 · 穿越静默海",
+                isPlaying = true,
+                positionMillis = 2_758_000,
+                durationMillis = 2_758_000,
+                playbackModeLabel = "自动 · 1080P",
+                playbackSpeed = 1f,
+                fallbackInProgress = false,
+                progressSaveFailed = false,
+                previousEnabled = true,
+                nextEnabled = true,
+                subtitles = PlayerActionUiState(enabled = true, active = true),
+                danmakus = PlayerActionUiState(enabled = true, active = true),
+                danmakuSettings = PlayerActionUiState(enabled = true),
+                quality = PlayerActionUiState(enabled = true),
+                subtitleLabel = "简体中文",
+            ),
+            playFocus = remember { FocusRequester() },
+            definitionFocus = remember { FocusRequester() },
+            danmakuSettingsFocus = remember { FocusRequester() },
+            subtitleFocus = remember { FocusRequester() },
+            speedFocus = remember { FocusRequester() },
+            onPrevious = {},
+            onRewind = {},
+            onPlayPause = {},
+            onForward = {},
+            onNext = {},
+            onOpenSubtitles = {},
+            onOpenSpeed = {},
+            onToggleDanmakus = {},
+            onOpenDanmakuSettings = {},
+            onOpenDefinitions = {},
+            onSeekTo = {},
+            onHideControls = {},
+            onInteraction = {},
         )
     }
 }

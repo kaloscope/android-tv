@@ -40,6 +40,7 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
@@ -66,10 +67,7 @@ fun PlayerScreen(
     when (state) {
         PlayerUiState.Loading -> {
             BackHandler(onBack = onBack)
-            PlayerMessage(
-                title = stringResource(R.string.preparing_playback),
-                description = stringResource(R.string.preparing_playback_description),
-            )
+            KaloscopeLoadingLayout("player-loading")
         }
 
         PlayerUiState.MissingRequest -> {
@@ -144,10 +142,7 @@ private fun PlayerContent(
     }
     val controller = activeController
     if (controller == null) {
-        PlayerMessage(
-            title = stringResource(R.string.preparing_playback),
-            description = stringResource(R.string.preparing_playback_description),
-        )
+        KaloscopeLoadingLayout("player-loading")
         return
     }
     val status by controller.status.collectAsStateWithLifecycle()
@@ -504,25 +499,50 @@ private fun PlayerContent(
             !speedDrawerOpen &&
             !state.switchingItem
         ) {
-            val definitions = (state.request as? PlaybackRequest.NetworkVideo)
-                ?.source
-                ?.definitions
-                .orEmpty()
+            val networkRequest = state.request as? PlaybackRequest.NetworkVideo
+            val localRequest = state.request as? PlaybackRequest.LocalMedia
+            val definitions = networkRequest?.source?.definitions.orEmpty()
+            val playbackMode = playbackModeLabel(
+                mode = localRequest?.playbackMode,
+                sourceKind = status.sourceKind,
+                resolution = localRequest?.transcodeResolution,
+            )
+            val selectedDefinitionLabel = networkRequest?.source?.let { source ->
+                source.selectedDefinition?.label
+                    ?: source.definitions.firstOrNull { it.url == source.url }?.label
+                    ?: source.definitions.singleOrNull()?.label
+            }
+            val qualityLabel = selectedDefinitionLabel
+                ?.takeIf(String::isNotBlank)
+                ?.let { definitionLabel ->
+                    stringResource(
+                        R.string.playback_status_with_definition,
+                        playbackMode,
+                        definitionLabel,
+                    )
+                }
+                ?: playbackMode
+            val parentTitle = localRequest?.parentTitle?.takeIf(String::isNotBlank)
+            val secondaryTitle = parentTitle?.let {
+                localRequest.episodeNumber?.let { episodeNumber ->
+                    stringResource(
+                        R.string.player_episode_summary,
+                        episodeNumber,
+                        localRequest.title,
+                    )
+                } ?: localRequest.title
+            }
             val subtitlesFailed = PlayerExtra.Subtitles in state.extraErrors
             val danmakusFailed = PlayerExtra.Danmakus in state.extraErrors
             val danmakusAvailable =
                 state.danmakus.isNotEmpty() && danmakuRuntimeAvailable && !danmakusFailed
             val controlsState = PlayerControlsUiState(
-                title = state.request.title,
+                title = parentTitle ?: state.request.title,
+                secondaryTitle = secondaryTitle,
                 isPlaying = status.isPlaying,
                 positionMillis = positionMillis,
                 durationMillis = status.effectiveDurationMillis,
-                playbackModeLabel = playbackModeLabel(
-                    mode = (state.request as? PlaybackRequest.LocalMedia)?.playbackMode,
-                    sourceKind = status.sourceKind,
-                    resolution =
-                        (state.request as? PlaybackRequest.LocalMedia)?.transcodeResolution,
-                ),
+                playbackModeLabel = qualityLabel,
                 playbackSpeed = playbackSpeed,
                 fallbackInProgress = status.fallbackInProgress,
                 progressSaveFailed = state.progressError != null,

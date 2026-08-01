@@ -3,16 +3,21 @@ package org.kaloscope.tv.feature.player
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -23,6 +28,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -58,6 +64,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
@@ -66,9 +73,11 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.model.MediaChapter
 import org.kaloscope.tv.core.player.ChapterTimelinePolicy
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
+import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Primary
@@ -95,6 +104,7 @@ internal data class PlayerControlsUiState(
     val danmakus: PlayerActionUiState,
     val danmakuSettings: PlayerActionUiState,
     val quality: PlayerActionUiState,
+    val secondaryTitle: String? = null,
     val subtitleLabel: String? = null,
     val chapters: List<MediaChapter> = emptyList(),
 )
@@ -149,7 +159,12 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
 }
 
 @Composable
-private fun PlayerPlaybackSummary(state: PlayerControlsUiState) {
+private fun PlayerPlaybackSummary(
+    state: PlayerControlsUiState,
+    qualityFocus: FocusRequester? = null,
+    progressFocus: FocusRequester? = null,
+    onOpenDefinitions: (() -> Unit)? = null,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom,
@@ -163,6 +178,16 @@ private fun PlayerPlaybackSummary(state: PlayerControlsUiState) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            state.secondaryTitle?.takeIf(String::isNotBlank)?.let { secondaryTitle ->
+                Text(
+                    text = secondaryTitle,
+                    color = Muted,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (state.fallbackInProgress) {
                 Text(
                     text = stringResource(R.string.switching_to_transcode),
@@ -172,25 +197,111 @@ private fun PlayerPlaybackSummary(state: PlayerControlsUiState) {
             }
         }
         Spacer(Modifier.width(16.dp))
-        PlayerStatusChip(state.playbackModeLabel)
+        if (qualityFocus != null && progressFocus != null && onOpenDefinitions != null) {
+            PlayerQualityControl(
+                label = state.playbackModeLabel,
+                action = state.quality,
+                focusRequester = qualityFocus,
+                downFocus = progressFocus,
+                onClick = onOpenDefinitions,
+            )
+        } else {
+            PlayerStatusChip(state.playbackModeLabel)
+        }
         Spacer(Modifier.width(6.dp))
-        PlayerStatusChip(formatPlaybackSpeed(state.playbackSpeed))
+        PlayerStatusChip(
+            label = formatPlaybackSpeed(state.playbackSpeed),
+            modifier = Modifier.testTag("player-playback-speed-status"),
+        )
     }
 }
 
 @Composable
-private fun PlayerStatusChip(label: String) {
-    Text(
-        text = label,
-        color = OnBackground,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.Medium,
-        maxLines = 1,
-        modifier = Modifier
-            .background(Color(0xD9293040), RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-    )
+private fun PlayerStatusChip(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .height(36.dp)
+            .background(Color(0x66293040), PlayerControlPillShape)
+            .border(PlayerControlBorder, PlayerControlPillShape)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = OnBackground,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+        )
+    }
 }
+
+@Composable
+private fun PlayerQualityControl(
+    label: String,
+    action: PlayerActionUiState,
+    focusRequester: FocusRequester,
+    downFocus: FocusRequester,
+    onClick: () -> Unit,
+) {
+    val description = stringResource(R.string.playback_quality)
+    if (action.enabled) {
+        KaloscopeButton(
+            onClick = onClick,
+            variant = KaloscopeControlVariant.Ghost,
+            size = KaloscopeControlSize.Compact,
+            shape = PlayerControlPillShape,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+            modifier = Modifier
+                .height(36.dp)
+                .background(Color(0x66293040), PlayerControlPillShape)
+                .border(PlayerControlBorder, PlayerControlPillShape)
+                .focusRequester(focusRequester)
+                .focusProperties { down = downFocus }
+                .semantics {
+                    contentDescription = description
+                    role = Role.Button
+                }
+                .testTag("player-quality"),
+        ) {
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+        }
+    } else {
+        Box(
+            modifier = Modifier
+                .height(36.dp)
+                .background(Color(0x66293040), PlayerControlPillShape)
+                .border(PlayerControlBorder, PlayerControlPillShape)
+                .padding(horizontal = 12.dp)
+                .semantics {
+                    contentDescription = description
+                    role = Role.Button
+                    disabled()
+                }
+                .testTag("player-quality"),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                color = OnBackground,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private val PlayerControlPillShape = RoundedCornerShape(50)
+private val PlayerControlBorder = BorderStroke(1.dp, Color(0x996F7888))
 
 private fun playerControlScrim(): Brush =
     Brush.verticalGradient(
@@ -233,17 +344,32 @@ internal fun PlayerControls(
     val resolvedProgressFocus = progressFocus ?: defaultProgressFocus
     val forwardFocus = remember { FocusRequester() }
     val nextFocus = remember { FocusRequester() }
+    val danmakuFocus = remember { FocusRequester() }
     val episodeGroupEndFocus = if (state.nextEnabled) nextFocus else forwardFocus
-    val supplementaryGroupStartFocus = if (state.subtitles.enabled) subtitleFocus else speedFocus
+    val supplementaryGroupStartFocus = when {
+        state.subtitles.enabled -> subtitleFocus
+        state.danmakus.enabled -> danmakuFocus
+        else -> speedFocus
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(playerControlScrim())
             .testTag("player-control-layer")
-            .padding(horizontal = 50.dp, vertical = 32.dp),
+            .padding(
+                start = 50.dp,
+                top = 32.dp,
+                end = 50.dp,
+                bottom = 40.dp,
+            ),
     ) {
         Spacer(Modifier.weight(1f))
-        PlayerPlaybackSummary(state)
+        PlayerPlaybackSummary(
+            state = state,
+            qualityFocus = definitionFocus,
+            progressFocus = resolvedProgressFocus,
+            onOpenDefinitions = onOpenDefinitions,
+        )
         if (state.progressSaveFailed) {
             Text(
                 text = stringResource(R.string.progress_save_failed),
@@ -258,6 +384,7 @@ internal fun PlayerControls(
             chapters = state.chapters,
             progressFocus = resolvedProgressFocus,
             playFocus = playFocus,
+            qualityFocus = definitionFocus.takeIf { state.quality.enabled },
             onSeekTo = onSeekTo,
             onHideControls = onHideControls,
             onInteraction = onInteraction,
@@ -280,189 +407,384 @@ internal fun PlayerControls(
         }
         Spacer(Modifier.height(12.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("player-control-row"),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            PlayerIconButton(
-                label = stringResource(R.string.previous_episode),
-                iconRes = R.drawable.ic_player_previous,
-                action = PlayerActionUiState(enabled = state.previousEnabled),
-                onClick = onPrevious,
-                upFocus = resolvedProgressFocus,
-                downFocus = supplementaryGroupStartFocus,
-            )
-            PlayerIconButton(
-                label = stringResource(R.string.rewind_seconds),
-                iconRes = R.drawable.ic_player_replay_10,
-                action = PlayerActionUiState(enabled = true),
-                onClick = onRewind,
-                upFocus = resolvedProgressFocus,
-                downFocus = supplementaryGroupStartFocus,
-            )
-            PlayerIconButton(
-                label = if (state.isPlaying) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PlayerCircleButton(
+                    label = stringResource(R.string.previous_episode),
+                    iconRes = R.drawable.ic_action_previous,
+                    action = PlayerActionUiState(enabled = state.previousEnabled),
+                    onClick = onPrevious,
+                    modifier = Modifier.testTag("player-previous"),
+                    upFocus = resolvedProgressFocus,
+                    downFocus = supplementaryGroupStartFocus,
+                )
+                PlayerPillButton(
+                    visibleLabel = stringResource(R.string.seek_seconds_short),
+                    accessibilityLabel = stringResource(R.string.rewind_seconds),
+                    iconRes = R.drawable.ic_action_seek_backward,
+                    action = PlayerActionUiState(enabled = true),
+                    onClick = onRewind,
+                    modifier = Modifier.testTag("player-rewind"),
+                    upFocus = resolvedProgressFocus,
+                    downFocus = supplementaryGroupStartFocus,
+                )
+                val playPauseLabel = if (state.isPlaying) {
                     stringResource(R.string.pause)
                 } else {
                     stringResource(R.string.play)
-                },
-                iconRes = if (state.isPlaying) {
-                    R.drawable.ic_player_pause
-                } else {
-                    R.drawable.ic_player_play
-                },
-                action = PlayerActionUiState(enabled = true),
-                onClick = onPlayPause,
-                modifier = Modifier.focusRequester(playFocus),
-                primary = true,
-                upFocus = resolvedProgressFocus,
-                downFocus = supplementaryGroupStartFocus,
-            )
-            PlayerIconButton(
-                label = stringResource(R.string.forward_seconds),
-                iconRes = R.drawable.ic_player_forward_10,
-                action = PlayerActionUiState(enabled = true),
-                onClick = onForward,
-                modifier = Modifier.focusRequester(forwardFocus),
-                upFocus = resolvedProgressFocus,
-                downFocus = supplementaryGroupStartFocus,
-                rightFocus = if (state.nextEnabled) nextFocus else supplementaryGroupStartFocus,
-            )
-            PlayerIconButton(
-                label = stringResource(R.string.next_episode),
-                iconRes = R.drawable.ic_player_next,
-                action = PlayerActionUiState(enabled = state.nextEnabled),
-                onClick = onNext,
-                modifier = Modifier.focusRequester(nextFocus),
-                upFocus = resolvedProgressFocus,
-                downFocus = supplementaryGroupStartFocus,
-                rightFocus = supplementaryGroupStartFocus,
-            )
+                }
+                PlayerPillButton(
+                    visibleLabel = playPauseLabel,
+                    accessibilityLabel = playPauseLabel,
+                    iconRes = if (state.isPlaying) {
+                        R.drawable.ic_action_pause
+                    } else {
+                        R.drawable.ic_action_play
+                    },
+                    action = PlayerActionUiState(enabled = true),
+                    onClick = onPlayPause,
+                    modifier = Modifier
+                        .focusRequester(playFocus)
+                        .testTag("player-play-pause"),
+                    height = 48.dp,
+                    minWidth = 96.dp,
+                    primary = true,
+                    upFocus = resolvedProgressFocus,
+                    downFocus = supplementaryGroupStartFocus,
+                )
+                PlayerPillButton(
+                    visibleLabel = stringResource(R.string.seek_seconds_short),
+                    accessibilityLabel = stringResource(R.string.forward_seconds),
+                    iconRes = R.drawable.ic_action_seek_forward,
+                    action = PlayerActionUiState(enabled = true),
+                    onClick = onForward,
+                    modifier = Modifier
+                        .focusRequester(forwardFocus)
+                        .testTag("player-forward"),
+                    upFocus = resolvedProgressFocus,
+                    downFocus = supplementaryGroupStartFocus,
+                    rightFocus = if (state.nextEnabled) nextFocus else supplementaryGroupStartFocus,
+                )
+                PlayerCircleButton(
+                    label = stringResource(R.string.next_episode),
+                    iconRes = R.drawable.ic_action_next,
+                    action = PlayerActionUiState(enabled = state.nextEnabled),
+                    onClick = onNext,
+                    modifier = Modifier
+                        .focusRequester(nextFocus)
+                        .testTag("player-next"),
+                    upFocus = resolvedProgressFocus,
+                    downFocus = supplementaryGroupStartFocus,
+                    rightFocus = supplementaryGroupStartFocus,
+                )
+            }
             Spacer(Modifier.weight(1f))
-            PlayerIconButton(
-                label = subtitleButtonLabel(state.subtitles, state.subtitleLabel),
-                iconRes = R.drawable.ic_player_subtitles,
-                action = state.subtitles,
-                onClick = if (state.subtitles.error) {
-                    onRetrySubtitles
-                } else {
-                    onOpenSubtitles
-                },
-                modifier = Modifier.focusRequester(subtitleFocus),
-                upFocus = playFocus,
-                leftFocus = episodeGroupEndFocus,
-            )
-            PlayerIconButton(
-                label = formatPlaybackSpeed(state.playbackSpeed),
-                iconRes = R.drawable.ic_player_speed,
-                action = PlayerActionUiState(enabled = true),
-                onClick = onOpenSpeed,
-                modifier = Modifier.focusRequester(speedFocus),
-                upFocus = playFocus,
-                leftFocus = if (state.subtitles.enabled) subtitleFocus else episodeGroupEndFocus,
-            )
-            PlayerIconButton(
-                label = danmakuButtonLabel(state.danmakus),
-                iconRes = R.drawable.ic_player_danmaku,
-                action = state.danmakus,
-                onClick = if (state.danmakus.error) {
-                    onRetryDanmakus
-                } else {
-                    onToggleDanmakus
-                },
-                upFocus = playFocus,
-            )
-            PlayerIconButton(
-                label = stringResource(R.string.player_danmaku_settings_button),
-                iconRes = R.drawable.ic_player_tune,
-                action = state.danmakuSettings,
-                onClick = onOpenDanmakuSettings,
-                modifier = Modifier.focusRequester(danmakuSettingsFocus),
-                upFocus = playFocus,
-            )
-            PlayerIconButton(
-                label = stringResource(R.string.playback_quality),
-                iconRes = R.drawable.ic_player_quality,
-                action = state.quality,
-                onClick = onOpenDefinitions,
-                modifier = Modifier.focusRequester(definitionFocus),
-                upFocus = playFocus,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PlayerAuxiliaryButton(
+                    visibleLabel = if (state.subtitles.error) {
+                        stringResource(R.string.retry)
+                    } else {
+                        stringResource(R.string.subtitle)
+                    },
+                    accessibilityLabel = subtitleButtonLabel(
+                        state.subtitles,
+                        state.subtitleLabel,
+                    ),
+                    labelTag = "player-subtitles-label",
+                    iconRes = R.drawable.ic_settings_subtitle,
+                    action = state.subtitles,
+                    onClick = if (state.subtitles.error) {
+                        onRetrySubtitles
+                    } else {
+                        onOpenSubtitles
+                    },
+                    modifier = Modifier
+                        .focusRequester(subtitleFocus)
+                        .testTag("player-subtitles"),
+                    upFocus = playFocus,
+                    leftFocus = episodeGroupEndFocus,
+                    rightFocus = if (state.danmakus.enabled) danmakuFocus else speedFocus,
+                )
+                PlayerAuxiliaryButton(
+                    visibleLabel = if (state.danmakus.error) {
+                        stringResource(R.string.retry)
+                    } else {
+                        stringResource(R.string.danmaku)
+                    },
+                    accessibilityLabel = danmakuButtonLabel(state.danmakus),
+                    labelTag = "player-danmaku-label",
+                    iconRes = R.drawable.ic_settings_danmaku,
+                    action = state.danmakus,
+                    onClick = if (state.danmakus.error) {
+                        onRetryDanmakus
+                    } else {
+                        onToggleDanmakus
+                    },
+                    modifier = Modifier
+                        .focusRequester(danmakuFocus)
+                        .testTag("player-danmaku"),
+                    upFocus = playFocus,
+                    leftFocus = if (state.subtitles.enabled) subtitleFocus else episodeGroupEndFocus,
+                    rightFocus = speedFocus,
+                )
+                PlayerAuxiliaryButton(
+                    visibleLabel = formatPlaybackSpeed(state.playbackSpeed),
+                    accessibilityLabel = formatPlaybackSpeed(state.playbackSpeed),
+                    labelTag = "player-speed-label",
+                    iconRes = R.drawable.ic_action_playback_speed,
+                    action = PlayerActionUiState(enabled = true),
+                    onClick = onOpenSpeed,
+                    modifier = Modifier
+                        .focusRequester(speedFocus)
+                        .testTag("player-speed"),
+                    upFocus = playFocus,
+                    leftFocus = when {
+                        state.danmakus.enabled -> danmakuFocus
+                        state.subtitles.enabled -> subtitleFocus
+                        else -> episodeGroupEndFocus
+                    },
+                    rightFocus = danmakuSettingsFocus,
+                )
+                PlayerAuxiliaryButton(
+                    visibleLabel = if (state.danmakuSettings.error) {
+                        stringResource(R.string.retry)
+                    } else {
+                        stringResource(R.string.settings)
+                    },
+                    accessibilityLabel = stringResource(
+                        R.string.player_danmaku_settings_button,
+                    ),
+                    labelTag = "player-danmaku-settings-label",
+                    iconRes = R.drawable.ic_action_filter,
+                    action = state.danmakuSettings,
+                    onClick = onOpenDanmakuSettings,
+                    modifier = Modifier
+                        .focusRequester(danmakuSettingsFocus)
+                        .testTag("player-danmaku-settings"),
+                    upFocus = playFocus,
+                    leftFocus = speedFocus,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun PlayerIconButton(
-    label: String,
+private fun PlayerAuxiliaryButton(
+    visibleLabel: String,
+    accessibilityLabel: String,
+    labelTag: String,
     @DrawableRes iconRes: Int,
     action: PlayerActionUiState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    primary: Boolean = false,
     upFocus: FocusRequester,
     downFocus: FocusRequester? = null,
     leftFocus: FocusRequester? = null,
     rightFocus: FocusRequester? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
+    val showLabel = focused && action.enabled
+    val width by animateDpAsState(
+        targetValue = if (showLabel) 92.dp else 42.dp,
+        animationSpec = tween(
+            durationMillis = KaloscopeMotion.FocusMillis,
+            easing = KaloscopeMotion.ControlEasing,
+        ),
+        label = "player-auxiliary-width",
+    )
 
-    Column(
-        modifier = Modifier.width(64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(contentAlignment = Alignment.TopEnd) {
-            KaloscopeIconButton(
-                onClick = onClick,
-                enabled = action.enabled,
-                selected = action.active,
-                variant = KaloscopeControlVariant.Filled,
-                size = KaloscopeControlSize.Compact,
-                modifier = modifier
-                    .size(if (primary) 48.dp else 42.dp)
-                    .focusProperties {
-                        up = upFocus
-                        downFocus?.let { down = it }
-                        leftFocus?.let { left = it }
-                        rightFocus?.let { right = it }
-                    }
-                    .onFocusChanged { focused = it.isFocused }
-                    .semantics {
-                        contentDescription = label
-                        role = Role.Button
-                        if (action.error) {
-                            error(label)
-                        }
-                    },
+    Box(contentAlignment = Alignment.TopEnd) {
+        KaloscopeButton(
+            onClick = onClick,
+            enabled = action.enabled,
+            selected = action.active,
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
+            shape = PlayerControlPillShape,
+            contentPadding = PaddingValues(0.dp),
+            modifier = modifier
+                .width(width)
+                .height(42.dp)
+                .onFocusChanged { focused = it.isFocused }
+                .playerFocusProperties(upFocus, downFocus, leftFocus, rightFocus)
+                .playerControlSemantics(accessibilityLabel, action),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = if (showLabel) 10.dp else 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                )
+                if (showLabel) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = visibleLabel,
+                        fontSize = 14.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        modifier = Modifier.testTag(labelTag),
+                    )
+                }
+            }
+        }
+        if (action.error) {
+            PlayerControlErrorBadge()
+        }
+    }
+}
+
+@Composable
+private fun PlayerCircleButton(
+    label: String,
+    @DrawableRes iconRes: Int,
+    action: PlayerActionUiState,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    upFocus: FocusRequester,
+    downFocus: FocusRequester? = null,
+    leftFocus: FocusRequester? = null,
+    rightFocus: FocusRequester? = null,
+) {
+    Box(contentAlignment = Alignment.TopEnd) {
+        KaloscopeIconButton(
+            onClick = onClick,
+            enabled = action.enabled,
+            selected = action.active,
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
+            modifier = modifier
+                .size(42.dp)
+                .playerFocusProperties(upFocus, downFocus, leftFocus, rightFocus)
+                .playerControlSemantics(label, action),
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        if (action.error) {
+            PlayerControlErrorBadge()
+        }
+    }
+}
+
+@Composable
+private fun PlayerPillButton(
+    visibleLabel: String,
+    accessibilityLabel: String,
+    @DrawableRes iconRes: Int,
+    action: PlayerActionUiState,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    height: Dp = 42.dp,
+    minWidth: Dp = 76.dp,
+    primary: Boolean = false,
+    upFocus: FocusRequester,
+    downFocus: FocusRequester? = null,
+    leftFocus: FocusRequester? = null,
+    rightFocus: FocusRequester? = null,
+) {
+    Box(contentAlignment = Alignment.TopEnd) {
+        KaloscopeButton(
+            onClick = onClick,
+            enabled = action.enabled,
+            selected = action.active,
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
+            shape = PlayerControlPillShape,
+            contentPadding = PaddingValues(0.dp),
+            modifier = modifier
+                .height(height)
+                .widthIn(min = minWidth)
+                .playerFocusProperties(upFocus, downFocus, leftFocus, rightFocus)
+                .playerControlSemantics(accessibilityLabel, action),
+        ) {
+            Row(
+                modifier = Modifier
+                    .height(height)
+                    .widthIn(min = minWidth)
+                    .padding(horizontal = if (primary) 18.dp else 14.dp)
+                    .then(
+                        if (primary) {
+                            Modifier.testTag("player-play-pause-content")
+                        } else {
+                            Modifier
+                        },
+                    ),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     painter = painterResource(iconRes),
                     contentDescription = null,
                     modifier = Modifier.size(if (primary) 24.dp else 22.dp),
                 )
-            }
-            if (action.error) {
-                Box(
-                    modifier = Modifier
-                        .size(9.dp)
-                        .background(Danger, CircleShape),
-                )
-            }
-        }
-        Box(
-            modifier = Modifier.height(20.dp),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            if (focused) {
+                Spacer(Modifier.width(7.dp))
                 Text(
-                    text = label,
-                    color = OnBackground,
-                    fontSize = 12.sp,
+                    text = visibleLabel,
+                    fontSize = if (primary) 16.sp else 15.sp,
+                    lineHeight = if (primary) 16.sp else 15.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
+                    modifier = if (primary) {
+                        Modifier.testTag("player-play-pause-label")
+                    } else {
+                        Modifier
+                    },
                 )
             }
         }
+        if (action.error) {
+            PlayerControlErrorBadge()
+        }
     }
+}
+
+private fun Modifier.playerFocusProperties(
+    upFocus: FocusRequester,
+    downFocus: FocusRequester?,
+    leftFocus: FocusRequester?,
+    rightFocus: FocusRequester?,
+): Modifier =
+    focusProperties {
+        up = upFocus
+        downFocus?.let { down = it }
+        leftFocus?.let { left = it }
+        rightFocus?.let { right = it }
+    }
+
+private fun Modifier.playerControlSemantics(
+    label: String,
+    action: PlayerActionUiState,
+): Modifier =
+    semantics {
+        contentDescription = label
+        role = Role.Button
+        if (action.error) {
+            error(label)
+        }
+    }
+
+@Composable
+private fun PlayerControlErrorBadge() {
+    Box(
+        modifier = Modifier
+            .size(9.dp)
+            .background(Danger, CircleShape),
+    )
 }
 
 @Composable
@@ -494,6 +816,7 @@ private fun SeekablePlayerProgress(
     chapters: List<MediaChapter>,
     progressFocus: FocusRequester,
     playFocus: FocusRequester,
+    qualityFocus: FocusRequester?,
     onSeekTo: (Long) -> Unit,
     onHideControls: () -> Unit,
     onInteraction: () -> Unit,
@@ -522,7 +845,10 @@ private fun SeekablePlayerProgress(
         modifier = modifier
             .height(50.dp)
             .focusRequester(progressFocus)
-            .focusProperties { down = playFocus }
+            .focusProperties {
+                qualityFocus?.let { up = it }
+                down = playFocus
+            }
             .onFocusChanged { focused = it.isFocused }
             .onPreviewKeyEvent { event ->
                 val command = PlayerControlKeyPolicy.command(
@@ -570,34 +896,69 @@ private fun SeekablePlayerProgress(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .height(if (focused) 9.dp else 6.dp)
-                .background(Color(0xFF4A5060), RoundedCornerShape(9.dp)),
+                .height(18.dp),
+            contentAlignment = Alignment.CenterStart,
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(progress)
-                    .fillMaxHeight()
-                    .background(Primary, RoundedCornerShape(9.dp)),
-            )
-            if (chapterMarkers.isNotEmpty()) {
+                    .fillMaxWidth()
+                    .height(if (focused) 9.dp else 6.dp)
+                    .background(Color(0xFF4A5060), RoundedCornerShape(9.dp))
+                    .testTag("player-progress-track"),
+            ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("player-chapter-markers"),
-                ) {
-                    for (marker in chapterMarkers) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .offset(
-                                    x = (progressWidth * marker - 1.dp)
-                                        .coerceIn(0.dp, progressWidth - 2.dp),
-                                )
-                                .width(2.dp)
-                                .fillMaxHeight()
-                                .background(Color.White.copy(alpha = 0.8f)),
-                        )
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .background(Primary, RoundedCornerShape(9.dp)),
+                )
+                if (chapterMarkers.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("player-chapter-markers"),
+                    ) {
+                        for (marker in chapterMarkers) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .offset(
+                                        x = (progressWidth * marker - 1.dp)
+                                            .coerceIn(0.dp, progressWidth - 2.dp),
+                                    )
+                                    .width(2.dp)
+                                    .fillMaxHeight()
+                                    .background(Color.White.copy(alpha = 0.8f)),
+                            )
+                        }
                     }
+                }
+            }
+            if (enabled) {
+                val thumbContainerSize = if (focused) 20.dp else 16.dp
+                val thumbRadius = thumbContainerSize / 2
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .offset(
+                            x = (progressWidth * progress - thumbRadius)
+                                .coerceIn(0.dp, progressWidth - thumbContainerSize),
+                        )
+                        .size(thumbContainerSize)
+                        .background(
+                            if (focused) Primary.copy(alpha = 0.28f) else Color.Transparent,
+                            CircleShape,
+                        )
+                        .testTag("player-progress-thumb"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .background(Primary, CircleShape)
+                            .border(2.dp, Color.White.copy(alpha = 0.94f), CircleShape)
+                            .testTag("player-progress-thumb-ring"),
+                    )
                 }
             }
         }
@@ -626,23 +987,6 @@ private fun SeekablePlayerProgress(
                     .width(targetWidth)
                     .offset(x = targetOffset, y = 18.dp),
             )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .offset(
-                        x = (maxWidth * progress - 9.dp)
-                            .coerceIn(0.dp, maxWidth - 18.dp),
-                    )
-                    .size(18.dp)
-                    .background(Primary.copy(alpha = 0.28f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .background(Color.White, CircleShape),
-                )
-            }
         }
     }
 }

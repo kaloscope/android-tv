@@ -598,7 +598,14 @@ private fun MediaCard(
             }
             .semantics(mergeDescendants = true) {},
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Column(
+            modifier = Modifier.padding(
+                start = 8.dp,
+                top = 8.dp,
+                end = 8.dp,
+                bottom = 6.dp,
+            ),
+        ) {
             Box {
                 ServerImage(
                     session = session,
@@ -621,7 +628,7 @@ private fun MediaCard(
                     )
                 }
             }
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = media.title,
                 color = OnBackground,
@@ -637,7 +644,7 @@ private fun MediaCard(
             Text(
                 text = media.year?.toString().orEmpty(),
                 color = Muted,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 minLines = 1,
                 maxLines = 1,
                 textAlign = TextAlign.Center,

@@ -24,6 +24,9 @@ sealed interface PlaybackRequest {
         val playbackMode: PlaybackMode = PlaybackMode.Auto,
         val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
         val siblings: List<LocalEpisodeRef> = emptyList(),
+        val parentTitle: String? = null,
+        val seasonNumber: Int? = null,
+        val episodeNumber: Int? = null,
         override val autoplayNext: Boolean = true,
         override val danmakuSettings: DanmakuSettings = DanmakuSettings(),
         override val subtitleSettings: SubtitleSettings = SubtitleSettings(),
@@ -47,6 +50,8 @@ data class LocalEpisodeRef(
     val mediaId: Long,
     val path: String,
     val title: String,
+    val seasonNumber: Int? = null,
+    val episodeNumber: Int? = null,
 )
 
 enum class PlaybackOrigin {

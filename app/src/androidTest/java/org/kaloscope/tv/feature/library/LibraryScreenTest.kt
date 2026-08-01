@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -673,6 +674,57 @@ class LibraryScreenTest {
 
         assertEquals(cardBounds.center.x, titleBounds.center.x, 1f)
         assertEquals(cardBounds.center.x, yearBounds.center.x, 1f)
+    }
+
+    @Test
+    fun mediaCardUsesCompactVerticalMetadataSpacing() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(
+                        media = listOf(
+                            mediaItems(1).single().copy(year = 2026),
+                        ),
+                    ),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val cardBounds = composeRule.onNodeWithTag("media-card-1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val titleBounds = composeRule.onNodeWithTag(
+            testTag = "media-title-1",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val yearBounds = composeRule.onNodeWithTag(
+            testTag = "media-year-1",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val posterWidth = cardBounds.width - 16f * density
+        val posterHeight = posterWidth / (2f / 3f)
+        val posterBottom = cardBounds.top + 8f * density + posterHeight
+        val posterTitleGap = titleBounds.top - posterBottom
+        val bottomPadding = cardBounds.bottom - yearBounds.bottom
+
+        assertTrue(
+            "Expected compact metadata spacing but was " +
+                "posterTitleGap=${posterTitleGap / density}dp " +
+                "bottomPadding=${bottomPadding / density}dp",
+            abs(posterTitleGap - 6f * density) <= 1f &&
+                abs(bottomPadding - 6f * density) <= 1f,
+        )
     }
 
     @Test

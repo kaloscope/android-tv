@@ -114,7 +114,7 @@ internal fun ControlStateGoldenCell(
                                 .focusRequester(controlFocus),
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_player_tune),
+                                painter = painterResource(R.drawable.ic_action_filter),
                                 contentDescription = null,
                                 modifier = Modifier.size(27.dp),
                             )

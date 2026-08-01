@@ -51,6 +51,9 @@ class PlayerViewModel @Inject constructor(
             mediaId = item.mediaId,
             path = item.path,
             title = item.title,
+            parentTitle = item.parentTitle,
+            seasonNumber = item.season,
+            episodeNumber = item.episode,
             resumePositionSeconds = item.positionSeconds,
             origin = PlaybackOrigin.Home,
             settings = settings,
@@ -61,6 +64,7 @@ class PlayerViewModel @Inject constructor(
         detail: MediaDetail,
         siblings: List<MediaSummary>,
         resumePositionSeconds: Long?,
+        parentTitle: String? = null,
         settings: TvSettings = TvSettings(),
     ): String? =
         createLocalRequest(
@@ -68,6 +72,9 @@ class PlayerViewModel @Inject constructor(
             mediaId = detail.id,
             path = detail.path,
             title = detail.title,
+            parentTitle = parentTitle,
+            seasonNumber = detail.season,
+            episodeNumber = detail.episode,
             resumePositionSeconds = resumePositionSeconds,
             origin = PlaybackOrigin.MediaDetail,
             siblings = siblings,
@@ -261,6 +268,9 @@ class PlayerViewModel @Inject constructor(
         title: String,
         resumePositionSeconds: Long?,
         origin: PlaybackOrigin,
+        parentTitle: String? = null,
+        seasonNumber: Int? = null,
+        episodeNumber: Int? = null,
         siblings: List<MediaSummary> = emptyList(),
         settings: TvSettings = TvSettings(),
     ): String? {
@@ -277,11 +287,16 @@ class PlayerViewModel @Inject constructor(
             origin = origin,
             playbackMode = settings.playbackMode,
             transcodeResolution = settings.transcodeResolution,
+            parentTitle = parentTitle?.takeIf(String::isNotBlank),
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
             siblings = siblings.mapNotNull { item ->
                 LocalEpisodeRef(
                     mediaId = item.id,
                     path = item.path,
                     title = item.title,
+                    seasonNumber = item.season,
+                    episodeNumber = item.episode,
                 ).takeIf { it.mediaId > 0 && it.path.isNotBlank() && it.title.isNotBlank() }
             },
             autoplayNext = settings.autoplayNext,

@@ -26,6 +26,8 @@ object PlaybackRequestNavigator {
             mediaId = target.mediaId,
             path = target.path,
             title = target.title,
+            seasonNumber = target.seasonNumber,
+            episodeNumber = target.episodeNumber,
             resumePositionSeconds = 0,
         )
     }

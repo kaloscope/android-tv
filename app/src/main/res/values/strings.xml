@@ -176,17 +176,17 @@
     <string name="detail_load_failed">无法加载媒体详情</string>
     <string name="episodes">分集</string>
     <string name="episode_number">第 %1$d 集</string>
+    <string name="player_episode_summary">第 %1$d 集 · %2$s</string>
     <string name="cast_title">演职人员</string>
     <string name="directors">导演：%1$s</string>
     <string name="play">播放</string>
     <string name="play_from_start">从头播放</string>
     <string name="resume_playback">继续播放</string>
-    <string name="preparing_playback">正在准备播放</string>
-    <string name="preparing_playback_description">正在加载播放地址、字幕和弹幕。</string>
     <string name="playback_request_missing">播放请求已失效</string>
     <string name="playback_request_missing_description">请返回来源页面并重新选择视频。</string>
     <string name="rewind_seconds">−10 秒</string>
     <string name="forward_seconds">+10 秒</string>
+    <string name="seek_seconds_short">10</string>
     <string name="pause">暂停</string>
     <string name="subtitles_on">字幕 开</string>
     <string name="subtitles_off">字幕 关</string>
@@ -206,6 +206,7 @@
     <string name="playback_direct">直连</string>
     <string name="playback_transcode">HLS 转码 %1$s</string>
     <string name="playback_network">网络资源</string>
+    <string name="playback_status_with_definition">%1$s · %2$s</string>
     <string name="network_source_playback_failed">网络资源播放失败</string>
     <string name="switching_to_transcode">正在准备 HLS 转码…</string>
     <string name="resolution_original">原画</string>

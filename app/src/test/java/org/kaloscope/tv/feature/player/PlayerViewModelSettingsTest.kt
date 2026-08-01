@@ -178,6 +178,7 @@ class PlayerViewModelSettingsTest {
                     session = session(),
                     detail = mediaDetail(episodes.first()),
                     siblings = episodes,
+                    parentTitle = "Series title",
                     resumePositionSeconds = 42,
                 ),
             )
@@ -190,6 +191,8 @@ class PlayerViewModelSettingsTest {
             val selected = store.get(requestId) as PlaybackRequest.LocalMedia
             assertEquals(302L, selected.mediaId)
             assertEquals("/episode-2.mkv", selected.path)
+            assertEquals("Series title", selected.parentTitle)
+            assertEquals(2, selected.episodeNumber)
             assertEquals(0L, selected.resumePositionSeconds)
             assertEquals(
                 listOf("/episode-1.mkv", "/episode-2.mkv"),

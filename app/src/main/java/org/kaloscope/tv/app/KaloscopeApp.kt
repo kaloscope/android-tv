@@ -192,6 +192,10 @@ fun KaloscopeApp(
                                 session = state.session,
                                 detail = detail,
                                 siblings = siblings,
+                                parentTitle = (detailState as? MediaDetailUiState.Content)
+                                    ?.parent
+                                    ?.takeIf { it.id != detail.id }
+                                    ?.title,
                                 resumePositionSeconds = resumePosition,
                                 settings = currentSettings,
                             )
