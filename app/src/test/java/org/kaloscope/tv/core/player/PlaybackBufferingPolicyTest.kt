@@ -34,6 +34,7 @@ class PlaybackBufferingPolicyTest {
             PlaybackBufferingPolicy.isRebuffering(
                 hasBeenReady = false,
                 playbackState = Player.STATE_BUFFERING,
+                playWhenReady = true,
             ),
         )
     }
@@ -44,6 +45,18 @@ class PlaybackBufferingPolicyTest {
             PlaybackBufferingPolicy.isRebuffering(
                 hasBeenReady = true,
                 playbackState = Player.STATE_BUFFERING,
+                playWhenReady = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `paused buffering after ready is not presented as rebuffering`() {
+        assertFalse(
+            PlaybackBufferingPolicy.isRebuffering(
+                hasBeenReady = true,
+                playbackState = Player.STATE_BUFFERING,
+                playWhenReady = false,
             ),
         )
     }
@@ -59,6 +72,7 @@ class PlaybackBufferingPolicyTest {
                 PlaybackBufferingPolicy.isRebuffering(
                     hasBeenReady = true,
                     playbackState = playbackState,
+                    playWhenReady = true,
                 ),
             )
         }

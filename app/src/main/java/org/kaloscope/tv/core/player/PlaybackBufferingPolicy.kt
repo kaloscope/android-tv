@@ -11,5 +11,9 @@ internal object PlaybackBufferingPolicy {
     fun isRebuffering(
         hasBeenReady: Boolean,
         playbackState: Int,
-    ): Boolean = hasBeenReady && playbackState == Player.STATE_BUFFERING
+        playWhenReady: Boolean,
+    ): Boolean =
+        hasBeenReady &&
+            playbackState == Player.STATE_BUFFERING &&
+            playWhenReady
 }

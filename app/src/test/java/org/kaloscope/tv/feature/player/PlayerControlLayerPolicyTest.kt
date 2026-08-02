@@ -5,6 +5,18 @@ import org.junit.Test
 
 class PlayerControlLayerPolicyTest {
     @Test
+    fun `initial controls focus progress without revealing actions`() {
+        assertEquals(
+            PlayerControlLayerTransition(
+                layer = PlayerControlLayer.Controls,
+                focusTarget = PlayerControlFocusTarget.Progress,
+                actionRowVisible = false,
+            ),
+            PlayerControlLayerPolicy.initialTransition(),
+        )
+    }
+
+    @Test
     fun `lightweight commands keep the player in preview`() {
         assertEquals(
             PlayerControlLayerTransition(PlayerControlLayer.Preview),
@@ -26,6 +38,7 @@ class PlayerControlLayerPolicyTest {
             PlayerControlLayerTransition(
                 layer = PlayerControlLayer.Controls,
                 focusTarget = PlayerControlFocusTarget.Progress,
+                actionRowVisible = false,
             ),
             PlayerControlLayerPolicy.transition(
                 PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.Progress),
@@ -34,10 +47,21 @@ class PlayerControlLayerPolicyTest {
         assertEquals(
             PlayerControlLayerTransition(
                 layer = PlayerControlLayer.Controls,
-                focusTarget = PlayerControlFocusTarget.PlayPause,
+                focusTarget = PlayerControlFocusTarget.Progress,
+                actionRowVisible = false,
             ),
             PlayerControlLayerPolicy.transition(
                 PlayerControlCommand.TogglePlaybackAndShowControls,
+            ),
+        )
+        assertEquals(
+            PlayerControlLayerTransition(
+                layer = PlayerControlLayer.Controls,
+                focusTarget = PlayerControlFocusTarget.PlayPause,
+                actionRowVisible = true,
+            ),
+            PlayerControlLayerPolicy.transition(
+                PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause),
             ),
         )
     }

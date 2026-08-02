@@ -96,7 +96,7 @@ class PlayerControlsTest {
             density = LocalDensity.current
             MaterialTheme {
                 PlayerControls(
-                    state = controlsState().copy(isPlaying = true),
+                    state = controlsState().copy(playWhenReady = true),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
                     danmakuSettingsFocus = remember { FocusRequester() },
@@ -581,12 +581,15 @@ class PlayerControlsTest {
     fun progressFocusHidesActionRowAndMovesInformationGroupToBottom() {
         lateinit var density: Density
         composeRule.mainClock.autoAdvance = false
+        var actionRowVisible by mutableStateOf(true)
 
         composeRule.setContent {
             density = LocalDensity.current
             MaterialTheme {
                 PlayerControls(
                     state = controlsState(),
+                    actionRowVisible = actionRowVisible,
+                    onActionRowVisibilityChange = { actionRowVisible = it },
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
                     danmakuSettingsFocus = remember { FocusRequester() },
@@ -667,10 +670,14 @@ class PlayerControlsTest {
 
     @Test
     fun downFromProgressRevealsActionRowAndFocusesPlayPause() {
+        var actionRowVisible by mutableStateOf(false)
+
         composeRule.setContent {
             MaterialTheme {
                 PlayerControls(
                     state = controlsState(),
+                    actionRowVisible = actionRowVisible,
+                    onActionRowVisibilityChange = { actionRowVisible = it },
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
                     danmakuSettingsFocus = remember { FocusRequester() },
@@ -693,12 +700,10 @@ class PlayerControlsTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("播放")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithTag("player-progress").assertIsFocused()
-        composeRule.waitForIdle()
         composeRule.onAllNodesWithTag("player-control-row").assertCountEquals(0)
+        composeRule.onNodeWithTag("player-progress")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
 
         composeRule.onNodeWithTag("player-progress")
             .performKeyInput { pressKey(Key.DirectionDown) }
@@ -709,13 +714,64 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun progressSubmitsSeekAndReturnsFocusToPlay() {
-        val seekTargets = mutableListOf<Long>()
+    fun centerOnProgressTogglesPlaybackWithoutRevealingActionRow() {
+        var playPauseClicks = 0
+        var actionRowVisible by mutableStateOf(false)
 
         composeRule.setContent {
             MaterialTheme {
                 PlayerControls(
                     state = controlsState(),
+                    actionRowVisible = actionRowVisible,
+                    onActionRowVisibilityChange = { actionRowVisible = it },
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = { playPauseClicks += 1 },
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithTag("player-control-row").assertCountEquals(0)
+        composeRule.onNodeWithTag("player-progress")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+
+        composeRule.onNodeWithTag("player-progress")
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("player-progress").assertIsFocused()
+        composeRule.onAllNodesWithTag("player-control-row").assertCountEquals(0)
+        composeRule.runOnIdle {
+            assertEquals(1, playPauseClicks)
+        }
+    }
+
+    @Test
+    fun progressSubmitsSeekAndReturnsFocusToPlay() {
+        val seekTargets = mutableListOf<Long>()
+        var actionRowVisible by mutableStateOf(true)
+
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    actionRowVisible = actionRowVisible,
+                    onActionRowVisibilityChange = { actionRowVisible = it },
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
                     danmakuSettingsFocus = remember { FocusRequester() },
@@ -859,6 +915,57 @@ class PlayerControlsTest {
 
         assertTrue("Progress thumb should have a near-white border", borderIsNearWhite)
         assertTrue("Progress thumb border should contrast with its center", centerDiffersFromBorder)
+    }
+
+    @Test
+    fun progressUsesActiveColorWhilePlayingAndInactiveColorWhilePaused() {
+        var playWhenReady by mutableStateOf(true)
+
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState().copy(playWhenReady = playWhenReady),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekTo = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val playingTrack = composeRule.onNodeWithTag("player-progress-played")
+            .captureToImage()
+            .asAndroidBitmap()
+        assertEquals(
+            0xFF9B8CFF.toInt(),
+            playingTrack.getPixel(playingTrack.width / 2, playingTrack.height / 2),
+        )
+
+        composeRule.runOnIdle {
+            playWhenReady = false
+        }
+
+        val pausedTrack = composeRule.onNodeWithTag("player-progress-played")
+            .captureToImage()
+            .asAndroidBitmap()
+        assertEquals(
+            0xFF747E94.toInt(),
+            pausedTrack.getPixel(pausedTrack.width / 2, pausedTrack.height / 2),
+        )
     }
 
     @Test
@@ -1020,6 +1127,49 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun playbackToggleFeedbackRestartsWithLatestIconAndThenDisappears() {
+        composeRule.mainClock.autoAdvance = false
+        var event by mutableStateOf<PlayerPlaybackToggleEvent?>(
+            PlayerPlaybackToggleEvent(
+                id = 1,
+                playWhenReady = false,
+            ),
+        )
+
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerPlaybackToggleFeedback(
+                    event = event,
+                    onFinished = { finishedId ->
+                        if (event?.id == finishedId) {
+                            event = null
+                        }
+                    },
+                )
+            }
+        }
+
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag("player-playback-toggle-pause").assertIsDisplayed()
+        composeRule.mainClock.advanceTimeBy(600)
+
+        composeRule.runOnIdle {
+            event = PlayerPlaybackToggleEvent(
+                id = 2,
+                playWhenReady = true,
+            )
+        }
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag("player-playback-toggle-play").assertIsDisplayed()
+        composeRule.onNodeWithTag("player-playback-toggle-pause").assertDoesNotExist()
+
+        composeRule.mainClock.advanceTimeBy(1_100)
+        composeRule.onNodeWithTag("player-playback-toggle-feedback").assertIsDisplayed()
+        composeRule.mainClock.advanceTimeBy(120)
+        composeRule.onNodeWithTag("player-playback-toggle-feedback").assertDoesNotExist()
+    }
+
+    @Test
     fun definitionDrawerFocusesTheSelectedDefinition() {
         composeRule.setContent {
             MaterialTheme {
@@ -1169,7 +1319,7 @@ class PlayerControlsTest {
     ): PlayerControlsUiState =
         PlayerControlsUiState(
             title = "Episode 1",
-            isPlaying = false,
+            playWhenReady = false,
             positionMillis = 10_000,
             durationMillis = 60_000,
             playbackModeLabel = "Network",

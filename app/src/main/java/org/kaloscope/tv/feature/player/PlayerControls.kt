@@ -88,6 +88,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.designsystem.Subtle
 import kotlinx.coroutines.delay
 
 internal data class PlayerActionUiState(
@@ -98,7 +99,7 @@ internal data class PlayerActionUiState(
 
 internal data class PlayerControlsUiState(
     val title: String,
-    val isPlaying: Boolean,
+    val playWhenReady: Boolean,
     val positionMillis: Long,
     val durationMillis: Long,
     val playbackModeLabel: String,
@@ -158,7 +159,10 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
                 modifier = Modifier
                     .fillMaxWidth(progress)
                     .fillMaxHeight()
-                    .background(Primary, RoundedCornerShape(9.dp)),
+                    .background(
+                        playerProgressColor(state.playWhenReady),
+                        RoundedCornerShape(9.dp),
+                    ),
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -344,10 +348,11 @@ internal fun PlayerControls(
     onSeekTo: (Long) -> Unit,
     onHideControls: () -> Unit,
     onInteraction: () -> Unit,
+    actionRowVisible: Boolean = true,
+    onActionRowVisibilityChange: (Boolean) -> Unit = {},
     onRetrySubtitles: () -> Unit = {},
     onRetryDanmakus: () -> Unit = {},
 ) {
-    var actionRowVisible by remember { mutableStateOf(true) }
     var playFocusRequestVersion by remember { mutableLongStateOf(0) }
     val defaultProgressFocus = remember { FocusRequester() }
     val resolvedProgressFocus = progressFocus ?: defaultProgressFocus
@@ -400,11 +405,13 @@ internal fun PlayerControls(
             progressFocus = resolvedProgressFocus,
             playFocus = playFocus,
             qualityFocus = definitionFocus.takeIf { state.quality.enabled },
-            onProgressFocused = { actionRowVisible = false },
+            playWhenReady = state.playWhenReady,
+            onProgressFocused = { onActionRowVisibilityChange(false) },
             onShowActions = {
-                actionRowVisible = true
+                onActionRowVisibilityChange(true)
                 playFocusRequestVersion += 1
             },
+            onPlayPause = onPlayPause,
             onSeekTo = onSeekTo,
             onHideControls = onHideControls,
             onInteraction = onInteraction,
@@ -457,7 +464,7 @@ internal fun PlayerControls(
                             upFocus = resolvedProgressFocus,
                             downFocus = supplementaryGroupStartFocus,
                         )
-                        val playPauseLabel = if (state.isPlaying) {
+                        val playPauseLabel = if (state.playWhenReady) {
                             stringResource(R.string.pause)
                         } else {
                             stringResource(R.string.play)
@@ -465,7 +472,7 @@ internal fun PlayerControls(
                         PlayerPillButton(
                             visibleLabel = playPauseLabel,
                             accessibilityLabel = playPauseLabel,
-                            iconRes = if (state.isPlaying) {
+                            iconRes = if (state.playWhenReady) {
                                 R.drawable.ic_action_pause
                             } else {
                                 R.drawable.ic_action_play
@@ -877,8 +884,10 @@ private fun SeekablePlayerProgress(
     progressFocus: FocusRequester,
     playFocus: FocusRequester,
     qualityFocus: FocusRequester?,
+    playWhenReady: Boolean,
     onProgressFocused: () -> Unit,
     onShowActions: () -> Unit,
+    onPlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
     onHideControls: () -> Unit,
     onInteraction: () -> Unit,
@@ -896,6 +905,7 @@ private fun SeekablePlayerProgress(
     }
     val chapterMarkers = ChapterTimelinePolicy.markers(chapters, durationMillis)
     val currentChapterTitle = ChapterTimelinePolicy.currentTitle(chapters, displayPosition)
+    val progressColor = playerProgressColor(playWhenReady)
 
     LaunchedEffect(positionMillis, durationMillis, focused) {
         if (!focused) {
@@ -941,6 +951,8 @@ private fun SeekablePlayerProgress(
                         previewMillis = null
                     }
 
+                    PlayerControlCommand.TogglePlaybackAndShowControls -> onPlayPause()
+
                     is PlayerControlCommand.ShowFullControls -> {
                         if (command.focusTarget != PlayerControlFocusTarget.PlayPause) {
                             return@onPreviewKeyEvent false
@@ -982,7 +994,8 @@ private fun SeekablePlayerProgress(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
-                        .background(Primary, RoundedCornerShape(9.dp)),
+                        .background(progressColor, RoundedCornerShape(9.dp))
+                        .testTag("player-progress-played"),
                 )
                 if (chapterMarkers.isNotEmpty()) {
                     Box(
@@ -1018,7 +1031,11 @@ private fun SeekablePlayerProgress(
                         )
                         .size(thumbContainerSize)
                         .background(
-                            if (focused) Primary.copy(alpha = 0.28f) else Color.Transparent,
+                            if (focused) {
+                                progressColor.copy(alpha = 0.28f)
+                            } else {
+                                Color.Transparent
+                            },
                             CircleShape,
                         )
                         .testTag("player-progress-thumb"),
@@ -1027,7 +1044,7 @@ private fun SeekablePlayerProgress(
                     Box(
                         modifier = Modifier
                             .size(16.dp)
-                            .background(Primary, CircleShape)
+                            .background(progressColor, CircleShape)
                             .border(2.dp, Color.White.copy(alpha = 0.94f), CircleShape)
                             .testTag("player-progress-thumb-ring"),
                     )
@@ -1062,6 +1079,9 @@ private fun SeekablePlayerProgress(
         }
     }
 }
+
+private fun playerProgressColor(playWhenReady: Boolean): Color =
+    if (playWhenReady) Primary else Subtle
 
 internal fun Key.toPlayerRemoteKey(): PlayerRemoteKey? =
     when (this) {

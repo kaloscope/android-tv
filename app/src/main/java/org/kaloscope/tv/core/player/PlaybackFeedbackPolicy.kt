@@ -18,6 +18,7 @@ object PlaybackFeedbackPolicy {
         fallbackInProgress: Boolean,
         switchingItem: Boolean,
         failure: PlaybackFailure?,
+        playWhenReady: Boolean,
     ): PlaybackFeedback =
         when {
             failure != null -> PlaybackFeedback.Failed
@@ -26,7 +27,11 @@ object PlaybackFeedbackPolicy {
             !hasBeenReady && playbackState != Player.STATE_READY ->
                 PlaybackFeedback.Preparing
 
-            hasBeenReady && playbackState == Player.STATE_BUFFERING ->
+            PlaybackBufferingPolicy.isRebuffering(
+                hasBeenReady = hasBeenReady,
+                playbackState = playbackState,
+                playWhenReady = playWhenReady,
+            ) ->
                 PlaybackFeedback.Rebuffering
 
             else -> PlaybackFeedback.Ready

@@ -152,11 +152,20 @@ private fun PlayerContent(
         fallbackInProgress = status.fallbackInProgress,
         switchingItem = state.switchingItem,
         failure = status.failure,
+        playWhenReady = status.playWhenReady,
     )
     var positionMillis by remember(playbackIdentity) { mutableLongStateOf(0) }
-    var controlLayer by remember { mutableStateOf(PlayerControlLayer.Controls) }
-    var requestedControlsFocus by remember {
-        mutableStateOf(PlayerControlFocusTarget.PlayPause)
+    val initialControlTransition = PlayerControlLayerPolicy.initialTransition()
+    var controlLayer by remember(playbackIdentity) {
+        mutableStateOf(initialControlTransition.layer)
+    }
+    var requestedControlsFocus by remember(playbackIdentity) {
+        mutableStateOf(
+            initialControlTransition.focusTarget ?: PlayerControlFocusTarget.Progress,
+        )
+    }
+    var actionRowVisible by remember(playbackIdentity) {
+        mutableStateOf(initialControlTransition.actionRowVisible == true)
     }
     var sessionSubtitleSettings by remember(state.request.requestId) {
         mutableStateOf(state.request.subtitleSettings)
@@ -187,6 +196,10 @@ private fun PlayerContent(
     var speedDrawerOpen by remember { mutableStateOf(false) }
     var restoreSpeedFocus by remember { mutableStateOf(false) }
     var interactionVersion by remember { mutableLongStateOf(0) }
+    var playbackToggleFeedbackId by remember(playbackIdentity) { mutableLongStateOf(0) }
+    var playbackToggleFeedback by remember(playbackIdentity) {
+        mutableStateOf<PlayerPlaybackToggleEvent?>(null)
+    }
     val playerFocus = remember { FocusRequester() }
     val progressFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
@@ -195,6 +208,14 @@ private fun PlayerContent(
     val subtitleFocus = remember { FocusRequester() }
     val speedFocus = remember { FocusRequester() }
     val hasNext = PlaybackRequestNavigator.hasNext(state.request)
+    val togglePlaybackWithFeedback = {
+        val playWhenReady = controller.togglePlayPause()
+        playbackToggleFeedbackId += 1
+        playbackToggleFeedback = PlayerPlaybackToggleEvent(
+            id = playbackToggleFeedbackId,
+            playWhenReady = playWhenReady,
+        )
+    }
 
     BackHandler {
         val context = when {
@@ -299,7 +320,8 @@ private fun PlayerContent(
     LaunchedEffect(status.fallbackInProgress) {
         if (status.fallbackInProgress) {
             controlLayer = PlayerControlLayer.Controls
-            requestedControlsFocus = PlayerControlFocusTarget.PlayPause
+            requestedControlsFocus = PlayerControlFocusTarget.Progress
+            actionRowVisible = false
         }
     }
     LaunchedEffect(
@@ -432,7 +454,7 @@ private fun PlayerContent(
                 ) ?: return@onPreviewKeyEvent false
                 val handled = when (command) {
                     PlayerControlCommand.TogglePlaybackAndShowControls -> {
-                        controller.togglePlayPause()
+                        togglePlaybackWithFeedback()
                         true
                     }
 
@@ -452,6 +474,7 @@ private fun PlayerContent(
                     PlayerControlLayerPolicy.transition(command)?.let { transition ->
                         controlLayer = transition.layer
                         transition.focusTarget?.let { requestedControlsFocus = it }
+                        transition.actionRowVisible?.let { actionRowVisible = it }
                     }
                     if (event.type == KeyEventType.KeyDown) {
                         interactionVersion += 1
@@ -544,7 +567,7 @@ private fun PlayerContent(
             val controlsState = PlayerControlsUiState(
                 title = parentTitle ?: state.request.title,
                 secondaryTitle = secondaryTitle,
-                isPlaying = status.isPlaying,
+                playWhenReady = status.playWhenReady,
                 positionMillis = positionMillis,
                 durationMillis = status.effectiveDurationMillis,
                 playbackModeLabel = qualityLabel,
@@ -584,6 +607,8 @@ private fun PlayerContent(
                     PlayerControlLayer.Preview -> PlayerInfoPreview(controlsState)
                     PlayerControlLayer.Controls -> PlayerControls(
                         state = controlsState,
+                        actionRowVisible = actionRowVisible,
+                        onActionRowVisibilityChange = { actionRowVisible = it },
                         progressFocus = progressFocus,
                         definitionFocus = definitionFocus,
                         danmakuSettingsFocus = danmakuSettingsFocus,
@@ -601,7 +626,7 @@ private fun PlayerContent(
                         },
                         onPlayPause = {
                             interactionVersion += 1
-                            controller.togglePlayPause()
+                            togglePlaybackWithFeedback()
                         },
                         onForward = {
                             interactionVersion += 1
@@ -668,6 +693,14 @@ private fun PlayerContent(
                 }
             }
         }
+        PlayerPlaybackToggleFeedback(
+            event = playbackToggleFeedback,
+            onFinished = { finishedId ->
+                if (playbackToggleFeedback?.id == finishedId) {
+                    playbackToggleFeedback = null
+                }
+            },
+        )
         if (definitionDrawerOpen) {
             PlayerDefinitionDrawer(
                 definitions = (state.request as? PlaybackRequest.NetworkVideo)
@@ -739,12 +772,20 @@ private fun PlayerContent(
             )
         }
         PlayerFeedbackOverlay(
-            feedback = feedback,
+            feedback = if (
+                playbackToggleFeedback != null &&
+                feedback == PlaybackFeedback.Rebuffering
+            ) {
+                PlaybackFeedback.Ready
+            } else {
+                feedback
+            },
             failure = status.failure,
             sourceKind = status.sourceKind,
             onRetry = {
                 controlLayer = PlayerControlLayer.Controls
-                requestedControlsFocus = PlayerControlFocusTarget.PlayPause
+                requestedControlsFocus = PlayerControlFocusTarget.Progress
+                actionRowVisible = false
                 interactionVersion += 1
                 controller.retry()
             },

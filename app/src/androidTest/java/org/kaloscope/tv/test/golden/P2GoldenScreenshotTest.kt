@@ -362,6 +362,7 @@ class P2GoldenScreenshotTest {
 
 @Composable
 private fun GoldenPlayerControls() {
+    var actionRowVisible by remember { mutableStateOf(true) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -379,7 +380,7 @@ private fun GoldenPlayerControls() {
             state = PlayerControlsUiState(
                 title = "星海纪行",
                 secondaryTitle = "第 4 集 · 穿越静默海",
-                isPlaying = true,
+                playWhenReady = true,
                 positionMillis = 2_758_000,
                 durationMillis = 2_758_000,
                 playbackModeLabel = "自动 · 1080P",
@@ -394,6 +395,8 @@ private fun GoldenPlayerControls() {
                 quality = PlayerActionUiState(enabled = true),
                 subtitleLabel = "简体中文",
             ),
+            actionRowVisible = actionRowVisible,
+            onActionRowVisibilityChange = { actionRowVisible = it },
             playFocus = remember { FocusRequester() },
             definitionFocus = remember { FocusRequester() },
             danmakuSettingsFocus = remember { FocusRequester() },

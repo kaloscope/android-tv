@@ -168,6 +168,9 @@ internal object PlayerControlKeyPolicy {
                 (key == PlayerRemoteKey.Left || key == PlayerRemoteKey.Right) ->
                 PlayerControlCommand.SubmitSeekPreview
 
+            phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Center ->
+                PlayerControlCommand.TogglePlaybackAndShowControls
+
             phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Down ->
                 PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause)
 

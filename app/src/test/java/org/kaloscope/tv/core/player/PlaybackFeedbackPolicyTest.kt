@@ -34,6 +34,13 @@ class PlaybackFeedbackPolicyTest {
         assertEquals(
             PlaybackFeedback.Ready,
             feedback(
+                hasBeenReady = true,
+                playWhenReady = false,
+            ),
+        )
+        assertEquals(
+            PlaybackFeedback.Ready,
+            feedback(
                 playbackState = Player.STATE_READY,
                 hasBeenReady = true,
             ),
@@ -64,11 +71,13 @@ class PlaybackFeedbackPolicyTest {
         fallbackInProgress: Boolean = false,
         switchingItem: Boolean = false,
         failure: PlaybackFailure? = null,
+        playWhenReady: Boolean = true,
     ) = PlaybackFeedbackPolicy.resolve(
         playbackState = playbackState,
         hasBeenReady = hasBeenReady,
         fallbackInProgress = fallbackInProgress,
         switchingItem = switchingItem,
         failure = failure,
+        playWhenReady = playWhenReady,
     )
 }

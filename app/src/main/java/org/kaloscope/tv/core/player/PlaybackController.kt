@@ -29,6 +29,7 @@ import org.kaloscope.tv.core.model.SubtitleTrack
 
 data class PlaybackStatus(
     val isPlaying: Boolean = false,
+    val playWhenReady: Boolean = false,
     val playbackState: Int = Player.STATE_IDLE,
     val hasBeenReady: Boolean = false,
     val sourceKind: PlaybackSourceKind,
@@ -74,6 +75,7 @@ class PlaybackController internal constructor(
             val currentStatus = mutableStatus.value
             mutableStatus.value = currentStatus.copy(
                 isPlaying = player.isPlaying,
+                playWhenReady = player.playWhenReady,
                 playbackState = player.playbackState,
                 hasBeenReady = PlaybackBufferingPolicy.hasBeenReady(
                     previouslyReady = currentStatus.hasBeenReady,
@@ -163,12 +165,14 @@ class PlaybackController internal constructor(
         startSource(sourceKind, request.resumePositionMillis())
     }
 
-    fun togglePlayPause() {
-        if (player.isPlaying) {
-            player.pause()
-        } else {
+    fun togglePlayPause(): Boolean {
+        val playWhenReady = PlaybackIntentPolicy.afterToggle(player.playWhenReady)
+        if (playWhenReady) {
             player.play()
+        } else {
+            player.pause()
         }
+        return playWhenReady
     }
 
     fun seekBy(offsetMillis: Long) {

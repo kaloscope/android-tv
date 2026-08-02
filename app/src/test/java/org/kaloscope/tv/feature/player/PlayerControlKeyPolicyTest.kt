@@ -102,7 +102,11 @@ class PlayerControlKeyPolicyTest {
     }
 
     @Test
-    fun `focused progress maps down and back without handling center`() {
+    fun `focused progress toggles playback and maps down and back`() {
+        assertEquals(
+            PlayerControlCommand.TogglePlaybackAndShowControls,
+            progressCommand(PlayerRemoteKey.Center),
+        )
         assertEquals(
             PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause),
             progressCommand(PlayerRemoteKey.Down),
@@ -111,7 +115,13 @@ class PlayerControlKeyPolicyTest {
             PlayerControlCommand.HideControls,
             progressCommand(PlayerRemoteKey.Back),
         )
-        assertNull(progressCommand(PlayerRemoteKey.Center))
+        assertNull(
+            PlayerControlKeyPolicy.command(
+                context = PlayerControlContext.Progress,
+                key = PlayerRemoteKey.Center,
+                phase = PlayerKeyPhase.Up,
+            ),
+        )
     }
 
     @Test
