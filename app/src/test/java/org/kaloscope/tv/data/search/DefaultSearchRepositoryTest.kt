@@ -19,6 +19,7 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.network.ApiClientFactory
+import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
 import org.kaloscope.tv.core.player.TranscodeResolution
 
 class DefaultSearchRepositoryTest {
@@ -153,6 +154,54 @@ class DefaultSearchRepositoryTest {
         assertEquals("episode-2", source.chapters.last().id)
         assertEquals("287683505", source.danmakus.single().id)
         assertEquals(12_500, source.danmakus.single().startMillis)
+    }
+
+    @Test
+    fun `software AVC capability selects matching HEVC DASH definition`() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "status": 200,
+                  "message": "",
+                  "data": {
+                    "id": "video-1",
+                    "title": "Video",
+                    "media_type": "video",
+                    "video_type": "dash",
+                    "definitions": [
+                      {"url": "https://media.example/avc.mpd", "definition": "480P AVC"},
+                      {"url": "https://media.example/hevc.mpd", "definition": "480P HEVC"}
+                    ]
+                  }
+                }
+                """.trimIndent(),
+            ),
+        )
+        val compatibleRepository = DefaultSearchRepository(
+            apiClientFactory = ApiClientFactory(json),
+            json = json,
+            videoCodecSupport = NetworkVideoCodecSupport { true },
+        )
+
+        val playback = compatibleRepository.resolvePlayback(
+            session = session(),
+            indexerId = 11,
+            result = NetworkSearchResult(
+                id = "video-1",
+                title = "Video",
+                coverPath = null,
+                rating = null,
+                category = null,
+                uploader = null,
+                uploadedAt = null,
+            ),
+            preferredDefinition = TranscodeResolution.P480,
+        )
+
+        val source = (playback as AppResult.Success).value
+        assertEquals("https://media.example/hevc.mpd", source.url)
+        assertEquals(1, source.selectedDefinitionIndex)
     }
 
     @Test

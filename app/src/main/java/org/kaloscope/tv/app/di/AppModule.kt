@@ -16,6 +16,8 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import org.kaloscope.tv.app.bootstrap.BootstrapRepository
 import org.kaloscope.tv.app.bootstrap.DefaultBootstrapRepository
+import org.kaloscope.tv.core.player.AndroidNetworkVideoCodecSupport
+import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
 import org.kaloscope.tv.core.storage.AndroidKeystoreTokenCipher
 import org.kaloscope.tv.core.storage.PreferencesServerStore
 import org.kaloscope.tv.core.storage.SecureSessionStore
@@ -39,6 +41,11 @@ import org.kaloscope.tv.data.settings.SettingsRepository
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class AppBindings {
+    @Binds
+    abstract fun bindNetworkVideoCodecSupport(
+        implementation: AndroidNetworkVideoCodecSupport,
+    ): NetworkVideoCodecSupport
+
     @Binds
     abstract fun bindServerStore(implementation: PreferencesServerStore): ServerStore
 

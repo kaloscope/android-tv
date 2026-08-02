@@ -16,6 +16,7 @@ import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.model.SearchFilterDefinition
 import org.kaloscope.tv.core.model.SearchFilterOption
 import org.kaloscope.tv.core.model.SearchFilterType
+import org.kaloscope.tv.core.player.NetworkDefinitionSelectionPolicy
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.search.remote.IndexerPageData
 import org.kaloscope.tv.data.search.remote.IndexerResourceData
@@ -96,6 +97,7 @@ internal fun IndexerResourceData.toPlaybackSource(
     indexerId: Long,
     fallbackTitle: String,
     preferredDefinition: TranscodeResolution,
+    preferHevcForDash: Boolean = false,
 ): NetworkPlaybackSource? {
     val resolvedId = id.clean() ?: return null
     if (!mediaType.isVideo()) {
@@ -113,10 +115,21 @@ internal fun IndexerResourceData.toPlaybackSource(
             NetworkDefinition(label = label, url = definitionUrl)
         }
     }
-    val selectedDefinitionIndex = mappedDefinitions
+    val videoType = when (videoType?.lowercase()) {
+        "hls", "m3u8" -> NetworkVideoType.Hls
+        "dash", "mpd" -> NetworkVideoType.Dash
+        "mp4" -> NetworkVideoType.Mp4
+        else -> NetworkVideoType.Unknown
+    }
+    val serverSelectedDefinitionIndex = mappedDefinitions
         .indexOfFirst { it.label.matches(preferredDefinition) }
         .takeIf { it >= 0 }
         ?: mappedDefinitions.indices.firstOrNull()
+    val selectedDefinitionIndex = NetworkDefinitionSelectionPolicy.selectIndex(
+        definitions = mappedDefinitions,
+        serverSelectedIndex = serverSelectedDefinitionIndex,
+        preferHevc = videoType == NetworkVideoType.Dash && preferHevcForDash,
+    )
     val mappedChapters = toChapters()
     // Definitions override the generic URL because they carry the preferred quality.
     val sourceUrl = selectedDefinitionIndex
@@ -130,12 +143,7 @@ internal fun IndexerResourceData.toPlaybackSource(
         resourceId = resolvedId,
         title = title.clean() ?: fallbackTitle.trim(),
         url = sourceUrl,
-        videoType = when (videoType?.lowercase()) {
-            "hls", "m3u8" -> NetworkVideoType.Hls
-            "dash", "mpd" -> NetworkVideoType.Dash
-            "mp4" -> NetworkVideoType.Mp4
-            else -> NetworkVideoType.Unknown
-        },
+        videoType = videoType,
         danmakus = danmakus.orEmpty().mapNotNull { comment ->
             val text = comment.text.clean()
             val start = comment.start

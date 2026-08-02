@@ -243,6 +243,36 @@ class SearchMapperTest {
     }
 
     @Test
+    fun `DASH mapping prefers matching HEVC definition when requested`() {
+        val source = IndexerResourceData(
+            id = "v1",
+            title = "视频",
+            mediaType = "video",
+            videoType = "dash",
+            definitions = listOf(
+                IndexerDefinitionData(
+                    url = "<MPD><Representation codecs=\"avc1.640033\" /></MPD>",
+                    definition = JsonPrimitive("480P 清晰"),
+                ),
+                IndexerDefinitionData(
+                    url = "<MPD><Representation codecs=\"hvc1.1.6.L120.90\" /></MPD>",
+                    definition = JsonPrimitive("480P 清晰 HEVC"),
+                ),
+            ),
+        ).toPlaybackSource(
+            indexerId = 11,
+            fallbackTitle = "备用",
+            preferredDefinition = TranscodeResolution.P480,
+            preferHevcForDash = true,
+        )
+
+        checkNotNull(source)
+        assertEquals(1, source.selectedDefinitionIndex)
+        assertEquals("480P 清晰 HEVC", source.selectedDefinition?.label)
+        assertTrue(source.url.contains("hvc1"))
+    }
+
+    @Test
     fun `first direct chapter becomes playable when top level source is absent`() {
         val source = IndexerResourceData(
             id = "v1",

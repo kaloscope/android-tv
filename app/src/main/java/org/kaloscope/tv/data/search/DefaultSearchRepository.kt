@@ -20,16 +20,19 @@ import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SearchFilterValue
-import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.core.network.ApiClientFactory
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
+import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
+import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.search.remote.IndexerDetailsRequestData
 
 @Singleton
 class DefaultSearchRepository @Inject constructor(
     private val apiClientFactory: ApiClientFactory,
     private val json: Json,
+    private val videoCodecSupport: NetworkVideoCodecSupport =
+        NetworkVideoCodecSupport.KeepServerOrder,
 ) : SearchRepository {
     override suspend fun getAvailableProfiles(
         session: Session,
@@ -129,7 +132,12 @@ class DefaultSearchRepository @Inject constructor(
                 indexerId = indexerId,
                 body = IndexerDetailsRequestData(resourceId = result.id),
             ).dataOrThrow() ?: throw SerializationException("Missing network details")
-            resource.toPlaybackSource(indexerId, result.title, preferredDefinition)
+            resource.toPlaybackSource(
+                indexerId = indexerId,
+                fallbackTitle = result.title,
+                preferredDefinition = preferredDefinition,
+                preferHevcForDash = videoCodecSupport.shouldPreferHevcForDash(),
+            )
                 ?: resolveInitialChapter(
                     session = session,
                     indexerId = indexerId,
@@ -168,7 +176,12 @@ class DefaultSearchRepository @Inject constructor(
                     chapterId = JsonPrimitive(chapterId),
                 ),
             ).dataOrThrow()
-                ?.toPlaybackSource(source.indexerId, chapter.title, preferredDefinition)
+                ?.toPlaybackSource(
+                    indexerId = source.indexerId,
+                    fallbackTitle = chapter.title,
+                    preferredDefinition = preferredDefinition,
+                    preferHevcForDash = videoCodecSupport.shouldPreferHevcForDash(),
+                )
                 ?: throw SerializationException("Missing playable network chapter")
             resolved.copy(
                 chapters = source.chapters,
@@ -196,7 +209,12 @@ class DefaultSearchRepository @Inject constructor(
                 chapterId = JsonPrimitive(chapterId),
             ),
         ).dataOrThrow()
-            ?.toPlaybackSource(indexerId, firstChapter.title ?: fallbackTitle, preferredDefinition)
+            ?.toPlaybackSource(
+                indexerId = indexerId,
+                fallbackTitle = firstChapter.title ?: fallbackTitle,
+                preferredDefinition = preferredDefinition,
+                preferHevcForDash = videoCodecSupport.shouldPreferHevcForDash(),
+            )
             ?: throw SerializationException("Missing playable network chapter")
         val chapters = resource.toChapters()
         return resolved.copy(
