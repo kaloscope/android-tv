@@ -195,12 +195,12 @@
     <string name="forward_seconds">+10 秒</string>
     <string name="seek_seconds_short">10</string>
     <string name="pause">暂停</string>
-    <string name="subtitles_on">字幕 开</string>
-    <string name="subtitles_off">字幕 关</string>
+    <string name="subtitles_on">字幕开</string>
+    <string name="subtitles_off">字幕关</string>
     <string name="no_subtitles">无字幕</string>
     <string name="retry_subtitles">重试字幕</string>
-    <string name="danmaku_on">弹幕 开</string>
-    <string name="danmaku_off">弹幕 关</string>
+    <string name="danmaku_on">弹幕开</string>
+    <string name="danmaku_off">弹幕关</string>
     <string name="no_danmaku">无弹幕</string>
     <string name="retry_danmakus">重试弹幕</string>
     <string name="direct_playback_failed">直连播放失败</string>

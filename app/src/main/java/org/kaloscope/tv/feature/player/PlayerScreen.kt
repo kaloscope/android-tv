@@ -216,7 +216,7 @@ private fun PlayerContent(
     val progressFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
     val definitionFocus = remember { FocusRequester() }
-    val danmakuSettingsFocus = remember { FocusRequester() }
+    val settingsFocus = remember { FocusRequester() }
     val subtitleFocus = remember { FocusRequester() }
     val speedFocus = remember { FocusRequester() }
     val hasNext = PlaybackRequestNavigator.hasNext(state.request)
@@ -385,7 +385,7 @@ private fun PlayerContent(
     LaunchedEffect(danmakuDrawerOpen, restoreDanmakuSettingsFocus) {
         if (!danmakuDrawerOpen && restoreDanmakuSettingsFocus) {
             withFrameNanos { }
-            danmakuSettingsFocus.requestFocus()
+            settingsFocus.requestFocus()
             restoreDanmakuSettingsFocus = false
         }
     }
@@ -611,14 +611,11 @@ private fun PlayerContent(
                     active = danmakusAvailable && sessionDanmakuSettings.enabled,
                     error = danmakusFailed,
                 ),
-                danmakuSettings = PlayerActionUiState(
+                settings = PlayerActionUiState(
                     enabled = danmakusAvailable,
                     error = danmakusFailed,
                 ),
                 quality = PlayerActionUiState(enabled = definitions.size > 1),
-                subtitleLabel = state.subtitles
-                    .firstOrNull { it.id == selectedSubtitleTrackId }
-                    ?.label,
                 chapters = state.mediaProbe?.chapters.orEmpty(),
             )
             AnimatedPlayerControlLayer(layer = displayedControlLayer) { renderedLayer ->
@@ -631,7 +628,7 @@ private fun PlayerContent(
                         onActionRowVisibilityChange = { actionRowVisible = it },
                         progressFocus = progressFocus,
                         definitionFocus = definitionFocus,
-                        danmakuSettingsFocus = danmakuSettingsFocus,
+                        settingsFocus = settingsFocus,
                         subtitleFocus = subtitleFocus,
                         speedFocus = speedFocus,
                         playFocus = playFocus,
@@ -663,7 +660,7 @@ private fun PlayerContent(
                             controller.recordItemSwitchProgress()
                             onNext()
                         },
-                        onOpenSubtitles = {
+                        onToggleSubtitles = {
                             interactionVersion += 1
                             subtitleDrawerOpen = true
                             speedDrawerOpen = false
@@ -683,7 +680,7 @@ private fun PlayerContent(
                                 enabled = !sessionDanmakuSettings.enabled,
                             )
                         },
-                        onOpenDanmakuSettings = {
+                        onOpenSettings = {
                             interactionVersion += 1
                             danmakuDrawerOpen = true
                             definitionDrawerOpen = false

@@ -17,7 +17,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.captureToImage
@@ -54,7 +53,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -62,10 +61,10 @@ class PlayerControlsTest {
                     onPlayPause = { playClicks += 1 },
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -100,7 +99,7 @@ class PlayerControlsTest {
                     state = controlsState().copy(playWhenReady = true),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -108,10 +107,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -150,7 +149,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -158,10 +157,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -200,11 +199,8 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun disabledSubtitlesStayIconOnlyAndCannotReceiveFocus() {
-        lateinit var density: Density
-
+    fun disabledSubtitlesAreOmittedFromTheControlRow() {
         composeRule.setContent {
-            density = LocalDensity.current
             MaterialTheme {
                 PlayerControls(
                     state = controlsState(
@@ -212,7 +208,7 @@ class PlayerControlsTest {
                     ),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -220,10 +216,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -234,17 +230,7 @@ class PlayerControlsTest {
         }
 
         composeRule.onNodeWithText("字幕").assertDoesNotExist()
-        val subtitle = composeRule.onNodeWithTag("player-subtitles")
-            .assertIsDisplayed()
-            .assertIsNotEnabled()
-        subtitle.performSemanticsAction(SemanticsActions.RequestFocus)
-            .assertIsNotFocused()
-        val bounds = subtitle.fetchSemanticsNode().boundsInRoot
-        val expectedSize = with(density) { 42.dp.toPx() }
-        val tolerance = with(density) { 1.dp.toPx() }
-
-        assertEquals(expectedSize, bounds.width, tolerance)
-        assertEquals(expectedSize, bounds.height, tolerance)
+        composeRule.onNodeWithTag("player-subtitles").assertDoesNotExist()
     }
 
     @Test
@@ -259,7 +245,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -267,10 +253,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -307,7 +293,8 @@ class PlayerControlsTest {
         assertCollapsed("player-subtitles")
         assertCollapsed("player-danmaku")
         assertCollapsed("player-speed")
-        assertCollapsed("player-danmaku-settings")
+        assertCollapsed("player-quality")
+        assertCollapsed("player-settings")
         composeRule.onNodeWithText("字幕").assertDoesNotExist()
         composeRule.onNodeWithText("弹幕").assertDoesNotExist()
         composeRule.onNodeWithText("设置").assertDoesNotExist()
@@ -335,10 +322,206 @@ class PlayerControlsTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.mainClock.advanceTimeBy(200)
         assertCollapsed("player-speed")
+        assertFocusedAndExpanded("player-quality", "player-quality-label")
+
+        composeRule.onNodeWithTag("player-quality")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.advanceTimeBy(200)
+        assertCollapsed("player-quality")
         assertFocusedAndExpanded(
-            "player-danmaku-settings",
-            "player-danmaku-settings-label",
+            "player-settings",
+            "player-settings-label",
         )
+    }
+
+    @Test
+    fun playbackSummaryStatusChipsAreDisplayOnly() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-playback-quality-status")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+        composeRule.onNodeWithTag("player-playback-speed-status")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+    }
+
+    @Test
+    fun unavailableAuxiliaryControlsAreOmittedAndFocusSkipsToSettings() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(
+                        subtitles = PlayerActionUiState(enabled = false),
+                        danmakus = PlayerActionUiState(enabled = false),
+                        quality = PlayerActionUiState(enabled = false),
+                        settings = PlayerActionUiState(enabled = true),
+                    ),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-subtitles").assertDoesNotExist()
+        composeRule.onNodeWithTag("player-danmaku").assertDoesNotExist()
+        composeRule.onNodeWithTag("player-quality").assertDoesNotExist()
+        composeRule.onNodeWithTag("player-speed")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("player-settings").assertIsFocused()
+    }
+
+    @Test
+    fun completeAuxiliaryControlsFollowApprovedLeftToRightOrder() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(settings = PlayerActionUiState(enabled = true)),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val leftEdges = listOf(
+            "player-subtitles",
+            "player-danmaku",
+            "player-speed",
+            "player-quality",
+            "player-settings",
+        ).map { tag ->
+            composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot.left
+        }
+
+        assertTrue(
+            "Auxiliary controls should be ordered left to right",
+            leftEdges.zipWithNext().all { (left, right) -> left < right },
+        )
+    }
+
+    @Test
+    fun focusedToggleControlsUpdateStateLabelsWithoutLosingFocus() {
+        var state by mutableStateOf(
+            controlsState(
+                subtitles = PlayerActionUiState(enabled = true),
+                danmakus = PlayerActionUiState(enabled = true),
+            ),
+        )
+
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = state,
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {
+                        state = state.copy(
+                            subtitles = state.subtitles.copy(
+                                active = !state.subtitles.active,
+                            ),
+                        )
+                    },
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {
+                        state = state.copy(
+                            danmakus = state.danmakus.copy(
+                                active = !state.danmakus.active,
+                            ),
+                        )
+                    },
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-subtitles")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithText("字幕关").assertExists()
+        composeRule.onNodeWithTag("player-subtitles")
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsFocused()
+            .assertIsSelected()
+        composeRule.onNodeWithText("字幕开").assertExists()
+
+        composeRule.onNodeWithTag("player-danmaku")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithText("弹幕关").assertExists()
+        composeRule.onNodeWithTag("player-danmaku")
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsFocused()
+            .assertIsSelected()
+        composeRule.onNodeWithText("弹幕开").assertExists()
     }
 
     @Test
@@ -352,7 +535,7 @@ class PlayerControlsTest {
                     ),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -360,10 +543,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -378,7 +561,7 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun qualityControlStaysAboveProgressAndOpensDefinitions() {
+    fun qualityControlStaysInAuxiliaryRowAndOpensDefinitions() {
         var qualityClicks = 0
 
         composeRule.setContent {
@@ -387,7 +570,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -395,10 +578,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = { qualityClicks += 1 },
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -420,7 +603,8 @@ class PlayerControlsTest {
             .fetchSemanticsNode()
             .boundsInRoot
 
-        assertTrue("Quality should sit above progress", qualityBounds.bottom < progressBounds.top)
+        assertTrue("Quality should sit below progress", qualityBounds.top > progressBounds.bottom)
+        assertTrue("Quality should sit inside the control row", qualityBounds.top >= controlsBounds.top)
         assertTrue("The control row should sit below progress", controlsBounds.top > progressBounds.bottom)
         composeRule.onNodeWithTag("player-quality")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -441,7 +625,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -449,10 +633,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -462,7 +646,7 @@ class PlayerControlsTest {
             }
         }
 
-        val qualityBounds = composeRule.onNodeWithTag("player-quality")
+        val qualityBounds = composeRule.onNodeWithTag("player-playback-quality-status")
             .fetchSemanticsNode()
             .boundsInRoot
         val speedBounds = composeRule.onNodeWithTag("player-playback-speed-status")
@@ -477,9 +661,8 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun controlsKeepDisabledSlotsAndExposeActiveToggleState() {
+    fun controlsHideUnavailableAuxiliaryActionsAndExposeActiveToggleState() {
         var nextClicks = 0
-        var qualityClicks = 0
 
         composeRule.setContent {
             MaterialTheme {
@@ -493,7 +676,7 @@ class PlayerControlsTest {
                     ),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -501,11 +684,11 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = { nextClicks += 1 },
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
-                    onOpenDefinitions = { qualityClicks += 1 },
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
                     onHideControls = {},
@@ -517,25 +700,22 @@ class PlayerControlsTest {
         composeRule.onNodeWithContentDescription("上一集")
             .assertIsDisplayed()
             .assertIsNotEnabled()
-        composeRule.onNodeWithContentDescription("字幕 开")
+        composeRule.onNodeWithContentDescription("字幕开")
             .assertIsDisplayed()
             .assertIsSelected()
-        composeRule.onNodeWithContentDescription("弹幕 开")
+        composeRule.onNodeWithContentDescription("弹幕开")
             .assertIsDisplayed()
             .assertIsSelected()
-        composeRule.onNodeWithContentDescription("弹幕设置")
+        composeRule.onNodeWithContentDescription("设置")
             .assertIsDisplayed()
             .assertIsEnabled()
         composeRule.onNodeWithContentDescription("下一集")
             .assertIsDisplayed()
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithContentDescription("清晰度")
-            .assertIsDisplayed()
-            .assertIsNotEnabled()
+        composeRule.onNodeWithTag("player-quality").assertDoesNotExist()
         composeRule.runOnIdle {
             assertEquals(1, nextClicks)
-            assertEquals(0, qualityClicks)
         }
     }
 
@@ -550,7 +730,7 @@ class PlayerControlsTest {
                     ),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -558,10 +738,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -572,12 +752,12 @@ class PlayerControlsTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("重试字幕")
+        composeRule.onNodeWithContentDescription("重试")
             .assertIsEnabled()
             .assert(
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.Error,
-                    "重试字幕",
+                    "重试",
                 ),
             )
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -602,7 +782,7 @@ class PlayerControlsTest {
                     onActionRowVisibilityChange = { actionRowVisible = it },
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -610,10 +790,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -691,7 +871,7 @@ class PlayerControlsTest {
                     onActionRowVisibilityChange = { actionRowVisible = it },
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -699,10 +879,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -738,7 +918,7 @@ class PlayerControlsTest {
                     onActionRowVisibilityChange = { actionRowVisible = it },
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -746,10 +926,10 @@ class PlayerControlsTest {
                     onPlayPause = { playPauseClicks += 1 },
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -788,7 +968,7 @@ class PlayerControlsTest {
                     onActionRowVisibilityChange = { actionRowVisible = it },
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -796,10 +976,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = { offsetMillis ->
                         displayedPositionMillis += offsetMillis
@@ -840,7 +1020,7 @@ class PlayerControlsTest {
                     state = controlsState().copy(positionMillis = displayedPositionMillis),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -848,10 +1028,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = { offsetMillis ->
                         displayedPositionMillis += offsetMillis
@@ -895,7 +1075,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -903,10 +1083,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -950,7 +1130,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -958,10 +1138,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -1003,7 +1183,7 @@ class PlayerControlsTest {
                     state = controlsState().copy(playWhenReady = playWhenReady),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -1011,10 +1191,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -1053,7 +1233,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -1061,10 +1241,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -1087,7 +1267,7 @@ class PlayerControlsTest {
                     state = controlsState(),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -1095,10 +1275,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -1111,8 +1291,8 @@ class PlayerControlsTest {
         composeRule.onNodeWithContentDescription("播放")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionDown) }
-        composeRule.onNodeWithContentDescription("字幕 关").assertIsFocused()
-        composeRule.onNodeWithContentDescription("字幕 关")
+        composeRule.onNodeWithContentDescription("字幕关").assertIsFocused()
+        composeRule.onNodeWithContentDescription("字幕关")
             .performKeyInput { pressKey(Key.DirectionUp) }
         composeRule.onNodeWithContentDescription("播放").assertIsFocused()
     }
@@ -1125,7 +1305,7 @@ class PlayerControlsTest {
                     state = controlsState().copy(durationMillis = 0),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -1133,10 +1313,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -1278,7 +1458,7 @@ class PlayerControlsTest {
                     state = controlsState().copy(playbackSpeed = 1.25f),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -1286,10 +1466,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = { subtitlesOpened += 1 },
+                    onToggleSubtitles = { subtitlesOpened += 1 },
                     onOpenSpeed = { speedOpened += 1 },
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -1303,7 +1483,7 @@ class PlayerControlsTest {
         composeRule.onNodeWithContentDescription("1.25x")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithContentDescription("字幕 关")
+        composeRule.onNodeWithContentDescription("字幕关")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.runOnIdle {
@@ -1323,7 +1503,7 @@ class PlayerControlsTest {
                     ),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -1331,10 +1511,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -1347,7 +1527,7 @@ class PlayerControlsTest {
         composeRule.onNodeWithContentDescription("+10 秒")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithContentDescription("弹幕 关").assertIsFocused()
+        composeRule.onNodeWithContentDescription("弹幕关").assertIsFocused()
     }
 
     @Test
@@ -1364,7 +1544,7 @@ class PlayerControlsTest {
                     ),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
-                    danmakuSettingsFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
                     subtitleFocus = remember { FocusRequester() },
                     speedFocus = remember { FocusRequester() },
                     onPrevious = {},
@@ -1372,10 +1552,10 @@ class PlayerControlsTest {
                     onPlayPause = {},
                     onForward = {},
                     onNext = {},
-                    onOpenSubtitles = {},
+                    onToggleSubtitles = {},
                     onOpenSpeed = {},
                     onToggleDanmakus = {},
-                    onOpenDanmakuSettings = {},
+                    onOpenSettings = {},
                     onOpenDefinitions = {},
                     onSeekPreviewBy = {},
                     onSeekPreviewFinished = {},
@@ -1399,6 +1579,7 @@ class PlayerControlsTest {
         subtitles: PlayerActionUiState = PlayerActionUiState(enabled = true),
         danmakus: PlayerActionUiState = PlayerActionUiState(enabled = true),
         quality: PlayerActionUiState = PlayerActionUiState(enabled = true),
+        settings: PlayerActionUiState = PlayerActionUiState(enabled = danmakus.enabled),
     ): PlayerControlsUiState =
         PlayerControlsUiState(
             title = "Episode 1",
@@ -1413,7 +1594,7 @@ class PlayerControlsTest {
             nextEnabled = nextEnabled,
             subtitles = subtitles,
             danmakus = danmakus,
-            danmakuSettings = PlayerActionUiState(enabled = danmakus.enabled),
+            settings = settings,
             quality = quality,
         )
 }

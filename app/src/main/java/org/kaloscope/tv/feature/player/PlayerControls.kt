@@ -110,10 +110,9 @@ internal data class PlayerControlsUiState(
     val nextEnabled: Boolean,
     val subtitles: PlayerActionUiState,
     val danmakus: PlayerActionUiState,
-    val danmakuSettings: PlayerActionUiState,
+    val settings: PlayerActionUiState,
     val quality: PlayerActionUiState,
     val secondaryTitle: String? = null,
-    val subtitleLabel: String? = null,
     val chapters: List<MediaChapter> = emptyList(),
 )
 
@@ -172,9 +171,6 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
 @Composable
 private fun PlayerPlaybackSummary(
     state: PlayerControlsUiState,
-    qualityFocus: FocusRequester? = null,
-    progressFocus: FocusRequester? = null,
-    onOpenDefinitions: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -208,17 +204,10 @@ private fun PlayerPlaybackSummary(
             }
         }
         Spacer(Modifier.width(16.dp))
-        if (qualityFocus != null && progressFocus != null && onOpenDefinitions != null) {
-            PlayerQualityControl(
-                label = state.playbackModeLabel,
-                action = state.quality,
-                focusRequester = qualityFocus,
-                downFocus = progressFocus,
-                onClick = onOpenDefinitions,
-            )
-        } else {
-            PlayerStatusChip(state.playbackModeLabel)
-        }
+        PlayerStatusChip(
+            label = state.playbackModeLabel,
+            modifier = Modifier.testTag("player-playback-quality-status"),
+        )
         Spacer(Modifier.width(6.dp))
         PlayerStatusChip(
             label = formatPlaybackSpeed(state.playbackSpeed),
@@ -250,67 +239,6 @@ private fun PlayerStatusChip(
     }
 }
 
-@Composable
-private fun PlayerQualityControl(
-    label: String,
-    action: PlayerActionUiState,
-    focusRequester: FocusRequester,
-    downFocus: FocusRequester,
-    onClick: () -> Unit,
-) {
-    val description = stringResource(R.string.playback_quality)
-    if (action.enabled) {
-        KaloscopeButton(
-            onClick = onClick,
-            variant = KaloscopeControlVariant.Ghost,
-            size = KaloscopeControlSize.Compact,
-            shape = PlayerControlPillShape,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-            modifier = Modifier
-                .height(36.dp)
-                .background(Color(0x66293040), PlayerControlPillShape)
-                .border(PlayerControlBorder, PlayerControlPillShape)
-                .focusRequester(focusRequester)
-                .focusProperties { down = downFocus }
-                .semantics {
-                    contentDescription = description
-                    role = Role.Button
-                }
-                .testTag("player-quality"),
-        ) {
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-            )
-        }
-    } else {
-        Box(
-            modifier = Modifier
-                .height(36.dp)
-                .background(Color(0x66293040), PlayerControlPillShape)
-                .border(PlayerControlBorder, PlayerControlPillShape)
-                .padding(horizontal = 12.dp)
-                .semantics {
-                    contentDescription = description
-                    role = Role.Button
-                    disabled()
-                }
-                .testTag("player-quality"),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = label,
-                color = OnBackground,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
 private val PlayerControlPillShape = RoundedCornerShape(50)
 private val PlayerControlBorder = BorderStroke(1.dp, Color(0x996F7888))
 
@@ -332,7 +260,7 @@ internal fun PlayerControls(
     playFocus: FocusRequester,
     progressFocus: FocusRequester? = null,
     definitionFocus: FocusRequester,
-    danmakuSettingsFocus: FocusRequester,
+    settingsFocus: FocusRequester,
     subtitleFocus: FocusRequester,
     speedFocus: FocusRequester,
     onPrevious: () -> Unit,
@@ -340,10 +268,10 @@ internal fun PlayerControls(
     onPlayPause: () -> Unit,
     onForward: () -> Unit,
     onNext: () -> Unit,
-    onOpenSubtitles: () -> Unit,
+    onToggleSubtitles: () -> Unit,
     onOpenSpeed: () -> Unit,
     onToggleDanmakus: () -> Unit,
-    onOpenDanmakuSettings: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenDefinitions: () -> Unit,
     onSeekPreviewBy: (Long) -> Unit,
     onSeekPreviewFinished: () -> Unit,
@@ -361,10 +289,31 @@ internal fun PlayerControls(
     val nextFocus = remember { FocusRequester() }
     val danmakuFocus = remember { FocusRequester() }
     val episodeGroupEndFocus = if (state.nextEnabled) nextFocus else forwardFocus
-    val supplementaryGroupStartFocus = when {
-        state.subtitles.enabled -> subtitleFocus
-        state.danmakus.enabled -> danmakuFocus
-        else -> speedFocus
+    val visibleAuxiliaryControls = PlayerAuxiliaryControlPolicy.visibleControls(
+        subtitles = state.subtitles,
+        danmakus = state.danmakus,
+        quality = state.quality,
+        settings = state.settings,
+    )
+    val auxiliaryFocusRequesters = mapOf(
+        PlayerAuxiliaryControl.Subtitle to subtitleFocus,
+        PlayerAuxiliaryControl.Danmaku to danmakuFocus,
+        PlayerAuxiliaryControl.Speed to speedFocus,
+        PlayerAuxiliaryControl.Quality to definitionFocus,
+        PlayerAuxiliaryControl.Settings to settingsFocus,
+    )
+    val supplementaryGroupStartFocus = auxiliaryFocusRequesters.getValue(
+        visibleAuxiliaryControls.first(),
+    )
+    val subtitleLabel = when {
+        state.subtitles.error -> stringResource(R.string.retry)
+        state.subtitles.active -> stringResource(R.string.subtitles_on)
+        else -> stringResource(R.string.subtitles_off)
+    }
+    val danmakuLabel = when {
+        state.danmakus.error -> stringResource(R.string.retry)
+        state.danmakus.active -> stringResource(R.string.danmaku_on)
+        else -> stringResource(R.string.danmaku_off)
     }
     LaunchedEffect(playFocusRequestVersion) {
         if (playFocusRequestVersion > 0) {
@@ -385,12 +334,7 @@ internal fun PlayerControls(
             ),
     ) {
         Spacer(Modifier.weight(1f))
-        PlayerPlaybackSummary(
-            state = state,
-            qualityFocus = definitionFocus,
-            progressFocus = resolvedProgressFocus,
-            onOpenDefinitions = onOpenDefinitions,
-        )
+        PlayerPlaybackSummary(state = state)
         if (state.progressSaveFailed) {
             Text(
                 text = stringResource(R.string.progress_save_failed),
@@ -405,7 +349,6 @@ internal fun PlayerControls(
             chapters = state.chapters,
             progressFocus = resolvedProgressFocus,
             playFocus = playFocus,
-            qualityFocus = definitionFocus.takeIf { state.quality.enabled },
             playWhenReady = state.playWhenReady,
             onProgressFocused = { onActionRowVisibilityChange(false) },
             onShowActions = {
@@ -522,94 +465,102 @@ internal fun PlayerControls(
                     }
                     Spacer(Modifier.weight(1f))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PlayerAuxiliaryButton(
-                            visibleLabel = if (state.subtitles.error) {
-                                stringResource(R.string.retry)
-                            } else {
-                                stringResource(R.string.subtitle)
-                            },
-                            accessibilityLabel = subtitleButtonLabel(
-                                state.subtitles,
-                                state.subtitleLabel,
-                            ),
-                            labelTag = "player-subtitles-label",
-                            iconRes = R.drawable.ic_settings_subtitle,
-                            action = state.subtitles,
-                            onClick = if (state.subtitles.error) {
-                                onRetrySubtitles
-                            } else {
-                                onOpenSubtitles
-                            },
-                            modifier = Modifier
-                                .focusRequester(subtitleFocus)
-                                .testTag("player-subtitles"),
-                            upFocus = playFocus,
-                            leftFocus = episodeGroupEndFocus,
-                            rightFocus = if (state.danmakus.enabled) danmakuFocus else speedFocus,
-                        )
-                        PlayerAuxiliaryButton(
-                            visibleLabel = if (state.danmakus.error) {
-                                stringResource(R.string.retry)
-                            } else {
-                                stringResource(R.string.danmaku)
-                            },
-                            accessibilityLabel = danmakuButtonLabel(state.danmakus),
-                            labelTag = "player-danmaku-label",
-                            iconRes = R.drawable.ic_settings_danmaku,
-                            action = state.danmakus,
-                            onClick = if (state.danmakus.error) {
-                                onRetryDanmakus
-                            } else {
-                                onToggleDanmakus
-                            },
-                            modifier = Modifier
-                                .focusRequester(danmakuFocus)
-                                .testTag("player-danmaku"),
-                            upFocus = playFocus,
-                            leftFocus = if (state.subtitles.enabled) {
-                                subtitleFocus
-                            } else {
-                                episodeGroupEndFocus
-                            },
-                            rightFocus = speedFocus,
-                        )
-                        PlayerAuxiliaryButton(
-                            visibleLabel = formatPlaybackSpeed(state.playbackSpeed),
-                            accessibilityLabel = formatPlaybackSpeed(state.playbackSpeed),
-                            labelTag = "player-speed-label",
-                            iconRes = R.drawable.ic_action_playback_speed,
-                            action = PlayerActionUiState(enabled = true),
-                            onClick = onOpenSpeed,
-                            modifier = Modifier
-                                .focusRequester(speedFocus)
-                                .testTag("player-speed"),
-                            upFocus = playFocus,
-                            leftFocus = when {
-                                state.danmakus.enabled -> danmakuFocus
-                                state.subtitles.enabled -> subtitleFocus
-                                else -> episodeGroupEndFocus
-                            },
-                            rightFocus = danmakuSettingsFocus,
-                        )
-                        PlayerAuxiliaryButton(
-                            visibleLabel = if (state.danmakuSettings.error) {
-                                stringResource(R.string.retry)
-                            } else {
-                                stringResource(R.string.settings)
-                            },
-                            accessibilityLabel = stringResource(
-                                R.string.player_danmaku_settings_button,
-                            ),
-                            labelTag = "player-danmaku-settings-label",
-                            iconRes = R.drawable.ic_action_filter,
-                            action = state.danmakuSettings,
-                            onClick = onOpenDanmakuSettings,
-                            modifier = Modifier
-                                .focusRequester(danmakuSettingsFocus)
-                                .testTag("player-danmaku-settings"),
-                            upFocus = playFocus,
-                            leftFocus = speedFocus,
-                        )
+                        visibleAuxiliaryControls.forEachIndexed { index, control ->
+                            val leftFocus = visibleAuxiliaryControls.getOrNull(index - 1)
+                                ?.let(auxiliaryFocusRequesters::getValue)
+                                ?: episodeGroupEndFocus
+                            val rightFocus = visibleAuxiliaryControls.getOrNull(index + 1)
+                                ?.let(auxiliaryFocusRequesters::getValue)
+                                ?: FocusRequester.Cancel
+                            val focusRequester = auxiliaryFocusRequesters.getValue(control)
+                            when (control) {
+                                PlayerAuxiliaryControl.Subtitle -> PlayerAuxiliaryButton(
+                                    visibleLabel = subtitleLabel,
+                                    accessibilityLabel = subtitleLabel,
+                                    labelTag = "player-subtitles-label",
+                                    iconRes = R.drawable.ic_settings_subtitle,
+                                    action = state.subtitles,
+                                    onClick = if (state.subtitles.error) {
+                                        onRetrySubtitles
+                                    } else {
+                                        onToggleSubtitles
+                                    },
+                                    modifier = Modifier
+                                        .focusRequester(focusRequester)
+                                        .testTag("player-subtitles"),
+                                    upFocus = playFocus,
+                                    leftFocus = leftFocus,
+                                    rightFocus = rightFocus,
+                                )
+
+                                PlayerAuxiliaryControl.Danmaku -> PlayerAuxiliaryButton(
+                                    visibleLabel = danmakuLabel,
+                                    accessibilityLabel = danmakuLabel,
+                                    labelTag = "player-danmaku-label",
+                                    iconRes = R.drawable.ic_settings_danmaku,
+                                    action = state.danmakus,
+                                    onClick = if (state.danmakus.error) {
+                                        onRetryDanmakus
+                                    } else {
+                                        onToggleDanmakus
+                                    },
+                                    modifier = Modifier
+                                        .focusRequester(focusRequester)
+                                        .testTag("player-danmaku"),
+                                    upFocus = playFocus,
+                                    leftFocus = leftFocus,
+                                    rightFocus = rightFocus,
+                                )
+
+                                PlayerAuxiliaryControl.Speed -> {
+                                    val speedLabel = formatPlaybackSpeed(state.playbackSpeed)
+                                    PlayerAuxiliaryButton(
+                                        visibleLabel = speedLabel,
+                                        accessibilityLabel = speedLabel,
+                                        labelTag = "player-speed-label",
+                                        iconRes = R.drawable.ic_action_playback_speed,
+                                        action = PlayerActionUiState(enabled = true),
+                                        onClick = onOpenSpeed,
+                                        modifier = Modifier
+                                            .focusRequester(focusRequester)
+                                            .testTag("player-speed"),
+                                        upFocus = playFocus,
+                                        leftFocus = leftFocus,
+                                        rightFocus = rightFocus,
+                                    )
+                                }
+
+                                PlayerAuxiliaryControl.Quality -> PlayerAuxiliaryButton(
+                                    visibleLabel = state.playbackModeLabel,
+                                    accessibilityLabel = state.playbackModeLabel,
+                                    labelTag = "player-quality-label",
+                                    iconRes = R.drawable.ic_player_quality,
+                                    action = state.quality,
+                                    onClick = onOpenDefinitions,
+                                    modifier = Modifier
+                                        .focusRequester(focusRequester)
+                                        .testTag("player-quality"),
+                                    upFocus = playFocus,
+                                    leftFocus = leftFocus,
+                                    rightFocus = rightFocus,
+                                )
+
+                                PlayerAuxiliaryControl.Settings -> PlayerAuxiliaryButton(
+                                    visibleLabel = stringResource(R.string.settings),
+                                    accessibilityLabel = stringResource(R.string.settings),
+                                    labelTag = "player-settings-label",
+                                    iconRes = R.drawable.ic_action_filter,
+                                    action = state.settings,
+                                    onClick = onOpenSettings,
+                                    modifier = Modifier
+                                        .focusRequester(focusRequester)
+                                        .testTag("player-settings"),
+                                    upFocus = playFocus,
+                                    leftFocus = leftFocus,
+                                    rightFocus = rightFocus,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -857,35 +808,12 @@ private fun PlayerControlErrorBadge() {
 }
 
 @Composable
-private fun subtitleButtonLabel(
-    action: PlayerActionUiState,
-    selectedLabel: String?,
-): String =
-    when {
-        action.error -> stringResource(R.string.retry_subtitles)
-        !action.enabled -> stringResource(R.string.no_subtitles)
-        action.active && !selectedLabel.isNullOrBlank() -> selectedLabel
-        action.active -> stringResource(R.string.subtitles_on)
-        else -> stringResource(R.string.subtitles_off)
-    }
-
-@Composable
-private fun danmakuButtonLabel(action: PlayerActionUiState): String =
-    when {
-        action.error -> stringResource(R.string.retry_danmakus)
-        !action.enabled -> stringResource(R.string.no_danmaku)
-        action.active -> stringResource(R.string.danmaku_on)
-        else -> stringResource(R.string.danmaku_off)
-    }
-
-@Composable
 private fun SeekablePlayerProgress(
     positionMillis: Long,
     durationMillis: Long,
     chapters: List<MediaChapter>,
     progressFocus: FocusRequester,
     playFocus: FocusRequester,
-    qualityFocus: FocusRequester?,
     playWhenReady: Boolean,
     onProgressFocused: () -> Unit,
     onShowActions: () -> Unit,
@@ -914,7 +842,7 @@ private fun SeekablePlayerProgress(
             .height(50.dp)
             .focusRequester(progressFocus)
             .focusProperties {
-                qualityFocus?.let { up = it }
+                up = FocusRequester.Cancel
                 down = playFocus
             }
             .onFocusChanged {
