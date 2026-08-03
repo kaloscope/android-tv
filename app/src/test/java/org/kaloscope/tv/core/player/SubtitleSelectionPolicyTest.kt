@@ -47,6 +47,38 @@ class SubtitleSelectionPolicyTest {
     }
 
     @Test
+    fun `restoration keeps a valid remembered track`() {
+        assertEquals(
+            "en",
+            SubtitleSelectionPolicy.restoredTrackId(
+                tracks = tracks(),
+                rememberedTrackId = "en",
+                settings = SubtitleSettings(enabled = false, languagePreference = "zh"),
+            ),
+        )
+    }
+
+    @Test
+    fun `restoration falls back to preference then first track`() {
+        assertEquals(
+            "zh",
+            SubtitleSelectionPolicy.restoredTrackId(
+                tracks = tracks(),
+                rememberedTrackId = "missing",
+                settings = SubtitleSettings(enabled = false, languagePreference = "zh-cn"),
+            ),
+        )
+        assertEquals(
+            "first",
+            SubtitleSelectionPolicy.restoredTrackId(
+                tracks = tracks(),
+                rememberedTrackId = null,
+                settings = SubtitleSettings(enabled = false, languagePreference = "French"),
+            ),
+        )
+    }
+
+    @Test
     fun `only selected subtitle receives default flag`() {
         val flags = listOf("first", "zh", "en").map {
             SubtitleSelectionPolicy.selectionFlags(it, "zh")

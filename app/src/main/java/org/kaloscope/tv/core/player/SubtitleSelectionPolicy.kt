@@ -8,8 +8,14 @@ object SubtitleSelectionPolicy {
     fun preferredTrackId(
         tracks: List<SubtitleTrack>,
         settings: SubtitleSettings,
+    ): String? =
+        if (settings.enabled) preferredAvailableTrackId(tracks, settings) else null
+
+    fun preferredAvailableTrackId(
+        tracks: List<SubtitleTrack>,
+        settings: SubtitleSettings,
     ): String? {
-        if (!settings.enabled || tracks.isEmpty()) {
+        if (tracks.isEmpty()) {
             return null
         }
         val expression = settings.languagePreference.trim()
@@ -21,9 +27,18 @@ object SubtitleSelectionPolicy {
             ?: return tracks.first().id
         return tracks.firstOrNull { track ->
             regex.containsMatchIn(track.language.orEmpty()) ||
-                regex.containsMatchIn(track.label)
+            regex.containsMatchIn(track.label)
         }?.id ?: tracks.first().id
     }
+
+    fun restoredTrackId(
+        tracks: List<SubtitleTrack>,
+        rememberedTrackId: String?,
+        settings: SubtitleSettings,
+    ): String? =
+        rememberedTrackId
+            ?.takeIf { candidate -> tracks.any { it.id == candidate } }
+            ?: preferredAvailableTrackId(tracks, settings)
 
     fun selectionFlags(
         trackId: String,
