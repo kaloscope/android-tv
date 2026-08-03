@@ -23,26 +23,51 @@ internal fun List<DanmakuComment>.toAkDanmakuData(): List<DanmakuItemData> =
         )
     }
 
-internal fun DanmakuSettings.toAkDanmakuConfig(): DanmakuConfig {
-    val typeFilter = TypeFilter().apply {
-        if (DanmakuDisplayMode.Scroll !in visibleModes) {
-            addFilterItem(DanmakuItemData.DANMAKU_MODE_ROLLING)
-        }
-        if (DanmakuDisplayMode.Top !in visibleModes) {
-            addFilterItem(DanmakuItemData.DANMAKU_MODE_CENTER_TOP)
-        }
-        if (DanmakuDisplayMode.Bottom !in visibleModes) {
-            addFilterItem(DanmakuItemData.DANMAKU_MODE_CENTER_BOTTOM)
-        }
+internal fun DanmakuSettings.toAkDanmakuConfig(): DanmakuConfig =
+    toAkDanmakuConfig(
+        typeFilter = TypeFilter(),
+        colorFilter = TextColorFilter(),
+        filterGeneration = 0,
+    )
+
+internal class AkDanmakuRuntimeConfigState {
+    private val typeFilter = TypeFilter()
+    private val colorFilter = TextColorFilter()
+    private var filterGeneration = 0
+
+    fun update(settings: DanmakuSettings): DanmakuConfig {
+        // DanmakuSystem increments an incoming generation once while installing it.
+        // Emitting only even generations prevents the next update from colliding
+        // with the odd generation retained by the dependency.
+        filterGeneration += FILTER_GENERATION_STEP
+        return settings.toAkDanmakuConfig(
+            typeFilter = typeFilter,
+            colorFilter = colorFilter,
+            filterGeneration = filterGeneration,
+        )
     }
+}
+
+private fun DanmakuSettings.toAkDanmakuConfig(
+    typeFilter: TypeFilter,
+    colorFilter: TextColorFilter,
+    filterGeneration: Int,
+): DanmakuConfig {
+    typeFilter.clear()
+    if (DanmakuDisplayMode.Scroll !in visibleModes) {
+        typeFilter.addFilterItem(DanmakuItemData.DANMAKU_MODE_ROLLING)
+    }
+    if (DanmakuDisplayMode.Top !in visibleModes) {
+        typeFilter.addFilterItem(DanmakuItemData.DANMAKU_MODE_CENTER_TOP)
+    }
+    if (DanmakuDisplayMode.Bottom !in visibleModes) {
+        typeFilter.addFilterItem(DanmakuItemData.DANMAKU_MODE_CENTER_BOTTOM)
+    }
+    colorFilter.filterColor = mutableSetOf(WHITE_TEXT_RGB)
     val dataFilters = buildList<DanmakuDataFilter> {
         add(typeFilter)
         if (blockColored) {
-            add(
-                TextColorFilter().apply {
-                    filterColor = mutableSetOf(WHITE_TEXT_RGB)
-                },
-            )
+            add(colorFilter)
         }
     }
     return DanmakuConfig(
@@ -53,6 +78,7 @@ internal fun DanmakuSettings.toAkDanmakuConfig(): DanmakuConfig {
         alpha = (opacityPercent / 100f).coerceIn(0f, 1f),
         visibility = enabled,
         allowOverlap = false,
+        filterGeneration = filterGeneration,
         dataFilter = dataFilters,
     )
 }
@@ -93,3 +119,4 @@ private const val FIXED_DURATION_MILLIS = 4_000L
 private const val OPAQUE_ALPHA = 0xFF000000L
 private const val DEFAULT_TEXT_COLOR = -0x1
 private const val WHITE_TEXT_RGB = 0xFFFFFF
+private const val FILTER_GENERATION_STEP = 2

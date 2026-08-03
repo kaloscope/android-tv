@@ -9,7 +9,8 @@ import org.kaloscope.tv.core.model.DanmakuSettings
 
 internal class AkDanmakuRuntime : DanmakuRuntimeControl {
     private val player = DanmakuPlayer(SimpleRenderer())
-    private var config: DanmakuConfig = DanmakuSettings().toAkDanmakuConfig()
+    private val configState = AkDanmakuRuntimeConfigState()
+    private var config: DanmakuConfig = configState.update(DanmakuSettings())
     private var released = false
 
     fun bind(view: DanmakuView) {
@@ -28,7 +29,7 @@ internal class AkDanmakuRuntime : DanmakuRuntimeControl {
         if (released) {
             return
         }
-        config = settings.toAkDanmakuConfig()
+        config = configState.update(settings)
         player.updateConfig(config)
     }
 

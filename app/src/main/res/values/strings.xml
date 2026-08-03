@@ -219,6 +219,7 @@
     <string name="previous_episode">上一集</string>
     <string name="next_episode">下一集</string>
     <string name="playback_quality">清晰度</string>
+    <string name="playback_quality_with_value">清晰度，%1$s</string>
     <string name="player_progress">播放进度</string>
     <string name="player_buffering">正在缓冲…</string>
     <string name="switching_episode">正在切换剧集…</string>

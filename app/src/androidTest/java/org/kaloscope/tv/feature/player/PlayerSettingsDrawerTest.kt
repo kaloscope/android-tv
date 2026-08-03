@@ -1,10 +1,16 @@
 package org.kaloscope.tv.feature.player
 
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasTestTag
@@ -20,6 +26,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleTrack
@@ -122,27 +129,109 @@ class PlayerSettingsDrawerTest {
         composeRule.onNodeWithText("全部屏蔽").assertDoesNotExist()
     }
 
+    @Test
+    fun combinedSettingsKeepVerticalBoundaryFocusInsideDrawer() {
+        val harness = DrawerHarness()
+        setDrawer(harness, includeFocusableBackground = true)
+
+        assertTopBoundaryStaysOn("简体中文")
+        scrollBlockRowIntoView()
+        assertBottomBoundaryStaysOnBlockRow()
+    }
+
+    @Test
+    fun subtitleOnlySettingsKeepVerticalBoundaryFocusInsideDrawer() {
+        val harness = DrawerHarness()
+        setDrawer(
+            harness = harness,
+            includeDanmakuSettings = false,
+            includeFocusableBackground = true,
+        )
+
+        assertTopBoundaryStaysOn("简体中文")
+        composeRule.onNodeWithText("时间偏移")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+            .assertIsFocused()
+    }
+
+    @Test
+    fun danmakuOnlySettingsKeepVerticalBoundaryFocusInsideDrawer() {
+        val harness = DrawerHarness()
+        setDrawer(
+            harness = harness,
+            subtitleTracks = emptyList(),
+            includeFocusableBackground = true,
+        )
+
+        assertTopBoundaryStaysOn("弹幕字号")
+        scrollBlockRowIntoView()
+        assertBottomBoundaryStaysOnBlockRow()
+    }
+
+    private fun assertTopBoundaryStaysOn(label: String) {
+        composeRule.onNodeWithText(label)
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionUp) }
+            .assertIsFocused()
+    }
+
+    private fun assertBottomBoundaryStaysOnBlockRow() {
+        composeRule.onNodeWithTag("player-settings-block-types")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+            .assertIsFocused()
+    }
+
     private fun scrollBlockRowIntoView() {
         composeRule.onNodeWithTag("player-settings-list")
             .performScrollToNode(hasTestTag("player-settings-block-types"))
     }
 
-    private fun setDrawer(harness: DrawerHarness) {
+    private fun setDrawer(
+        harness: DrawerHarness,
+        subtitleTracks: List<SubtitleTrack> = listOf(
+            SubtitleTrack("zh", "简体中文", "/zh.vtt", "zh-CN"),
+            SubtitleTrack("en", "English", "/en.vtt", "en"),
+        ),
+        includeDanmakuSettings: Boolean = true,
+        includeFocusableBackground: Boolean = false,
+    ) {
         composeRule.setContent {
             KaloscopeTheme {
-                PlayerSettingsDrawer(
-                    subtitleTracks = listOf(
-                        SubtitleTrack("zh", "简体中文", "/zh.vtt", "zh-CN"),
-                        SubtitleTrack("en", "English", "/en.vtt", "en"),
-                    ),
-                    selectedSubtitleTrackId = harness.selectedTrackId,
-                    subtitleSettings = harness.subtitleSettings,
-                    danmakuSettings = harness.danmakuSettings,
-                    onSelectSubtitleTrack = { harness.selectedTrackId = it },
-                    onChangeSubtitleSettings = { harness.subtitleSettings = it },
-                    onChangeDanmakuSettings = { harness.danmakuSettings = it },
-                    onDismiss = { harness.dismissCount += 1 },
-                )
+                Box {
+                    if (includeFocusableBackground) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            KaloscopeButton(
+                                onClick = {},
+                                modifier = Modifier.testTag("behind-drawer-top"),
+                            ) {
+                                androidx.tv.material3.Text("Behind top")
+                            }
+                            KaloscopeButton(
+                                onClick = {},
+                                modifier = Modifier.testTag("behind-drawer-bottom"),
+                            ) {
+                                androidx.tv.material3.Text("Behind bottom")
+                            }
+                        }
+                    }
+                    PlayerSettingsDrawer(
+                        subtitleTracks = subtitleTracks,
+                        selectedSubtitleTrackId = harness.selectedTrackId,
+                        subtitleSettings = harness.subtitleSettings,
+                        danmakuSettings = harness.danmakuSettings.takeIf {
+                            includeDanmakuSettings
+                        },
+                        onSelectSubtitleTrack = { harness.selectedTrackId = it },
+                        onChangeSubtitleSettings = { harness.subtitleSettings = it },
+                        onChangeDanmakuSettings = { harness.danmakuSettings = it },
+                        onDismiss = { harness.dismissCount += 1 },
+                    )
+                }
             }
         }
     }

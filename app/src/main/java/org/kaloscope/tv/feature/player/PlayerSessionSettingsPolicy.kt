@@ -3,6 +3,7 @@ package org.kaloscope.tv.feature.player
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleTrack
+import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.SubtitleSelectionPolicy
 
 internal data class PlayerSessionSettingsState(
@@ -11,6 +12,41 @@ internal data class PlayerSessionSettingsState(
     val rememberedSubtitleTrackId: String?,
     val danmakuSettings: DanmakuSettings,
 )
+
+internal data class PlayerRequestSessionState(
+    val requestId: String,
+    val sessionSettings: PlayerSessionSettingsState,
+    val playbackSpeed: Float = 1f,
+) {
+    fun updateRequest(
+        request: PlaybackRequest,
+        tracks: List<SubtitleTrack>,
+    ): PlayerRequestSessionState =
+        if (request.requestId == requestId) {
+            copy(
+                sessionSettings = PlayerSessionSettingsPolicy.refreshTracks(
+                    state = sessionSettings,
+                    tracks = tracks,
+                ),
+            )
+        } else {
+            initial(request, tracks)
+        }
+
+    companion object {
+        fun initial(
+            request: PlaybackRequest,
+            tracks: List<SubtitleTrack>,
+        ): PlayerRequestSessionState = PlayerRequestSessionState(
+            requestId = request.requestId,
+            sessionSettings = PlayerSessionSettingsPolicy.initial(
+                tracks = tracks,
+                subtitleSettings = request.subtitleSettings,
+                danmakuSettings = request.danmakuSettings,
+            ),
+        )
+    }
+}
 
 internal object PlayerSessionSettingsPolicy {
     fun initial(

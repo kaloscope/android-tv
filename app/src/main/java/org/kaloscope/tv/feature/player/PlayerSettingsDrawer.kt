@@ -128,6 +128,7 @@ internal fun PlayerSettingsDrawer(
                             value = track.language.orEmpty(),
                             selected = track.id == selectedSubtitleTrackId,
                             onClick = { onSelectSubtitleTrack(track.id) },
+                            isFirstFocusable = track.id == subtitleTracks.first().id,
                             modifier = Modifier.initialFocusWhen(
                                 condition = track.id == initialSubtitleTrackId,
                                 requester = initialFocus,
@@ -224,6 +225,7 @@ internal fun PlayerSettingsDrawer(
                                     subtitleSettings.copy(timeOffsetSeconds = 0f),
                                 )
                             },
+                            isLastFocusable = danmakuSettings == null,
                         )
                     }
                 }
@@ -248,6 +250,7 @@ internal fun PlayerSettingsDrawer(
                                 condition = initialSubtitleTrackId == null,
                                 requester = initialFocus,
                             ),
+                            isFirstFocusable = subtitleTracks.isEmpty(),
                         )
                     }
                     item {
@@ -299,6 +302,7 @@ internal fun PlayerSettingsDrawer(
                             value = blockSummary(danmakuSettings),
                             selected = false,
                             onClick = { blockMenuOpen = true },
+                            isLastFocusable = true,
                             modifier = Modifier
                                 .focusRequester(blockRowFocus)
                                 .testTag("player-settings-block-types"),
@@ -328,6 +332,8 @@ private fun PlayerSettingsRow(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isFirstFocusable: Boolean = false,
+    isLastFocusable: Boolean = false,
 ) {
     KaloscopeButton(
         onClick = onClick,
@@ -338,6 +344,12 @@ private fun PlayerSettingsRow(
             .focusProperties {
                 left = FocusRequester.Cancel
                 right = FocusRequester.Cancel
+                if (isFirstFocusable) {
+                    up = FocusRequester.Cancel
+                }
+                if (isLastFocusable) {
+                    down = FocusRequester.Cancel
+                }
             },
     ) {
         Row(
@@ -361,6 +373,8 @@ private fun <T> PlayerSettingsChoiceRow(
     label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
+    isFirstFocusable: Boolean = false,
+    isLastFocusable: Boolean = false,
 ) {
     val index = values.indexOf(selected).coerceAtLeast(0)
     fun selectOffset(offset: Int) {
@@ -372,6 +386,8 @@ private fun <T> PlayerSettingsChoiceRow(
         value = "‹  ${label(selected)}  ›",
         selected = false,
         onClick = { selectOffset(1) },
+        isFirstFocusable = isFirstFocusable,
+        isLastFocusable = isLastFocusable,
         modifier = modifier.onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             when (event.key) {
@@ -397,12 +413,16 @@ private fun PlayerSettingsAdjustRow(
     onIncrease: () -> Unit,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier,
+    isFirstFocusable: Boolean = false,
+    isLastFocusable: Boolean = false,
 ) {
     PlayerSettingsRow(
         title = title,
         value = "‹  $value  ›",
         selected = false,
         onClick = onClick,
+        isFirstFocusable = isFirstFocusable,
+        isLastFocusable = isLastFocusable,
         modifier = modifier.onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             when (event.key) {

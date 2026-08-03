@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -108,6 +107,20 @@ private fun PlayerContent(
     onBack: () -> Unit,
 ) {
     val playbackIdentity = state.request.playbackIdentity()
+    var requestSessionState by remember(state.request.requestId) {
+        mutableStateOf(
+            PlayerRequestSessionState.initial(
+                request = state.request,
+                tracks = state.subtitles,
+            ),
+        )
+    }
+    LaunchedEffect(state.request.requestId, state.subtitles) {
+        requestSessionState = requestSessionState.updateRequest(
+            request = state.request,
+            tracks = state.subtitles,
+        )
+    }
     var activeController by remember(playbackIdentity) {
         mutableStateOf<PlaybackController?>(null)
     }
@@ -146,6 +159,8 @@ private fun PlayerContent(
         KaloscopeLoadingLayout("player-loading")
         return
     }
+    val sessionSettings = requestSessionState.sessionSettings
+    val playbackSpeed = requestSessionState.playbackSpeed
     val status by controller.status.collectAsStateWithLifecycle()
     val feedback = PlaybackFeedbackPolicy.resolve(
         playbackState = status.playbackState,
@@ -177,18 +192,6 @@ private fun PlayerContent(
     }
     var actionRowVisible by remember(playbackIdentity) {
         mutableStateOf(initialControlTransition.actionRowVisible == true)
-    }
-    var sessionSettings by remember(state.request.requestId) {
-        mutableStateOf(
-            PlayerSessionSettingsPolicy.initial(
-                tracks = state.subtitles,
-                subtitleSettings = state.request.subtitleSettings,
-                danmakuSettings = state.request.danmakuSettings,
-            ),
-        )
-    }
-    var playbackSpeed by remember(state.request.requestId) {
-        mutableFloatStateOf(1f)
     }
     var danmakuRuntimeAvailable by remember(playbackIdentity) {
         mutableStateOf(true)
@@ -258,12 +261,6 @@ private fun PlayerContent(
         }
     }
 
-    LaunchedEffect(playbackIdentity, state.subtitles) {
-        sessionSettings = PlayerSessionSettingsPolicy.refreshTracks(
-            state = sessionSettings,
-            tracks = state.subtitles,
-        )
-    }
     LaunchedEffect(controller, sessionSettings.selectedSubtitleTrackId) {
         controller.selectSubtitle(sessionSettings.selectedSubtitleTrackId)
     }
@@ -626,9 +623,11 @@ private fun PlayerContent(
                         },
                         onToggleSubtitles = {
                             interactionVersion += 1
-                            sessionSettings = PlayerSessionSettingsPolicy.toggleSubtitles(
-                                state = sessionSettings,
-                                tracks = state.subtitles,
+                            requestSessionState = requestSessionState.copy(
+                                sessionSettings = PlayerSessionSettingsPolicy.toggleSubtitles(
+                                    state = requestSessionState.sessionSettings,
+                                    tracks = state.subtitles,
+                                ),
                             )
                         },
                         onOpenSpeed = {
@@ -639,8 +638,10 @@ private fun PlayerContent(
                         },
                         onToggleDanmakus = {
                             interactionVersion += 1
-                            sessionSettings = PlayerSessionSettingsPolicy.toggleDanmakus(
-                                sessionSettings,
+                            requestSessionState = requestSessionState.copy(
+                                sessionSettings = PlayerSessionSettingsPolicy.toggleDanmakus(
+                                    requestSessionState.sessionSettings,
+                                ),
                             )
                         },
                         onOpenSettings = {
@@ -713,23 +714,31 @@ private fun PlayerContent(
                     danmakusAvailable
                 },
                 onSelectSubtitleTrack = { trackId ->
-                    sessionSettings = PlayerSessionSettingsPolicy.selectSubtitleTrack(
-                        state = sessionSettings,
-                        tracks = state.subtitles,
-                        trackId = trackId,
+                    requestSessionState = requestSessionState.copy(
+                        sessionSettings = PlayerSessionSettingsPolicy.selectSubtitleTrack(
+                            state = requestSessionState.sessionSettings,
+                            tracks = state.subtitles,
+                            trackId = trackId,
+                        ),
                     )
                 },
                 onChangeSubtitleSettings = { value ->
-                    sessionSettings = sessionSettings.copy(
-                        subtitleSettings = value.copy(
-                            enabled = sessionSettings.selectedSubtitleTrackId != null,
+                    requestSessionState = requestSessionState.copy(
+                        sessionSettings = requestSessionState.sessionSettings.copy(
+                            subtitleSettings = value.copy(
+                                enabled = requestSessionState.sessionSettings
+                                    .selectedSubtitleTrackId != null,
+                            ),
                         ),
                     )
                 },
                 onChangeDanmakuSettings = { value ->
-                    sessionSettings = sessionSettings.copy(
-                        danmakuSettings = value.copy(
-                            enabled = sessionSettings.danmakuSettings.enabled,
+                    requestSessionState = requestSessionState.copy(
+                        sessionSettings = requestSessionState.sessionSettings.copy(
+                            danmakuSettings = value.copy(
+                                enabled = requestSessionState.sessionSettings
+                                    .danmakuSettings.enabled,
+                            ),
                         ),
                     )
                 },
@@ -743,7 +752,9 @@ private fun PlayerContent(
             PlayerSpeedDrawer(
                 speed = playbackSpeed,
                 onSelect = { selectedSpeed ->
-                    playbackSpeed = selectedSpeed
+                    requestSessionState = requestSessionState.copy(
+                        playbackSpeed = selectedSpeed,
+                    )
                     speedDrawerOpen = false
                     restoreSpeedFocus = true
                 },

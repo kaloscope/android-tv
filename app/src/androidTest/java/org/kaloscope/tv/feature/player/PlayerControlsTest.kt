@@ -19,6 +19,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -29,6 +30,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
@@ -752,19 +754,109 @@ class PlayerControlsTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("重试")
+        composeRule.onNodeWithTag("player-subtitles")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("player-subtitles-label", useUnmergedTree = true)
+            .assertTextEquals("重试")
+        composeRule.onNodeWithContentDescription("重试字幕")
             .assertIsEnabled()
             .assert(
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.Error,
-                    "重试",
+                    "重试字幕",
                 ),
             )
-            .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.runOnIdle {
             assertEquals(1, subtitleRetries)
         }
+    }
+
+    @Test
+    fun failedDanmakuControlKeepsRetryTextAndUsesSpecificAccessibilityLabel() {
+        var danmakuRetries = 0
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(
+                        danmakus = PlayerActionUiState(enabled = true, error = true),
+                    ),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                    onRetryDanmakus = { danmakuRetries += 1 },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-danmaku")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("player-danmaku-label", useUnmergedTree = true)
+            .assertTextEquals("重试")
+        composeRule.onNodeWithContentDescription("重试弹幕")
+            .assertIsEnabled()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Error,
+                    "重试弹幕",
+                ),
+            )
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(1, danmakuRetries)
+        }
+    }
+
+    @Test
+    fun qualityControlAnnouncesFeatureAndValueButShowsOnlyValue() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-quality")
+            .assertContentDescriptionEquals("清晰度，Network")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("player-quality-label", useUnmergedTree = true)
+            .assertTextEquals("Network")
     }
 
     @Test

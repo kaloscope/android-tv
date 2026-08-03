@@ -315,6 +315,16 @@ internal fun PlayerControls(
         state.danmakus.active -> stringResource(R.string.danmaku_on)
         else -> stringResource(R.string.danmaku_off)
     }
+    val subtitleAccessibilityLabel = if (state.subtitles.error) {
+        stringResource(R.string.retry_subtitles)
+    } else {
+        subtitleLabel
+    }
+    val danmakuAccessibilityLabel = if (state.danmakus.error) {
+        stringResource(R.string.retry_danmakus)
+    } else {
+        danmakuLabel
+    }
     LaunchedEffect(playFocusRequestVersion) {
         if (playFocusRequestVersion > 0) {
             withFrameNanos { }
@@ -476,7 +486,7 @@ internal fun PlayerControls(
                             when (control) {
                                 PlayerAuxiliaryControl.Subtitle -> PlayerAuxiliaryButton(
                                     visibleLabel = subtitleLabel,
-                                    accessibilityLabel = subtitleLabel,
+                                    accessibilityLabel = subtitleAccessibilityLabel,
                                     labelTag = "player-subtitles-label",
                                     iconRes = R.drawable.ic_settings_subtitle,
                                     action = state.subtitles,
@@ -495,7 +505,7 @@ internal fun PlayerControls(
 
                                 PlayerAuxiliaryControl.Danmaku -> PlayerAuxiliaryButton(
                                     visibleLabel = danmakuLabel,
-                                    accessibilityLabel = danmakuLabel,
+                                    accessibilityLabel = danmakuAccessibilityLabel,
                                     labelTag = "player-danmaku-label",
                                     iconRes = R.drawable.ic_settings_danmaku,
                                     action = state.danmakus,
@@ -532,7 +542,10 @@ internal fun PlayerControls(
 
                                 PlayerAuxiliaryControl.Quality -> PlayerAuxiliaryButton(
                                     visibleLabel = state.playbackModeLabel,
-                                    accessibilityLabel = state.playbackModeLabel,
+                                    accessibilityLabel = stringResource(
+                                        R.string.playback_quality_with_value,
+                                        state.playbackModeLabel,
+                                    ),
                                     labelTag = "player-quality-label",
                                     iconRes = R.drawable.ic_player_quality,
                                     action = state.quality,
