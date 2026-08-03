@@ -38,6 +38,16 @@ class DanmakuPlaybackSynchronizerTest {
     }
 
     @Test
+    fun `block setting update does not pause seek or restart`() {
+        val runtime = RecordingDanmakuRuntime()
+        val synchronizer = DanmakuPlaybackSynchronizer(runtime)
+
+        synchronizer.onSettingsChanged(DanmakuSettings(blockColored = true))
+
+        assertEquals(listOf("settings:100"), runtime.commands)
+    }
+
+    @Test
     fun `invalid speed is sanitized and dispose stops forwarding without releasing runtime`() {
         val runtime = RecordingDanmakuRuntime()
         val synchronizer = DanmakuPlaybackSynchronizer(runtime)

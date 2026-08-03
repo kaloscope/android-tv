@@ -63,9 +63,6 @@
     <string name="danmaku">弹幕</string>
     <string name="danmaku_settings_title">弹幕设置</string>
     <string name="danmaku_settings_description">设置每次进入播放器时使用的弹幕默认值。</string>
-    <string name="player_danmaku_enabled">开启弹幕</string>
-    <string name="player_danmaku_temporary_description">仅本次播放有效，不会修改全局默认值。</string>
-    <string name="player_danmaku_settings_button">弹幕设置</string>
     <string name="player_settings_title">设置</string>
     <string name="danmaku_block_types">屏蔽类型</string>
     <string name="danmaku_block_none">未屏蔽</string>
@@ -128,8 +125,6 @@
     <string name="subtitle_vertical_position_description">按左右键调整距画面底部的位置。</string>
     <string name="subtitle_time_offset">时间偏移</string>
     <string name="subtitle_time_offset_description">正值延迟，负值提前；确认键归零。</string>
-    <string name="player_subtitle_temporary_description">仅对当前播放会话生效。</string>
-    <string name="player_subtitles_off_option">关闭字幕</string>
     <string name="playback_speed">播放倍速</string>
     <string name="player_fallback_banner">直连失败，正在切换转码…</string>
     <string name="cancel">取消</string>

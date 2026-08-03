@@ -52,7 +52,6 @@ import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestNavigator
 import org.kaloscope.tv.core.player.PlaybackSettingsPolicy
 import org.kaloscope.tv.core.player.ProgressReason
-import org.kaloscope.tv.core.player.SubtitleSelectionPolicy
 
 @Composable
 fun PlayerScreen(
@@ -179,32 +178,25 @@ private fun PlayerContent(
     var actionRowVisible by remember(playbackIdentity) {
         mutableStateOf(initialControlTransition.actionRowVisible == true)
     }
-    var sessionSubtitleSettings by remember(state.request.requestId) {
-        mutableStateOf(state.request.subtitleSettings)
-    }
-    var selectedSubtitleTrackId by remember(state.request.requestId) {
+    var sessionSettings by remember(state.request.requestId) {
         mutableStateOf(
-            SubtitleSelectionPolicy.preferredTrackId(
-                state.subtitles,
-                state.request.subtitleSettings,
+            PlayerSessionSettingsPolicy.initial(
+                tracks = state.subtitles,
+                subtitleSettings = state.request.subtitleSettings,
+                danmakuSettings = state.request.danmakuSettings,
             ),
         )
     }
     var playbackSpeed by remember(state.request.requestId) {
         mutableFloatStateOf(1f)
     }
-    var sessionDanmakuSettings by remember(state.request.requestId) {
-        mutableStateOf(state.request.danmakuSettings)
-    }
     var danmakuRuntimeAvailable by remember(playbackIdentity) {
         mutableStateOf(true)
     }
     var definitionDrawerOpen by remember { mutableStateOf(false) }
     var restoreDefinitionFocus by remember { mutableStateOf(false) }
-    var danmakuDrawerOpen by remember { mutableStateOf(false) }
-    var restoreDanmakuSettingsFocus by remember { mutableStateOf(false) }
-    var subtitleDrawerOpen by remember { mutableStateOf(false) }
-    var restoreSubtitleFocus by remember { mutableStateOf(false) }
+    var settingsDrawerOpen by remember { mutableStateOf(false) }
+    var restoreSettingsFocus by remember { mutableStateOf(false) }
     var speedDrawerOpen by remember { mutableStateOf(false) }
     var restoreSpeedFocus by remember { mutableStateOf(false) }
     var interactionVersion by remember { mutableLongStateOf(0) }
@@ -231,9 +223,8 @@ private fun PlayerContent(
 
     BackHandler {
         val context = when {
-            subtitleDrawerOpen -> PlayerBackContext.SubtitleDrawer
+            settingsDrawerOpen -> PlayerBackContext.SettingsDrawer
             speedDrawerOpen -> PlayerBackContext.SpeedDrawer
-            danmakuDrawerOpen -> PlayerBackContext.DanmakuDrawer
             definitionDrawerOpen -> PlayerBackContext.DefinitionDrawer
             controlLayer != PlayerControlLayer.Hidden &&
                 feedback in setOf(
@@ -246,19 +237,14 @@ private fun PlayerContent(
             else -> PlayerBackContext.Player
         }
         when (PlayerControlKeyPolicy.backCommand(context)) {
-            PlayerControlCommand.CloseSubtitleDrawer -> {
-                subtitleDrawerOpen = false
-                restoreSubtitleFocus = true
+            PlayerControlCommand.CloseSettingsDrawer -> {
+                settingsDrawerOpen = false
+                restoreSettingsFocus = true
             }
 
             PlayerControlCommand.CloseSpeedDrawer -> {
                 speedDrawerOpen = false
                 restoreSpeedFocus = true
-            }
-
-            PlayerControlCommand.CloseDanmakuDrawer -> {
-                danmakuDrawerOpen = false
-                restoreDanmakuSettingsFocus = true
             }
 
             PlayerControlCommand.CloseDefinitionDrawer -> {
@@ -273,22 +259,18 @@ private fun PlayerContent(
     }
 
     LaunchedEffect(playbackIdentity, state.subtitles) {
-        selectedSubtitleTrackId = if (!sessionSubtitleSettings.enabled) {
-            null
-        } else {
-            selectedSubtitleTrackId
-                ?.takeIf { selected -> state.subtitles.any { it.id == selected } }
-                ?: SubtitleSelectionPolicy.preferredTrackId(
-                    state.subtitles,
-                    sessionSubtitleSettings,
-                )
-        }
+        sessionSettings = PlayerSessionSettingsPolicy.refreshTracks(
+            state = sessionSettings,
+            tracks = state.subtitles,
+        )
     }
-    LaunchedEffect(controller, selectedSubtitleTrackId) {
-        controller.selectSubtitle(selectedSubtitleTrackId)
+    LaunchedEffect(controller, sessionSettings.selectedSubtitleTrackId) {
+        controller.selectSubtitle(sessionSettings.selectedSubtitleTrackId)
     }
-    LaunchedEffect(controller, sessionSubtitleSettings.timeOffsetSeconds) {
-        controller.setSubtitleTimeOffset(sessionSubtitleSettings.timeOffsetSeconds)
+    LaunchedEffect(controller, sessionSettings.subtitleSettings.timeOffsetSeconds) {
+        controller.setSubtitleTimeOffset(
+            sessionSettings.subtitleSettings.timeOffsetSeconds,
+        )
     }
     LaunchedEffect(controller, playbackSpeed) {
         controller.setPlaybackSpeed(playbackSpeed)
@@ -311,8 +293,7 @@ private fun PlayerContent(
         status.failure,
         status.fallbackInProgress,
         definitionDrawerOpen,
-        danmakuDrawerOpen,
-        subtitleDrawerOpen,
+        settingsDrawerOpen,
         speedDrawerOpen,
         feedback,
     ) {
@@ -320,8 +301,7 @@ private fun PlayerContent(
         if (
             autoHideDelayMillis != null &&
             !definitionDrawerOpen &&
-            !danmakuDrawerOpen &&
-            !subtitleDrawerOpen &&
+            !settingsDrawerOpen &&
             !speedDrawerOpen &&
             feedback == PlaybackFeedback.Ready
         ) {
@@ -340,8 +320,7 @@ private fun PlayerContent(
         controlLayer,
         requestedControlsFocus,
         definitionDrawerOpen,
-        danmakuDrawerOpen,
-        subtitleDrawerOpen,
+        settingsDrawerOpen,
         speedDrawerOpen,
         feedback,
     ) {
@@ -353,12 +332,10 @@ private fun PlayerContent(
                 PlaybackFeedback.FallingBack,
             ) &&
             !definitionDrawerOpen &&
-            !danmakuDrawerOpen &&
-            !subtitleDrawerOpen &&
+            !settingsDrawerOpen &&
             !speedDrawerOpen &&
             !restoreDefinitionFocus &&
-            !restoreDanmakuSettingsFocus &&
-            !restoreSubtitleFocus &&
+            !restoreSettingsFocus &&
             !restoreSpeedFocus
         ) {
             when (requestedControlsFocus) {
@@ -368,8 +345,7 @@ private fun PlayerContent(
         } else if (
             controlLayer != PlayerControlLayer.Controls &&
             !definitionDrawerOpen &&
-            !danmakuDrawerOpen &&
-            !subtitleDrawerOpen &&
+            !settingsDrawerOpen &&
             !speedDrawerOpen
         ) {
             playerFocus.requestFocus()
@@ -382,18 +358,11 @@ private fun PlayerContent(
             restoreDefinitionFocus = false
         }
     }
-    LaunchedEffect(danmakuDrawerOpen, restoreDanmakuSettingsFocus) {
-        if (!danmakuDrawerOpen && restoreDanmakuSettingsFocus) {
+    LaunchedEffect(settingsDrawerOpen, restoreSettingsFocus) {
+        if (!settingsDrawerOpen && restoreSettingsFocus) {
             withFrameNanos { }
             settingsFocus.requestFocus()
-            restoreDanmakuSettingsFocus = false
-        }
-    }
-    LaunchedEffect(subtitleDrawerOpen, restoreSubtitleFocus) {
-        if (!subtitleDrawerOpen && restoreSubtitleFocus) {
-            withFrameNanos { }
-            subtitleFocus.requestFocus()
-            restoreSubtitleFocus = false
+            restoreSettingsFocus = false
         }
     }
     LaunchedEffect(speedDrawerOpen, restoreSpeedFocus) {
@@ -406,8 +375,7 @@ private fun PlayerContent(
     LaunchedEffect(status.failure) {
         if (status.failure != null) {
             definitionDrawerOpen = false
-            danmakuDrawerOpen = false
-            subtitleDrawerOpen = false
+            settingsDrawerOpen = false
             speedDrawerOpen = false
         }
     }
@@ -423,6 +391,10 @@ private fun PlayerContent(
             onNext()
         }
     }
+    val subtitlesFailed = PlayerExtra.Subtitles in state.extraErrors
+    val danmakusFailed = PlayerExtra.Danmakus in state.extraErrors
+    val danmakusAvailable =
+        state.danmakus.isNotEmpty() && danmakuRuntimeAvailable && !danmakusFailed
 
     Box(
         modifier = Modifier
@@ -433,16 +405,14 @@ private fun PlayerContent(
                 enabled =
                     controlLayer != PlayerControlLayer.Controls &&
                         !definitionDrawerOpen &&
-                        !danmakuDrawerOpen &&
-                        !subtitleDrawerOpen &&
+                        !settingsDrawerOpen &&
                         !speedDrawerOpen,
             )
             .onPreviewKeyEvent { event ->
                 if (
                     controlLayer == PlayerControlLayer.Controls ||
                     definitionDrawerOpen ||
-                    danmakuDrawerOpen ||
-                    subtitleDrawerOpen ||
+                    settingsDrawerOpen ||
                     speedDrawerOpen
                 ) {
                     if (event.type == KeyEventType.KeyDown) {
@@ -507,15 +477,15 @@ private fun PlayerContent(
             player = controller.player,
             modifier = Modifier.fillMaxSize(),
         )
-        if (selectedSubtitleTrackId != null && status.cues.isNotEmpty()) {
+        if (sessionSettings.selectedSubtitleTrackId != null && status.cues.isNotEmpty()) {
             AndroidView(
                 factory = { context ->
                     SubtitleView(context).apply {
-                        applySubtitleStyle(sessionSubtitleSettings)
+                        applySubtitleStyle(sessionSettings.subtitleSettings)
                     }
                 },
                 update = { subtitleView ->
-                    subtitleView.applySubtitleStyle(sessionSubtitleSettings)
+                    subtitleView.applySubtitleStyle(sessionSettings.subtitleSettings)
                     subtitleView.setCues(status.cues)
                 },
                 modifier = Modifier.fillMaxSize(),
@@ -525,7 +495,7 @@ private fun PlayerContent(
             AkDanmakuOverlay(
                 player = controller.player,
                 comments = state.danmakus,
-                settings = sessionDanmakuSettings,
+                settings = sessionSettings.danmakuSettings,
                 onRuntimeAvailable = { danmakuRuntimeAvailable = it },
             )
         }
@@ -537,8 +507,7 @@ private fun PlayerContent(
                 PlaybackFeedback.FallingBack,
             ) &&
             !definitionDrawerOpen &&
-            !danmakuDrawerOpen &&
-            !subtitleDrawerOpen &&
+            !settingsDrawerOpen &&
             !speedDrawerOpen &&
             !state.switchingItem
         ) {
@@ -580,10 +549,6 @@ private fun PlayerContent(
                     )
                 } ?: localRequest.title
             }
-            val subtitlesFailed = PlayerExtra.Subtitles in state.extraErrors
-            val danmakusFailed = PlayerExtra.Danmakus in state.extraErrors
-            val danmakusAvailable =
-                state.danmakus.isNotEmpty() && danmakuRuntimeAvailable && !danmakusFailed
             val controlsState = PlayerControlsUiState(
                 title = parentTitle ?: state.request.title,
                 secondaryTitle = secondaryTitle,
@@ -603,17 +568,16 @@ private fun PlayerContent(
                     active =
                         state.subtitles.isNotEmpty() &&
                             !subtitlesFailed &&
-                            selectedSubtitleTrackId != null,
+                            sessionSettings.selectedSubtitleTrackId != null,
                     error = subtitlesFailed,
                 ),
                 danmakus = PlayerActionUiState(
                     enabled = danmakusFailed || danmakusAvailable,
-                    active = danmakusAvailable && sessionDanmakuSettings.enabled,
+                    active = danmakusAvailable && sessionSettings.danmakuSettings.enabled,
                     error = danmakusFailed,
                 ),
                 settings = PlayerActionUiState(
-                    enabled = danmakusAvailable,
-                    error = danmakusFailed,
+                    enabled = state.subtitles.isNotEmpty() || danmakusAvailable,
                 ),
                 quality = PlayerActionUiState(enabled = definitions.size > 1),
                 chapters = state.mediaProbe?.chapters.orEmpty(),
@@ -662,36 +626,33 @@ private fun PlayerContent(
                         },
                         onToggleSubtitles = {
                             interactionVersion += 1
-                            subtitleDrawerOpen = true
-                            speedDrawerOpen = false
-                            definitionDrawerOpen = false
-                            danmakuDrawerOpen = false
+                            sessionSettings = PlayerSessionSettingsPolicy.toggleSubtitles(
+                                state = sessionSettings,
+                                tracks = state.subtitles,
+                            )
                         },
                         onOpenSpeed = {
                             interactionVersion += 1
                             speedDrawerOpen = true
-                            subtitleDrawerOpen = false
+                            settingsDrawerOpen = false
                             definitionDrawerOpen = false
-                            danmakuDrawerOpen = false
                         },
                         onToggleDanmakus = {
                             interactionVersion += 1
-                            sessionDanmakuSettings = sessionDanmakuSettings.copy(
-                                enabled = !sessionDanmakuSettings.enabled,
+                            sessionSettings = PlayerSessionSettingsPolicy.toggleDanmakus(
+                                sessionSettings,
                             )
                         },
                         onOpenSettings = {
                             interactionVersion += 1
-                            danmakuDrawerOpen = true
+                            settingsDrawerOpen = true
                             definitionDrawerOpen = false
-                            subtitleDrawerOpen = false
                             speedDrawerOpen = false
                         },
                         onOpenDefinitions = {
                             interactionVersion += 1
                             definitionDrawerOpen = true
-                            danmakuDrawerOpen = false
-                            subtitleDrawerOpen = false
+                            settingsDrawerOpen = false
                             speedDrawerOpen = false
                         },
                         onSeekPreviewBy = { offsetMillis ->
@@ -743,31 +704,38 @@ private fun PlayerContent(
                 },
             )
         }
-        if (danmakuDrawerOpen) {
-            PlayerDanmakuSettingsDrawer(
-                settings = sessionDanmakuSettings,
-                onChange = { sessionDanmakuSettings = it },
-                onDismiss = {
-                    danmakuDrawerOpen = false
-                    restoreDanmakuSettingsFocus = true
+        if (settingsDrawerOpen) {
+            PlayerSettingsDrawer(
+                subtitleTracks = state.subtitles,
+                selectedSubtitleTrackId = sessionSettings.rememberedSubtitleTrackId,
+                subtitleSettings = sessionSettings.subtitleSettings,
+                danmakuSettings = sessionSettings.danmakuSettings.takeIf {
+                    danmakusAvailable
                 },
-            )
-        }
-        if (subtitleDrawerOpen) {
-            PlayerSubtitleSettingsDrawer(
-                tracks = state.subtitles,
-                selectedTrackId = selectedSubtitleTrackId,
-                settings = sessionSubtitleSettings,
-                onSelectTrack = { trackId ->
-                    selectedSubtitleTrackId = trackId
-                    sessionSubtitleSettings = sessionSubtitleSettings.copy(
-                        enabled = trackId != null,
+                onSelectSubtitleTrack = { trackId ->
+                    sessionSettings = PlayerSessionSettingsPolicy.selectSubtitleTrack(
+                        state = sessionSettings,
+                        tracks = state.subtitles,
+                        trackId = trackId,
                     )
                 },
-                onChangeSettings = { sessionSubtitleSettings = it },
+                onChangeSubtitleSettings = { value ->
+                    sessionSettings = sessionSettings.copy(
+                        subtitleSettings = value.copy(
+                            enabled = sessionSettings.selectedSubtitleTrackId != null,
+                        ),
+                    )
+                },
+                onChangeDanmakuSettings = { value ->
+                    sessionSettings = sessionSettings.copy(
+                        danmakuSettings = value.copy(
+                            enabled = sessionSettings.danmakuSettings.enabled,
+                        ),
+                    )
+                },
                 onDismiss = {
-                    subtitleDrawerOpen = false
-                    restoreSubtitleFocus = true
+                    settingsDrawerOpen = false
+                    restoreSettingsFocus = true
                 },
             )
         }

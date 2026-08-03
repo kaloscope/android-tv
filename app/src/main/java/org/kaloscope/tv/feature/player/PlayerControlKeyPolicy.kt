@@ -26,9 +26,8 @@ internal enum class PlayerControlFocusTarget {
 }
 
 internal enum class PlayerBackContext {
-    SubtitleDrawer,
+    SettingsDrawer,
     SpeedDrawer,
-    DanmakuDrawer,
     DefinitionDrawer,
     Controls,
     Player,
@@ -55,11 +54,9 @@ internal sealed interface PlayerControlCommand {
 
     data object HideControls : PlayerControlCommand
 
-    data object CloseDanmakuDrawer : PlayerControlCommand
+    data object CloseSettingsDrawer : PlayerControlCommand
 
     data object CloseDefinitionDrawer : PlayerControlCommand
-
-    data object CloseSubtitleDrawer : PlayerControlCommand
 
     data object CloseSpeedDrawer : PlayerControlCommand
 
@@ -93,9 +90,8 @@ internal object PlayerControlKeyPolicy {
 
     fun backCommand(context: PlayerBackContext): PlayerControlCommand =
         when (context) {
-            PlayerBackContext.SubtitleDrawer -> PlayerControlCommand.CloseSubtitleDrawer
+            PlayerBackContext.SettingsDrawer -> PlayerControlCommand.CloseSettingsDrawer
             PlayerBackContext.SpeedDrawer -> PlayerControlCommand.CloseSpeedDrawer
-            PlayerBackContext.DanmakuDrawer -> PlayerControlCommand.CloseDanmakuDrawer
             PlayerBackContext.DefinitionDrawer -> PlayerControlCommand.CloseDefinitionDrawer
             PlayerBackContext.Controls -> PlayerControlCommand.HideControls
             PlayerBackContext.Player -> PlayerControlCommand.ExitPlayer
