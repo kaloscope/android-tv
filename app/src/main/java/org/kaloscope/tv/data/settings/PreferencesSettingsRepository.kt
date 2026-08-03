@@ -51,6 +51,7 @@ class PreferencesSettingsRepository @Inject constructor(
                     DanmakuDisplayMode.Top in settings.danmaku.visibleModes
                 preferences[DANMAKU_BOTTOM_VISIBLE] =
                     DanmakuDisplayMode.Bottom in settings.danmaku.visibleModes
+                preferences[DANMAKU_COLORED_BLOCKED] = settings.danmaku.blockColored
                 val subtitle = SubtitleSettingsPolicy.sanitize(settings.subtitle)
                 preferences[SUBTITLE_ENABLED] = subtitle.enabled
                 preferences[SUBTITLE_LANGUAGE_PREFERENCE] = subtitle.languagePreference
@@ -98,6 +99,7 @@ class PreferencesSettingsRepository @Inject constructor(
                         add(DanmakuDisplayMode.Bottom)
                     }
                 },
+                blockColored = this[DANMAKU_COLORED_BLOCKED] ?: false,
             ),
             subtitle = SubtitleSettingsPolicy.sanitize(
                 SubtitleSettings(
@@ -152,6 +154,7 @@ class PreferencesSettingsRepository @Inject constructor(
         val DANMAKU_SCROLL_VISIBLE = booleanPreferencesKey("danmaku_scroll_visible")
         val DANMAKU_TOP_VISIBLE = booleanPreferencesKey("danmaku_top_visible")
         val DANMAKU_BOTTOM_VISIBLE = booleanPreferencesKey("danmaku_bottom_visible")
+        val DANMAKU_COLORED_BLOCKED = booleanPreferencesKey("danmaku_colored_blocked")
         val SUBTITLE_ENABLED = booleanPreferencesKey("subtitle_enabled")
         val SUBTITLE_LANGUAGE_PREFERENCE =
             stringPreferencesKey("subtitle_language_preference")

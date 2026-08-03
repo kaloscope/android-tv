@@ -7,6 +7,7 @@ data class DanmakuSettings(
     val opacityPercent: Int = 100,
     val displayAreaPercent: Int = 75,
     val visibleModes: Set<DanmakuDisplayMode> = DanmakuDisplayMode.entries.toSet(),
+    val blockColored: Boolean = false,
 )
 
 enum class DanmakuTextSize {

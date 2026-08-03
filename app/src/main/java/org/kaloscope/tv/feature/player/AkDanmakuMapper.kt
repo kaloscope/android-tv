@@ -2,6 +2,8 @@ package org.kaloscope.tv.feature.player
 
 import com.kuaishou.akdanmaku.DanmakuConfig
 import com.kuaishou.akdanmaku.data.DanmakuItemData
+import com.kuaishou.akdanmaku.ecs.component.filter.DanmakuDataFilter
+import com.kuaishou.akdanmaku.ecs.component.filter.TextColorFilter
 import com.kuaishou.akdanmaku.ecs.component.filter.TypeFilter
 import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
@@ -33,6 +35,16 @@ internal fun DanmakuSettings.toAkDanmakuConfig(): DanmakuConfig {
             addFilterItem(DanmakuItemData.DANMAKU_MODE_CENTER_BOTTOM)
         }
     }
+    val dataFilters = buildList<DanmakuDataFilter> {
+        add(typeFilter)
+        if (blockColored) {
+            add(
+                TextColorFilter().apply {
+                    filterColor = mutableSetOf(WHITE_TEXT_RGB)
+                },
+            )
+        }
+    }
     return DanmakuConfig(
         durationMs = FIXED_DURATION_MILLIS,
         rollingDurationMs = speed.durationMillis,
@@ -41,7 +53,7 @@ internal fun DanmakuSettings.toAkDanmakuConfig(): DanmakuConfig {
         alpha = (opacityPercent / 100f).coerceIn(0f, 1f),
         visibility = enabled,
         allowOverlap = false,
-        dataFilter = listOf(typeFilter),
+        dataFilter = dataFilters,
     )
 }
 
@@ -80,3 +92,4 @@ private const val BASE_TEXT_SIZE = 25
 private const val FIXED_DURATION_MILLIS = 4_000L
 private const val OPAQUE_ALPHA = 0xFF000000L
 private const val DEFAULT_TEXT_COLOR = -0x1
+private const val WHITE_TEXT_RGB = 0xFFFFFF

@@ -1,6 +1,7 @@
 package org.kaloscope.tv.feature.player
 
 import com.kuaishou.akdanmaku.data.DanmakuItemData
+import com.kuaishou.akdanmaku.ecs.component.filter.TextColorFilter
 import com.kuaishou.akdanmaku.ecs.component.filter.TypeFilter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -72,6 +73,18 @@ class AkDanmakuMapperTest {
         assertTrue(
             DanmakuItemData.DANMAKU_MODE_CENTER_BOTTOM in typeFilter.filterSet,
         )
+    }
+
+    @Test
+    fun `colored blocking keeps only white RGB while type filtering stays independent`() {
+        val config = DanmakuSettings(
+            visibleModes = setOf(DanmakuDisplayMode.Scroll),
+            blockColored = true,
+        ).toAkDanmakuConfig()
+
+        val colorFilter = config.dataFilter.filterIsInstance<TextColorFilter>().single()
+        assertEquals(setOf(0xFFFFFF), colorFilter.filterColor)
+        assertEquals(1, config.dataFilter.filterIsInstance<TypeFilter>().size)
     }
 }
 

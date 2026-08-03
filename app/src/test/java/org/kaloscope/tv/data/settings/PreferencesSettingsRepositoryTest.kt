@@ -42,6 +42,7 @@ class PreferencesSettingsRepositoryTest {
             ),
             result.value.danmaku,
         )
+        assertEquals(false, result.value.danmaku.blockColored)
     }
 
     @Test
@@ -83,6 +84,7 @@ class PreferencesSettingsRepositoryTest {
                 DanmakuDisplayMode.Scroll,
                 DanmakuDisplayMode.Top,
             ),
+            blockColored = true,
         )
 
         PreferencesSettingsRepository(store).saveSettings(
