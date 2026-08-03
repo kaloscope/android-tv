@@ -345,7 +345,8 @@ internal fun PlayerControls(
     onToggleDanmakus: () -> Unit,
     onOpenDanmakuSettings: () -> Unit,
     onOpenDefinitions: () -> Unit,
-    onSeekTo: (Long) -> Unit,
+    onSeekPreviewBy: (Long) -> Unit,
+    onSeekPreviewFinished: () -> Unit,
     onHideControls: () -> Unit,
     onInteraction: () -> Unit,
     actionRowVisible: Boolean = true,
@@ -412,7 +413,8 @@ internal fun PlayerControls(
                 playFocusRequestVersion += 1
             },
             onPlayPause = onPlayPause,
-            onSeekTo = onSeekTo,
+            onSeekPreviewBy = onSeekPreviewBy,
+            onSeekPreviewFinished = onSeekPreviewFinished,
             onHideControls = onHideControls,
             onInteraction = onInteraction,
             modifier = Modifier.fillMaxWidth(),
@@ -888,7 +890,8 @@ private fun SeekablePlayerProgress(
     onProgressFocused: () -> Unit,
     onShowActions: () -> Unit,
     onPlayPause: () -> Unit,
-    onSeekTo: (Long) -> Unit,
+    onSeekPreviewBy: (Long) -> Unit,
+    onSeekPreviewFinished: () -> Unit,
     onHideControls: () -> Unit,
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier,
@@ -896,8 +899,7 @@ private fun SeekablePlayerProgress(
     val enabled = durationMillis > 0
     val progressDescription = stringResource(R.string.player_progress)
     var focused by remember { mutableStateOf(false) }
-    var previewMillis by remember { mutableStateOf<Long?>(null) }
-    val displayPosition = previewMillis ?: positionMillis
+    val displayPosition = positionMillis
     val progress = if (enabled) {
         (displayPosition.toFloat() / durationMillis).coerceIn(0f, 1f)
     } else {
@@ -906,12 +908,6 @@ private fun SeekablePlayerProgress(
     val chapterMarkers = ChapterTimelinePolicy.markers(chapters, durationMillis)
     val currentChapterTitle = ChapterTimelinePolicy.currentTitle(chapters, displayPosition)
     val progressColor = playerProgressColor(playWhenReady)
-
-    LaunchedEffect(positionMillis, durationMillis, focused) {
-        if (!focused) {
-            previewMillis = null
-        }
-    }
 
     BoxWithConstraints(
         modifier = modifier
@@ -938,18 +934,10 @@ private fun SeekablePlayerProgress(
                     },
                 ) ?: return@onPreviewKeyEvent false
                 when (command) {
-                    is PlayerControlCommand.PreviewSeek -> {
-                        PlayerControlKeyPolicy.previewTarget(
-                            currentTargetMillis = previewMillis ?: positionMillis,
-                            durationMillis = durationMillis,
-                            offsetMillis = command.offsetMillis,
-                        )?.let { previewMillis = it }
-                    }
+                    is PlayerControlCommand.PreviewSeek ->
+                        onSeekPreviewBy(command.offsetMillis)
 
-                    PlayerControlCommand.SubmitSeekPreview -> {
-                        previewMillis?.let(onSeekTo)
-                        previewMillis = null
-                    }
+                    PlayerControlCommand.SubmitSeekPreview -> onSeekPreviewFinished()
 
                     PlayerControlCommand.TogglePlaybackAndShowControls -> onPlayPause()
 

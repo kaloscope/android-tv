@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -154,7 +156,17 @@ private fun PlayerContent(
         failure = status.failure,
         playWhenReady = status.playWhenReady,
     )
-    var positionMillis by remember(playbackIdentity) { mutableLongStateOf(0) }
+    val seekScope = rememberCoroutineScope()
+    val seekCoordinator = remember(playbackIdentity, controller) {
+        PlayerSeekCoordinator(
+            scope = seekScope,
+            onSeek = controller::seekTo,
+        )
+    }
+    DisposableEffect(seekCoordinator) {
+        onDispose(seekCoordinator::cancelPendingInteraction)
+    }
+    val seekState by seekCoordinator.state.collectAsStateWithLifecycle()
     val initialControlTransition = PlayerControlLayerPolicy.initialTransition()
     var controlLayer by remember(playbackIdentity) {
         mutableStateOf(initialControlTransition.layer)
@@ -281,9 +293,9 @@ private fun PlayerContent(
     LaunchedEffect(controller, playbackSpeed) {
         controller.setPlaybackSpeed(playbackSpeed)
     }
-    LaunchedEffect(controller) {
+    LaunchedEffect(controller, seekCoordinator) {
         while (true) {
-            positionMillis = controller.player.currentPosition.coerceAtLeast(0)
+            seekCoordinator.reportPlayerPosition(controller.player.currentPosition)
             delay(500)
         }
     }
@@ -459,7 +471,15 @@ private fun PlayerContent(
                     }
 
                     is PlayerControlCommand.SeekAndShowPreview -> {
-                        controller.seekBy(command.offsetMillis)
+                        seekCoordinator.adjustBy(
+                            durationMillis = status.effectiveDurationMillis,
+                            offsetMillis = command.offsetMillis,
+                        )
+                        true
+                    }
+
+                    PlayerControlCommand.SubmitSeekPreview -> {
+                        seekCoordinator.release()
                         true
                     }
 
@@ -568,7 +588,7 @@ private fun PlayerContent(
                 title = parentTitle ?: state.request.title,
                 secondaryTitle = secondaryTitle,
                 playWhenReady = status.playWhenReady,
-                positionMillis = positionMillis,
+                positionMillis = seekState.displayPositionMillis,
                 durationMillis = status.effectiveDurationMillis,
                 playbackModeLabel = qualityLabel,
                 playbackSpeed = playbackSpeed,
@@ -622,7 +642,10 @@ private fun PlayerContent(
                         },
                         onRewind = {
                             interactionVersion += 1
-                            controller.seekBy(-10_000)
+                            seekCoordinator.stepBy(
+                                durationMillis = status.effectiveDurationMillis,
+                                offsetMillis = -10_000L,
+                            )
                         },
                         onPlayPause = {
                             interactionVersion += 1
@@ -630,7 +653,10 @@ private fun PlayerContent(
                         },
                         onForward = {
                             interactionVersion += 1
-                            controller.seekBy(10_000)
+                            seekCoordinator.stepBy(
+                                durationMillis = status.effectiveDurationMillis,
+                                offsetMillis = 10_000L,
+                            )
                         },
                         onNext = {
                             interactionVersion += 1
@@ -671,10 +697,13 @@ private fun PlayerContent(
                             subtitleDrawerOpen = false
                             speedDrawerOpen = false
                         },
-                        onSeekTo = { position ->
-                            interactionVersion += 1
-                            controller.seekTo(position)
+                        onSeekPreviewBy = { offsetMillis ->
+                            seekCoordinator.adjustBy(
+                                durationMillis = status.effectiveDurationMillis,
+                                offsetMillis = offsetMillis,
+                            )
                         },
+                        onSeekPreviewFinished = seekCoordinator::release,
                         onHideControls = {
                             controlLayer = PlayerControlLayer.Hidden
                         },

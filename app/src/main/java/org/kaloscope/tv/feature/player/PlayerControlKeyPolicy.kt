@@ -105,6 +105,12 @@ internal object PlayerControlKeyPolicy {
         key: PlayerRemoteKey,
         phase: PlayerKeyPhase,
     ): PlayerControlCommand? {
+        if (
+            phase == PlayerKeyPhase.Up &&
+            (key == PlayerRemoteKey.Left || key == PlayerRemoteKey.Right)
+        ) {
+            return PlayerControlCommand.SubmitSeekPreview
+        }
         if (phase != PlayerKeyPhase.Down) {
             return null
         }
@@ -130,6 +136,12 @@ internal object PlayerControlKeyPolicy {
         key: PlayerRemoteKey,
         phase: PlayerKeyPhase,
     ): PlayerControlCommand? {
+        if (
+            phase == PlayerKeyPhase.Up &&
+            (key == PlayerRemoteKey.Left || key == PlayerRemoteKey.Right)
+        ) {
+            return PlayerControlCommand.SubmitSeekPreview
+        }
         if (phase != PlayerKeyPhase.Down) {
             return null
         }

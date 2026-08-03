@@ -59,10 +59,26 @@ class PlayerControlKeyPolicyTest {
             PlayerControlCommand.HideControls,
             previewCommand(PlayerRemoteKey.Back),
         )
+        assertEquals(
+            PlayerControlCommand.SubmitSeekPreview,
+            PlayerControlKeyPolicy.command(
+                context = PlayerControlContext.Preview,
+                key = PlayerRemoteKey.Right,
+                phase = PlayerKeyPhase.Up,
+            ),
+        )
     }
 
     @Test
-    fun `hidden controls ignore key up and unsupported keys`() {
+    fun `hidden controls submit seek release and ignore unsupported releases`() {
+        assertEquals(
+            PlayerControlCommand.SubmitSeekPreview,
+            PlayerControlKeyPolicy.command(
+                context = PlayerControlContext.HiddenControls,
+                key = PlayerRemoteKey.Left,
+                phase = PlayerKeyPhase.Up,
+            ),
+        )
         assertNull(
             PlayerControlKeyPolicy.command(
                 context = PlayerControlContext.HiddenControls,

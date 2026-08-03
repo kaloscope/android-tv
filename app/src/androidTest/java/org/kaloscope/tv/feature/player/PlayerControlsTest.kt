@@ -67,7 +67,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -112,7 +113,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -161,7 +163,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -222,7 +225,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -268,7 +272,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -360,7 +365,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -394,7 +400,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = { qualityClicks += 1 },
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -447,7 +454,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -498,7 +506,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = { qualityClicks += 1 },
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -554,7 +563,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                     onRetrySubtitles = { subtitleRetries += 1 },
@@ -605,7 +615,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -693,7 +704,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -739,7 +751,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -765,11 +778,12 @@ class PlayerControlsTest {
     fun progressSubmitsSeekAndReturnsFocusToPlay() {
         val seekTargets = mutableListOf<Long>()
         var actionRowVisible by mutableStateOf(true)
+        var displayedPositionMillis by mutableStateOf(10_000L)
 
         composeRule.setContent {
             MaterialTheme {
                 PlayerControls(
-                    state = controlsState(),
+                    state = controlsState().copy(positionMillis = displayedPositionMillis),
                     actionRowVisible = actionRowVisible,
                     onActionRowVisibilityChange = { actionRowVisible = it },
                     playFocus = remember { FocusRequester() },
@@ -787,7 +801,12 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = seekTargets::add,
+                    onSeekPreviewBy = { offsetMillis ->
+                        displayedPositionMillis += offsetMillis
+                    },
+                    onSeekPreviewFinished = {
+                        seekTargets += displayedPositionMillis
+                    },
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -808,6 +827,61 @@ class PlayerControlsTest {
         composeRule.onNodeWithTag("player-progress")
             .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithContentDescription("播放").assertIsFocused()
+    }
+
+    @Test
+    fun progressKeepsSubmittedTargetVisibleUntilPlayerReportsIt() {
+        val seekTargets = mutableListOf<Long>()
+        var displayedPositionMillis by mutableStateOf(10_000L)
+
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState().copy(positionMillis = displayedPositionMillis),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    danmakuSettingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onOpenSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenDanmakuSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = { offsetMillis ->
+                        displayedPositionMillis += offsetMillis
+                    },
+                    onSeekPreviewFinished = {
+                        seekTargets += displayedPositionMillis
+                    },
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-progress")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                keyDown(Key.DirectionRight)
+            }
+        composeRule.onAllNodesWithText("00:20").assertCountEquals(2)
+        composeRule.runOnIdle {
+            assertTrue(seekTargets.isEmpty())
+        }
+
+        composeRule.onNodeWithTag("player-progress")
+            .performKeyInput { keyUp(Key.DirectionRight) }
+
+        composeRule.onAllNodesWithText("00:20").assertCountEquals(2)
+        composeRule.runOnIdle {
+            assertEquals(listOf(20_000L), seekTargets)
+        }
     }
 
     @Test
@@ -834,7 +908,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -888,7 +963,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -940,7 +1016,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -989,7 +1066,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -1022,7 +1100,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -1059,7 +1138,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -1211,7 +1291,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -1255,7 +1336,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )
@@ -1295,7 +1377,8 @@ class PlayerControlsTest {
                     onToggleDanmakus = {},
                     onOpenDanmakuSettings = {},
                     onOpenDefinitions = {},
-                    onSeekTo = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
                     onHideControls = {},
                     onInteraction = {},
                 )

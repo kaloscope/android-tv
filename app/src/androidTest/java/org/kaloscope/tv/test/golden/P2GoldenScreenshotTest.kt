@@ -412,7 +412,8 @@ private fun GoldenPlayerControls() {
             onToggleDanmakus = {},
             onOpenDanmakuSettings = {},
             onOpenDefinitions = {},
-            onSeekTo = {},
+            onSeekPreviewBy = {},
+            onSeekPreviewFinished = {},
             onHideControls = {},
             onInteraction = {},
         )
