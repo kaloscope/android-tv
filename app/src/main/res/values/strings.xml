@@ -66,6 +66,13 @@
     <string name="player_danmaku_enabled">开启弹幕</string>
     <string name="player_danmaku_temporary_description">仅本次播放有效，不会修改全局默认值。</string>
     <string name="player_danmaku_settings_button">弹幕设置</string>
+    <string name="player_settings_title">设置</string>
+    <string name="danmaku_block_types">屏蔽类型</string>
+    <string name="danmaku_block_none">未屏蔽</string>
+    <string name="danmaku_block_scroll">滚动</string>
+    <string name="danmaku_block_top">顶部</string>
+    <string name="danmaku_block_bottom">底部</string>
+    <string name="danmaku_block_colored">彩色</string>
     <string name="subtitle">字幕</string>
     <string name="subtitle_settings_title">字幕设置</string>
     <string name="subtitle_settings_description">设置播放器进入时的字幕默认状态。</string>
