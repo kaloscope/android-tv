@@ -23,6 +23,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
@@ -312,6 +313,7 @@ class P2GoldenScreenshotTest {
         composeRule.onNodeWithTag("player-danmaku")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.mainClock.advanceTimeBy(220)
+        composeRule.onNodeWithText("弹幕开").assertExists()
 
         assertGolden(
             "player-controls-auxiliary-focus-1920",
