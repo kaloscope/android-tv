@@ -143,6 +143,8 @@ private fun KaloscopeControlFocusMaterial.color(): Color =
     when (this) {
         KaloscopeControlFocusMaterial.None -> Color.Transparent
         KaloscopeControlFocusMaterial.Focused -> KaloscopeControlTokens.FocusedSurface
+        KaloscopeControlFocusMaterial.SelectedFocused ->
+            KaloscopeControlTokens.SelectedFocusedSurface
         KaloscopeControlFocusMaterial.DangerFocused -> DangerFocusedSurface
     }
 

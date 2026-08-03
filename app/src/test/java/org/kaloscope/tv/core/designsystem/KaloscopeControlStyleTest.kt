@@ -83,6 +83,25 @@ class KaloscopeControlStyleTest {
     }
 
     @Test
+    fun focusedNonSidebarSelectionUsesSelectedFocusedMaterial() {
+        val state = resolveKaloscopeControlState(
+            variant = KaloscopeControlVariant.Filled,
+            size = KaloscopeControlSize.Compact,
+            tone = KaloscopeControlTone.Default,
+            selected = true,
+            enabled = true,
+            focused = true,
+            pressed = false,
+        )
+
+        assertEquals(
+            KaloscopeControlFocusMaterial.SelectedFocused,
+            state.focusMaterial,
+        )
+        assertEquals(OnControlFocused, state.contentColor)
+    }
+
+    @Test
     fun focusedSelectionUsesDarkContentAndKeepsDepth() {
         val state = resolveKaloscopeControlState(
             variant = KaloscopeControlVariant.Ghost,
@@ -96,7 +115,7 @@ class KaloscopeControlStyleTest {
 
         assertEquals(KaloscopeControlBaseMaterial.Selected, state.baseMaterial)
         assertEquals(
-            KaloscopeControlFocusMaterial.Focused,
+            KaloscopeControlFocusMaterial.SelectedFocused,
             state.focusMaterial,
         )
         assertFalse(state.showPressedShade)

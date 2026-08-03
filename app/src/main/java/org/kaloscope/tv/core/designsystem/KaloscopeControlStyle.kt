@@ -22,6 +22,7 @@ enum class KaloscopeControlTone {
 
 object KaloscopeControlTokens {
     val SelectedSurface = ControlSelected
+    val SelectedFocusedSurface = ControlSelectedFocused
     val SidebarSelectedSurface = SidebarSelected
     val FocusedSurface = ControlFocused
     val PressedShade = Color(0x14000000)
@@ -45,6 +46,7 @@ internal enum class KaloscopeControlBaseMaterial {
 internal enum class KaloscopeControlFocusMaterial {
     None,
     Focused,
+    SelectedFocused,
     DangerFocused,
 }
 
@@ -84,6 +86,9 @@ internal fun resolveKaloscopeControlState(
         !effectivelyFocused -> KaloscopeControlFocusMaterial.None
         tone == KaloscopeControlTone.Danger ->
             KaloscopeControlFocusMaterial.DangerFocused
+
+        selected && variant != KaloscopeControlVariant.Sidebar ->
+            KaloscopeControlFocusMaterial.SelectedFocused
 
         else -> KaloscopeControlFocusMaterial.Focused
     }
