@@ -1,5 +1,6 @@
 package org.kaloscope.tv.core.designsystem
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -7,6 +8,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
 
@@ -40,6 +43,12 @@ fun KaloscopeFocusSurface(
             focusedScale = focusScale,
             disabledScale = 1f,
             focusedDisabledScale = 1f,
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedDisabledBorder = Border(
+                border = BorderStroke(2.dp, Color.White),
+                shape = shape,
+            ),
         ),
         content = content,
     )

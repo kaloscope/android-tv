@@ -49,6 +49,7 @@ import org.kaloscope.tv.core.model.SearchFilterType
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.test.assertFocusedContentCardCornerRadius
 import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
 import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
@@ -149,6 +150,57 @@ class SearchScreenTest {
             bitmap = focused,
             sampleX = focused.width / 2,
             sampleY = focused.height - sampleInset,
+        )
+    }
+
+    @Test
+    fun resolvingNetworkResultBorderMatchesCardCornerRadius() {
+        var screenState by mutableStateOf(state())
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background),
+                ) {
+                    SearchScreen(
+                        session = session(),
+                        state = screenState,
+                        requestInitialFocus = false,
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = {},
+                        onPlay = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("network-result-v1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.runOnIdle {
+            screenState = screenState.copy(resolvingResultId = "v1")
+        }
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val resolving = composeRule.onNodeWithTag("network-result-v1")
+            .assertIsFocused()
+            .captureToImage()
+            .asAndroidBitmap()
+
+        assertFocusedContentCardCornerRadius(
+            label = "Resolving network result card",
+            bitmap = resolving,
+            density = composeRule.density.density,
         )
     }
 
