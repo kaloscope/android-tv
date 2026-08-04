@@ -286,6 +286,7 @@ private fun PlayerContent(
     }
     LaunchedEffect(
         controlLayer,
+        actionRowVisible,
         interactionVersion,
         status.failure,
         status.fallbackInProgress,
@@ -294,7 +295,10 @@ private fun PlayerContent(
         speedDrawerOpen,
         feedback,
     ) {
-        val autoHideDelayMillis = PlayerControlLayerPolicy.autoHideDelayMillis(controlLayer)
+        val autoHideDelayMillis = PlayerControlLayerPolicy.autoHideDelayMillis(
+            layer = controlLayer,
+            actionRowVisible = actionRowVisible,
+        )
         if (
             autoHideDelayMillis != null &&
             !definitionDrawerOpen &&

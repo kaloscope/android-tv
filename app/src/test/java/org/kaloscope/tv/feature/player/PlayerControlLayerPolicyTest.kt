@@ -75,18 +75,53 @@ class PlayerControlLayerPolicyTest {
     }
 
     @Test
-    fun `preview dismisses sooner than full controls`() {
+    fun `preview hides after the shared delay regardless of action row state`() {
         assertEquals(
-            2_600L,
-            PlayerControlLayerPolicy.autoHideDelayMillis(PlayerControlLayer.Preview),
+            3_000L,
+            PlayerControlLayerPolicy.autoHideDelayMillis(
+                layer = PlayerControlLayer.Preview,
+                actionRowVisible = false,
+            ),
         )
         assertEquals(
-            4_000L,
-            PlayerControlLayerPolicy.autoHideDelayMillis(PlayerControlLayer.Controls),
+            3_000L,
+            PlayerControlLayerPolicy.autoHideDelayMillis(
+                layer = PlayerControlLayer.Preview,
+                actionRowVisible = true,
+            ),
         )
+    }
+
+    @Test
+    fun `full controls hide after the shared delay when actions are hidden`() {
+        assertEquals(
+            3_000L,
+            PlayerControlLayerPolicy.autoHideDelayMillis(
+                layer = PlayerControlLayer.Controls,
+                actionRowVisible = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `full controls stay visible while actions are visible`() {
         assertEquals(
             null,
-            PlayerControlLayerPolicy.autoHideDelayMillis(PlayerControlLayer.Hidden),
+            PlayerControlLayerPolicy.autoHideDelayMillis(
+                layer = PlayerControlLayer.Controls,
+                actionRowVisible = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `hidden layer does not schedule auto hide`() {
+        assertEquals(
+            null,
+            PlayerControlLayerPolicy.autoHideDelayMillis(
+                layer = PlayerControlLayer.Hidden,
+                actionRowVisible = true,
+            ),
         )
     }
 }

@@ -12,8 +12,7 @@ internal data class PlayerControlLayerTransition(
     val actionRowVisible: Boolean? = null,
 )
 
-private const val PREVIEW_AUTO_HIDE_MILLIS = 2_600L
-private const val CONTROLS_AUTO_HIDE_MILLIS = 4_000L
+private const val AUTO_HIDE_DELAY_MILLIS = 3_000L
 
 internal object PlayerControlLayerPolicy {
     fun initialTransition(): PlayerControlLayerTransition =
@@ -23,11 +22,15 @@ internal object PlayerControlLayerPolicy {
             actionRowVisible = false,
         )
 
-    fun autoHideDelayMillis(layer: PlayerControlLayer): Long? =
+    fun autoHideDelayMillis(
+        layer: PlayerControlLayer,
+        actionRowVisible: Boolean,
+    ): Long? =
         when (layer) {
             PlayerControlLayer.Hidden -> null
-            PlayerControlLayer.Preview -> PREVIEW_AUTO_HIDE_MILLIS
-            PlayerControlLayer.Controls -> CONTROLS_AUTO_HIDE_MILLIS
+            PlayerControlLayer.Preview -> AUTO_HIDE_DELAY_MILLIS
+            PlayerControlLayer.Controls ->
+                if (actionRowVisible) null else AUTO_HIDE_DELAY_MILLIS
         }
 
     fun transition(command: PlayerControlCommand): PlayerControlLayerTransition? =
