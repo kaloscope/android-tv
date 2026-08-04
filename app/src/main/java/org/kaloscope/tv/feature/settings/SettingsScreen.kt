@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,6 +50,7 @@ import java.util.Locale
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeConfirmDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
@@ -135,20 +138,24 @@ private fun SettingsContent(
 ) {
     var choice by remember { mutableStateOf<SettingsChoice?>(null) }
     var languageEditorOpen by remember { mutableStateOf(false) }
+    var logoutConfirmationOpen by remember { mutableStateOf(false) }
     var restoreFocus by remember { mutableStateOf<FocusRequester?>(null) }
     val internalSelectedSectionFocus = remember { FocusRequester() }
     val selectedSectionFocus =
         selectedSectionFocusRequester ?: internalSelectedSectionFocus
     // A transiently disabled TV control loses focus before its dialog can take over.
-    val interactionsEnabled = choice == null && !languageEditorOpen && !state.isSaving
+    val interactionsEnabled = choice == null &&
+        !languageEditorOpen &&
+        !logoutConfirmationOpen &&
+        !state.isSaving
 
     LaunchedEffect(requestInitialFocus) {
         if (requestInitialFocus) {
             selectedSectionFocus.requestFocus()
         }
     }
-    LaunchedEffect(choice, languageEditorOpen, restoreFocus) {
-        if (choice == null && !languageEditorOpen) {
+    LaunchedEffect(choice, languageEditorOpen, logoutConfirmationOpen, restoreFocus) {
+        if (choice == null && !languageEditorOpen && !logoutConfirmationOpen) {
             restoreFocus?.let { requester ->
                 withFrameNanos { }
                 requester.requestFocus()
@@ -203,7 +210,10 @@ private fun SettingsContent(
                 },
                 onTestConnection = onTestConnection,
                 onManageServers = onManageServers,
-                onLogout = onLogout,
+                onRequestLogout = { focus ->
+                    restoreFocus = focus
+                    logoutConfirmationOpen = true
+                },
                 onPlaybackMode = onPlaybackMode,
                 onTranscodeResolution = onTranscodeResolution,
                 onStartPage = onStartPage,
@@ -232,6 +242,25 @@ private fun SettingsContent(
                             languagePreference = language.trim(),
                         ),
                     )
+                },
+            )
+        }
+        if (logoutConfirmationOpen) {
+            KaloscopeConfirmDialog(
+                title = stringResource(R.string.logout_confirmation_title),
+                message = stringResource(
+                    R.string.logout_confirmation_message,
+                    session.server.name,
+                    session.user.username,
+                ),
+                cancelLabel = stringResource(R.string.cancel),
+                confirmLabel = stringResource(R.string.logout),
+                confirmTone = KaloscopeControlTone.Danger,
+                onDismiss = { logoutConfirmationOpen = false },
+                onConfirm = {
+                    logoutConfirmationOpen = false
+                    restoreFocus = null
+                    onLogout()
                 },
             )
         }
@@ -316,81 +345,84 @@ private fun SettingsPanel(
     onOpenSubtitleLanguage: (FocusRequester) -> Unit,
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
-    onLogout: () -> Unit,
+    onRequestLogout: (FocusRequester) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
     onStartPage: (StartPage) -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .background(Panel.copy(alpha = 0.82f), RoundedCornerShape(22.dp))
-            .testTag("settings-panel")
-            .padding(horizontal = 28.dp, vertical = 26.dp),
-    ) {
-        Text(
-            text = sectionTitle(state.section),
-            color = OnBackground,
-            fontSize = 27.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = sectionDescription(state.section),
-            color = Muted,
-            fontSize = 15.sp,
-        )
-        Spacer(Modifier.height(20.dp))
-        when (state.section) {
-            SettingsSection.Playback -> PlaybackSettings(
-                state = state,
-                interactionsEnabled = interactionsEnabled,
-                onOpenChoice = onOpenChoice,
-                onPlaybackMode = onPlaybackMode,
-                onTranscodeResolution = onTranscodeResolution,
-                onAutoplayNext = onAutoplayNext,
-            )
+    key(state.section) {
+        LazyColumn(
+            modifier = modifier
+                .fillMaxHeight()
+                .background(Panel.copy(alpha = 0.82f), RoundedCornerShape(22.dp))
+                .testTag("settings-panel")
+                .padding(horizontal = 28.dp, vertical = 26.dp),
+        ) {
+            item {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = sectionTitle(state.section),
+                        color = OnBackground,
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = sectionDescription(state.section),
+                        color = Muted,
+                        fontSize = 15.sp,
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    when (state.section) {
+                        SettingsSection.Playback -> PlaybackSettings(
+                            state = state,
+                            interactionsEnabled = interactionsEnabled,
+                            onOpenChoice = onOpenChoice,
+                            onPlaybackMode = onPlaybackMode,
+                            onTranscodeResolution = onTranscodeResolution,
+                            onAutoplayNext = onAutoplayNext,
+                        )
 
-            SettingsSection.Danmaku -> DanmakuDefaultSettings(
-                settings = state.settings.danmaku,
-                interactionsEnabled = interactionsEnabled,
-                onOpenChoice = onOpenChoice,
-                onChange = onDanmakuSettings,
-                modifier = Modifier.weight(1f),
-            )
+                        SettingsSection.Danmaku -> DanmakuDefaultSettings(
+                            settings = state.settings.danmaku,
+                            interactionsEnabled = interactionsEnabled,
+                            onOpenChoice = onOpenChoice,
+                            onChange = onDanmakuSettings,
+                        )
 
-            SettingsSection.Subtitle -> SubtitleDefaultSettings(
-                settings = state.settings.subtitle,
-                interactionsEnabled = interactionsEnabled,
-                onOpenChoice = onOpenChoice,
-                onOpenLanguage = onOpenSubtitleLanguage,
-                onChange = onSubtitleSettings,
-                modifier = Modifier.weight(1f),
-            )
+                        SettingsSection.Subtitle -> SubtitleDefaultSettings(
+                            settings = state.settings.subtitle,
+                            interactionsEnabled = interactionsEnabled,
+                            onOpenChoice = onOpenChoice,
+                            onOpenLanguage = onOpenSubtitleLanguage,
+                            onChange = onSubtitleSettings,
+                        )
 
-            SettingsSection.Behavior -> BehaviorSettings(
-                state = state,
-                interactionsEnabled = interactionsEnabled,
-                onOpenChoice = onOpenChoice,
-                onStartPage = onStartPage,
-            )
+                        SettingsSection.Behavior -> BehaviorSettings(
+                            state = state,
+                            interactionsEnabled = interactionsEnabled,
+                            onOpenChoice = onOpenChoice,
+                            onStartPage = onStartPage,
+                        )
 
-            SettingsSection.ServerAccount -> ServerAccountSettings(
-                session = session,
-                connection = state.connection,
-                interactionsEnabled = interactionsEnabled,
-                onTestConnection = onTestConnection,
-                onManageServers = onManageServers,
-                onLogout = onLogout,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        state.saveError?.let {
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = stringResource(R.string.settings_save_failed),
-                color = Danger,
-                fontSize = 14.sp,
-            )
+                        SettingsSection.ServerAccount -> ServerAccountSettings(
+                            session = session,
+                            connection = state.connection,
+                            interactionsEnabled = interactionsEnabled,
+                            onTestConnection = onTestConnection,
+                            onManageServers = onManageServers,
+                            onRequestLogout = onRequestLogout,
+                        )
+                    }
+                    state.saveError?.let {
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            text = stringResource(R.string.settings_save_failed),
+                            color = Danger,
+                            fontSize = 14.sp,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -455,8 +487,10 @@ internal fun ToggleSettingRow(
 internal fun SettingActionRow(
     title: String,
     description: String,
+    value: String = "",
     interactionsEnabled: Boolean,
     danger: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     KaloscopeButton(
@@ -471,9 +505,9 @@ internal fun SettingActionRow(
         } else {
             KaloscopeControlTone.Default
         },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
-        SettingRowContent(title, description, "")
+        SettingRowContent(title, description, value)
     }
 }
 
@@ -498,24 +532,6 @@ internal fun SettingRowContent(
         if (value.isNotEmpty()) {
             Text(value, fontSize = 15.sp)
         }
-    }
-}
-
-@Composable
-internal fun SettingValue(
-    label: String,
-    value: String,
-    detail: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = Muted, fontSize = 13.sp)
-            Text(value, color = OnBackground, fontSize = 18.sp)
-        }
-        Text(detail, color = Muted, fontSize = 14.sp)
     }
 }
 

@@ -17,8 +17,32 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.data.auth.SessionRepository
 import org.kaloscope.tv.data.server.ServerRepository
+import org.kaloscope.tv.feature.server.ServerSetupState
 
 class KaloscopeViewModelDeletionTest {
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `showing server selection clears the previous setup draft`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val viewModel = KaloscopeViewModel(
+                bootstrapRepository = EmptyBootstrapRepository(),
+                serverRepository = DeletionServerRepository(mutableListOf(), emptyList()),
+                sessionRepository = DeletionSessionRepository(mutableListOf()),
+            )
+            advanceUntilIdle()
+            viewModel.updateServerName("旧服务器")
+            viewModel.updateServerUrl("https://old.example")
+
+            viewModel.showServerSelection()
+            advanceUntilIdle()
+
+            assertEquals(ServerSetupState(), viewModel.serverSetupState.value)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun `successful deletion publishes remaining servers at root`() = runTest {

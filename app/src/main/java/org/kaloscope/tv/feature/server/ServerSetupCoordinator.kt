@@ -41,6 +41,10 @@ class ServerSetupCoordinator(
     private val mutableState = MutableStateFlow(ServerSetupState())
     val state: StateFlow<ServerSetupState> = mutableState.asStateFlow()
 
+    fun reset() {
+        mutableState.value = ServerSetupState()
+    }
+
     fun updateName(value: String) {
         mutableState.value = mutableState.value.copy(
             name = value,

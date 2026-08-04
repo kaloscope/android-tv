@@ -38,6 +38,8 @@
     <string name="change_server">更换服务器</string>
 
     <string name="logout">退出登录</string>
+    <string name="logout_confirmation_title">退出登录？</string>
+    <string name="logout_confirmation_message">将退出服务器“%1$s”上的账号“%2$s”，并清除保存的登录状态。</string>
 
     <string name="home">首页</string>
     <string name="search">网络搜索</string>
@@ -77,8 +79,6 @@
     <string name="client_behavior_description">设置下次进入主界面时首先展示的页面。</string>
     <string name="server_and_account">服务器与账号</string>
     <string name="server_account_description">查看当前连接并管理服务器与登录状态。</string>
-    <string name="current_server">当前服务器</string>
-    <string name="current_account">当前账号</string>
     <string name="default_playback_mode">默认播放模式</string>
     <string name="default_playback_mode_description">自动模式会优先直连，并在可恢复失败后转码。</string>
     <string name="default_transcode_resolution">默认转码画质</string>

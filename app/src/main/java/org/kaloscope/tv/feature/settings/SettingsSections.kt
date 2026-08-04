@@ -1,10 +1,10 @@
 package org.kaloscope.tv.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -101,99 +101,86 @@ internal fun SubtitleDefaultSettings(
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onOpenLanguage: (FocusRequester) -> Unit,
     onChange: (SubtitleSettings) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
-        modifier = modifier
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .testTag("subtitle-default-settings"),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item {
-            ToggleSettingRow(
-                title = stringResource(R.string.default_subtitle),
-                description = stringResource(R.string.default_subtitle_description),
-                checked = settings.enabled,
-                interactionsEnabled = interactionsEnabled,
-                onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
-            )
-        }
-        item {
-            SubtitleLanguageSettingRow(
-                value = settings.languagePreference,
-                interactionsEnabled = interactionsEnabled,
-                onOpen = onOpenLanguage,
-            )
-        }
-        item {
-            ChoiceSettingRow(
-                title = stringResource(R.string.subtitle_display_mode),
-                description = stringResource(R.string.subtitle_display_mode_description),
-                value = subtitleDisplayModeLabel(settings.displayMode),
-                interactionsEnabled = interactionsEnabled,
-                createChoice = {
-                    SettingsChoice(
-                        title = stringResource(R.string.subtitle_display_mode),
-                        options = SubtitleDisplayMode.entries.map { mode ->
-                            SettingsChoiceOption(
-                                label = subtitleDisplayModeLabel(mode),
-                                selected = mode == settings.displayMode,
-                                onSelect = { onChange(settings.copy(displayMode = mode)) },
-                            )
-                        },
-                    )
-                },
-                onOpenChoice = onOpenChoice,
-            )
-        }
-        item {
-            AdjustableSettingRow(
-                title = stringResource(R.string.subtitle_font_scale),
-                description = stringResource(R.string.subtitle_font_scale_description),
-                value = stringResource(R.string.percentage_value, settings.fontScalePercent),
-                interactionsEnabled = interactionsEnabled,
-                onDecrease = {
-                    onChange(SubtitleSettingsPolicy.adjustFontScale(settings, -1))
-                },
-                onIncrease = {
-                    onChange(SubtitleSettingsPolicy.adjustFontScale(settings, 1))
-                },
-            )
-        }
-        item {
-            AdjustableSettingRow(
-                title = stringResource(R.string.subtitle_vertical_position),
-                description = stringResource(R.string.subtitle_vertical_position_description),
-                value = stringResource(
-                    R.string.percentage_value,
-                    settings.verticalPositionPercent,
-                ),
-                interactionsEnabled = interactionsEnabled,
-                onDecrease = {
-                    onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, -1))
-                },
-                onIncrease = {
-                    onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, 1))
-                },
-            )
-        }
-        item {
-            AdjustableSettingRow(
-                title = stringResource(R.string.subtitle_time_offset),
-                description = stringResource(R.string.subtitle_time_offset_description),
-                value = formatSubtitleOffset(settings.timeOffsetSeconds),
-                interactionsEnabled = interactionsEnabled,
-                onDecrease = {
-                    onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, -1))
-                },
-                onIncrease = {
-                    onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, 1))
-                },
-                onClick = {
-                    onChange(settings.copy(timeOffsetSeconds = 0f))
-                },
-            )
-        }
+        ToggleSettingRow(
+            title = stringResource(R.string.default_subtitle),
+            description = stringResource(R.string.default_subtitle_description),
+            checked = settings.enabled,
+            interactionsEnabled = interactionsEnabled,
+            onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
+        )
+        SubtitleLanguageSettingRow(
+            value = settings.languagePreference,
+            interactionsEnabled = interactionsEnabled,
+            onOpen = onOpenLanguage,
+        )
+        ChoiceSettingRow(
+            title = stringResource(R.string.subtitle_display_mode),
+            description = stringResource(R.string.subtitle_display_mode_description),
+            value = subtitleDisplayModeLabel(settings.displayMode),
+            interactionsEnabled = interactionsEnabled,
+            createChoice = {
+                SettingsChoice(
+                    title = stringResource(R.string.subtitle_display_mode),
+                    options = SubtitleDisplayMode.entries.map { mode ->
+                        SettingsChoiceOption(
+                            label = subtitleDisplayModeLabel(mode),
+                            selected = mode == settings.displayMode,
+                            onSelect = { onChange(settings.copy(displayMode = mode)) },
+                        )
+                    },
+                )
+            },
+            onOpenChoice = onOpenChoice,
+        )
+        AdjustableSettingRow(
+            title = stringResource(R.string.subtitle_font_scale),
+            description = stringResource(R.string.subtitle_font_scale_description),
+            value = stringResource(R.string.percentage_value, settings.fontScalePercent),
+            interactionsEnabled = interactionsEnabled,
+            onDecrease = {
+                onChange(SubtitleSettingsPolicy.adjustFontScale(settings, -1))
+            },
+            onIncrease = {
+                onChange(SubtitleSettingsPolicy.adjustFontScale(settings, 1))
+            },
+        )
+        AdjustableSettingRow(
+            title = stringResource(R.string.subtitle_vertical_position),
+            description = stringResource(R.string.subtitle_vertical_position_description),
+            value = stringResource(
+                R.string.percentage_value,
+                settings.verticalPositionPercent,
+            ),
+            interactionsEnabled = interactionsEnabled,
+            onDecrease = {
+                onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, -1))
+            },
+            onIncrease = {
+                onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, 1))
+            },
+        )
+        AdjustableSettingRow(
+            title = stringResource(R.string.subtitle_time_offset),
+            description = stringResource(R.string.subtitle_time_offset_description),
+            value = formatSubtitleOffset(settings.timeOffsetSeconds),
+            interactionsEnabled = interactionsEnabled,
+            onDecrease = {
+                onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, -1))
+            },
+            onIncrease = {
+                onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, 1))
+            },
+            onClick = {
+                onChange(settings.copy(timeOffsetSeconds = 0f))
+            },
+        )
     }
 }
 
@@ -277,103 +264,90 @@ internal fun DanmakuDefaultSettings(
     interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onChange: (DanmakuSettings) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val percentages = listOf(25, 50, 75, 100)
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
+    Column(
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item {
-            ToggleSettingRow(
-                title = stringResource(R.string.default_danmaku),
-                description = stringResource(R.string.default_danmaku_description),
-                checked = settings.enabled,
-                interactionsEnabled = interactionsEnabled,
-                onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
-            )
-        }
-        item {
-            ChoiceSettingRow(
-                title = stringResource(R.string.danmaku_text_size),
-                description = stringResource(R.string.danmaku_text_size_description),
-                value = danmakuTextSizeLabel(settings.textSize),
-                interactionsEnabled = interactionsEnabled,
-                createChoice = {
-                    SettingsChoice(
-                        title = stringResource(R.string.danmaku_text_size),
-                        options = DanmakuTextSize.entries.map { size ->
-                            SettingsChoiceOption(
-                                label = danmakuTextSizeLabel(size),
-                                selected = size == settings.textSize,
-                                onSelect = { onChange(settings.copy(textSize = size)) },
-                            )
-                        },
-                    )
-                },
-                onOpenChoice = onOpenChoice,
-            )
-        }
-        item {
-            ChoiceSettingRow(
-                title = stringResource(R.string.danmaku_speed),
-                description = stringResource(R.string.danmaku_speed_description),
-                value = danmakuSpeedLabel(settings.speed),
-                interactionsEnabled = interactionsEnabled,
-                createChoice = {
-                    SettingsChoice(
-                        title = stringResource(R.string.danmaku_speed),
-                        options = DanmakuSpeed.entries.map { speed ->
-                            SettingsChoiceOption(
-                                label = danmakuSpeedLabel(speed),
-                                selected = speed == settings.speed,
-                                onSelect = { onChange(settings.copy(speed = speed)) },
-                            )
-                        },
-                    )
-                },
-                onOpenChoice = onOpenChoice,
-            )
-        }
-        item {
-            DanmakuPercentageSetting(
-                title = stringResource(R.string.danmaku_opacity),
-                description = stringResource(R.string.danmaku_opacity_description),
-                value = settings.opacityPercent,
-                percentages = percentages,
-                interactionsEnabled = interactionsEnabled,
-                onOpenChoice = onOpenChoice,
-                onSelect = { onChange(settings.copy(opacityPercent = it)) },
-            )
-        }
-        item {
-            DanmakuPercentageSetting(
-                title = stringResource(R.string.danmaku_display_area),
-                description = stringResource(R.string.danmaku_display_area_description),
-                value = settings.displayAreaPercent,
-                percentages = percentages,
-                interactionsEnabled = interactionsEnabled,
-                onOpenChoice = onOpenChoice,
-                onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
-            )
-        }
-        for (mode in DanmakuDisplayMode.entries) {
-            item {
-                ToggleSettingRow(
-                    title = danmakuModeLabel(mode),
-                    description = danmakuModeDescription(mode),
-                    checked = mode in settings.visibleModes,
-                    interactionsEnabled = interactionsEnabled,
-                    onToggle = {
-                        val visibleModes = if (mode in settings.visibleModes) {
-                            settings.visibleModes - mode
-                        } else {
-                            settings.visibleModes + mode
-                        }
-                        onChange(settings.copy(visibleModes = visibleModes))
+        ToggleSettingRow(
+            title = stringResource(R.string.default_danmaku),
+            description = stringResource(R.string.default_danmaku_description),
+            checked = settings.enabled,
+            interactionsEnabled = interactionsEnabled,
+            onToggle = { onChange(settings.copy(enabled = !settings.enabled)) },
+        )
+        ChoiceSettingRow(
+            title = stringResource(R.string.danmaku_text_size),
+            description = stringResource(R.string.danmaku_text_size_description),
+            value = danmakuTextSizeLabel(settings.textSize),
+            interactionsEnabled = interactionsEnabled,
+            createChoice = {
+                SettingsChoice(
+                    title = stringResource(R.string.danmaku_text_size),
+                    options = DanmakuTextSize.entries.map { size ->
+                        SettingsChoiceOption(
+                            label = danmakuTextSizeLabel(size),
+                            selected = size == settings.textSize,
+                            onSelect = { onChange(settings.copy(textSize = size)) },
+                        )
                     },
                 )
-            }
+            },
+            onOpenChoice = onOpenChoice,
+        )
+        ChoiceSettingRow(
+            title = stringResource(R.string.danmaku_speed),
+            description = stringResource(R.string.danmaku_speed_description),
+            value = danmakuSpeedLabel(settings.speed),
+            interactionsEnabled = interactionsEnabled,
+            createChoice = {
+                SettingsChoice(
+                    title = stringResource(R.string.danmaku_speed),
+                    options = DanmakuSpeed.entries.map { speed ->
+                        SettingsChoiceOption(
+                            label = danmakuSpeedLabel(speed),
+                            selected = speed == settings.speed,
+                            onSelect = { onChange(settings.copy(speed = speed)) },
+                        )
+                    },
+                )
+            },
+            onOpenChoice = onOpenChoice,
+        )
+        DanmakuPercentageSetting(
+            title = stringResource(R.string.danmaku_opacity),
+            description = stringResource(R.string.danmaku_opacity_description),
+            value = settings.opacityPercent,
+            percentages = percentages,
+            interactionsEnabled = interactionsEnabled,
+            onOpenChoice = onOpenChoice,
+            onSelect = { onChange(settings.copy(opacityPercent = it)) },
+        )
+        DanmakuPercentageSetting(
+            title = stringResource(R.string.danmaku_display_area),
+            description = stringResource(R.string.danmaku_display_area_description),
+            value = settings.displayAreaPercent,
+            percentages = percentages,
+            interactionsEnabled = interactionsEnabled,
+            onOpenChoice = onOpenChoice,
+            onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
+        )
+        for (mode in DanmakuDisplayMode.entries) {
+            ToggleSettingRow(
+                title = danmakuModeLabel(mode),
+                description = danmakuModeDescription(mode),
+                checked = mode in settings.visibleModes,
+                interactionsEnabled = interactionsEnabled,
+                onToggle = {
+                    val visibleModes = if (mode in settings.visibleModes) {
+                        settings.visibleModes - mode
+                    } else {
+                        settings.visibleModes + mode
+                    }
+                    onChange(settings.copy(visibleModes = visibleModes))
+                },
+            )
         }
     }
 }
@@ -444,57 +418,38 @@ internal fun ServerAccountSettings(
     interactionsEnabled: Boolean,
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
-    onLogout: () -> Unit,
-    modifier: Modifier = Modifier,
+    onRequestLogout: (FocusRequester) -> Unit,
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
+    val logoutFocus = remember { FocusRequester() }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item {
-            SettingValue(
-                label = stringResource(R.string.current_server),
-                value = session.server.name,
-                detail = session.server.origin,
-            )
-        }
-        item { Spacer(Modifier.height(14.dp)) }
-        item {
-            SettingValue(
-                label = stringResource(R.string.current_account),
-                value = session.user.username,
-                detail = session.user.role,
-            )
-        }
-        item { Spacer(Modifier.height(18.dp)) }
-        item {
-            SettingActionRow(
-                title = stringResource(R.string.test_connection),
-                description = connectionDescription(connection),
-                interactionsEnabled = interactionsEnabled &&
-                    connection != SettingsConnection.Testing,
-                danger = false,
-                onClick = onTestConnection,
-            )
-        }
-        item { Spacer(Modifier.height(10.dp)) }
-        item {
-            SettingActionRow(
-                title = stringResource(R.string.manage_servers),
-                description = stringResource(R.string.manage_servers_description),
-                interactionsEnabled = interactionsEnabled,
-                danger = false,
-                onClick = onManageServers,
-            )
-        }
-        item { Spacer(Modifier.height(10.dp)) }
-        item {
-            SettingActionRow(
-                title = stringResource(R.string.logout),
-                description = stringResource(R.string.logout_description),
-                interactionsEnabled = interactionsEnabled,
-                danger = true,
-                onClick = onLogout,
-            )
-        }
+        SettingActionRow(
+            title = stringResource(R.string.test_connection),
+            description = connectionDescription(connection),
+            value = session.server.origin,
+            interactionsEnabled = interactionsEnabled &&
+                connection != SettingsConnection.Testing,
+            danger = false,
+            onClick = onTestConnection,
+        )
+        SettingActionRow(
+            title = stringResource(R.string.manage_servers),
+            description = stringResource(R.string.manage_servers_description),
+            value = session.server.name,
+            interactionsEnabled = interactionsEnabled,
+            danger = false,
+            onClick = onManageServers,
+        )
+        SettingActionRow(
+            title = stringResource(R.string.logout),
+            description = stringResource(R.string.logout_description),
+            value = session.user.username,
+            interactionsEnabled = interactionsEnabled,
+            danger = true,
+            modifier = Modifier.focusRequester(logoutFocus),
+            onClick = { onRequestLogout(logoutFocus) },
+        )
     }
 }

@@ -14,12 +14,14 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
@@ -285,8 +287,24 @@ class SettingsScreenTest {
             }
         }
 
+        composeRule.onNodeWithText("当前服务器").assertDoesNotExist()
+        composeRule.onNodeWithText("当前账号").assertDoesNotExist()
         composeRule.onNodeWithText("家庭服务器").assertExists()
+        composeRule.onNodeWithText("http://127.0.0.1:8000").assertExists()
         composeRule.onNodeWithText("tv_user").assertExists()
+        composeRule.onNode(
+            hasClickAction() and
+                hasText("测试连接") and
+                hasText("http://127.0.0.1:8000"),
+        ).assertExists()
+        composeRule.onNode(
+            hasClickAction() and
+                hasText("切换或添加服务器") and
+                hasText("家庭服务器"),
+        ).assertExists()
+        composeRule.onNode(
+            hasClickAction() and hasText("退出登录") and hasText("tv_user"),
+        ).assertExists()
         composeRule.onNodeWithText("切换或添加服务器")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
@@ -345,11 +363,69 @@ class SettingsScreenTest {
             .assertIsFocused()
             .assertIsDisplayed()
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("confirm-dialog-cancel")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("confirm-dialog-confirm")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.runOnIdle {
             assertEquals(1, manages)
             assertEquals(1, logouts)
         }
+    }
+
+    @Test
+    fun logoutRequiresConfirmationAndRestoresFocusAfterCancel() {
+        var logouts = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.ServerAccount,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = { logouts += 1 },
+                )
+            }
+        }
+        val logout = composeRule.onNode(
+            hasClickAction() and hasText("退出登录") and hasText("tv_user"),
+        )
+
+        logout
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertExists()
+        composeRule.onNodeWithTag("confirm-dialog-cancel")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertDoesNotExist()
+        logout.assertIsFocused()
+        composeRule.runOnIdle { assertEquals(0, logouts) }
+
+        logout.performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("confirm-dialog-cancel")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("confirm-dialog-confirm")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle { assertEquals(1, logouts) }
     }
 
     @Test
@@ -455,6 +531,55 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun sectionHeaderScrollsWithOverflowingOptions() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    SettingsScreen(
+                        session = session(),
+                        state = SettingsUiState.Content(
+                            settings = TvSettings(),
+                            section = SettingsSection.Danmaku,
+                        ),
+                        onRetry = {},
+                        onSelectSection = {},
+                        onPlaybackMode = {},
+                        onTranscodeResolution = {},
+                        onAutoplayNext = {},
+                        onDanmakuSettings = {},
+                        onSubtitleSettings = {},
+                        onStartPage = {},
+                        onTestConnection = {},
+                        onManageServers = {},
+                        onLogout = {},
+                    )
+                }
+            }
+        }
+        val header = composeRule.onNodeWithText("弹幕设置")
+        val initialHeaderTop = header.getUnclippedBoundsInRoot().top
+
+        composeRule.onNodeWithText("默认开启弹幕")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                repeat(7) { pressKey(Key.DirectionDown) }
+            }
+
+        composeRule.onNodeWithText("底部弹幕")
+            .assertIsFocused()
+            .assertIsDisplayed()
+        val scrolledHeaderTop = header.getUnclippedBoundsInRoot().top
+        assertTrue(
+            "Expected the section header to scroll with its options",
+            scrolledHeaderTop < initialHeaderTop,
+        )
+    }
+
+    @Test
     fun danmakuCategoryShowsDefaultsAndUpdatesTheWholeModel() {
         var updatedSettings: DanmakuSettings? = null
         composeRule.setContent {
@@ -531,9 +656,13 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("垂直位置").assertExists()
         composeRule.onNodeWithText("默认开启字幕")
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithTag("subtitle-default-settings").performScrollToIndex(5)
-        composeRule.onNodeWithText("时间偏移").assertExists()
+            .performKeyInput {
+                pressKey(Key.Enter)
+                repeat(5) { pressKey(Key.DirectionDown) }
+            }
+        composeRule.onNodeWithText("时间偏移")
+            .assertIsFocused()
+            .assertIsDisplayed()
 
         composeRule.runOnIdle {
             assertEquals(false, updatedSettings?.enabled)

@@ -76,6 +76,7 @@ class KaloscopeViewModel @Inject constructor(
         viewModelScope.launch {
             // Drop any password-bearing login state before showing another root screen.
             stopLoginCollection()
+            serverCoordinator.reset()
             serverDeletionCoordinator.clearError()
             mutableBootstrapState.value = BootstrapState.NeedsServer(
                 bootstrapRepository.getServers(),
