@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.kaloscope.tv.core.model.MediaLibraryType
+import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.data.media.remote.MediaActorData
 import org.kaloscope.tv.data.media.remote.MediaItemData
 import org.kaloscope.tv.data.media.remote.MediaLibraryData
@@ -87,6 +88,23 @@ class MediaMapperTest {
         assertEquals("沈川", detail.actors.single().name)
         assertEquals("actors/shen.webp", detail.actors.single().thumbPath)
         assertEquals("2026-01-02", detail.children[1].aired)
+    }
+
+    @Test
+    fun `detail drops blank child paths and naturally orders numeric titles`() {
+        val detail = MediaItemData(
+            id = 201,
+            name = "Collection",
+            path = "/media/collection",
+            children = listOf(
+                child(310, null, null, "Part 10"),
+                child(302, null, null, "Part 2"),
+                child(399, null, null, "Broken").copy(path = " "),
+            ),
+        ).toDetail()
+
+        checkNotNull(detail)
+        assertEquals(listOf(302L, 310L), detail.children.map(MediaSummary::id))
     }
 
     @Test

@@ -109,6 +109,10 @@ internal fun MainShell(
     var libraryBackdrop by remember(session.server.id) {
         mutableStateOf<LibraryBackdropPresentation?>(null)
     }
+    val resumePositionsByMediaId = (homeState as? HomeUiState.Content)
+        ?.items
+        .orEmpty()
+        .associate { it.mediaId to it.positionSeconds }
 
     // TV launchers do not guarantee an initial Compose focus owner.
     LaunchedEffect(launchRoute) {
@@ -363,23 +367,25 @@ internal fun MainShell(
                         }
                     }
                     entry<MediaDetailRoute> {
-                        val displayedId = (detailState as? MediaDetailUiState.Content)?.let {
-                            (it.selectedChild ?: it.parent).id
-                        }
-                        val resumePosition = (homeState as? HomeUiState.Content)
-                            ?.items
-                            ?.firstOrNull { it.mediaId == displayedId }
-                            ?.positionSeconds
                         MediaDetailScreen(
                             session = session,
                             state = detailState,
-                            resumePositionSeconds = resumePosition,
+                            resumePositionsByMediaId = resumePositionsByMediaId,
                             onBack = ::goBack,
                             onRetry = detailActions.retry,
-                            onSelectChild = detailActions.selectChild,
-                            onPlay = { detail, resume ->
+                            onChildFocused = detailActions.rememberFocusedChild,
+                            onChildViewportChanged = detailActions.rememberChildViewport,
+                            onPlayParent = { detail, resume ->
                                 destinationEntryKeepsTopFocus = false
-                                detailActions.play(detail, resume)?.let { requestId ->
+                                detailActions.playParent(detail, resume)?.let { requestId ->
+                                    backStack.openPlayer(requestId)
+                                    currentRoute = PlayerRoute(requestId)
+                                    playerActions.load(requestId)
+                                }
+                            },
+                            onPlayChild = { child, resume ->
+                                destinationEntryKeepsTopFocus = false
+                                detailActions.playChild(child, resume)?.let { requestId ->
                                     backStack.openPlayer(requestId)
                                     currentRoute = PlayerRoute(requestId)
                                     playerActions.load(requestId)

@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.data.media.MediaRepository
@@ -14,9 +15,8 @@ sealed interface MediaDetailUiState {
 
     data class Content(
         val parent: MediaDetail,
-        val selectedChild: MediaDetail? = null,
-        val loadingChildId: Long? = null,
-        val childError: AppError? = null,
+        val focusedChildId: Long? = null,
+        val childViewport: GridViewportSnapshot = GridViewportSnapshot.Top,
     ) : MediaDetailUiState
 
     data class Error(
@@ -42,26 +42,38 @@ class MediaDetailCoordinator(
     ) {
         mutableState.value = MediaDetailUiState.Loading
         mutableState.value = when (val result = repository.getMediaDetail(session, mediaId)) {
-            is AppResult.Success -> MediaDetailUiState.Content(result.value)
+            is AppResult.Success -> contentState(result.value)
             is AppResult.Failure -> MediaDetailUiState.Error(result.error)
         }
     }
 
-    suspend fun selectChild(
-        session: Session,
-        childId: Long,
+    fun rememberFocusedChild(childId: Long) {
+        updateContent { content ->
+            if (content.parent.children.none { it.id == childId }) {
+                content
+            } else {
+                content.copy(focusedChildId = childId)
+            }
+        }
+    }
+
+    fun rememberChildViewport(snapshot: GridViewportSnapshot) {
+        updateContent { content ->
+            if (content.childViewport == snapshot) content else content.copy(childViewport = snapshot)
+        }
+    }
+
+    private fun contentState(parent: MediaDetail): MediaDetailUiState.Content {
+        return MediaDetailUiState.Content(
+            parent = parent,
+            focusedChildId = parent.children.firstOrNull()?.id,
+        )
+    }
+
+    private inline fun updateContent(
+        transform: (MediaDetailUiState.Content) -> MediaDetailUiState.Content,
     ) {
         val content = mutableState.value as? MediaDetailUiState.Content ?: return
-        if (content.parent.children.none { it.id == childId }) {
-            return
-        }
-        mutableState.value = content.copy(
-            loadingChildId = childId,
-            childError = null,
-        )
-        mutableState.value = when (val result = repository.getMediaDetail(session, childId)) {
-            is AppResult.Success -> content.copy(selectedChild = result.value)
-            is AppResult.Failure -> content.copy(childError = result.error)
-        }
+        mutableState.value = transform(content)
     }
 }

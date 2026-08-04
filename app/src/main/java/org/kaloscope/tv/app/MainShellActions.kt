@@ -3,6 +3,7 @@ package org.kaloscope.tv.app
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaDetail
+import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleSettings
@@ -51,8 +52,10 @@ internal data class LibraryActions(
 internal data class DetailActions(
     val open: (Long) -> Unit = {},
     val retry: () -> Unit = {},
-    val selectChild: (Long) -> Unit = {},
-    val play: (MediaDetail, Long?) -> String? = { _, _ -> null },
+    val rememberFocusedChild: (Long) -> Unit = {},
+    val rememberChildViewport: (GridViewportSnapshot) -> Unit = {},
+    val playParent: (MediaDetail, Long?) -> String? = { _, _ -> null },
+    val playChild: (MediaSummary, Long?) -> String? = { _, _ -> null },
 )
 
 internal data class SettingsActions(

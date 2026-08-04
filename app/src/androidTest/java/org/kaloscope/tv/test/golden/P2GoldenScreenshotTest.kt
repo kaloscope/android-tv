@@ -40,6 +40,8 @@ import org.kaloscope.tv.core.designsystem.ServerImageVisualState
 import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
+import org.kaloscope.tv.core.model.MediaActor
+import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
 import org.kaloscope.tv.core.model.MediaSummary
@@ -51,6 +53,8 @@ import org.kaloscope.tv.core.model.SearchFilterType
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.feature.detail.MediaDetailScreen
+import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
@@ -164,6 +168,92 @@ class P2GoldenScreenshotTest {
 
         assertGolden(
             "search-results-1920",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
+    fun mediaDetailMovieMatchesCurrentTvResolution() {
+        val width = Resources.getSystem().displayMetrics.widthPixels
+        if (width !in setOf(1280, 1920)) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(parent = goldenMovie()),
+                    resumePositionsByMediaId = mapOf(501L to 42L),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(1_000)
+
+        assertGolden(
+            "media-detail-movie-$width",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
+    fun mediaDetailSeriesMatchesCurrentTvResolution() {
+        val width = Resources.getSystem().displayMetrics.widthPixels
+        if (width !in setOf(1280, 1920)) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(parent = goldenSeries()),
+                    resumePositionsByMediaId = mapOf(301L to 42L),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+        composeRule.onNodeWithTag("media-child-card-301")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+
+        assertGolden(
+            "media-detail-series-$width",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
+    fun mediaDetailMissingArtMatchesCurrentTvResolution() {
+        val width = Resources.getSystem().displayMetrics.widthPixels
+        if (width !in setOf(1280, 1920)) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(parent = goldenMissingArtMovie()),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(1_000)
+
+        assertGolden(
+            "media-detail-missing-art-$width",
             composeRule.onRoot().captureToImage().asAndroidBitmap(),
         )
     }
@@ -569,6 +659,109 @@ private fun searchState(): SearchUiState.Content {
         ),
     )
 }
+
+private fun goldenMovie() = MediaDetail(
+    id = 501,
+    library = MediaLibrary(21, "Golden Movies", MediaLibraryType.Movie),
+    title = "星际远航",
+    path = "/fixtures/media/movie-501.mkv",
+    posterPath = null,
+    backdropPath = null,
+    year = 2026,
+    rating = 8.7,
+    season = null,
+    episode = null,
+    aired = "2026-03-14",
+    plot = "一支深空探索队穿越寂静星云，寻找失联已久的先遣舰队。",
+    genres = listOf("科幻", "冒险"),
+    directors = listOf("林舟"),
+    writers = listOf("顾远"),
+    studios = listOf("Kaloscope Pictures"),
+    actors = emptyList(),
+    children = emptyList(),
+)
+
+private fun goldenSeries() = MediaDetail(
+    id = 201,
+    library = MediaLibrary(22, "Golden Series", MediaLibraryType.TvShow),
+    title = "群星档案",
+    path = "/fixtures/media/series-201",
+    posterPath = null,
+    backdropPath = null,
+    year = 2026,
+    rating = 9.1,
+    season = null,
+    episode = null,
+    aired = "2026-01-02",
+    plot = "档案员沿着被遗忘的航线，重建一段跨越数代人的星海记忆。",
+    genres = listOf("科幻", "剧情"),
+    directors = listOf("沈霁"),
+    writers = listOf("闻川"),
+    studios = listOf("Kaloscope Television"),
+    actors = emptyList(),
+    children = listOf(
+        MediaSummary(
+            id = 301,
+            title = "启程",
+            path = "/fixtures/media/episode-301.mkv",
+            posterPath = null,
+            backdropPath = null,
+            year = 2026,
+            rating = 8.8,
+            season = 1,
+            episode = 1,
+            aired = "2026-01-02",
+        ),
+        MediaSummary(
+            id = 302,
+            title = "穿越静默海",
+            path = "/fixtures/media/episode-302.mkv",
+            posterPath = null,
+            backdropPath = null,
+            year = 2026,
+            rating = 9.0,
+            season = 1,
+            episode = 2,
+            aired = "2026-01-09",
+        ),
+        MediaSummary(
+            id = 303,
+            title = "归航坐标",
+            path = "/fixtures/media/episode-303.mkv",
+            posterPath = null,
+            backdropPath = null,
+            year = 2026,
+            rating = 9.2,
+            season = 1,
+            episode = 3,
+            aired = "2026-01-16",
+        ),
+    ),
+)
+
+private fun goldenMissingArtMovie() = MediaDetail(
+    id = 701,
+    library = MediaLibrary(23, "Golden Missing Art", MediaLibraryType.Movie),
+    title = "无图像档案",
+    path = "/fixtures/media/missing-art-701.mkv",
+    posterPath = null,
+    backdropPath = null,
+    year = 2024,
+    rating = 7.6,
+    season = null,
+    episode = null,
+    aired = "2024-11-08",
+    plot = "所有图像字段均为空，用于固定验证海报、背景与演员占位状态。",
+    genres = listOf("纪录片"),
+    directors = listOf("测试导演"),
+    writers = listOf("测试编剧"),
+    studios = listOf("Synthetic Fixture Studio"),
+    actors = listOf(
+        MediaActor(name = "测试演员甲", role = "领航员", thumbPath = null),
+        MediaActor(name = "测试演员乙", role = "工程师", thumbPath = null),
+    ),
+    children = emptyList(),
+)
 
 private fun session() = Session(
     server = SavedServer("golden", "Golden", "http://127.0.0.1:8000"),

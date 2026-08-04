@@ -180,10 +180,9 @@ fun KaloscopeApp(
                             detailViewModel.load(state.session, mediaId)
                         },
                         retry = { detailViewModel.retry(state.session) },
-                        selectChild = { childId ->
-                            detailViewModel.selectChild(state.session, childId)
-                        },
-                        play = { detail, resumePosition ->
+                        rememberFocusedChild = detailViewModel::rememberFocusedChild,
+                        rememberChildViewport = detailViewModel::rememberChildViewport,
+                        playParent = { detail, resumePosition ->
                             val siblings = (detailState as? MediaDetailUiState.Content)
                                 ?.parent
                                 ?.children
@@ -196,6 +195,18 @@ fun KaloscopeApp(
                                     ?.parent
                                     ?.takeIf { it.id != detail.id }
                                     ?.title,
+                                resumePositionSeconds = resumePosition,
+                                settings = currentSettings,
+                            )
+                        },
+                        playChild = playChild@{ child, resumePosition ->
+                            val content = detailState as? MediaDetailUiState.Content
+                                ?: return@playChild null
+                            playerViewModel.createFromSummary(
+                                session = state.session,
+                                summary = child,
+                                siblings = content.parent.children,
+                                parentTitle = content.parent.title,
                                 resumePositionSeconds = resumePosition,
                                 settings = currentSettings,
                             )

@@ -7,6 +7,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.data.media.MediaRepository
 
@@ -32,12 +33,10 @@ class MediaDetailViewModel @Inject constructor(
         startRequest { coordinator.load(session, mediaId) }
     }
 
-    fun selectChild(
-        session: Session,
-        childId: Long,
-    ) {
-        startRequest { coordinator.selectChild(session, childId) }
-    }
+    fun rememberFocusedChild(childId: Long) = coordinator.rememberFocusedChild(childId)
+
+    fun rememberChildViewport(snapshot: GridViewportSnapshot) =
+        coordinator.rememberChildViewport(snapshot)
 
     fun retry(session: Session) {
         val mediaId = currentMediaId ?: return

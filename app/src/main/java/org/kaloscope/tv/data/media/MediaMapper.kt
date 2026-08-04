@@ -79,13 +79,7 @@ internal fun MediaItemData.toDetail(): MediaDetail? {
     // Backend children may include hidden files retained for administrative workflows.
     val visibleChildren = children
         .mapNotNull(MediaItemData::toSummary)
-        .sortedWith(
-            compareBy<MediaSummary>(
-                { it.season ?: 0 },
-                { it.episode ?: 0 },
-                { it.title.lowercase() },
-            ),
-        )
+        .sortedWith(Comparator(::compareMediaSummaries))
     return MediaDetail(
         id = id,
         library = lib
@@ -121,7 +115,7 @@ internal fun MediaItemData.toDetail(): MediaDetail? {
 
 private fun MediaItemData.toSummary(): MediaSummary? {
     val resolvedTitle = displayTitle()
-    if (!visible || id <= 0 || resolvedTitle.isBlank()) {
+    if (!visible || id <= 0 || path.isBlank() || resolvedTitle.isBlank()) {
         return null
     }
     return MediaSummary(
@@ -136,6 +130,49 @@ private fun MediaItemData.toSummary(): MediaSummary? {
         episode = episode,
         aired = aired.nonBlankOrNull(),
     )
+}
+
+private fun compareMediaSummaries(
+    left: MediaSummary,
+    right: MediaSummary,
+): Int {
+    val seasonComparison = compareValues(left.season ?: 0, right.season ?: 0)
+    if (seasonComparison != 0) return seasonComparison
+    val episodeComparison = compareValues(left.episode ?: 0, right.episode ?: 0)
+    if (episodeComparison != 0) return episodeComparison
+    return compareNaturalTitles(left.title, right.title)
+}
+
+private fun compareNaturalTitles(left: String, right: String): Int {
+    var leftIndex = 0
+    var rightIndex = 0
+    while (leftIndex < left.length && rightIndex < right.length) {
+        val leftChar = left[leftIndex]
+        val rightChar = right[rightIndex]
+        if (leftChar.isDigit() && rightChar.isDigit()) {
+            val leftStart = leftIndex
+            val rightStart = rightIndex
+            while (leftIndex < left.length && left[leftIndex].isDigit()) leftIndex += 1
+            while (rightIndex < right.length && right[rightIndex].isDigit()) rightIndex += 1
+            val leftRun = left.substring(leftStart, leftIndex)
+            val rightRun = right.substring(rightStart, rightIndex)
+            val leftValue = leftRun.trimStart('0').ifEmpty { "0" }
+            val rightValue = rightRun.trimStart('0').ifEmpty { "0" }
+            val lengthComparison = compareValues(leftValue.length, rightValue.length)
+            if (lengthComparison != 0) return lengthComparison
+            val valueComparison = leftValue.compareTo(rightValue)
+            if (valueComparison != 0) return valueComparison
+            val runComparison = compareValues(leftRun.length, rightRun.length)
+            if (runComparison != 0) return runComparison
+        } else {
+            val charComparison = leftChar.lowercaseChar().compareTo(rightChar.lowercaseChar())
+            if (charComparison != 0) return charComparison
+            leftIndex += 1
+            rightIndex += 1
+        }
+    }
+    val lengthComparison = compareValues(left.length, right.length)
+    return if (lengthComparison != 0) lengthComparison else left.compareTo(right)
 }
 
 private fun MediaItemData.displayTitle(): String =

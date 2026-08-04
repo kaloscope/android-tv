@@ -6,6 +6,7 @@ import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DanmakuComment
+import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaActor
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
@@ -43,46 +44,59 @@ class MediaDetailCoordinatorTest {
     }
 
     @Test
-    fun `selecting a child loads its complete metadata`() = runBlocking {
-        val parent = detail(201, children = listOf(summary(301)))
-        val child = detail(301, title = "启程")
-        val repository = DetailFakeRepository(
-            mutableListOf(
-                AppResult.Success(parent),
-                AppResult.Success(child),
-            ),
-        )
+    fun `load chooses first child without loading child detail`() =
+        runBlocking {
+            val parent = detail(
+                201,
+                children = listOf(
+                    summary(100, season = 0),
+                    summary(301, season = 1),
+                ),
+            )
+            val repository = DetailFakeRepository(mutableListOf(AppResult.Success(parent)))
+            val coordinator = MediaDetailCoordinator(repository)
+
+            coordinator.load(session(), 201)
+
+            val content = coordinator.state.value as MediaDetailUiState.Content
+            assertEquals(100L, content.focusedChildId)
+            assertEquals(listOf(201L), repository.detailCalls)
+        }
+
+    @Test
+    fun `focus and viewport updates never call repository`() = runBlocking {
+        val parent = detail(201, children = listOf(summary(301), summary(302)))
+        val repository = DetailFakeRepository(mutableListOf(AppResult.Success(parent)))
         val coordinator = MediaDetailCoordinator(repository)
         coordinator.load(session(), 201)
 
-        coordinator.selectChild(session(), 301)
+        coordinator.rememberFocusedChild(302)
+        coordinator.rememberChildViewport(GridViewportSnapshot(1, 24))
 
-        assertEquals(
-            MediaDetailUiState.Content(parent = parent, selectedChild = child),
-            coordinator.state.value,
-        )
-        assertEquals(listOf(201L, 301L), repository.detailCalls)
+        val content = coordinator.state.value as MediaDetailUiState.Content
+        assertEquals(302L, content.focusedChildId)
+        assertEquals(GridViewportSnapshot(1, 24), content.childViewport)
+        assertEquals(listOf(201L), repository.detailCalls)
     }
 
     @Test
-    fun `child failure preserves parent detail`() = runBlocking {
-        val parent = detail(201, children = listOf(summary(301)))
-        val coordinator = MediaDetailCoordinator(
-            DetailFakeRepository(
-                mutableListOf(
-                    AppResult.Success(parent),
-                    AppResult.Failure(AppError.Offline),
-                ),
+    fun `focus moves across season numbers without repository calls`() = runBlocking {
+        val parent = detail(
+            201,
+            children = listOf(
+                summary(100, season = 0),
+                summary(301, season = 1),
             ),
         )
+        val repository = DetailFakeRepository(mutableListOf(AppResult.Success(parent)))
+        val coordinator = MediaDetailCoordinator(repository)
         coordinator.load(session(), 201)
 
-        coordinator.selectChild(session(), 301)
+        coordinator.rememberFocusedChild(301)
 
-        assertEquals(
-            MediaDetailUiState.Content(parent = parent, childError = AppError.Offline),
-            coordinator.state.value,
-        )
+        val content = coordinator.state.value as MediaDetailUiState.Content
+        assertEquals(301L, content.focusedChildId)
+        assertEquals(listOf(201L), repository.detailCalls)
     }
 }
 
@@ -152,7 +166,10 @@ private fun detail(
     children = children,
 )
 
-private fun summary(id: Long) = MediaSummary(
+private fun summary(
+    id: Long,
+    season: Int = 1,
+) = MediaSummary(
     id = id,
     title = "启程",
     path = "/media/$id",
@@ -160,7 +177,7 @@ private fun summary(id: Long) = MediaSummary(
     backdropPath = null,
     year = 2026,
     rating = null,
-    season = 1,
+    season = season,
     episode = 1,
 )
 

@@ -46,7 +46,7 @@ internal fun SearchUiState.hasUnauthorized(): Boolean =
 internal fun MediaDetailUiState.hasUnauthorized(): Boolean =
     when (this) {
         is MediaDetailUiState.Error -> error == AppError.Unauthorized
-        is MediaDetailUiState.Content -> childError == AppError.Unauthorized
+        is MediaDetailUiState.Content -> false
         MediaDetailUiState.Loading -> false
     }
 

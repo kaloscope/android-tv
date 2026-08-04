@@ -33,6 +33,7 @@ import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.ProgressReason
+import org.kaloscope.tv.core.player.LocalEpisodeRef
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -71,6 +72,43 @@ class PlayerViewModelSettingsTest {
         assertFalse(request.autoplayNext)
         assertEquals(expectedDanmaku, request.danmakuSettings)
         assertFalse(request.subtitleSettings.enabled)
+    }
+
+    @Test
+    fun `summary detail playback preserves resume metadata and siblings`() {
+        val store = PlaybackRequestStore()
+        val viewModel = PlayerViewModel(
+            requestStore = store,
+            mediaRepository = unusedMediaRepository(),
+            historyRepository = unusedHistoryRepository(),
+            searchRepository = unusedSearchRepository(),
+        )
+        val episodes = listOf(
+            mediaSummary(301, "/episode-1.mkv", "Episode 1"),
+            mediaSummary(302, "/episode-2.mkv", "Episode 2"),
+        )
+
+        val requestId = checkNotNull(
+            viewModel.createFromSummary(
+                session = session(),
+                summary = episodes.first(),
+                siblings = episodes,
+                parentTitle = "Series title",
+                resumePositionSeconds = 42,
+                settings = TvSettings(autoplayNext = false),
+            ),
+        )
+
+        val request = store.get(requestId) as PlaybackRequest.LocalMedia
+        assertEquals(301L, request.mediaId)
+        assertEquals("/episode-1.mkv", request.path)
+        assertEquals("Episode 1", request.title)
+        assertEquals("Series title", request.parentTitle)
+        assertEquals(1, request.seasonNumber)
+        assertEquals(1, request.episodeNumber)
+        assertEquals(42L, request.resumePositionSeconds)
+        assertEquals(listOf(301L, 302L), request.siblings.map(LocalEpisodeRef::mediaId))
+        assertFalse(request.autoplayNext)
     }
 
     @Test

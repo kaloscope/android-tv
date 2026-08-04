@@ -177,7 +177,9 @@
     <string name="back">返回</string>
     <string name="detail_load_failed">无法加载媒体详情</string>
     <string name="episodes">分集</string>
+    <string name="parts">分段</string>
     <string name="episode_number">第 %1$d 集</string>
+    <string name="episode_preview">S%1$dE%2$d · %3$s</string>
     <string name="player_episode_summary">第 %1$d 集 · %2$s</string>
     <string name="cast_title">演职人员</string>
     <string name="directors">导演：%1$s</string>

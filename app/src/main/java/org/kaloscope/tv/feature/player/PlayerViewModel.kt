@@ -81,6 +81,27 @@ class PlayerViewModel @Inject constructor(
             settings = settings,
         )
 
+    fun createFromSummary(
+        session: Session,
+        summary: MediaSummary,
+        siblings: List<MediaSummary>,
+        resumePositionSeconds: Long?,
+        parentTitle: String,
+        settings: TvSettings = TvSettings(),
+    ): String? = createLocalRequest(
+        session = session,
+        mediaId = summary.id,
+        path = summary.path,
+        title = summary.title,
+        parentTitle = parentTitle,
+        seasonNumber = summary.season,
+        episodeNumber = summary.episode,
+        resumePositionSeconds = resumePositionSeconds,
+        origin = PlaybackOrigin.MediaDetail,
+        siblings = siblings,
+        settings = settings,
+    )
+
     fun load(
         session: Session,
         requestId: String,
