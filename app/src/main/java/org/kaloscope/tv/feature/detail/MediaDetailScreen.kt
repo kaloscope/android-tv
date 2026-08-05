@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -70,10 +72,17 @@ fun MediaDetailScreen(
 ) {
     val initialFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
+    val detailScrollState = rememberLazyListState()
+    var backButtonFocused by remember { mutableStateOf(false) }
     val backExitFocusRequester = when (state) {
         MediaDetailUiState.Loading -> null
         is MediaDetailUiState.Error -> initialFocusRequester
         is MediaDetailUiState.Content -> primaryActionFocusRequester
+    }
+    LaunchedEffect(backButtonFocused, state is MediaDetailUiState.Content) {
+        if (backButtonFocused && state is MediaDetailUiState.Content) {
+            detailScrollState.scrollToItem(0)
+        }
     }
 
     KaloscopeBackground {
@@ -144,6 +153,7 @@ fun MediaDetailScreen(
                         childViewport = state.childViewport,
                         resumePositionSeconds = resumePositionSeconds,
                         resumePositionsByMediaId = resumePositionsByMediaId,
+                        detailScrollState = detailScrollState,
                         childFocusRequester = childFocusRequester,
                         primaryActionFocusRequester = primaryActionFocusRequester,
                         onBack = onBack,
@@ -183,6 +193,7 @@ fun MediaDetailScreen(
 
             DetailBackButton(
                 onBack = onBack,
+                onFocusChanged = { backButtonFocused = it },
                 exitFocusRequester = backExitFocusRequester,
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -195,6 +206,7 @@ fun MediaDetailScreen(
 @Composable
 private fun DetailBackButton(
     onBack: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     exitFocusRequester: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
@@ -206,6 +218,7 @@ private fun DetailBackButton(
         modifier = modifier
             .size(48.dp)
             .background(Color(0x73060912), CircleShape)
+            .onFocusChanged { onFocusChanged(it.isFocused) }
             .focusProperties {
                 exitFocusRequester?.let { target ->
                     right = target

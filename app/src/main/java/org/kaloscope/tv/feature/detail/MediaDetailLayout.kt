@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -76,6 +77,7 @@ internal fun MediaDetailCinematicLayout(
     childViewport: GridViewportSnapshot,
     resumePositionSeconds: Long?,
     resumePositionsByMediaId: Map<Long, Long>,
+    detailScrollState: LazyListState,
     childFocusRequester: FocusRequester,
     primaryActionFocusRequester: FocusRequester,
     onBack: () -> Unit,
@@ -127,6 +129,7 @@ internal fun MediaDetailCinematicLayout(
         )
 
         LazyColumn(
+            state = detailScrollState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 48.dp),
         ) {
