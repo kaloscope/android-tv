@@ -10,6 +10,27 @@ kotlin {
     jvmToolchain(17)
 }
 
+// Keep local release builds unsigned; CI opts into signing only with a complete set.
+val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH")
+val releaseKeystorePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS")
+val releaseKeyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD")
+val releaseSigningInputs =
+    listOf(
+        releaseKeystorePath,
+        releaseKeystorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    )
+val configuredReleaseSigningInputs =
+    releaseSigningInputs.count { !it.orNull.isNullOrBlank() }
+val hasReleaseSigning = configuredReleaseSigningInputs == releaseSigningInputs.size
+
+check(configuredReleaseSigningInputs == 0 || hasReleaseSigning) {
+    "Set all ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, " +
+        "ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD variables for release signing."
+}
+
 android {
     namespace = "org.kaloscope.tv"
     compileSdk = 37
@@ -25,10 +46,24 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeystorePath.get())
+                storePassword = releaseKeystorePassword.get()
+                keyAlias = releaseKeyAlias.get()
+                keyPassword = releaseKeyPassword.get()
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
