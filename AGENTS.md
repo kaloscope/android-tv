@@ -62,6 +62,7 @@ to change them:
 - Preferences DataStore and Android Keystore-backed token storage.
 - Coil for images.
 - Media3 ExoPlayer, MediaSession, HLS, DASH, and Compose player UI.
+- AkDanmaku for on-screen comment rendering and playback synchronization.
 - JUnit, coroutines-test, MockWebServer, Compose UI tests, screenshot tests, and
   targeted device tests.
 
@@ -77,16 +78,16 @@ DTOs belong in the remote data layer. UI code must not call Retrofit or
 DataStore directly. Feature packages communicate through stable models, route
 keys, and IDs rather than by sharing screen internals.
 
-Do not introduce Leanback, Fragment/XML-based primary UI, Room, another HTTP
-client, another dependency injection framework, a service locator, multiple
-Gradle modules, an event bus, WebView-based product flows, or disabled TLS
-validation without explicit approval and a clear migration need.
+Do not introduce the Leanback UI toolkit, Fragment/XML-based primary UI, Room,
+another HTTP client, another dependency injection framework, a service locator,
+multiple Gradle modules, an event bus, WebView-based product flows, or disabled
+TLS validation without explicit approval and a clear migration need.
 
 ## 4. Established product behavior
 
 Preserve these client behaviors unless the task explicitly changes the product:
 
-- Release code displays real server data. Fixtures, previews, and sample data
+- Production code displays real server data. Fixtures, previews, and sample data
   are limited to tests and previews.
 - Search selects the first available real indexer. If it does not require a
   keyword, the initial search runs automatically.
@@ -185,7 +186,7 @@ media paths.
 - The player owns ExoPlayer and MediaSession through its screen-scoped playback
   controller and releases both with the screen lifecycle.
 - Record local playback progress periodically and at important lifecycle
-  boundaries, including immediately before release.
+  boundaries, including immediately before the playback controller is released.
 - Danmaku timing uses milliseconds and must be resynchronized after seek or
   episode changes.
 
@@ -284,7 +285,30 @@ that a check passed unless it was actually executed successfully.
 Documentation-only changes do not require an Android build unless they change
 build instructions or make claims that need build verification.
 
-## 11. Completion criteria
+## 11. Release and signing
+
+- Local `release` builds remain unsigned when none of the four Gradle signing
+  environment variables are configured. Supplying only a subset must continue
+  to fail fast; signing is enabled only when `ANDROID_KEYSTORE_PATH`,
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`
+  are all present.
+- Store `ANDROID_KEYSTORE_BASE64` only as a secret in the GitHub `release`
+  Environment. Restore it under `${{ runner.temp }}` at runtime and delete it
+  with an `always()` cleanup step. Never commit, cache, upload, print, or
+  otherwise expose signing material.
+- GitHub Releases are created only from pushed `v*` tags. Before a release,
+  increment `versionCode` and keep `versionName` equal to the tag without the
+  leading `v`.
+- Preserve release gates: JVM unit tests, release lint, signed APK assembly, and
+  `apksigner` verification must succeed before publishing.
+- Publish the versioned APK and its SHA-256 checksum. Preserve the R8 mapping as
+  a workflow artifact for diagnosing obfuscated crashes.
+- Keep third-party GitHub Actions pinned to full commit SHAs and grant only the
+  workflow permissions required to publish release assets.
+- Do not create or push a release tag or publish a GitHub Release without the
+  user's explicit approval.
+
+## 12. Completion criteria
 
 A change is complete only when:
 
@@ -301,7 +325,7 @@ A change is complete only when:
 - There are no unexplained TODOs, placeholders, skipped tests, or empty catches.
 - The final diff contains no generated artifacts or unrelated user changes.
 
-## 12. Git workflow
+## 13. Git workflow
 
 - Never discard, overwrite, or reformat unrelated user changes.
 - Do not run `git commit`, push, create a branch, or open a pull request unless
