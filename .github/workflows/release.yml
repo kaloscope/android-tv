@@ -97,7 +97,6 @@ jobs:
           )
 
           {
-            echo "version=$version"
             echo "apk=release-assets/$apk_name"
             echo "checksum=release-assets/${apk_name}.sha256"
           } >> "$GITHUB_OUTPUT"
@@ -116,7 +115,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           APK_PATH: ${{ steps.release.outputs.apk }}
           CHECKSUM_PATH: ${{ steps.release.outputs.checksum }}
-          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           set -euo pipefail
           gh release create "$GITHUB_REF_NAME" \
@@ -124,4 +122,4 @@ jobs:
             "$CHECKSUM_PATH" \
             --verify-tag \
             --generate-notes \
-            --title "Kaloscope TV ${RELEASE_VERSION}"
+            --title "$GITHUB_REF_NAME"
