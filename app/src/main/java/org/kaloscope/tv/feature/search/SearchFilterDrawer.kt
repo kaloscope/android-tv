@@ -28,6 +28,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,6 +71,15 @@ internal fun SearchFilterDrawer(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onPreviewKeyEvent { event ->
+                if (event.key != Key.Back) {
+                    return@onPreviewKeyEvent false
+                }
+                if (event.type == KeyEventType.KeyUp) {
+                    onDismiss()
+                }
+                true
+            }
             .background(Color(0x66000000))
             .testTag("search-filter-drawer"),
         contentAlignment = Alignment.CenterEnd,
@@ -119,13 +133,23 @@ internal fun SearchFilterDrawer(
                     text = stringResource(R.string.filter_clear),
                     tag = "filter-clear",
                     onClick = onClear,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusProperties {
+                            left = FocusRequester.Cancel
+                            down = FocusRequester.Cancel
+                        },
                 )
                 DrawerActionButton(
                     text = stringResource(R.string.filter_apply),
                     tag = "filter-apply",
                     onClick = { onApply(draft.toMap()) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusProperties {
+                            right = FocusRequester.Cancel
+                            down = FocusRequester.Cancel
+                        },
                 )
             }
         }
@@ -250,12 +274,7 @@ private fun DrawerActionButton(
         onClick = onClick,
         size = KaloscopeControlSize.Compact,
         modifier = modifier
-            .testTag(tag)
-            .focusProperties {
-                left = FocusRequester.Cancel
-                right = FocusRequester.Cancel
-                down = FocusRequester.Cancel
-            },
+            .testTag(tag),
     ) {
         Text(text = text)
     }

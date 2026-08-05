@@ -62,6 +62,8 @@ import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
+import org.kaloscope.tv.core.model.SearchFilterDefinition
+import org.kaloscope.tv.core.model.SearchFilterType
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.TvSettings
@@ -1005,6 +1007,69 @@ class MainShellTest {
         composeRule.runOnIdle {
             assertEquals(1, searchOpens)
         }
+    }
+
+    @Test
+    fun backClosesSearchFiltersWithoutLeavingSearchOrApplying() {
+        val baseSearchState = deepSearchState()
+        var searchState by mutableStateOf(
+            baseSearchState.copy(
+                profiles = baseSearchState.profiles.map { profile ->
+                    profile.copy(
+                        filters = listOf(
+                            SearchFilterDefinition(
+                                key = "title",
+                                label = "标题",
+                                type = SearchFilterType.Text,
+                            ),
+                        ),
+                    )
+                },
+            ),
+        )
+        var dismissals = 0
+        var applications = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SearchRoute,
+                    searchActions = SearchActions(
+                        openFilters = {
+                            searchState = searchState.copy(filterDrawerOpen = true)
+                        },
+                        dismissFilters = {
+                            dismissals += 1
+                            searchState = searchState.copy(filterDrawerOpen = false)
+                        },
+                        applyFilters = { applications += 1 },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-filter-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("search-filter-drawer").assertExists()
+        composeRule.onNodeWithTag("filter-clear")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Back) }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(1, dismissals)
+            assertEquals(0, applications)
+        }
+        composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
+        composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
+        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
     }
 
     @Test

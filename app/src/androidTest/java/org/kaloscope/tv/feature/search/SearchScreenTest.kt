@@ -1254,6 +1254,44 @@ class SearchScreenTest {
     }
 
     @Test
+    fun filterActionsFollowHorizontalDpadOrder() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(regionFilter()),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val clear = composeRule.onNodeWithTag("filter-clear")
+        val apply = composeRule.onNodeWithTag("filter-apply")
+
+        clear.performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        apply.assertIsFocused()
+
+        apply.performKeyInput { pressKey(Key.DirectionLeft) }
+        clear.assertIsFocused()
+    }
+
+    @Test
     fun closingFilterDrawerRestoresFilterButtonFocus() {
         var drawerOpen by mutableStateOf(false)
         composeRule.setContent {
