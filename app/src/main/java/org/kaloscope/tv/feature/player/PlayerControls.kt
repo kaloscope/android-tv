@@ -103,6 +103,7 @@ internal data class PlayerControlsUiState(
     val positionMillis: Long,
     val durationMillis: Long,
     val playbackModeLabel: String,
+    val qualityControlLabel: String = playbackModeLabel,
     val playbackSpeed: Float,
     val fallbackInProgress: Boolean,
     val progressSaveFailed: Boolean,
@@ -541,15 +542,16 @@ internal fun PlayerControls(
                                 }
 
                                 PlayerAuxiliaryControl.Quality -> PlayerAuxiliaryButton(
-                                    visibleLabel = state.playbackModeLabel,
+                                    visibleLabel = state.qualityControlLabel,
                                     accessibilityLabel = stringResource(
                                         R.string.playback_quality_with_value,
-                                        state.playbackModeLabel,
+                                        state.qualityControlLabel,
                                     ),
                                     labelTag = "player-quality-label",
                                     iconRes = R.drawable.ic_player_quality,
                                     action = state.quality,
                                     onClick = onOpenDefinitions,
+                                    expandedWidth = 160.dp,
                                     modifier = Modifier
                                         .focusRequester(focusRequester)
                                         .testTag("player-quality"),
@@ -615,6 +617,7 @@ private fun PlayerAuxiliaryButton(
     action: PlayerActionUiState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    expandedWidth: Dp = 92.dp,
     upFocus: FocusRequester,
     downFocus: FocusRequester? = null,
     leftFocus: FocusRequester? = null,
@@ -623,7 +626,7 @@ private fun PlayerAuxiliaryButton(
     var focused by remember { mutableStateOf(false) }
     val showLabel = focused && action.enabled
     val width by animateDpAsState(
-        targetValue = if (showLabel) 92.dp else 42.dp,
+        targetValue = if (showLabel) expandedWidth else 42.dp,
         animationSpec = tween(
             durationMillis = KaloscopeMotion.FocusMillis,
             easing = KaloscopeMotion.ControlEasing,
@@ -667,6 +670,7 @@ private fun PlayerAuxiliaryButton(
                         lineHeight = 14.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.testTag(labelTag),
                     )
                 }

@@ -31,6 +31,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
@@ -269,9 +270,10 @@ class PlayerControlsTest {
         }
 
         val collapsedSize = with(density) { 42.dp.toPx() }
-        val expandedWidth = with(density) { 92.dp.toPx() }
+        val defaultExpandedWidth = with(density) { 92.dp.toPx() }
+        val qualityExpandedWidth = with(density) { 160.dp.toPx() }
         val collapsedTolerance = with(density) { 1.dp.toPx() }
-        val focusedTolerance = with(density) { 5.dp.toPx() }
+        val focusedTolerance = with(density) { 7.dp.toPx() }
 
         fun assertCollapsed(tag: String) {
             val bounds = composeRule.onNodeWithTag(tag)
@@ -281,12 +283,16 @@ class PlayerControlsTest {
             assertEquals(collapsedSize, bounds.height, collapsedTolerance)
         }
 
-        fun assertFocusedAndExpanded(controlTag: String, labelTag: String) {
+        fun assertFocusedAndExpanded(
+            controlTag: String,
+            labelTag: String,
+            expectedWidth: Float = defaultExpandedWidth,
+        ) {
             val bounds = composeRule.onNodeWithTag(controlTag)
                 .assertIsFocused()
                 .fetchSemanticsNode()
                 .boundsInRoot
-            assertEquals(expandedWidth, bounds.width, focusedTolerance)
+            assertEquals(expectedWidth, bounds.width, focusedTolerance)
             composeRule.onNodeWithTag(labelTag, useUnmergedTree = true)
                 .assertIsDisplayed()
         }
@@ -324,7 +330,11 @@ class PlayerControlsTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.mainClock.advanceTimeBy(200)
         assertCollapsed("player-speed")
-        assertFocusedAndExpanded("player-quality", "player-quality-label")
+        assertFocusedAndExpanded(
+            "player-quality",
+            "player-quality-label",
+            qualityExpandedWidth,
+        )
 
         composeRule.onNodeWithTag("player-quality")
             .performKeyInput { pressKey(Key.DirectionRight) }
@@ -825,10 +835,59 @@ class PlayerControlsTest {
 
     @Test
     fun qualityControlAnnouncesFeatureAndValueButShowsOnlyValue() {
+        val playbackStatus = "网络资源 · 480P 清晰 HEVC"
+        val qualityValue = "480P 清晰 HEVC"
+
         composeRule.setContent {
             MaterialTheme {
                 PlayerControls(
-                    state = controlsState(),
+                    state = controlsState().copy(
+                        playbackModeLabel = playbackStatus,
+                        qualityControlLabel = qualityValue,
+                    ),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(playbackStatus, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag("player-quality")
+            .assertContentDescriptionEquals("清晰度，$qualityValue")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("player-quality-label", useUnmergedTree = true)
+            .assertTextEquals(qualityValue)
+    }
+
+    @Test
+    fun longQualityValueIsEllipsizedWithinItsFocusedWidth() {
+        lateinit var density: Density
+        val qualityValue = "480P 清晰 HEVC 超长线路名称测试内容"
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState().copy(qualityControlLabel = qualityValue),
                     playFocus = remember { FocusRequester() },
                     definitionFocus = remember { FocusRequester() },
                     settingsFocus = remember { FocusRequester() },
@@ -853,10 +912,25 @@ class PlayerControlsTest {
         }
 
         composeRule.onNodeWithTag("player-quality")
-            .assertContentDescriptionEquals("清晰度，Network")
+            .assertContentDescriptionEquals("清晰度，$qualityValue")
             .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(200)
+
+        val focusedBounds = composeRule.onNodeWithTag("player-quality")
+            .assertIsFocused()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val widthTolerance = with(density) { 7.dp.toPx() }
+        assertEquals(with(density) { 160.dp.toPx() }, focusedBounds.width, widthTolerance)
+
+        val layoutResults = mutableListOf<TextLayoutResult>()
         composeRule.onNodeWithTag("player-quality-label", useUnmergedTree = true)
-            .assertTextEquals("Network")
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(layoutResults)
+            }
+        val layout = layoutResults.single()
+        assertEquals(1, layout.lineCount)
+        assertTrue("Long quality value should end with an ellipsis", layout.isLineEllipsized(0))
     }
 
     @Test

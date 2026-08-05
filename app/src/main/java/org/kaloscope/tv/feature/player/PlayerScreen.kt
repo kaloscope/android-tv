@@ -530,7 +530,11 @@ private fun PlayerContent(
                     ?: source.definitions.firstOrNull { it.url == source.url }?.label
                     ?: source.definitions.singleOrNull()?.label
             }
-            val qualityLabel = selectedDefinitionLabel
+            val qualityControlLabel = playerQualityControlLabel(
+                playbackModeLabel = playbackMode,
+                selectedDefinitionLabel = selectedDefinitionLabel,
+            )
+            val playbackStatusLabel = selectedDefinitionLabel
                 ?.takeIf(String::isNotBlank)
                 ?.let { definitionLabel ->
                     stringResource(
@@ -556,7 +560,8 @@ private fun PlayerContent(
                 playWhenReady = status.playWhenReady,
                 positionMillis = seekState.displayPositionMillis,
                 durationMillis = status.effectiveDurationMillis,
-                playbackModeLabel = qualityLabel,
+                playbackModeLabel = playbackStatusLabel,
+                qualityControlLabel = qualityControlLabel,
                 playbackSpeed = playbackSpeed,
                 fallbackInProgress = status.fallbackInProgress,
                 progressSaveFailed = state.progressError != null,

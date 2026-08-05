@@ -14,6 +14,14 @@ internal fun PlaybackRequest.playbackIdentity(): String =
             "$requestId:network:${source.resourceId}:${source.selectedChapterIndex}:${source.url}"
     }
 
+internal fun playerQualityControlLabel(
+    playbackModeLabel: String,
+    selectedDefinitionLabel: String?,
+): String =
+    selectedDefinitionLabel
+        ?.takeIf(String::isNotBlank)
+        ?: playbackModeLabel
+
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun SubtitleView.applySubtitleStyle(settings: SubtitleSettings) {
     setApplyEmbeddedStyles(false)
