@@ -4,5 +4,5 @@
     <size
         android:width="320dp"
         android:height="180dp" />
-    <solid android:color="@color/launcher_background" />
+    <solid android:color="@color/launcher_artwork_background" />
 </shape>

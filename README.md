@@ -130,7 +130,7 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## 参与贡献
 
-欢迎提交 Issue 和 Pull Request，包括完全由 AI 生成的 PR。提交前请阅读[AGENTS.md](AGENTS.md) 中的项目边界，并至少说明：
+欢迎提交 Issue 和 Pull Request，包括完全由 AI 生成的 PR。提交前请阅读 [AGENTS.md](AGENTS.md) 中的项目边界，并至少说明：
 
 - 要解决的问题以及修改范围
 - 是否会影响界面、网络、存储、播放、遥控器或焦点行为
@@ -143,7 +143,6 @@ app/build/outputs/apk/debug/app-debug.apk
 ## 相关项目
 
 - [服务端与 Web UI](https://github.com/kaloscope/kaloscope)
-- [使用文档](https://kaloscope.org/docs/introduction)
 - [社区工作流模板](https://github.com/kaloscope/workflows)
 - [弹弹play API 代理服务](https://github.com/kaloscope/danmaku)
 
