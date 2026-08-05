@@ -1,0 +1,127 @@
+name: Release APK
+
+"on":
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish APK
+    runs-on: ubuntu-24.04
+    environment: release
+
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@4733eaac7c1b0da527e4206b7671e0061de1ce37 # v6
+        with:
+          cache-provider: basic
+
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Run release lint
+        run: ./gradlew :app:lintRelease --no-daemon --stacktrace
+
+      - name: Restore release keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PATH: ${{ runner.temp }}/kaloscope-release.jks
+        run: |
+          set -euo pipefail
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+
+      - name: Assemble signed APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/kaloscope-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Remove release keystore
+        if: ${{ always() }}
+        shell: bash
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/kaloscope-release.jks
+        run: rm -f -- "$KEYSTORE_PATH"
+
+      - name: Verify APK signature
+        shell: bash
+        env:
+          APK_PATH: app/build/outputs/apk/release/app-release.apk
+        run: |
+          set -euo pipefail
+          apksigner_path="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          if [[ -z "$apksigner_path" ]]; then
+            echo "::error::apksigner was not found in the Android SDK"
+            exit 1
+          fi
+          "$apksigner_path" verify --verbose --print-certs "$APK_PATH"
+
+      - name: Prepare release assets
+        id: release
+        shell: bash
+        env:
+          SOURCE_APK: app/build/outputs/apk/release/app-release.apk
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          if [[ -z "$version" || "$version" == "$GITHUB_REF_NAME" || ! "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
+            echo "::error::Tag must use a safe non-empty v<version> format"
+            exit 1
+          fi
+
+          apk_name="kaloscope-tv-${version}.apk"
+          mkdir -p release-assets
+          cp "$SOURCE_APK" "release-assets/$apk_name"
+          (
+            cd release-assets
+            sha256sum "$apk_name" > "${apk_name}.sha256"
+          )
+
+          {
+            echo "version=$version"
+            echo "apk=release-assets/$apk_name"
+            echo "checksum=release-assets/${apk_name}.sha256"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload R8 mapping
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: r8-mapping-${{ github.ref_name }}
+          path: app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK_PATH: ${{ steps.release.outputs.apk }}
+          CHECKSUM_PATH: ${{ steps.release.outputs.checksum }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            "$APK_PATH" \
+            "$CHECKSUM_PATH" \
+            --verify-tag \
+            --generate-notes \
+            --title "Kaloscope TV ${RELEASE_VERSION}"
