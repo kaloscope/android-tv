@@ -46,7 +46,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
-import java.util.Locale
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
@@ -65,7 +64,6 @@ import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
-import org.kaloscope.tv.core.model.SubtitleDisplayMode
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -781,21 +779,6 @@ internal fun resolutionLabel(resolution: TranscodeResolution): String =
         TranscodeResolution.P1080 -> stringResource(R.string.resolution_1080p)
         TranscodeResolution.P720 -> stringResource(R.string.resolution_720p)
         TranscodeResolution.P480 -> stringResource(R.string.resolution_480p)
-    }
-
-@Composable
-internal fun subtitleDisplayModeLabel(mode: SubtitleDisplayMode): String =
-    when (mode) {
-        SubtitleDisplayMode.Stroke -> stringResource(R.string.subtitle_display_mode_stroke)
-        SubtitleDisplayMode.Background ->
-            stringResource(R.string.subtitle_display_mode_background)
-    }
-
-internal fun formatSubtitleOffset(value: Float): String =
-    if (value == 0f) {
-        "0.0s"
-    } else {
-        String.format(Locale.US, "%+.1fs", value)
     }
 
 @Composable

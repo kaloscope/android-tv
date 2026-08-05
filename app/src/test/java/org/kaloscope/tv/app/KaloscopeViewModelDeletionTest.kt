@@ -9,12 +9,12 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.kaloscope.tv.app.bootstrap.BootstrapRepository
 import org.kaloscope.tv.app.bootstrap.BootstrapState
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.storage.ServerStore
 import org.kaloscope.tv.data.auth.SessionRepository
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.feature.server.ServerSetupState
@@ -26,7 +26,7 @@ class KaloscopeViewModelDeletionTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             val viewModel = KaloscopeViewModel(
-                bootstrapRepository = EmptyBootstrapRepository(),
+                serverStore = EmptyServerStore(),
                 serverRepository = DeletionServerRepository(mutableListOf(), emptyList()),
                 sessionRepository = DeletionSessionRepository(mutableListOf()),
             )
@@ -52,7 +52,7 @@ class KaloscopeViewModelDeletionTest {
             val remaining = listOf(server("remaining"))
             val events = mutableListOf<String>()
             val viewModel = KaloscopeViewModel(
-                bootstrapRepository = EmptyBootstrapRepository(),
+                serverStore = EmptyServerStore(),
                 serverRepository = DeletionServerRepository(events, remaining),
                 sessionRepository = DeletionSessionRepository(events),
             )
@@ -72,19 +72,16 @@ class KaloscopeViewModelDeletionTest {
     }
 }
 
-private class EmptyBootstrapRepository : BootstrapRepository {
+private class EmptyServerStore : ServerStore {
     override suspend fun getServers(): List<SavedServer> = emptyList()
 
     override suspend fun getActiveServerId(): String? = null
 
-    override suspend fun getToken(serverId: String): String? = null
+    override suspend fun save(server: SavedServer) = error("Not used")
 
-    override suspend fun validateSession(
-        server: SavedServer,
-        token: String,
-    ): AppResult<Session> = AppResult.Failure(AppError.Offline)
+    override suspend fun delete(serverId: String): List<SavedServer> = error("Not used")
 
-    override suspend fun clearToken(serverId: String) = Unit
+    override suspend fun setActiveServerId(serverId: String) = error("Not used")
 }
 
 private class DeletionServerRepository(

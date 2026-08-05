@@ -14,8 +14,6 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
-import org.kaloscope.tv.app.bootstrap.BootstrapRepository
-import org.kaloscope.tv.app.bootstrap.DefaultBootstrapRepository
 import org.kaloscope.tv.core.player.AndroidNetworkVideoCodecSupport
 import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
 import org.kaloscope.tv.core.storage.AndroidKeystoreTokenCipher
@@ -75,11 +73,6 @@ abstract class AppBindings {
     abstract fun bindSearchRepository(
         implementation: DefaultSearchRepository,
     ): SearchRepository
-
-    @Binds
-    abstract fun bindBootstrapRepository(
-        implementation: DefaultBootstrapRepository,
-    ): BootstrapRepository
 
     @Binds
     abstract fun bindSettingsRepository(

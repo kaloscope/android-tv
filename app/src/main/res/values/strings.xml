@@ -2,8 +2,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Kaloscope</string>
     <string name="tv_experience">TV EXPERIENCE</string>
-    <string name="loading_episode">正在加载…</string>
-
     <string name="setup_title">添加服务器</string>
     <string name="setup_description">添加你的 Kaloscope 服务器，连接信息只会保存在这台设备上。</string>
     <string name="setup_step_server">配置服务器</string>
@@ -194,11 +192,9 @@
     <string name="pause">暂停</string>
     <string name="subtitles_on">字幕开</string>
     <string name="subtitles_off">字幕关</string>
-    <string name="no_subtitles">无字幕</string>
     <string name="retry_subtitles">重试字幕</string>
     <string name="danmaku_on">弹幕开</string>
     <string name="danmaku_off">弹幕关</string>
-    <string name="no_danmaku">无弹幕</string>
     <string name="retry_danmakus">重试弹幕</string>
     <string name="direct_playback_failed">直连播放失败</string>
     <string name="transcode_playback_failed">转码播放失败</string>

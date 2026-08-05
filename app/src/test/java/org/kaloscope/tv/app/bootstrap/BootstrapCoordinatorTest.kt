@@ -10,13 +10,15 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.core.storage.ServerStore
+import org.kaloscope.tv.data.auth.SessionRepository
 
 class BootstrapCoordinatorTest {
     @Test
     fun `requires a server when none are saved`() = runBlocking {
-        val repository = FakeBootstrapRepository()
+        val data = FakeBootstrapData()
 
-        val state = BootstrapCoordinator(repository).resolve()
+        val state = BootstrapCoordinator(data, data).resolve()
 
         assertEquals(BootstrapState.NeedsServer(emptyList()), state)
     }
@@ -24,9 +26,9 @@ class BootstrapCoordinatorTest {
     @Test
     fun `requires login when active server has no token`() = runBlocking {
         val server = savedServer()
-        val repository = FakeBootstrapRepository(servers = listOf(server))
+        val data = FakeBootstrapData(servers = listOf(server))
 
-        val state = BootstrapCoordinator(repository).resolve()
+        val state = BootstrapCoordinator(data, data).resolve()
 
         assertEquals(BootstrapState.NeedsLogin(server), state)
     }
@@ -35,64 +37,76 @@ class BootstrapCoordinatorTest {
     fun `enters ready state after validating a saved session`() = runBlocking {
         val server = savedServer()
         val session = session(server)
-        val repository = FakeBootstrapRepository(
+        val data = FakeBootstrapData(
             servers = listOf(server),
             token = "saved-token",
             validation = AppResult.Success(session),
         )
 
-        val state = BootstrapCoordinator(repository).resolve()
+        val state = BootstrapCoordinator(data, data).resolve()
 
         assertEquals(BootstrapState.Ready(session), state)
-        assertFalse(repository.tokenCleared)
+        assertFalse(data.tokenCleared)
     }
 
     @Test
     fun `clears only an unauthorized token and returns to login`() = runBlocking {
         val server = savedServer()
-        val repository = FakeBootstrapRepository(
+        val data = FakeBootstrapData(
             servers = listOf(server),
             token = "expired-token",
             validation = AppResult.Failure(AppError.Unauthorized),
         )
 
-        val state = BootstrapCoordinator(repository).resolve()
+        val state = BootstrapCoordinator(data, data).resolve()
 
         assertEquals(BootstrapState.NeedsLogin(server), state)
-        assertTrue(repository.tokenCleared)
+        assertTrue(data.tokenCleared)
     }
 
     @Test
     fun `keeps token when validation fails because server is offline`() = runBlocking {
         val server = savedServer()
-        val repository = FakeBootstrapRepository(
+        val data = FakeBootstrapData(
             servers = listOf(server),
             token = "saved-token",
             validation = AppResult.Failure(AppError.Offline),
         )
 
-        val state = BootstrapCoordinator(repository).resolve()
+        val state = BootstrapCoordinator(data, data).resolve()
 
         assertEquals(BootstrapState.ConnectionError(server, AppError.Offline), state)
-        assertFalse(repository.tokenCleared)
+        assertFalse(data.tokenCleared)
     }
 }
 
-private class FakeBootstrapRepository(
+private class FakeBootstrapData(
     private val servers: List<SavedServer> = emptyList(),
     private val activeServerId: String? = servers.firstOrNull()?.id,
     private val token: String? = null,
     private val validation: AppResult<Session> = AppResult.Failure(AppError.Offline),
-) : BootstrapRepository {
+) : ServerStore, SessionRepository {
     var tokenCleared = false
 
     override suspend fun getServers(): List<SavedServer> = servers
 
+    override suspend fun save(server: SavedServer) = error("Not used")
+
+    override suspend fun delete(serverId: String): List<SavedServer> = error("Not used")
+
     override suspend fun getActiveServerId(): String? = activeServerId
+
+    override suspend fun setActiveServerId(serverId: String) = error("Not used")
+
+    override suspend fun login(
+        server: SavedServer,
+        username: String,
+        password: String,
+    ): AppResult<Session> = error("Not used")
 
     override suspend fun getToken(serverId: String): String? = token
 
-    override suspend fun validateSession(server: SavedServer, token: String): AppResult<Session> =
+    override suspend fun validate(server: SavedServer, token: String): AppResult<Session> =
         validation
 
     override suspend fun clearToken(serverId: String) {

@@ -649,36 +649,6 @@ private fun ProgressBar(
 }
 
 @Composable
-private fun StatusPanel(
-    title: String,
-    description: String,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
-            .background(Panel, RoundedCornerShape(20.dp))
-            .padding(34.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Column {
-            Text(
-                text = title,
-                color = OnBackground,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = description,
-                color = Muted,
-                fontSize = 17.sp,
-            )
-        }
-    }
-}
-
-@Composable
 private fun ErrorPanel(
     error: AppError,
     refreshFocusRequester: FocusRequester,

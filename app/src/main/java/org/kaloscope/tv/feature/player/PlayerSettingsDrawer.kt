@@ -39,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
-import java.util.Locale
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
@@ -48,6 +47,8 @@ import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
 import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
+import org.kaloscope.tv.core.designsystem.formatSubtitleOffset
+import org.kaloscope.tv.core.designsystem.subtitleDisplayModeLabel
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
@@ -201,7 +202,7 @@ internal fun PlayerSettingsDrawer(
                     item {
                         PlayerSettingsAdjustRow(
                             title = stringResource(R.string.subtitle_time_offset),
-                            value = formatSubtitleDrawerOffset(
+                            value = formatSubtitleOffset(
                                 subtitleSettings.timeOffsetSeconds,
                             ),
                             onDecrease = {
@@ -452,15 +453,6 @@ private fun PlayerSettingsSectionHeader(title: String) {
 }
 
 @Composable
-private fun subtitleDisplayModeLabel(mode: SubtitleDisplayMode): String =
-    when (mode) {
-        SubtitleDisplayMode.Stroke ->
-            stringResource(R.string.subtitle_display_mode_stroke)
-        SubtitleDisplayMode.Background ->
-            stringResource(R.string.subtitle_display_mode_background)
-    }
-
-@Composable
 private fun blockSummary(settings: DanmakuSettings): String {
     val selected = PlayerDanmakuBlockPolicy.selected(settings)
     return if (selected.isEmpty()) {
@@ -469,13 +461,6 @@ private fun blockSummary(settings: DanmakuSettings): String {
         selected.map { playerDanmakuBlockLabel(it) }.joinToString("、")
     }
 }
-
-private fun formatSubtitleDrawerOffset(value: Float): String =
-    if (value == 0f) {
-        "0.0s"
-    } else {
-        String.format(Locale.US, "%+.1fs", value)
-    }
 
 private fun Modifier.initialFocusWhen(
     condition: Boolean,

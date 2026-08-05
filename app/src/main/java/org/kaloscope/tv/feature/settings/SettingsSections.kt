@@ -28,6 +28,8 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.danmakuModeLabel
 import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
 import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
+import org.kaloscope.tv.core.designsystem.formatSubtitleOffset
+import org.kaloscope.tv.core.designsystem.subtitleDisplayModeLabel
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed

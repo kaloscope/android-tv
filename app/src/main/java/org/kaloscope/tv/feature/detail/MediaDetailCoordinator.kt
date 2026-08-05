@@ -42,7 +42,10 @@ class MediaDetailCoordinator(
     ) {
         mutableState.value = MediaDetailUiState.Loading
         mutableState.value = when (val result = repository.getMediaDetail(session, mediaId)) {
-            is AppResult.Success -> contentState(result.value)
+            is AppResult.Success -> MediaDetailUiState.Content(
+                parent = result.value,
+                focusedChildId = result.value.children.firstOrNull()?.id,
+            )
             is AppResult.Failure -> MediaDetailUiState.Error(result.error)
         }
     }
@@ -61,13 +64,6 @@ class MediaDetailCoordinator(
         updateContent { content ->
             if (content.childViewport == snapshot) content else content.copy(childViewport = snapshot)
         }
-    }
-
-    private fun contentState(parent: MediaDetail): MediaDetailUiState.Content {
-        return MediaDetailUiState.Content(
-            parent = parent,
-            focusedChildId = parent.children.firstOrNull()?.id,
-        )
     }
 
     private inline fun updateContent(

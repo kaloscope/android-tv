@@ -38,6 +38,7 @@ android {
 
     buildFeatures {
         compose = true
+        // Legacy kapt loses Kotlin types from Javac's classpath when this source is disabled.
         buildConfig = true
     }
 

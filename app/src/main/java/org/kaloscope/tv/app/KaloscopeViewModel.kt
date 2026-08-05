@@ -11,10 +11,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.app.bootstrap.BootstrapCoordinator
-import org.kaloscope.tv.app.bootstrap.BootstrapRepository
 import org.kaloscope.tv.app.bootstrap.BootstrapState
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.storage.ServerStore
 import org.kaloscope.tv.data.auth.SessionRepository
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.feature.login.LoginCoordinator
@@ -26,11 +26,11 @@ import org.kaloscope.tv.feature.server.ServerSetupState
 
 @HiltViewModel
 class KaloscopeViewModel @Inject constructor(
-    private val bootstrapRepository: BootstrapRepository,
+    private val serverStore: ServerStore,
     private val serverRepository: ServerRepository,
     private val sessionRepository: SessionRepository,
 ) : ViewModel() {
-    private val bootstrapCoordinator = BootstrapCoordinator(bootstrapRepository)
+    private val bootstrapCoordinator = BootstrapCoordinator(serverStore, sessionRepository)
     private val serverCoordinator = ServerSetupCoordinator(
         repository = serverRepository,
         createServerId = { UUID.randomUUID().toString() },
@@ -79,7 +79,7 @@ class KaloscopeViewModel @Inject constructor(
             serverCoordinator.reset()
             serverDeletionCoordinator.clearError()
             mutableBootstrapState.value = BootstrapState.NeedsServer(
-                bootstrapRepository.getServers(),
+                serverStore.getServers(),
             )
         }
     }
