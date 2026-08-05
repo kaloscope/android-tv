@@ -160,6 +160,36 @@ class MediaDetailScreenTest {
     }
 
     @Test
+    fun backButtonRightAndDownReachPrimaryPlaybackAction() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(movie()),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("detail-back")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("播放").assertIsFocused()
+
+        composeRule.onNodeWithTag("detail-back")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithText("播放").assertIsFocused()
+    }
+
+    @Test
     fun remoteBackInvokesOnBack() {
         var backs = 0
         composeRule.setContent {

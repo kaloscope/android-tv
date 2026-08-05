@@ -1,6 +1,7 @@
 package org.kaloscope.tv.feature.settings
 
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -13,6 +14,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
@@ -667,6 +669,126 @@ class SettingsScreenTest {
         composeRule.runOnIdle {
             assertEquals(false, updatedSettings?.enabled)
         }
+    }
+
+    @Test
+    fun adjustableSubtitleRowLeftReturnsToSelectedMenuWithoutChangingValue() {
+        var state by mutableStateOf(
+            SettingsUiState.Content(
+                settings = TvSettings(
+                    subtitle = SubtitleSettings(fontScalePercent = 100),
+                ),
+                section = SettingsSection.Subtitle,
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = state,
+                    requestInitialFocus = false,
+                    onRetry = {},
+                    onSelectSection = { state = state.copy(section = it) },
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = { subtitle ->
+                        state = state.copy(
+                            settings = state.settings.copy(subtitle = subtitle),
+                        )
+                    },
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("字幕字号")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithText("字幕").assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(100, state.settings.subtitle.fontScalePercent)
+        }
+    }
+
+    @Test
+    fun subtitleAdjustmentModeConsumesDirectionsUntilCenterOrBackExits() {
+        var systemBacks = 0
+        var state by mutableStateOf(
+            SettingsUiState.Content(
+                settings = TvSettings(
+                    subtitle = SubtitleSettings(fontScalePercent = 100),
+                ),
+                section = SettingsSection.Subtitle,
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                BackHandler { systemBacks += 1 }
+                SettingsScreen(
+                    session = session(),
+                    state = state,
+                    requestInitialFocus = false,
+                    onRetry = {},
+                    onSelectSection = { state = state.copy(section = it) },
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = { subtitle ->
+                        state = state.copy(
+                            settings = state.settings.copy(subtitle = subtitle),
+                        )
+                    },
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val fontScaleRow = composeRule.onNodeWithText("字幕字号")
+        fontScaleRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsFocused()
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        fontScaleRow.assertIsFocused().assertIsSelected()
+        composeRule.runOnIdle {
+            assertEquals(95, state.settings.subtitle.fontScalePercent)
+        }
+
+        fontScaleRow
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsNotSelected()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("字幕").assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(95, state.settings.subtitle.fontScalePercent)
+        }
+
+        fontScaleRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.Back) }
+            .assertIsFocused()
+            .assertIsNotSelected()
+        composeRule.runOnIdle {
+            assertEquals(0, systemBacks)
+        }
+
+        fontScaleRow.performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithText("字幕").assertIsFocused()
     }
 
     @Test

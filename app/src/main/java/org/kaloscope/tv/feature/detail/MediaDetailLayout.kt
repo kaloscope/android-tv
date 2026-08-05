@@ -77,6 +77,7 @@ internal fun MediaDetailCinematicLayout(
     resumePositionSeconds: Long?,
     resumePositionsByMediaId: Map<Long, Long>,
     childFocusRequester: FocusRequester,
+    primaryActionFocusRequester: FocusRequester,
     onBack: () -> Unit,
     onChildFocused: (Long) -> Unit,
     onChildViewportChanged: (GridViewportSnapshot) -> Unit,
@@ -146,7 +147,7 @@ internal fun MediaDetailCinematicLayout(
                         posterWidth = posterWidth,
                         horizontalSafePadding = horizontalSafePadding,
                         resumePositionSeconds = resumePositionSeconds,
-                        initialFocusRequester = childFocusRequester,
+                        primaryActionFocusRequester = primaryActionFocusRequester,
                         onResumePlayback = onResumePlayback,
                         onStartOverPlayback = onStartOverPlayback,
                     )
@@ -193,7 +194,7 @@ private fun DetailHero(
     posterWidth: Dp,
     horizontalSafePadding: Dp,
     resumePositionSeconds: Long?,
-    initialFocusRequester: FocusRequester,
+    primaryActionFocusRequester: FocusRequester,
     onResumePlayback: () -> Unit,
     onStartOverPlayback: () -> Unit,
 ) {
@@ -238,9 +239,8 @@ private fun DetailHero(
             if (parent.children.isEmpty() || focusedChild != null) {
                 Spacer(Modifier.height(18.dp))
                 DetailPlaybackActions(
-                    parent = parent,
                     resumePositionSeconds = resumePositionSeconds,
-                    initialFocusRequester = initialFocusRequester,
+                    primaryActionFocusRequester = primaryActionFocusRequester,
                     onResumePlayback = onResumePlayback,
                     onStartOverPlayback = onStartOverPlayback,
                 )
@@ -262,9 +262,8 @@ private fun DetailHero(
 
 @Composable
 private fun DetailPlaybackActions(
-    parent: MediaDetail,
     resumePositionSeconds: Long?,
-    initialFocusRequester: FocusRequester,
+    primaryActionFocusRequester: FocusRequester,
     onResumePlayback: () -> Unit,
     onStartOverPlayback: () -> Unit,
 ) {
@@ -272,11 +271,7 @@ private fun DetailPlaybackActions(
         if (resumePositionSeconds != null) {
             KaloscopeButton(
                 onClick = onResumePlayback,
-                modifier = if (parent.children.isEmpty()) {
-                    Modifier.focusRequester(initialFocusRequester)
-                } else {
-                    Modifier
-                },
+                modifier = Modifier.focusRequester(primaryActionFocusRequester),
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
             ) {
@@ -292,11 +287,7 @@ private fun DetailPlaybackActions(
         } else {
             KaloscopeButton(
                 onClick = onStartOverPlayback,
-                modifier = if (parent.children.isEmpty()) {
-                    Modifier.focusRequester(initialFocusRequester)
-                } else {
-                    Modifier
-                },
+                modifier = Modifier.focusRequester(primaryActionFocusRequester),
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
             ) {

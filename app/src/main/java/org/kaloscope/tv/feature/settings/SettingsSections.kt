@@ -6,10 +6,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -177,9 +181,6 @@ internal fun SubtitleDefaultSettings(
             onIncrease = {
                 onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, 1))
             },
-            onClick = {
-                onChange(settings.copy(timeOffsetSeconds = 0f))
-            },
         )
     }
 }
@@ -220,30 +221,54 @@ private fun AdjustableSettingRow(
     interactionsEnabled: Boolean,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
-    onClick: () -> Unit = {},
 ) {
+    var isAdjusting by remember { mutableStateOf(false) }
+    var consumeBackKeyUp by remember { mutableStateOf(false) }
     KaloscopeButton(
         onClick = {
             if (interactionsEnabled) {
-                onClick()
+                isAdjusting = !isAdjusting
             }
         },
+        selected = isAdjusting,
         size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
-            .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) {
-                    return@onPreviewKeyEvent false
+            .onFocusChanged { focusState ->
+                if (!focusState.isFocused) {
+                    isAdjusting = false
+                    consumeBackKeyUp = false
                 }
-                when (event.key) {
-                    Key.DirectionLeft -> {
+            }
+            .onPreviewKeyEvent { event ->
+                when {
+                    event.key == Key.Back &&
+                        event.type == KeyEventType.KeyDown &&
+                        isAdjusting -> {
+                        isAdjusting = false
+                        consumeBackKeyUp = true
+                        true
+                    }
+
+                    event.key == Key.Back &&
+                        event.type == KeyEventType.KeyUp &&
+                        consumeBackKeyUp -> {
+                        consumeBackKeyUp = false
+                        true
+                    }
+
+                    event.type == KeyEventType.KeyDown &&
+                        isAdjusting &&
+                        event.key == Key.DirectionLeft -> {
                         if (interactionsEnabled) {
                             onDecrease()
                         }
                         true
                     }
 
-                    Key.DirectionRight -> {
+                    event.type == KeyEventType.KeyDown &&
+                        isAdjusting &&
+                        event.key == Key.DirectionRight -> {
                         if (interactionsEnabled) {
                             onIncrease()
                         }

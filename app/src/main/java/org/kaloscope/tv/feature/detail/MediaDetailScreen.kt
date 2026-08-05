@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -68,6 +69,12 @@ fun MediaDetailScreen(
     onPlayChild: (MediaSummary, Long?) -> Unit,
 ) {
     val initialFocusRequester = remember { FocusRequester() }
+    val primaryActionFocusRequester = remember { FocusRequester() }
+    val backExitFocusRequester = when (state) {
+        MediaDetailUiState.Loading -> null
+        is MediaDetailUiState.Error -> initialFocusRequester
+        is MediaDetailUiState.Content -> primaryActionFocusRequester
+    }
 
     KaloscopeBackground {
         BoxWithConstraints(
@@ -126,7 +133,7 @@ fun MediaDetailScreen(
 
                     LaunchedEffect(state.parent.id) {
                         if (state.parent.children.isEmpty()) {
-                            childFocusRequester.requestFocus()
+                            primaryActionFocusRequester.requestFocus()
                         }
                     }
                     MediaDetailCinematicLayout(
@@ -138,6 +145,7 @@ fun MediaDetailScreen(
                         resumePositionSeconds = resumePositionSeconds,
                         resumePositionsByMediaId = resumePositionsByMediaId,
                         childFocusRequester = childFocusRequester,
+                        primaryActionFocusRequester = primaryActionFocusRequester,
                         onBack = onBack,
                         onChildFocused = { childId ->
                             focusedChildId = childId
@@ -175,6 +183,7 @@ fun MediaDetailScreen(
 
             DetailBackButton(
                 onBack = onBack,
+                exitFocusRequester = backExitFocusRequester,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(start = horizontalSafePadding, top = 28.dp),
@@ -186,6 +195,7 @@ fun MediaDetailScreen(
 @Composable
 private fun DetailBackButton(
     onBack: () -> Unit,
+    exitFocusRequester: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
     KaloscopeIconButton(
@@ -196,6 +206,12 @@ private fun DetailBackButton(
         modifier = modifier
             .size(48.dp)
             .background(Color(0x73060912), CircleShape)
+            .focusProperties {
+                exitFocusRequester?.let { target ->
+                    right = target
+                    down = target
+                }
+            }
             .testTag("detail-back"),
     ) {
         Icon(

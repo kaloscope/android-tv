@@ -120,11 +120,11 @@
     <string name="subtitle_display_mode_stroke">描边</string>
     <string name="subtitle_display_mode_background">背景</string>
     <string name="subtitle_font_scale">字幕字号</string>
-    <string name="subtitle_font_scale_description">按左右键以 5% 调整。</string>
+    <string name="subtitle_font_scale_description">按确认键进入调节，左右键以 5% 调整。</string>
     <string name="subtitle_vertical_position">垂直位置</string>
-    <string name="subtitle_vertical_position_description">按左右键调整距画面底部的位置。</string>
+    <string name="subtitle_vertical_position_description">按确认键进入调节，左右键调整距画面底部的位置。</string>
     <string name="subtitle_time_offset">时间偏移</string>
-    <string name="subtitle_time_offset_description">正值延迟，负值提前；确认键归零。</string>
+    <string name="subtitle_time_offset_description">按确认键进入调节；正值延迟，负值提前。</string>
     <string name="playback_speed">播放倍速</string>
     <string name="player_fallback_banner">直连失败，正在切换转码…</string>
     <string name="cancel">取消</string>
