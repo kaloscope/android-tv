@@ -12,7 +12,9 @@ jobs:
   release:
     name: Build and publish APK
     runs-on: ubuntu-24.04
-    environment: release
+    environment:
+      name: release
+      deployment: false
 
     steps:
       - name: Check out sources
