@@ -1,5 +1,7 @@
 package org.kaloscope.tv.feature.player
 
+import org.kaloscope.tv.core.player.PlaybackFeedback
+
 internal enum class PlayerControlLayer {
     Hidden,
     Preview,
@@ -15,6 +17,15 @@ internal data class PlayerControlLayerTransition(
 private const val AUTO_HIDE_DELAY_MILLIS = 3_000L
 
 internal object PlayerControlLayerPolicy {
+    fun shouldRequestFocusForFeedbackTransition(
+        previous: PlaybackFeedback,
+        current: PlaybackFeedback,
+    ): Boolean =
+        !previous.allowsControlFocus() && current.allowsControlFocus()
+
+    fun allowsControlFocus(feedback: PlaybackFeedback): Boolean =
+        feedback.allowsControlFocus()
+
     fun initialTransition(): PlayerControlLayerTransition =
         PlayerControlLayerTransition(
             layer = PlayerControlLayer.Controls,
@@ -60,3 +71,8 @@ internal object PlayerControlLayerPolicy {
             else -> null
         }
 }
+
+private fun PlaybackFeedback.allowsControlFocus(): Boolean =
+    this == PlaybackFeedback.Ready ||
+        this == PlaybackFeedback.Rebuffering ||
+        this == PlaybackFeedback.FallingBack

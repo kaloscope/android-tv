@@ -190,6 +190,9 @@ private fun PlayerContent(
             initialControlTransition.focusTarget ?: PlayerControlFocusTarget.Progress,
         )
     }
+    var previousFeedback by remember(playbackIdentity) {
+        mutableStateOf(feedback)
+    }
     var actionRowVisible by remember(playbackIdentity) {
         mutableStateOf(initialControlTransition.actionRowVisible == true)
     }
@@ -323,15 +326,10 @@ private fun PlayerContent(
         definitionDrawerOpen,
         settingsDrawerOpen,
         speedDrawerOpen,
-        feedback,
     ) {
         if (
             controlLayer == PlayerControlLayer.Controls &&
-            feedback in setOf(
-                PlaybackFeedback.Ready,
-                PlaybackFeedback.Rebuffering,
-                PlaybackFeedback.FallingBack,
-            ) &&
+            PlayerControlLayerPolicy.allowsControlFocus(feedback) &&
             !definitionDrawerOpen &&
             !settingsDrawerOpen &&
             !speedDrawerOpen &&
@@ -350,6 +348,29 @@ private fun PlayerContent(
             !speedDrawerOpen
         ) {
             playerFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(feedback) {
+        val shouldRequestFocus =
+            PlayerControlLayerPolicy.shouldRequestFocusForFeedbackTransition(
+                previous = previousFeedback,
+                current = feedback,
+            )
+        previousFeedback = feedback
+        if (
+            shouldRequestFocus &&
+            controlLayer == PlayerControlLayer.Controls &&
+            !definitionDrawerOpen &&
+            !settingsDrawerOpen &&
+            !speedDrawerOpen &&
+            !restoreDefinitionFocus &&
+            !restoreSettingsFocus &&
+            !restoreSpeedFocus
+        ) {
+            when (requestedControlsFocus) {
+                PlayerControlFocusTarget.Progress -> progressFocus.requestFocus()
+                PlayerControlFocusTarget.PlayPause -> playFocus.requestFocus()
+            }
         }
     }
     LaunchedEffect(definitionDrawerOpen, restoreDefinitionFocus) {

@@ -1,9 +1,44 @@
 package org.kaloscope.tv.feature.player
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.kaloscope.tv.core.player.PlaybackFeedback
 
 class PlayerControlLayerPolicyTest {
+    @Test
+    fun `buffering completion does not request the cached control focus`() {
+        assertFalse(
+            PlayerControlLayerPolicy.shouldRequestFocusForFeedbackTransition(
+                previous = PlaybackFeedback.Rebuffering,
+                current = PlaybackFeedback.Ready,
+            ),
+        )
+        assertFalse(
+            PlayerControlLayerPolicy.shouldRequestFocusForFeedbackTransition(
+                previous = PlaybackFeedback.FallingBack,
+                current = PlaybackFeedback.Ready,
+            ),
+        )
+    }
+
+    @Test
+    fun `first interactive feedback requests the configured initial focus`() {
+        assertTrue(
+            PlayerControlLayerPolicy.shouldRequestFocusForFeedbackTransition(
+                previous = PlaybackFeedback.Preparing,
+                current = PlaybackFeedback.Ready,
+            ),
+        )
+        assertTrue(
+            PlayerControlLayerPolicy.shouldRequestFocusForFeedbackTransition(
+                previous = PlaybackFeedback.SwitchingItem,
+                current = PlaybackFeedback.Rebuffering,
+            ),
+        )
+    }
+
     @Test
     fun `initial controls focus progress without revealing actions`() {
         assertEquals(
