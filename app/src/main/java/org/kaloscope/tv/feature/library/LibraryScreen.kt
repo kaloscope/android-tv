@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
@@ -207,7 +208,7 @@ private fun LibraryContent(
 
     Row(
         modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(22.dp),
+        horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.PaneSpacing),
     ) {
         LibrarySidebar(
             libraries = state.libraries,
@@ -232,7 +233,7 @@ private fun LibraryContent(
                 onValueChange = onQueryChange,
                 onSearch = onSearch,
             )
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(BrowseLayoutTokens.HeaderContentSpacing))
             LibraryItems(
                 session = session,
                 state = state.items,
@@ -294,10 +295,10 @@ private fun LibrarySidebar(
                 }
             }
             .focusGroup()
-            .width(220.dp)
+            .width(BrowseLayoutTokens.SidebarWidth)
             .fillMaxHeight()
             .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
-            .padding(10.dp),
+            .padding(BrowseLayoutTokens.SidebarContentPadding),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(
@@ -312,10 +313,13 @@ private fun LibrarySidebar(
                 variant = KaloscopeControlVariant.Sidebar,
                 size = KaloscopeControlSize.Row,
                 shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                contentPadding = PaddingValues(
+                    horizontal = BrowseLayoutTokens.SidebarItemHorizontalPadding,
+                    vertical = 0.dp,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp)
+                    .height(BrowseLayoutTokens.SidebarItemHeight)
                     .testTag("library-sidebar-item-${library.id}")
                     .focusProperties { canFocus = menuItemsAreFocusable }
                     .then(
@@ -343,7 +347,7 @@ private fun LibrarySidebar(
                         iconRes = library.type.iconResource(),
                         modifier = Modifier.testTag(library.type.iconTestTag()),
                     )
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(BrowseLayoutTokens.SidebarIconTextSpacing))
                     Text(
                         text = library.name,
                         fontSize = 16.sp,
@@ -475,7 +479,9 @@ private fun LibraryItems(
             Column(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Adaptive(minSize = 172.dp),
+                    columns = GridCells.Adaptive(
+                        minSize = BrowseLayoutTokens.PortraitGridMinWidth,
+                    ),
                     modifier = Modifier
                         .weight(1f)
                         .testTag("library-results-grid"),

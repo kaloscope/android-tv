@@ -3,6 +3,7 @@ package org.kaloscope.tv.feature.library
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -360,6 +361,50 @@ class LibraryScreenTest {
         assertEquals(24f * density, iconBounds.height, 1f)
         composeRule.onNodeWithText("搜索", useUnmergedTree = true)
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun portraitGridFitsExactlyFourCardsPerRowInAuthenticatedFrameAt1080p() {
+        val width = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.widthPixels
+        if (width != 1920) return
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 44.dp),
+                ) {
+                    LibraryScreen(
+                        session = session(),
+                        state = state(media = mediaItems(5)),
+                        restoreMediaId = null,
+                        requestInitialFocus = false,
+                        onSelectLibrary = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onMediaFocused = {},
+                        onOpenMedia = {},
+                    )
+                }
+            }
+        }
+
+        val cardTops = (1..5).map { id ->
+            composeRule.onNodeWithTag("media-card-$id")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        }
+
+        cardTops.take(4).forEach { top ->
+            assertEquals(cardTops.first(), top, 0.5f)
+        }
+        assertTrue(
+            "The fifth portrait card should start the second row",
+            cardTops[4] > cardTops.first(),
+        )
     }
 
     @Test

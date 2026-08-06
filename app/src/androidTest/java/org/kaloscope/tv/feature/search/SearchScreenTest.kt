@@ -4,6 +4,7 @@ import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -841,49 +842,102 @@ class SearchScreenTest {
     }
 
     @Test
-    fun landscapeGridFitsThreeResultsPerRowAt1080p() {
+    fun landscapeGridFitsExactlyThreeResultsPerRowInAuthenticatedFrameAt1080p() {
         val width = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.widthPixels
         if (width != 1920) return
         composeRule.setContent {
             KaloscopeTheme {
-                SearchScreen(
-                    session = session(),
-                    state = state(
-                        results = listOf(
-                            result("v1"),
-                            result("v2"),
-                            result("v3"),
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 44.dp),
+                ) {
+                    SearchScreen(
+                        session = session(),
+                        state = state(
+                            results = (1..4).map { result("v$it") },
                         ),
-                    ),
-                    onRefreshIndexers = {},
-                    onSelectIndexer = {},
-                    onQueryChange = {},
-                    onSearch = {},
-                    onRetry = {},
-                    onLoadMore = {},
-                    onResultFocused = {},
-                    onPlay = {},
-                    onOpenFilters = {},
-                    onDismissFilters = {},
-                    onApplyFilters = {},
-                    onClearFilters = {},
-                )
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = {},
+                        onPlay = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
             }
         }
 
-        val firstTop = composeRule.onNodeWithTag("network-result-v1")
-            .fetchSemanticsNode()
-            .boundsInRoot.top
-        val secondTop = composeRule.onNodeWithTag("network-result-v2")
-            .fetchSemanticsNode()
-            .boundsInRoot.top
-        val thirdTop = composeRule.onNodeWithTag("network-result-v3")
-            .fetchSemanticsNode()
-            .boundsInRoot.top
+        val resultTops = (1..4).map { id ->
+            composeRule.onNodeWithTag("network-result-v$id")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        }
 
-        assertEquals(firstTop, secondTop, 0.5f)
-        assertEquals(firstTop, thirdTop, 0.5f)
+        resultTops.take(3).forEach { top ->
+            assertEquals(resultTops.first(), top, 0.5f)
+        }
+        assertTrue(
+            "The fourth landscape result should start the second row",
+            resultTops[3] > resultTops.first(),
+        )
+    }
+
+    @Test
+    fun portraitGridFitsExactlyFourResultsPerRowInAuthenticatedFrameAt1080p() {
+        val width = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.widthPixels
+        if (width != 1920) return
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 44.dp),
+                ) {
+                    SearchScreen(
+                        session = session(),
+                        state = state(
+                            coverRatio = 2f / 3f,
+                            results = (1..5).map { result("v$it") },
+                        ),
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = {},
+                        onPlay = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
+            }
+        }
+
+        val resultTops = (1..5).map { id ->
+            composeRule.onNodeWithTag("network-result-v$id")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        }
+
+        resultTops.take(4).forEach { top ->
+            assertEquals(resultTops.first(), top, 0.5f)
+        }
+        assertTrue(
+            "The fifth portrait result should start the second row",
+            resultTops[4] > resultTops.first(),
+        )
     }
 
     @Test
@@ -1474,6 +1528,7 @@ class SearchScreenTest {
 
 private fun state(
     indexerIconPath: String? = null,
+    coverRatio: Float = 16f / 9f,
     filters: List<SearchFilterDefinition> = emptyList(),
     appliedFilters: Map<String, SearchFilterValue> = emptyMap(),
     filterDrawerOpen: Boolean = false,
@@ -1488,6 +1543,7 @@ private fun state(
         indexer = indexer(indexerIconPath),
         pageSize = 20,
         keywordRequired = true,
+        coverRatio = coverRatio,
         filters = filters,
     )
     return SearchUiState.Content(

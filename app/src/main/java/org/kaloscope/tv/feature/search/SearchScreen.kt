@@ -66,6 +66,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
@@ -206,7 +207,7 @@ private fun SearchContent(
     }
     Row(
         modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(22.dp),
+        horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.PaneSpacing),
     ) {
         IndexerSidebar(
             session = session,
@@ -239,7 +240,7 @@ private fun SearchContent(
                     onOpenFilters()
                 },
             )
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(BrowseLayoutTokens.HeaderContentSpacing))
             SearchResults(
                 session = session,
                 state = state,
@@ -349,10 +350,10 @@ private fun IndexerSidebar(
                 }
             }
             .focusGroup()
-            .width(220.dp)
+            .width(BrowseLayoutTokens.SidebarWidth)
             .fillMaxHeight()
             .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
-            .padding(10.dp),
+            .padding(BrowseLayoutTokens.SidebarContentPadding),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(indexers, key = NetworkIndexer::id) { indexer ->
@@ -364,10 +365,13 @@ private fun IndexerSidebar(
                 variant = KaloscopeControlVariant.Sidebar,
                 size = KaloscopeControlSize.Row,
                 shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                contentPadding = PaddingValues(
+                    horizontal = BrowseLayoutTokens.SidebarItemHorizontalPadding,
+                    vertical = 0.dp,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp)
+                    .height(BrowseLayoutTokens.SidebarItemHeight)
                     .testTag("indexer-${indexer.id}")
                     .focusProperties { canFocus = menuItemsAreFocusable }
                     .then(
@@ -408,7 +412,7 @@ private fun IndexerSidebar(
                             policy = ServerImagePolicy.Auto,
                         )
                     }
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(BrowseLayoutTokens.SidebarIconTextSpacing))
                     Text(
                         text = indexer.name,
                         fontSize = 16.sp,
@@ -584,7 +588,11 @@ private fun SearchResults(
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Adaptive(
-                        minSize = if (coverRatio >= 1f) 220.dp else 172.dp,
+                        minSize = if (coverRatio >= 1f) {
+                            BrowseLayoutTokens.LandscapeGridMinWidth
+                        } else {
+                            BrowseLayoutTokens.PortraitGridMinWidth
+                        },
                     ),
                     modifier = Modifier
                         .weight(1f)

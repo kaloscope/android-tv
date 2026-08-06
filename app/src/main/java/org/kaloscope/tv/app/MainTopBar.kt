@@ -44,6 +44,7 @@ import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.LibraryRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.KaloscopeBrand
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
@@ -80,12 +81,14 @@ internal fun MainTopBar(
             name = stringResource(R.string.app_name),
             caption = stringResource(R.string.tv_experience),
             compact = true,
-            modifier = Modifier.width(230.dp),
+            modifier = Modifier.width(
+                BrowseLayoutTokens.SidebarWidth + BrowseLayoutTokens.PaneSpacing,
+            ),
         )
         Row(
             modifier = Modifier
                 .background(Panel.copy(alpha = 0.82f), RoundedCornerShape(14.dp))
-                .padding(4.dp),
+                .padding(3.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             MainNavButton(
@@ -149,7 +152,7 @@ internal fun MainTopBar(
                     down = settingsMenuFocus
                 },
         )
-        Spacer(Modifier.width(18.dp))
+        Spacer(Modifier.width(14.dp))
         Clock()
     }
 }
@@ -180,7 +183,7 @@ private fun MainNavButton(
                 }
             },
         shape = RoundedCornerShape(11.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 0.dp),
     ) {
         val displayedVariant = if (selected) "filled" else "regular"
         KaloscopeSelectableNavigationIcon(
@@ -189,7 +192,7 @@ private fun MainNavButton(
             selected = selected,
             modifier = Modifier.testTag("$iconTag-$displayedVariant"),
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = text,
             fontSize = 15.sp,
