@@ -29,6 +29,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
@@ -111,6 +112,49 @@ class SearchScreenTest {
             unselected = unselected,
             sampleInset = sampleInset,
         )
+    }
+
+    @Test
+    fun longIndexerNameUsesSingleLineEllipsis() {
+        val longName = "轻小说翻译资源站点名称长到无法在菜单中完整显示"
+        val firstProfile = state().profiles.single()
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state().copy(
+                        profiles = listOf(
+                            firstProfile.copy(
+                                indexer = NetworkIndexer(11, longName, null),
+                            ),
+                        ),
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val layoutResults = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText(longName, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(layoutResults)
+            }
+
+        val layout = layoutResults.single()
+        assertEquals(1, layout.lineCount)
+        assertTrue("Long indexer name should end with an ellipsis", layout.isLineEllipsized(0))
     }
 
     @Test

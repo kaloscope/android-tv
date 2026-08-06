@@ -352,6 +352,8 @@ private fun LibrarySidebar(
                         text = library.name,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

@@ -23,6 +23,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlin.math.abs
@@ -95,6 +96,42 @@ class LibraryScreenTest {
             unselected = unselected,
             sampleInset = sampleInset,
         )
+    }
+
+    @Test
+    fun longLibraryNameUsesSingleLineEllipsis() {
+        val longName = "适合全家观看的超长名称电视剧媒体资料库"
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state().copy(
+                        libraries = listOf(
+                            MediaLibrary(21, longName, MediaLibraryType.TvShow),
+                        ),
+                    ),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        val layoutResults = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText(longName, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(layoutResults)
+            }
+
+        val layout = layoutResults.single()
+        assertEquals(1, layout.lineCount)
+        assertTrue("Long library name should end with an ellipsis", layout.isLineEllipsized(0))
     }
 
     @Test
