@@ -64,6 +64,7 @@ import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.SearchFilterDefinition
 import org.kaloscope.tv.core.model.SearchFilterType
+import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.TvSettings
@@ -1070,6 +1071,131 @@ class MainShellTest {
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
         composeRule.onNodeWithText("网络搜索").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
+    }
+
+    @Test
+    fun applyingSearchFiltersClosesDrawerWithoutLeavingSearch() {
+        val baseSearchState = deepSearchState()
+        var searchState by mutableStateOf(
+            baseSearchState.copy(
+                profiles = baseSearchState.profiles.map { profile ->
+                    profile.copy(
+                        filters = listOf(
+                            SearchFilterDefinition(
+                                key = "title",
+                                label = "标题",
+                                type = SearchFilterType.Text,
+                            ),
+                        ),
+                    )
+                },
+            ),
+        )
+        var applications = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SearchRoute,
+                    searchActions = SearchActions(
+                        openFilters = {
+                            searchState = searchState.copy(filterDrawerOpen = true)
+                        },
+                        applyFilters = { values ->
+                            applications += 1
+                            searchState = searchState.copy(
+                                appliedFilters = values,
+                                filterDrawerOpen = false,
+                            )
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-filter-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("filter-apply")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(1, applications)
+        }
+        composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
+        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
+        composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
+    }
+
+    @Test
+    fun clearingSearchFiltersClosesDrawerWithoutLeavingSearch() {
+        val baseSearchState = deepSearchState()
+        var searchState by mutableStateOf(
+            baseSearchState.copy(
+                profiles = baseSearchState.profiles.map { profile ->
+                    profile.copy(
+                        filters = listOf(
+                            SearchFilterDefinition(
+                                key = "title",
+                                label = "标题",
+                                type = SearchFilterType.Text,
+                            ),
+                        ),
+                    )
+                },
+                appliedFilters = mapOf(
+                    "title" to SearchFilterValue.Scalar("星际"),
+                ),
+            ),
+        )
+        var clearings = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SearchRoute,
+                    searchActions = SearchActions(
+                        openFilters = {
+                            searchState = searchState.copy(filterDrawerOpen = true)
+                        },
+                        clearFilters = {
+                            clearings += 1
+                            searchState = searchState.copy(
+                                appliedFilters = emptyMap(),
+                                filterDrawerOpen = false,
+                            )
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-filter-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("filter-clear")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(1, clearings)
+        }
+        composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
+        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
+        composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
     }
 
     @Test

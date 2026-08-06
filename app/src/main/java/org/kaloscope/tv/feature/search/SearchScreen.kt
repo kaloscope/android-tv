@@ -261,13 +261,25 @@ private fun SearchContent(
             )
         }
     }
+    fun runFilterCloseAction(action: () -> Unit) {
+        // Hand focus back before the modal node disappears; transient Home focus changes routes.
+        filterButtonFocus.requestFocus()
+        action()
+    }
+
     if (state.filterDrawerOpen) {
         SearchFilterDrawer(
             definitions = state.selectedProfile.filters,
             appliedValues = state.appliedFilters,
-            onApply = onApplyFilters,
-            onClear = onClearFilters,
-            onDismiss = onDismissFilters,
+            onApply = { values ->
+                runFilterCloseAction { onApplyFilters(values) }
+            },
+            onClear = {
+                runFilterCloseAction(onClearFilters)
+            },
+            onDismiss = {
+                runFilterCloseAction(onDismissFilters)
+            },
         )
     }
 }
