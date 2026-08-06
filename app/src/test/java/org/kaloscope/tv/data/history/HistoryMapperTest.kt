@@ -14,6 +14,43 @@ private val tolerantJson = Json {
 
 class HistoryMapperTest {
     @Test
+    fun `uses parent id for details while retaining episode id for playback`() {
+        val mapped = historyItem(
+            media = HistoryMediaData(
+                id = 301,
+                name = "S01E01.mkv",
+                title = "启程",
+                parent = HistoryMediaData(
+                    id = 201,
+                    name = "群星档案",
+                ),
+            ),
+        ).toModel()
+
+        checkNotNull(mapped)
+        assertEquals(301L, mapped.mediaId)
+        assertEquals(201L, mapped.detailMediaId)
+    }
+
+    @Test
+    fun `uses episode id for details when parent id is invalid`() {
+        val mapped = historyItem(
+            media = HistoryMediaData(
+                id = 301,
+                name = "S01E01.mkv",
+                title = "启程",
+                parent = HistoryMediaData(
+                    id = 0,
+                    name = "群星档案",
+                ),
+            ),
+        ).toModel()
+
+        checkNotNull(mapped)
+        assertEquals(301L, mapped.detailMediaId)
+    }
+
+    @Test
     fun `maps numeric string rating and clamps progress`() {
         val item = historyItem(
             percentage = 140,

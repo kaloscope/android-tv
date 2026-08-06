@@ -75,6 +75,7 @@ internal fun HistoryItemData.toModel(): WatchHistoryItem? {
     return WatchHistoryItem(
         historyId = id,
         mediaId = source.id,
+        detailMediaId = parent?.id?.takeIf { it > 0 } ?: source.id,
         title = resolvedTitle,
         fileName = source.name,
         path = source.path,

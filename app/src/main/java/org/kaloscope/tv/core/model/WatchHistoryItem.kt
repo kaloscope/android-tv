@@ -3,6 +3,7 @@ package org.kaloscope.tv.core.model
 data class WatchHistoryItem(
     val historyId: Long,
     val mediaId: Long,
+    val detailMediaId: Long = mediaId,
     val title: String,
     val fileName: String,
     val path: String,

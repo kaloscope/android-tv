@@ -28,6 +28,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
@@ -437,6 +438,22 @@ class HomeScreenTest {
     }
 
     @Test
+    fun viewDetailsOpensParentSeriesInsteadOfEpisode() {
+        var openedMediaId: Long? = null
+        val episode = historyItems().first().copy(detailMediaId = 201L)
+        showContentHome(
+            items = listOf(episode),
+            onOpenMedia = { openedMediaId = it },
+        )
+
+        composeRule.onNodeWithText("查看详情").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(201L, openedMediaId)
+        }
+    }
+
+    @Test
     fun requestedMediaIsSelectedAndFocusedWhenHomeReturns() {
         showContentHome(restoreMediaId = 302L)
 
@@ -698,6 +715,7 @@ class HomeScreenTest {
     private fun showContentHome(
         restoreMediaId: Long? = null,
         items: List<WatchHistoryItem> = historyItems(),
+        onOpenMedia: (Long) -> Unit = {},
         onPlayHistory: (WatchHistoryItem) -> Unit = {},
         onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
         viewportHeight: Dp = 440.dp,
@@ -717,7 +735,7 @@ class HomeScreenTest {
                         onRefresh = {},
                         restoreMediaId = restoreMediaId,
                         onOpenLibrary = {},
-                        onOpenMedia = {},
+                        onOpenMedia = onOpenMedia,
                         onPlayHistory = onPlayHistory,
                         onBackdropChanged = onBackdropChanged,
                     )

@@ -375,7 +375,7 @@ private fun SelectedHistoryDetails(
                 Text(stringResource(R.string.resume_playback))
             }
             KaloscopeButton(
-                onClick = { onOpenMedia(item.mediaId) },
+                onClick = { onOpenMedia(item.detailMediaId) },
                 modifier = Modifier
                     .height(42.dp)
                     .focusProperties {
