@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,15 +25,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.accentPalette
-import org.kaloscope.tv.core.designsystem.danmakuModeLabel
+import org.kaloscope.tv.core.designsystem.danmakuBlockSummary
+import org.kaloscope.tv.core.designsystem.danmakuBlockTypeLabel
 import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
 import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
 import org.kaloscope.tv.core.designsystem.formatSubtitleOffset
 import org.kaloscope.tv.core.designsystem.subtitleDisplayModeLabel
 import org.kaloscope.tv.core.model.AccentColor
-import org.kaloscope.tv.core.model.DanmakuDisplayMode
+import org.kaloscope.tv.core.model.DanmakuBlockPolicy
+import org.kaloscope.tv.core.model.DanmakuBlockType
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
@@ -62,9 +66,9 @@ internal fun PlaybackSettings(
             SettingsChoice(
                 title = stringResource(R.string.default_playback_mode),
                 options = PlaybackMode.entries.map { mode ->
-                    SettingsChoiceOption(
+                    KaloscopeChoiceDialogOption(
                         label = playbackModeLabel(mode),
-                        selected = mode == state.settings.playbackMode,
+                        selected = { mode == state.settings.playbackMode },
                         onSelect = { onPlaybackMode(mode) },
                     )
                 },
@@ -82,9 +86,9 @@ internal fun PlaybackSettings(
             SettingsChoice(
                 title = stringResource(R.string.default_transcode_resolution),
                 options = TranscodeResolution.entries.map { resolution ->
-                    SettingsChoiceOption(
+                    KaloscopeChoiceDialogOption(
                         label = resolutionLabel(resolution),
-                        selected = resolution == state.settings.transcodeResolution,
+                        selected = { resolution == state.settings.transcodeResolution },
                         onSelect = { onTranscodeResolution(resolution) },
                     )
                 },
@@ -137,9 +141,9 @@ internal fun SubtitleDefaultSettings(
                 SettingsChoice(
                     title = stringResource(R.string.subtitle_display_mode),
                     options = SubtitleDisplayMode.entries.map { mode ->
-                        SettingsChoiceOption(
+                        KaloscopeChoiceDialogOption(
                             label = subtitleDisplayModeLabel(mode),
-                            selected = mode == settings.displayMode,
+                            selected = { mode == settings.displayMode },
                             onSelect = { onChange(settings.copy(displayMode = mode)) },
                         )
                     },
@@ -295,6 +299,10 @@ internal fun DanmakuDefaultSettings(
     onChange: (DanmakuSettings) -> Unit,
 ) {
     val percentages = listOf(25, 50, 75, 100)
+    var blockDraft by remember { mutableStateOf(settings) }
+    LaunchedEffect(settings) {
+        blockDraft = settings
+    }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -315,9 +323,9 @@ internal fun DanmakuDefaultSettings(
                 SettingsChoice(
                     title = stringResource(R.string.danmaku_text_size),
                     options = DanmakuTextSize.entries.map { size ->
-                        SettingsChoiceOption(
+                        KaloscopeChoiceDialogOption(
                             label = danmakuTextSizeLabel(size),
-                            selected = size == settings.textSize,
+                            selected = { size == settings.textSize },
                             onSelect = { onChange(settings.copy(textSize = size)) },
                         )
                     },
@@ -334,9 +342,9 @@ internal fun DanmakuDefaultSettings(
                 SettingsChoice(
                     title = stringResource(R.string.danmaku_speed),
                     options = DanmakuSpeed.entries.map { speed ->
-                        SettingsChoiceOption(
+                        KaloscopeChoiceDialogOption(
                             label = danmakuSpeedLabel(speed),
-                            selected = speed == settings.speed,
+                            selected = { speed == settings.speed },
                             onSelect = { onChange(settings.copy(speed = speed)) },
                         )
                     },
@@ -362,22 +370,38 @@ internal fun DanmakuDefaultSettings(
             onOpenChoice = onOpenChoice,
             onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
         )
-        for (mode in DanmakuDisplayMode.entries) {
-            ToggleSettingRow(
-                title = danmakuModeLabel(mode),
-                description = danmakuModeDescription(mode),
-                checked = mode in settings.visibleModes,
-                interactionsEnabled = interactionsEnabled,
-                onToggle = {
-                    val visibleModes = if (mode in settings.visibleModes) {
-                        settings.visibleModes - mode
-                    } else {
-                        settings.visibleModes + mode
-                    }
-                    onChange(settings.copy(visibleModes = visibleModes))
-                },
-            )
-        }
+        ChoiceSettingRow(
+            title = stringResource(R.string.danmaku_block_types),
+            description = stringResource(R.string.danmaku_block_types_description),
+            value = danmakuBlockSummary(settings),
+            interactionsEnabled = interactionsEnabled,
+            onBeforeOpen = { blockDraft = settings },
+            createChoice = {
+                SettingsChoice(
+                    title = stringResource(R.string.danmaku_block_types),
+                    dismissOnSelect = false,
+                    onDismiss = {
+                        if (blockDraft != settings) {
+                            onChange(blockDraft)
+                        }
+                    },
+                    options = DanmakuBlockType.entries.map { type ->
+                        KaloscopeChoiceDialogOption(
+                            label = danmakuBlockTypeLabel(type),
+                            selected = {
+                                DanmakuBlockPolicy.isSelected(blockDraft, type)
+                            },
+                            testTag =
+                                "settings-danmaku-block-${type.name.lowercase()}",
+                            onSelect = {
+                                blockDraft = DanmakuBlockPolicy.toggle(blockDraft, type)
+                            },
+                        )
+                    },
+                )
+            },
+            onOpenChoice = onOpenChoice,
+        )
     }
 }
 
@@ -400,9 +424,9 @@ private fun DanmakuPercentageSetting(
             SettingsChoice(
                 title = title,
                 options = percentages.map { percentage ->
-                    SettingsChoiceOption(
+                    KaloscopeChoiceDialogOption(
                         label = stringResource(R.string.percentage_value, percentage),
-                        selected = percentage == value,
+                        selected = { percentage == value },
                         onSelect = { onSelect(percentage) },
                     )
                 },
@@ -429,9 +453,9 @@ internal fun BehaviorSettings(
             SettingsChoice(
                 title = stringResource(R.string.accent_color),
                 options = AccentColor.entries.map { accentColor ->
-                    SettingsChoiceOption(
+                    KaloscopeChoiceDialogOption(
                         label = accentColorLabel(accentColor),
-                        selected = accentColor == state.settings.accentColor,
+                        selected = { accentColor == state.settings.accentColor },
                         swatchColor = accentColor.accentPalette().primary,
                         testTag = "accent-option-${accentColor.name.lowercase()}",
                         swatchTestTag = "accent-swatch-${accentColor.name.lowercase()}",
@@ -452,9 +476,9 @@ internal fun BehaviorSettings(
             SettingsChoice(
                 title = stringResource(R.string.default_start_page),
                 options = StartPage.entries.map { page ->
-                    SettingsChoiceOption(
+                    KaloscopeChoiceDialogOption(
                         label = startPageLabel(page),
-                        selected = page == state.settings.startPage,
+                        selected = { page == state.settings.startPage },
                         onSelect = { onStartPage(page) },
                     )
                 },

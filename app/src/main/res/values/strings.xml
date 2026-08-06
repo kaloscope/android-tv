@@ -65,6 +65,7 @@
     <string name="danmaku_settings_description">设置每次进入播放器时使用的弹幕默认值。</string>
     <string name="player_settings_title">设置</string>
     <string name="danmaku_block_types">屏蔽类型</string>
+    <string name="danmaku_block_types_description">选择默认屏蔽的弹幕类型，可多选。</string>
     <string name="danmaku_block_none">未屏蔽</string>
     <string name="danmaku_block_scroll">滚动</string>
     <string name="danmaku_block_top">顶部</string>

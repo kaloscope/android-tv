@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +49,8 @@ import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialog
+import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeConfirmDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
@@ -62,7 +63,6 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.TvTextField
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.model.AccentColor
-import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
@@ -224,13 +224,14 @@ private fun SettingsContent(
             )
         }
         choice?.let { current ->
-            SettingsChoiceDialog(
-                choice = current,
+            KaloscopeChoiceDialog(
+                title = current.title,
+                options = current.options,
                 viewportSize = viewportSize,
-                onDismiss = { choice = null },
-                onSelect = { option ->
+                dismissOnSelect = current.dismissOnSelect,
+                onDismiss = {
+                    current.onDismiss()
                     choice = null
-                    option.onSelect()
                 },
             )
         }
@@ -439,6 +440,7 @@ internal fun ChoiceSettingRow(
     description: String,
     value: String,
     interactionsEnabled: Boolean,
+    onBeforeOpen: () -> Unit = {},
     createChoice: @Composable () -> SettingsChoice,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
 ) {
@@ -447,6 +449,7 @@ internal fun ChoiceSettingRow(
     KaloscopeButton(
         onClick = {
             if (interactionsEnabled) {
+                onBeforeOpen()
                 onOpenChoice(focus, choice)
             }
         },
@@ -616,100 +619,6 @@ private fun SubtitleLanguageDialog(
 }
 
 @Composable
-private fun SettingsChoiceDialog(
-    choice: SettingsChoice,
-    viewportSize: DpSize,
-    onDismiss: () -> Unit,
-    onSelect: (SettingsChoiceOption) -> Unit,
-) {
-    val initialFocus = remember { FocusRequester() }
-    LaunchedEffect(choice) {
-        withFrameNanos { }
-        initialFocus.requestFocus()
-    }
-    Popup(
-        alignment = Alignment.Center,
-        onDismissRequest = onDismiss,
-        properties = PopupProperties(
-            focusable = true,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false,
-            clippingEnabled = false,
-        ),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(viewportSize)
-                .background(Color(0xCC050812)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier
-                    .width(420.dp)
-                    .background(PanelElevated, RoundedCornerShape(22.dp))
-                    .padding(28.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(
-                    text = choice.title,
-                    color = OnBackground,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(6.dp))
-                choice.options.forEachIndexed { index, option ->
-                    KaloscopeButton(
-                        onClick = { onSelect(option) },
-                        selected = option.selected,
-                        size = KaloscopeControlSize.Row,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusProperties {
-                                left = FocusRequester.Cancel
-                                right = FocusRequester.Cancel
-                                if (index == 0) {
-                                    up = FocusRequester.Cancel
-                                }
-                                if (index == choice.options.lastIndex) {
-                                    down = FocusRequester.Cancel
-                                }
-                            }
-                            .then(
-                                if (
-                                    option.selected ||
-                                    choice.options.none { it.selected } && index == 0
-                                ) {
-                                    Modifier.focusRequester(initialFocus)
-                                } else {
-                                    Modifier
-                                },
-                            )
-                            .then(
-                                option.testTag?.let(Modifier::testTag) ?: Modifier,
-                            ),
-                    ) {
-                        option.swatchColor?.let { swatchColor ->
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .background(swatchColor, CircleShape)
-                                    .then(
-                                        option.swatchTestTag
-                                            ?.let(Modifier::testTag)
-                                            ?: Modifier,
-                                    ),
-                            )
-                            Spacer(Modifier.width(10.dp))
-                        }
-                        Text(option.label)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun SettingsStatus(
     title: String,
     description: String,
@@ -806,19 +715,6 @@ internal fun resolutionLabel(resolution: TranscodeResolution): String =
     }
 
 @Composable
-internal fun danmakuModeDescription(mode: DanmakuDisplayMode): String =
-    when (mode) {
-        DanmakuDisplayMode.Scroll ->
-            stringResource(R.string.danmaku_mode_scroll_description)
-
-        DanmakuDisplayMode.Top ->
-            stringResource(R.string.danmaku_mode_top_description)
-
-        DanmakuDisplayMode.Bottom ->
-            stringResource(R.string.danmaku_mode_bottom_description)
-    }
-
-@Composable
 internal fun startPageLabel(page: StartPage): String =
     when (page) {
         StartPage.Home -> stringResource(R.string.home)
@@ -842,14 +738,7 @@ internal fun connectionDescription(connection: SettingsConnection): String =
 
 internal data class SettingsChoice(
     val title: String,
-    val options: List<SettingsChoiceOption>,
-)
-
-internal data class SettingsChoiceOption(
-    val label: String,
-    val selected: Boolean,
-    val swatchColor: Color? = null,
-    val testTag: String? = null,
-    val swatchTestTag: String? = null,
-    val onSelect: () -> Unit,
+    val options: List<KaloscopeChoiceDialogOption>,
+    val dismissOnSelect: Boolean = true,
+    val onDismiss: () -> Unit = {},
 )

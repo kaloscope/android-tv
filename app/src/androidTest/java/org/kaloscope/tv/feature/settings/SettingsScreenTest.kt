@@ -37,6 +37,7 @@ import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.model.AccentColor
+import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
@@ -159,7 +160,10 @@ class SettingsScreenTest {
             .assertIsSelected()
             .assertIsFocused()
         for (accent in AccentColor.entries) {
-            composeRule.onNodeWithTag("accent-swatch-${accent.name.lowercase()}")
+            composeRule.onNodeWithTag(
+                testTag = "accent-swatch-${accent.name.lowercase()}",
+                useUnmergedTree = true,
+            )
                 .assertExists()
         }
         for (label in listOf("蓝色", "紫色", "橙色", "黄色", "绿色")) {
@@ -753,16 +757,18 @@ class SettingsScreenTest {
                 }
             }
         }
-        val header = composeRule.onNodeWithText("弹幕设置")
+        val header = composeRule.onNode(
+            hasText("弹幕设置") and !hasClickAction(),
+        )
         val initialHeaderTop = header.getUnclippedBoundsInRoot().top
 
         composeRule.onNodeWithText("默认开启弹幕")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput {
-                repeat(7) { pressKey(Key.DirectionDown) }
+                repeat(5) { pressKey(Key.DirectionDown) }
             }
 
-        composeRule.onNodeWithText("底部弹幕")
+        composeRule.onNodeWithText("屏蔽类型")
             .assertIsFocused()
             .assertIsDisplayed()
         val scrolledHeaderTop = header.getUnclippedBoundsInRoot().top
@@ -814,6 +820,70 @@ class SettingsScreenTest {
         composeRule.runOnIdle {
             assertEquals(false, updatedSettings?.enabled)
         }
+    }
+
+    @Test
+    fun danmakuBlockDialogBatchesSharedOptionsUntilBack() {
+        var updatedSettings: DanmakuSettings? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Danmaku,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = { updatedSettings = it },
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val blockRow = composeRule.onNode(hasClickAction() and hasText("屏蔽类型"))
+        blockRow
+            .assertExists()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("settings-danmaku-block-scroll")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("settings-danmaku-block-top")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertExists()
+        composeRule.runOnIdle {
+            assertEquals(null, updatedSettings)
+        }
+
+        InstrumentationRegistry.getInstrumentation().apply {
+            waitForIdleSync()
+            sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertDoesNotExist()
+        blockRow.assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(
+                setOf(DanmakuDisplayMode.Bottom),
+                updatedSettings?.visibleModes,
+            )
+            assertEquals(false, updatedSettings?.blockColored)
+        }
+        composeRule.onNodeWithText("滚动弹幕").assertDoesNotExist()
+        composeRule.onNodeWithText("顶部弹幕").assertDoesNotExist()
+        composeRule.onNodeWithText("底部弹幕").assertDoesNotExist()
     }
 
     @Test

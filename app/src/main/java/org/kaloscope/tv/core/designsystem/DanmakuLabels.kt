@@ -3,7 +3,10 @@ package org.kaloscope.tv.core.designsystem
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.model.DanmakuBlockPolicy
+import org.kaloscope.tv.core.model.DanmakuBlockType
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
+import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
 
@@ -31,3 +34,22 @@ internal fun danmakuModeLabel(mode: DanmakuDisplayMode): String =
         DanmakuDisplayMode.Top -> stringResource(R.string.danmaku_mode_top)
         DanmakuDisplayMode.Bottom -> stringResource(R.string.danmaku_mode_bottom)
     }
+
+@Composable
+internal fun danmakuBlockTypeLabel(type: DanmakuBlockType): String =
+    when (type) {
+        DanmakuBlockType.Scroll -> stringResource(R.string.danmaku_block_scroll)
+        DanmakuBlockType.Top -> stringResource(R.string.danmaku_block_top)
+        DanmakuBlockType.Bottom -> stringResource(R.string.danmaku_block_bottom)
+        DanmakuBlockType.Colored -> stringResource(R.string.danmaku_block_colored)
+    }
+
+@Composable
+internal fun danmakuBlockSummary(settings: DanmakuSettings): String {
+    val selected = DanmakuBlockPolicy.selected(settings)
+    return if (selected.isEmpty()) {
+        stringResource(R.string.danmaku_block_none)
+    } else {
+        selected.map { danmakuBlockTypeLabel(it) }.joinToString("、")
+    }
+}

@@ -27,6 +27,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.model.DanmakuBlockPolicy
+import org.kaloscope.tv.core.model.DanmakuBlockType
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleTrack
@@ -66,14 +68,14 @@ class PlayerSettingsDrawerTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithTag("player-settings-block-menu").assertExists()
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertExists()
         composeRule.runOnIdle {
             assertEquals(
                 listOf(
-                    PlayerDanmakuBlockOption.Scroll,
-                    PlayerDanmakuBlockOption.Top,
+                    DanmakuBlockType.Scroll,
+                    DanmakuBlockType.Top,
                 ),
-                PlayerDanmakuBlockPolicy.selected(harness.danmakuSettings),
+                DanmakuBlockPolicy.selected(harness.danmakuSettings),
             )
         }
     }
@@ -95,7 +97,7 @@ class PlayerSettingsDrawerTest {
         }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag("player-settings-block-menu").assertDoesNotExist()
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertDoesNotExist()
         composeRule.onNodeWithTag("player-settings-block-types").assertIsFocused()
     }
 

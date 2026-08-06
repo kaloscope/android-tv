@@ -45,6 +45,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.danmakuBlockSummary
 import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
 import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
 import org.kaloscope.tv.core.designsystem.formatSubtitleOffset
@@ -300,7 +301,7 @@ internal fun PlayerSettingsDrawer(
                     item {
                         PlayerSettingsRow(
                             title = stringResource(R.string.danmaku_block_types),
-                            value = blockSummary(danmakuSettings),
+                            value = danmakuBlockSummary(danmakuSettings),
                             selected = false,
                             onClick = { blockMenuOpen = true },
                             isLastFocusable = true,
@@ -450,16 +451,6 @@ private fun PlayerSettingsSectionHeader(title: String) {
         fontWeight = FontWeight.Medium,
         modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
     )
-}
-
-@Composable
-private fun blockSummary(settings: DanmakuSettings): String {
-    val selected = PlayerDanmakuBlockPolicy.selected(settings)
-    return if (selected.isEmpty()) {
-        stringResource(R.string.danmaku_block_none)
-    } else {
-        selected.map { playerDanmakuBlockLabel(it) }.joinToString("、")
-    }
 }
 
 private fun Modifier.initialFocusWhen(
