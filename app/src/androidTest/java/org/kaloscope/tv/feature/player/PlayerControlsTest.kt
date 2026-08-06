@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.player
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,8 +40,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.kaloscope.tv.core.model.NetworkDefinition
+import org.kaloscope.tv.core.designsystem.LocalAccentPalette
+import org.kaloscope.tv.core.designsystem.accentPalette
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.MediaChapter
+import org.kaloscope.tv.core.model.NetworkDefinition
 
 class PlayerControlsTest {
     @get:Rule
@@ -1340,33 +1344,37 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun progressUsesActiveColorWhilePlayingAndInactiveColorWhilePaused() {
+    fun progressUsesConfiguredAccentWhilePlayingAndInactiveColorWhilePaused() {
         var playWhenReady by mutableStateOf(true)
 
         composeRule.setContent {
-            MaterialTheme {
-                PlayerControls(
-                    state = controlsState().copy(playWhenReady = playWhenReady),
-                    playFocus = remember { FocusRequester() },
-                    definitionFocus = remember { FocusRequester() },
-                    settingsFocus = remember { FocusRequester() },
-                    subtitleFocus = remember { FocusRequester() },
-                    speedFocus = remember { FocusRequester() },
-                    onPrevious = {},
-                    onRewind = {},
-                    onPlayPause = {},
-                    onForward = {},
-                    onNext = {},
-                    onToggleSubtitles = {},
-                    onOpenSpeed = {},
-                    onToggleDanmakus = {},
-                    onOpenSettings = {},
-                    onOpenDefinitions = {},
-                    onSeekPreviewBy = {},
-                    onSeekPreviewFinished = {},
-                    onHideControls = {},
-                    onInteraction = {},
-                )
+            CompositionLocalProvider(
+                LocalAccentPalette provides AccentColor.Green.accentPalette(),
+            ) {
+                MaterialTheme {
+                    PlayerControls(
+                        state = controlsState().copy(playWhenReady = playWhenReady),
+                        playFocus = remember { FocusRequester() },
+                        definitionFocus = remember { FocusRequester() },
+                        settingsFocus = remember { FocusRequester() },
+                        subtitleFocus = remember { FocusRequester() },
+                        speedFocus = remember { FocusRequester() },
+                        onPrevious = {},
+                        onRewind = {},
+                        onPlayPause = {},
+                        onForward = {},
+                        onNext = {},
+                        onToggleSubtitles = {},
+                        onOpenSpeed = {},
+                        onToggleDanmakus = {},
+                        onOpenSettings = {},
+                        onOpenDefinitions = {},
+                        onSeekPreviewBy = {},
+                        onSeekPreviewFinished = {},
+                        onHideControls = {},
+                        onInteraction = {},
+                    )
+                }
             }
         }
 
@@ -1374,7 +1382,7 @@ class PlayerControlsTest {
             .captureToImage()
             .asAndroidBitmap()
         assertEquals(
-            0xFF9B8CFF.toInt(),
+            0xFF4DD990.toInt(),
             playingTrack.getPixel(playingTrack.width / 2, playingTrack.height / 2),
         )
 

@@ -6,8 +6,35 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.kaloscope.tv.core.model.AccentColor
 
 class KaloscopeControlStyleTest {
+    @Test
+    fun selectedMaterialsUseAccentAtRestAndNeutralWhiteWhenFocused() {
+        val palette = AccentColor.Green.accentPalette()
+
+        assertEquals(
+            palette.controlSelected,
+            resolveKaloscopeControlBaseColor(
+                KaloscopeControlBaseMaterial.Selected,
+                palette,
+            ),
+        )
+        assertEquals(
+            ControlFocused,
+            resolveKaloscopeControlFocusColor(
+                KaloscopeControlFocusMaterial.SelectedFocused,
+            ),
+        )
+        assertEquals(
+            SidebarSelected,
+            resolveKaloscopeControlBaseColor(
+                KaloscopeControlBaseMaterial.SidebarSelected,
+                palette,
+            ),
+        )
+    }
+
     @Test
     fun restingVariantsUseTheirBaseMaterialWithoutFocusDepth() {
         val ghost = resolveKaloscopeControlState(

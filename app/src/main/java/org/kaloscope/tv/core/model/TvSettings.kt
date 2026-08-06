@@ -4,6 +4,7 @@ import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
 
 data class TvSettings(
+    val accentColor: AccentColor = AccentColor.Blue,
     val startPage: StartPage = StartPage.Home,
     val playbackMode: PlaybackMode = PlaybackMode.Auto,
     val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,

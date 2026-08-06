@@ -357,6 +357,7 @@ internal fun MainShell(
                                 onTranscodeResolution =
                                     settingsActions.setTranscodeResolution,
                                 onAutoplayNext = settingsActions.setAutoplayNext,
+                                onAccentColor = settingsActions.setAccentColor,
                                 onDanmakuSettings = settingsActions.setDanmaku,
                                 onSubtitleSettings = settingsActions.setSubtitles,
                                 onStartPage = settingsActions.setStartPage,

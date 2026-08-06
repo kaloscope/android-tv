@@ -25,11 +25,13 @@ import androidx.compose.ui.unit.dp
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.accentPalette
 import org.kaloscope.tv.core.designsystem.danmakuModeLabel
 import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
 import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
 import org.kaloscope.tv.core.designsystem.formatSubtitleOffset
 import org.kaloscope.tv.core.designsystem.subtitleDisplayModeLabel
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
@@ -415,8 +417,32 @@ internal fun BehaviorSettings(
     state: SettingsUiState.Content,
     interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
+    onAccentColor: (AccentColor) -> Unit,
     onStartPage: (StartPage) -> Unit,
 ) {
+    ChoiceSettingRow(
+        title = stringResource(R.string.accent_color),
+        description = stringResource(R.string.accent_color_description),
+        value = accentColorLabel(state.settings.accentColor),
+        interactionsEnabled = interactionsEnabled,
+        createChoice = {
+            SettingsChoice(
+                title = stringResource(R.string.accent_color),
+                options = AccentColor.entries.map { accentColor ->
+                    SettingsChoiceOption(
+                        label = accentColorLabel(accentColor),
+                        selected = accentColor == state.settings.accentColor,
+                        swatchColor = accentColor.accentPalette().primary,
+                        testTag = "accent-option-${accentColor.name.lowercase()}",
+                        swatchTestTag = "accent-swatch-${accentColor.name.lowercase()}",
+                        onSelect = { onAccentColor(accentColor) },
+                    )
+                },
+            )
+        },
+        onOpenChoice = onOpenChoice,
+    )
+    Spacer(Modifier.height(10.dp))
     ChoiceSettingRow(
         title = stringResource(R.string.default_start_page),
         description = stringResource(R.string.default_start_page_description),
@@ -437,6 +463,16 @@ internal fun BehaviorSettings(
         onOpenChoice = onOpenChoice,
     )
 }
+
+@Composable
+internal fun accentColorLabel(accentColor: AccentColor): String =
+    when (accentColor) {
+        AccentColor.Blue -> stringResource(R.string.accent_color_blue)
+        AccentColor.Purple -> stringResource(R.string.accent_color_purple)
+        AccentColor.Orange -> stringResource(R.string.accent_color_orange)
+        AccentColor.Yellow -> stringResource(R.string.accent_color_yellow)
+        AccentColor.Green -> stringResource(R.string.accent_color_green)
+    }
 
 @Composable
 internal fun ServerAccountSettings(

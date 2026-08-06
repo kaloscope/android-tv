@@ -48,6 +48,7 @@ internal fun rememberKaloscopeControlVisuals(
     enabled: Boolean,
     scaleOnFocus: Boolean = true,
 ): KaloscopeControlVisuals {
+    val accentPalette = LocalAccentPalette.current
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
     val pressed by interactionSource.collectIsPressedAsState()
@@ -67,7 +68,10 @@ internal fun rememberKaloscopeControlVisuals(
         KaloscopeMotion.FocusMillis
     }
     val animatedBaseColor by animateColorAsState(
-        targetValue = state.baseMaterial.color(),
+        targetValue = resolveKaloscopeControlBaseColor(
+            material = state.baseMaterial,
+            accentPalette = accentPalette,
+        ),
         animationSpec = tween(
             durationMillis = duration,
             easing = KaloscopeMotion.ControlEasing,
@@ -75,7 +79,7 @@ internal fun rememberKaloscopeControlVisuals(
         label = "control-base",
     )
     val animatedFocusColor by animateColorAsState(
-        targetValue = state.focusMaterial.color(),
+        targetValue = resolveKaloscopeControlFocusColor(state.focusMaterial),
         animationSpec = tween(
             durationMillis = duration,
             easing = KaloscopeMotion.ControlEasing,
@@ -129,24 +133,6 @@ internal fun rememberKaloscopeControlVisuals(
         animatedScale = scale,
     )
 }
-
-private fun KaloscopeControlBaseMaterial.color(): Color =
-    when (this) {
-        KaloscopeControlBaseMaterial.Ghost -> Color.Transparent
-        KaloscopeControlBaseMaterial.Filled -> PanelElevated
-        KaloscopeControlBaseMaterial.Selected -> KaloscopeControlTokens.SelectedSurface
-        KaloscopeControlBaseMaterial.SidebarSelected ->
-            KaloscopeControlTokens.SidebarSelectedSurface
-    }
-
-private fun KaloscopeControlFocusMaterial.color(): Color =
-    when (this) {
-        KaloscopeControlFocusMaterial.None -> Color.Transparent
-        KaloscopeControlFocusMaterial.Focused -> KaloscopeControlTokens.FocusedSurface
-        KaloscopeControlFocusMaterial.SelectedFocused ->
-            KaloscopeControlTokens.SelectedFocusedSurface
-        KaloscopeControlFocusMaterial.DangerFocused -> DangerFocusedSurface
-    }
 
 internal fun Modifier.kaloscopeControlVisuals(
     visuals: KaloscopeControlVisuals,

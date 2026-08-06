@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
@@ -76,6 +77,9 @@ class SettingsCoordinator(
 
     suspend fun setAutoplayNext(value: Boolean) =
         update { copy(autoplayNext = value) }
+
+    suspend fun setAccentColor(value: AccentColor) =
+        update { copy(accentColor = value) }
 
     suspend fun setDanmakuSettings(value: DanmakuSettings) =
         update { copy(danmaku = value) }

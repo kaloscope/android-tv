@@ -78,7 +78,7 @@ import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.ContentCardFocused
-import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.designsystem.LocalAccentPalette
 import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
@@ -891,6 +891,7 @@ private fun SearchResultFooter(
     result: NetworkSearchResult,
     resolving: Boolean,
 ) {
+    val accentPalette = LocalAccentPalette.current
     val uploader = result.uploader?.let {
         stringResource(R.string.search_result_uploader, it)
     }
@@ -908,7 +909,7 @@ private fun SearchResultFooter(
         if (resolving) {
             Text(
                 text = stringResource(R.string.resolving_playback),
-                color = Primary,
+                color = accentPalette.primary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

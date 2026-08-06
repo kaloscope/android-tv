@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +61,7 @@ import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.TvTextField
 import org.kaloscope.tv.core.designsystem.appErrorText
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
@@ -80,6 +82,7 @@ fun SettingsScreen(
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
+    onAccentColor: (AccentColor) -> Unit = {},
     onDanmakuSettings: (DanmakuSettings) -> Unit,
     onSubtitleSettings: (SubtitleSettings) -> Unit,
     onStartPage: (StartPage) -> Unit,
@@ -106,6 +109,7 @@ fun SettingsScreen(
             onPlaybackMode = onPlaybackMode,
             onTranscodeResolution = onTranscodeResolution,
             onAutoplayNext = onAutoplayNext,
+            onAccentColor = onAccentColor,
             onDanmakuSettings = onDanmakuSettings,
             onSubtitleSettings = onSubtitleSettings,
             onStartPage = onStartPage,
@@ -127,6 +131,7 @@ private fun SettingsContent(
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
+    onAccentColor: (AccentColor) -> Unit,
     onDanmakuSettings: (DanmakuSettings) -> Unit,
     onSubtitleSettings: (SubtitleSettings) -> Unit,
     onStartPage: (StartPage) -> Unit,
@@ -200,6 +205,7 @@ private fun SettingsContent(
                     choice = requestedChoice
                 },
                 onAutoplayNext = onAutoplayNext,
+                onAccentColor = onAccentColor,
                 onDanmakuSettings = onDanmakuSettings,
                 onSubtitleSettings = onSubtitleSettings,
                 onOpenSubtitleLanguage = { focus ->
@@ -346,6 +352,7 @@ private fun SettingsPanel(
     onRequestLogout: (FocusRequester) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
     onTranscodeResolution: (TranscodeResolution) -> Unit,
+    onAccentColor: (AccentColor) -> Unit,
     onStartPage: (StartPage) -> Unit,
 ) {
     key(state.section) {
@@ -399,6 +406,7 @@ private fun SettingsPanel(
                             state = state,
                             interactionsEnabled = interactionsEnabled,
                             onOpenChoice = onOpenChoice,
+                            onAccentColor = onAccentColor,
                             onStartPage = onStartPage,
                         )
 
@@ -675,8 +683,24 @@ private fun SettingsChoiceDialog(
                                 } else {
                                     Modifier
                                 },
+                            )
+                            .then(
+                                option.testTag?.let(Modifier::testTag) ?: Modifier,
                             ),
                     ) {
+                        option.swatchColor?.let { swatchColor ->
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .background(swatchColor, CircleShape)
+                                    .then(
+                                        option.swatchTestTag
+                                            ?.let(Modifier::testTag)
+                                            ?: Modifier,
+                                    ),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                        }
                         Text(option.label)
                     }
                 }
@@ -824,5 +848,8 @@ internal data class SettingsChoice(
 internal data class SettingsChoiceOption(
     val label: String,
     val selected: Boolean,
+    val swatchColor: Color? = null,
+    val testTag: String? = null,
+    val swatchTestTag: String? = null,
     val onSelect: () -> Unit,
 )

@@ -85,9 +85,9 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
+import org.kaloscope.tv.core.designsystem.LocalAccentPalette
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.Subtle
 import kotlinx.coroutines.delay
 
@@ -119,6 +119,7 @@ internal data class PlayerControlsUiState(
 
 @Composable
 internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
+    val accentPalette = LocalAccentPalette.current
     val progress = if (state.durationMillis > 0) {
         (state.positionMillis.toFloat() / state.durationMillis).coerceIn(0f, 1f)
     } else {
@@ -160,7 +161,10 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
                     .fillMaxWidth(progress)
                     .fillMaxHeight()
                     .background(
-                        playerProgressColor(state.playWhenReady),
+                        playerProgressColor(
+                            playWhenReady = state.playWhenReady,
+                            activeColor = accentPalette.primary,
+                        ),
                         RoundedCornerShape(9.dp),
                     ),
             )
@@ -841,6 +845,7 @@ private fun SeekablePlayerProgress(
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val accentPalette = LocalAccentPalette.current
     val enabled = durationMillis > 0
     val progressDescription = stringResource(R.string.player_progress)
     var focused by remember { mutableStateOf(false) }
@@ -852,7 +857,10 @@ private fun SeekablePlayerProgress(
     }
     val chapterMarkers = ChapterTimelinePolicy.markers(chapters, durationMillis)
     val currentChapterTitle = ChapterTimelinePolicy.currentTitle(chapters, displayPosition)
-    val progressColor = playerProgressColor(playWhenReady)
+    val progressColor = playerProgressColor(
+        playWhenReady = playWhenReady,
+        activeColor = accentPalette.primary,
+    )
 
     BoxWithConstraints(
         modifier = modifier
@@ -1013,8 +1021,10 @@ private fun SeekablePlayerProgress(
     }
 }
 
-private fun playerProgressColor(playWhenReady: Boolean): Color =
-    if (playWhenReady) Primary else Subtle
+private fun playerProgressColor(
+    playWhenReady: Boolean,
+    activeColor: Color,
+): Color = if (playWhenReady) activeColor else Subtle
 
 internal fun Key.toPlayerRemoteKey(): PlayerRemoteKey? =
     when (this) {

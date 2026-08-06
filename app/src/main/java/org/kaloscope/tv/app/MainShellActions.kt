@@ -1,5 +1,6 @@
 package org.kaloscope.tv.app
 
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaDetail
@@ -64,6 +65,7 @@ internal data class SettingsActions(
     val setPlaybackMode: (PlaybackMode) -> Unit = {},
     val setTranscodeResolution: (TranscodeResolution) -> Unit = {},
     val setAutoplayNext: (Boolean) -> Unit = {},
+    val setAccentColor: (AccentColor) -> Unit = {},
     val setDanmaku: (DanmakuSettings) -> Unit = {},
     val setSubtitles: (SubtitleSettings) -> Unit = {},
     val setStartPage: (StartPage) -> Unit = {},

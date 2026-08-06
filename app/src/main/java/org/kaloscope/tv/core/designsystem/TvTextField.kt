@@ -125,6 +125,7 @@ private fun TvTextFieldSurface(
     selectorTestTag: String?,
     editorTestTag: String?,
 ) {
+    val accentPalette = LocalAccentPalette.current
     var editing by remember { mutableStateOf(false) }
     var fieldFocused by remember { mutableStateOf(false) }
     var pendingActivationKey by remember { mutableStateOf<Key?>(null) }
@@ -324,7 +325,7 @@ private fun TvTextFieldSurface(
             .border(
                 width = if (editing || fieldFocused) 2.dp else 1.dp,
                 color = when {
-                    editing -> Primary
+                    editing -> accentPalette.primary
                     fieldFocused -> OnBackground
                     else -> Outline
                 },

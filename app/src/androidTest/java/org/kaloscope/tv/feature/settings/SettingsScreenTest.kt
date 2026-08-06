@@ -36,6 +36,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
@@ -75,6 +76,196 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun settingsMenuUsesApprovedLabelsInOrder() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(TvSettings()),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+        val labels = listOf(
+            "播放设置",
+            "弹幕设置",
+            "字幕设置",
+            "外观与行为",
+            "服务器与账户",
+        )
+
+        val verticalPositions = labels.map { label ->
+            composeRule.onNode(hasClickAction() and hasText(label))
+                .fetchSemanticsNode()
+                .boundsInRoot
+                .top
+        }
+
+        assertEquals(verticalPositions.sorted(), verticalPositions)
+        composeRule.onNode(hasClickAction() and hasText("外观", substring = false))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun appearanceAndBehaviorSelectsAccentAndRestoresRowFocus() {
+        var selectedAccent: AccentColor? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Behavior,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onAccentColor = { selectedAccent = it },
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val accentRow = composeRule.onNode(hasClickAction() and hasText("强调色"))
+        val startPageRow = composeRule.onNode(hasClickAction() and hasText("默认启动页"))
+        assertTrue(
+            accentRow.fetchSemanticsNode().boundsInRoot.top <
+                startPageRow.fetchSemanticsNode().boundsInRoot.top,
+        )
+        composeRule.onNode(hasClickAction() and hasText("蓝色  ›")).assertExists()
+        accentRow
+            .assertExists()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("accent-option-blue")
+            .assertIsSelected()
+            .assertIsFocused()
+        for (accent in AccentColor.entries) {
+            composeRule.onNodeWithTag("accent-swatch-${accent.name.lowercase()}")
+                .assertExists()
+        }
+        for (label in listOf("蓝色", "紫色", "橙色", "黄色", "绿色")) {
+            composeRule.onNodeWithText(label).assertExists()
+        }
+        composeRule.onNodeWithTag("accent-option-purple")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        accentRow.assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(AccentColor.Purple, selectedAccent)
+        }
+    }
+
+    @Test
+    fun appearanceAccentDialogBackDismissesWithoutChangingSelection() {
+        var selectedAccent: AccentColor? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(accentColor = AccentColor.Green),
+                        section = SettingsSection.Behavior,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onAccentColor = { selectedAccent = it },
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val accentRow = composeRule.onNode(hasClickAction() and hasText("强调色"))
+        accentRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("accent-option-green").assertIsFocused()
+
+        InstrumentationRegistry.getInstrumentation().apply {
+            waitForIdleSync()
+            sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("accent-option-green").assertDoesNotExist()
+        accentRow.assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(null, selectedAccent)
+        }
+    }
+
+    @Test
+    fun savingStateIgnoresRepeatedAccentActivationAndKeepsFocus() {
+        var selectedAccent: AccentColor? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Behavior,
+                        isSaving = true,
+                    ),
+                    requestInitialFocus = false,
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onAccentColor = { selectedAccent = it },
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val accentRow = composeRule.onNode(hasClickAction() and hasText("强调色"))
+        accentRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.Enter)
+                pressKey(Key.Enter)
+            }
+
+        accentRow.assertIsFocused()
+        composeRule.onNodeWithTag("accent-option-blue").assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(null, selectedAccent)
+        }
+    }
+
+    @Test
     fun playbackCategoryHasInitialFocusAndChoiceUpdatesSetting() {
         var selectedMode: PlaybackMode? = null
         composeRule.setContent {
@@ -97,7 +288,7 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("播放").assertIsFocused()
+        composeRule.onNode(hasClickAction() and hasText("播放设置")).assertIsFocused()
         composeRule.onNodeWithText("默认播放模式")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
@@ -173,11 +364,11 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("播放").assertIsSelected()
+        composeRule.onNode(hasClickAction() and hasText("播放设置")).assertIsSelected()
         composeRule.onNodeWithText("默认播放模式")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-        composeRule.onNodeWithText("播放")
+        composeRule.onNode(hasClickAction() and hasText("播放设置"))
             .assertIsSelected()
             .assertIsNotFocused()
     }
@@ -212,11 +403,11 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("播放")
+        composeRule.onNode(hasClickAction() and hasText("播放设置"))
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionDown) }
 
-        composeRule.onNodeWithText("弹幕")
+        composeRule.onNode(hasClickAction() and hasText("弹幕设置"))
             .assertIsFocused()
             .assertIsSelected()
         composeRule.onNodeWithText("默认开启弹幕").assertExists()
@@ -257,7 +448,7 @@ class SettingsScreenTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionLeft) }
 
-        composeRule.onNodeWithText("弹幕")
+        composeRule.onNode(hasClickAction() and hasText("弹幕设置"))
             .assertIsSelected()
             .assertIsFocused()
     }
@@ -711,7 +902,7 @@ class SettingsScreenTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionLeft) }
 
-        composeRule.onNodeWithText("字幕").assertIsFocused()
+        composeRule.onNode(hasClickAction() and hasText("字幕设置")).assertIsFocused()
         composeRule.runOnIdle {
             assertEquals(100, state.settings.subtitle.fontScalePercent)
         }
@@ -771,7 +962,7 @@ class SettingsScreenTest {
             .performKeyInput { pressKey(Key.Enter) }
             .assertIsNotSelected()
             .performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNodeWithText("字幕").assertIsFocused()
+        composeRule.onNode(hasClickAction() and hasText("字幕设置")).assertIsFocused()
         composeRule.runOnIdle {
             assertEquals(95, state.settings.subtitle.fontScalePercent)
         }
@@ -788,7 +979,7 @@ class SettingsScreenTest {
         }
 
         fontScaleRow.performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNodeWithText("字幕").assertIsFocused()
+        composeRule.onNode(hasClickAction() and hasText("字幕设置")).assertIsFocused()
     }
 
     @Test

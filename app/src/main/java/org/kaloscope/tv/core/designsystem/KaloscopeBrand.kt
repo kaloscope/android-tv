@@ -25,6 +25,7 @@ fun KaloscopeBrand(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
+    val accentPalette = LocalAccentPalette.current
     val nameLineHeight = if (compact) 22.sp else 28.sp
     val captionLineHeight = if (compact) 10.sp else 11.sp
     val logoSize = with(LocalDensity.current) {
@@ -46,7 +47,7 @@ fun KaloscopeBrand(
             )
             Text(
                 text = caption,
-                color = PrimarySoft,
+                color = accentPalette.soft,
                 fontSize = if (compact) 8.sp else 9.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.8.sp,

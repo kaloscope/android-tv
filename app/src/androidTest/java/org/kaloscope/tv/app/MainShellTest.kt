@@ -790,7 +790,7 @@ class MainShellTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionDown) }
 
-        composeRule.onNodeWithText("弹幕").assertIsFocused()
+        composeRule.onNode(hasClickAction() and hasText("弹幕设置")).assertIsFocused()
         composeRule.onNodeWithText("默认开启弹幕").assertIsNotFocused()
     }
 
@@ -808,7 +808,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("播放")
+        composeRule.onNode(hasClickAction() and hasText("播放设置"))
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }

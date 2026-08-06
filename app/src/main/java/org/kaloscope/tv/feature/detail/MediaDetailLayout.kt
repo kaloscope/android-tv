@@ -49,9 +49,9 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
+import org.kaloscope.tv.core.designsystem.LocalAccentPalette
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.model.GridViewportSnapshot
@@ -193,6 +193,7 @@ private fun DetailHero(
     onResumePlayback: () -> Unit,
     onStartOverPlayback: () -> Unit,
 ) {
+    val accentPalette = LocalAccentPalette.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -224,7 +225,7 @@ private fun DetailHero(
                 Spacer(Modifier.height(10.dp))
                 Text(
                     text = focusedChildPreview(sectionKind, child),
-                    color = Primary,
+                    color = accentPalette.primary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -412,6 +413,7 @@ private fun focusedChildPreview(
 
 @Composable
 private fun DetailMetadata(detail: MediaDetail) {
+    val accentPalette = LocalAccentPalette.current
     val metadata = listOfNotNull(
         detail.year?.toString(),
         detail.season?.let { season ->
@@ -436,7 +438,7 @@ private fun DetailMetadata(detail: MediaDetail) {
         Spacer(Modifier.height(8.dp))
         Text(
             text = detail.genres.joinToString("  ·  "),
-            color = Primary,
+            color = accentPalette.primary,
             fontSize = 15.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

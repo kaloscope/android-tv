@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.SavedServer
@@ -47,6 +48,38 @@ class SettingsCoordinatorTest {
         val state = coordinator.state.value as SettingsUiState.Content
         assertEquals(PlaybackMode.Auto, state.settings.playbackMode)
         assertEquals(AppError.InvalidData("settings_write"), state.saveError)
+        assertFalse(state.isSaving)
+    }
+
+    @Test
+    fun `accent color persists through the settings update path`() = runTest {
+        val repository = FakeSettingsRepository(TvSettings())
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+
+        coordinator.setAccentColor(AccentColor.Green)
+
+        val state = coordinator.state.value as SettingsUiState.Content
+        assertEquals(AccentColor.Green, state.settings.accentColor)
+        assertEquals(AccentColor.Green, repository.saved?.accentColor)
+        assertFalse(state.isSaving)
+    }
+
+    @Test
+    fun `failed accent save keeps the prior color`() = runTest {
+        val error = AppError.InvalidData("settings_write")
+        val repository = FakeSettingsRepository(
+            settings = TvSettings(accentColor = AccentColor.Purple),
+            saveResult = AppResult.Failure(error),
+        )
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+
+        coordinator.setAccentColor(AccentColor.Orange)
+
+        val state = coordinator.state.value as SettingsUiState.Content
+        assertEquals(AccentColor.Purple, state.settings.accentColor)
+        assertEquals(error, state.saveError)
         assertFalse(state.isSaving)
     }
 

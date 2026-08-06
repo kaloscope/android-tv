@@ -15,6 +15,7 @@ fun KaloscopeBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val accentPalette = LocalAccentPalette.current
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -25,7 +26,7 @@ fun KaloscopeBackground(
             )
             .background(
                 Brush.radialGradient(
-                    colors = listOf(Color(0x332E2775), Color.Transparent),
+                    colors = listOf(accentPalette.backgroundGlow, Color.Transparent),
                     radius = 1_050f,
                 ),
             )

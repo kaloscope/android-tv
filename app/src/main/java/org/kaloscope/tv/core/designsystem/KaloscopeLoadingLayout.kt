@@ -27,6 +27,7 @@ fun KaloscopeLoadingLayout(
     testTag: String,
     modifier: Modifier = Modifier,
 ) {
+    val accentPalette = LocalAccentPalette.current
     val transition = rememberInfiniteTransition(label = "loading")
     val rotation by transition.animateFloat(
         initialValue = 0f,
@@ -59,11 +60,11 @@ fun KaloscopeLoadingLayout(
             )
             inset(stroke.width / 2f) {
                 drawCircle(
-                    color = Primary.copy(alpha = 0.18f),
+                    color = accentPalette.primary.copy(alpha = 0.18f),
                     style = stroke,
                 )
                 drawArc(
-                    color = Primary,
+                    color = accentPalette.primary,
                     startAngle = -90f,
                     sweepAngle = 270f,
                     useCenter = false,

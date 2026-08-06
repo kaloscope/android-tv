@@ -12,6 +12,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
@@ -36,6 +37,7 @@ class PreferencesSettingsRepository @Inject constructor(
     override suspend fun saveSettings(settings: TvSettings): AppResult<TvSettings> =
         localCall("settings_write") {
             dataStore.edit { preferences ->
+                preferences[ACCENT_COLOR] = settings.accentColor.storedValue
                 preferences[START_PAGE] = settings.startPage.storedValue
                 preferences[PLAYBACK_MODE] = settings.playbackMode.storedValue
                 preferences[TRANSCODE_RESOLUTION] = settings.transcodeResolution.queryValue
@@ -66,6 +68,10 @@ class PreferencesSettingsRepository @Inject constructor(
 
     private fun Preferences.toSettings(): TvSettings =
         TvSettings(
+            accentColor = enumValue(
+                stored = this[ACCENT_COLOR],
+                fallback = AccentColor.Blue,
+            ),
             startPage = StartPage.entries.firstOrNull {
                 it.storedValue == this[START_PAGE]
             } ?: StartPage.Home,
@@ -142,6 +148,7 @@ class PreferencesSettingsRepository @Inject constructor(
 
     private companion object {
         val ALLOWED_PERCENTAGES = setOf(25, 50, 75, 100)
+        val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val START_PAGE = stringPreferencesKey("start_page")
         val PLAYBACK_MODE = stringPreferencesKey("playback_mode")
         val TRANSCODE_RESOLUTION = stringPreferencesKey("transcode_resolution")

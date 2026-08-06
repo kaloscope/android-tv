@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
@@ -31,6 +32,7 @@ class PreferencesSettingsRepositoryTest {
         val result = repository.getSettings()
 
         assertEquals(TvSettings(), (result as AppResult.Success).value)
+        assertEquals(AccentColor.Blue, result.value.accentColor)
         assertEquals(
             DanmakuSettings(
                 enabled = true,
@@ -43,6 +45,49 @@ class PreferencesSettingsRepositoryTest {
             result.value.danmaku,
         )
         assertEquals(false, result.value.danmaku.blockColored)
+    }
+
+    @Test
+    fun `every accent color survives repository recreation`() = runTest {
+        for (accentColor in AccentColor.entries) {
+            val store = dataStore(this, temporaryFile())
+            val expected = TvSettings(accentColor = accentColor)
+
+            PreferencesSettingsRepository(store).saveSettings(expected)
+            val restored = PreferencesSettingsRepository(store).getSettings()
+
+            assertEquals(expected, (restored as AppResult.Success).value)
+        }
+    }
+
+    @Test
+    fun `accent color parsing is case insensitive`() = runTest {
+        val store = dataStore(this)
+        store.edit { preferences ->
+            preferences[stringPreferencesKey("accent_color")] = "PuRpLe"
+        }
+
+        val result = PreferencesSettingsRepository(store).getSettings()
+
+        assertEquals(
+            AccentColor.Purple,
+            (result as AppResult.Success).value.accentColor,
+        )
+    }
+
+    @Test
+    fun `invalid accent color falls back to blue`() = runTest {
+        val store = dataStore(this)
+        store.edit { preferences ->
+            preferences[stringPreferencesKey("accent_color")] = "ultraviolet"
+        }
+
+        val result = PreferencesSettingsRepository(store).getSettings()
+
+        assertEquals(
+            AccentColor.Blue,
+            (result as AppResult.Success).value.accentColor,
+        )
     }
 
     @Test

@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.kaloscope.tv.app.bootstrap.BootstrapState
 import org.kaloscope.tv.app.navigation.toRootRoute
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
@@ -38,8 +39,12 @@ fun KaloscopeApp(
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val accentColor = (settingsState as? SettingsUiState.Content)
+        ?.settings
+        ?.accentColor
+        ?: AccentColor.Blue
 
-    KaloscopeTheme {
+    KaloscopeTheme(accentColor = accentColor) {
         // Exactly one root subtree is composed to prevent hidden screens from retaining focus.
         when (val state = bootstrapState) {
             BootstrapState.Loading -> LoadingScreen()
@@ -218,6 +223,7 @@ fun KaloscopeApp(
                         setPlaybackMode = settingsViewModel::setPlaybackMode,
                         setTranscodeResolution = settingsViewModel::setTranscodeResolution,
                         setAutoplayNext = settingsViewModel::setAutoplayNext,
+                        setAccentColor = settingsViewModel::setAccentColor,
                         setDanmaku = settingsViewModel::setDanmakuSettings,
                         setSubtitles = settingsViewModel::setSubtitleSettings,
                         setStartPage = settingsViewModel::setStartPage,

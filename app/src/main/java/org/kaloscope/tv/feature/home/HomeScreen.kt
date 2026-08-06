@@ -70,7 +70,7 @@ import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.Primary
+import org.kaloscope.tv.core.designsystem.LocalAccentPalette
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.Subtle
 import org.kaloscope.tv.core.designsystem.appErrorText
@@ -633,6 +633,7 @@ private fun ProgressBar(
     percentage: Int,
     modifier: Modifier = Modifier,
 ) {
+    val accentPalette = LocalAccentPalette.current
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -643,7 +644,7 @@ private fun ProgressBar(
             modifier = Modifier
                 .fillMaxWidth(percentage.coerceIn(0, 100) / 100f)
                 .fillMaxHeight()
-                .background(Primary, RoundedCornerShape(4.dp)),
+                .background(accentPalette.primary, RoundedCornerShape(4.dp)),
         )
     }
 }

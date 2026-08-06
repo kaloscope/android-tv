@@ -7,6 +7,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
@@ -43,6 +44,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setAutoplayNext(value: Boolean) =
         launchSettingsOperation { coordinator.setAutoplayNext(value) }
+
+    fun setAccentColor(value: AccentColor) =
+        launchSettingsOperation { coordinator.setAccentColor(value) }
 
     fun setDanmakuSettings(value: DanmakuSettings) =
         launchSettingsOperation { coordinator.setDanmakuSettings(value) }

@@ -77,11 +77,11 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
+import org.kaloscope.tv.core.designsystem.LocalAccentPalette
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
-import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.designsystem.TvTextField
 import org.kaloscope.tv.core.designsystem.appErrorText
@@ -120,6 +120,7 @@ internal fun ServerSetupScreen(
     onDeleteServer: (SavedServer) -> Unit = {},
     onClearDeletionError: () -> Unit = {},
 ) {
+    val accentPalette = LocalAccentPalette.current
     val nameFocus = remember { FocusRequester() }
     val urlFocus = remember { FocusRequester() }
     val testFocus = remember { FocusRequester() }
@@ -369,7 +370,7 @@ internal fun ServerSetupScreen(
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.add_another_server),
-                    color = Primary,
+                    color = accentPalette.primary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -690,6 +691,7 @@ private fun SetupStep(
     label: String,
     active: Boolean,
 ) {
+    val accentPalette = LocalAccentPalette.current
     Row(
         modifier = Modifier
             .testTag("setup-step-$number")
@@ -701,12 +703,12 @@ private fun SetupStep(
             modifier = Modifier
                 .size(28.dp)
                 .background(
-                    color = if (active) Primary else BackgroundRaised,
+                    color = if (active) accentPalette.primary else BackgroundRaised,
                     shape = CircleShape,
                 )
                 .border(
                     width = 1.dp,
-                    color = if (active) Primary else SetupProgressOutline,
+                    color = if (active) accentPalette.primary else SetupProgressOutline,
                     shape = CircleShape,
                 ),
             contentAlignment = Alignment.Center,
