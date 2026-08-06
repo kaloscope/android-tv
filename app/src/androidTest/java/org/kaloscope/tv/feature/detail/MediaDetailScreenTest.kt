@@ -3,22 +3,26 @@ package org.kaloscope.tv.feature.detail
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
@@ -30,8 +34,8 @@ import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.model.GridViewportSnapshot
-import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaActor
+import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
 import org.kaloscope.tv.core.model.MediaSummary
@@ -138,6 +142,59 @@ class MediaDetailScreenTest {
         composeRule.onAllNodesWithTag("cast-item-0").assertCountEquals(1)
         composeRule.onNodeWithText("演员8").assertExists()
         composeRule.onNodeWithText("演员9").assertDoesNotExist()
+    }
+
+    @Test
+    fun focusingCreditsAnchorDoesNotChangeItsAppearance() {
+        lateinit var clearFocus: () -> Unit
+        val state = MediaDetailUiState.Content(
+            parent = movie(
+                actors = listOf(MediaActor("沈川", "队长", null)),
+            ).copy(
+                directors = listOf("林舟"),
+            ),
+        )
+        composeRule.setContent {
+            val focusManager = LocalFocusManager.current
+            SideEffect {
+                clearFocus = { focusManager.clearFocus(force = true) }
+            }
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = state,
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val credits = composeRule.onNodeWithTag("detail-credits-anchor")
+
+        credits.performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+        composeRule.runOnIdle(clearFocus)
+        composeRule.waitForIdle()
+        val unfocusedBounds = credits.getUnclippedBoundsInRoot()
+        val unfocusedImage = credits.captureToImage().asAndroidBitmap()
+
+        credits.performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+        composeRule.waitForIdle()
+
+        assertEquals(unfocusedBounds, credits.getUnclippedBoundsInRoot())
+        assertTrue(
+            "Expected credits focus to leave the section appearance unchanged",
+            unfocusedImage.sameAs(credits.captureToImage().asAndroidBitmap()),
+        )
     }
 
     @Test

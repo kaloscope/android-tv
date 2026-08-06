@@ -2,7 +2,6 @@ package org.kaloscope.tv.feature.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,21 +22,15 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -58,7 +51,6 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.Primary
 import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.designsystem.ServerImage
@@ -460,8 +452,6 @@ private fun DetailCreditsAndCast(
     childFocusRequester: FocusRequester,
 ) {
     val sectionLabel = stringResource(R.string.cast_title)
-    var isFocused by remember(parent.id) { mutableStateOf(false) }
-    val shape = RoundedCornerShape(16.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -471,19 +461,9 @@ private fun DetailCreditsAndCast(
                 end = horizontalSafePadding,
             )
             .focusProperties { up = childFocusRequester }
-            .onFocusChanged { isFocused = it.isFocused }
             .focusable()
             .semantics { contentDescription = sectionLabel }
             .testTag("detail-credits-anchor")
-            .background(
-                color = if (isFocused) PanelElevated else Color.Transparent,
-                shape = shape,
-            )
-            .border(
-                width = 2.dp,
-                color = if (isFocused) Primary else Color.Transparent,
-                shape = shape,
-            )
             .padding(16.dp),
     ) {
         parent.directors.takeIf(List<String>::isNotEmpty)?.let { directors ->
