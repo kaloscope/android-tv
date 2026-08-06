@@ -20,7 +20,52 @@ jobs:
       - name: Check out sources
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Build release changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@a34a8009a9588bb86b02a873cf592440e96a5da8 # v6.1.1
+        with:
+          mode: COMMIT
+          failOnError: "true"
+          configurationJson: |
+            {
+              "template": "#{{CHANGELOG}}\n\n<details>\n<summary>:wrench: Maintenance changes</summary>\n\n#{{UNCATEGORIZED}}\n</details>\n\n#{{RELEASE_DIFF}}",
+              "empty_template": "No changes were detected.\n\n#{{RELEASE_DIFF}}",
+              "categories": [
+                {
+                  "title": "### :sparkles: New Features",
+                  "labels": ["feat"]
+                },
+                {
+                  "title": "### :hammer: Bug Fixes",
+                  "labels": ["fix"]
+                },
+                {
+                  "title": "### :zap: Performance",
+                  "labels": ["perf"]
+                },
+                {
+                  "title": "### :recycle: Refactors",
+                  "labels": ["refactor"]
+                },
+                {
+                  "title": "### :art: UI & Style",
+                  "labels": ["style"]
+                }
+              ],
+              "label_extractor": [
+                {
+                  "pattern": "^(build|bump|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)([(][A-Za-z0-9_./-]+[)])?!?: .+",
+                  "on_property": "title",
+                  "target": "$1"
+                }
+              ],
+              "commit_template": "- #{{TITLE}} (by [@#{{AUTHOR}}](https://github.com/#{{AUTHOR}}))"
+            }
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Set up Java
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -116,12 +161,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           APK_PATH: ${{ steps.release.outputs.apk }}
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
           CHECKSUM_PATH: ${{ steps.release.outputs.checksum }}
+          RELEASE_NOTES_PATH: ${{ runner.temp }}/release-notes.md
         run: |
           set -euo pipefail
+          printf '%s\n' "$CHANGELOG" > "$RELEASE_NOTES_PATH"
           gh release create "$GITHUB_REF_NAME" \
             "$APK_PATH" \
             "$CHECKSUM_PATH" \
             --verify-tag \
-            --generate-notes \
+            --notes-file "$RELEASE_NOTES_PATH" \
             --title "$GITHUB_REF_NAME"
