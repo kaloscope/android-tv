@@ -1,0 +1,38 @@
+name: Bug Report
+description: Create a report to help us improve
+title: '[Bug Report]: '
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: Please provide a clear and concise description of the bug.
+      placeholder: The bug is...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: To Reproduce
+      description: Please provide the steps to reproduce the issue.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please provide your environment information.
+      value: |
+        - App version: [e.g., v0.1.1]
+        - TV / box model: [e.g., NVIDIA Shield TV]
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots (optional)
+      description: If applicable, add screenshots to help explain your problem.

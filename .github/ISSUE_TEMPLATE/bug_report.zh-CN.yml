@@ -1,0 +1,38 @@
+name: 问题反馈
+description: 报告 Bug 以帮助我们改进
+title: '[Bug Report]: '
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 请清晰简洁地描述这个问题
+      placeholder: 问题是...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 请提供复现该问题的大致步骤
+      placeholder: |
+        1. 打开 '...'
+        2. 点击 '...'
+        3. 看到错误
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: 请提供您的运行环境信息
+      value: |
+        - 应用版本：[例如 v0.1.1]
+        - 电视 / 盒子型号：[例如 NVIDIA Shield TV]
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截屏（可选）
+      description: 添加截图或录屏帮助解释您的问题
