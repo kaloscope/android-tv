@@ -282,6 +282,50 @@ class LibraryScreenTest {
     }
 
     @Test
+    fun selectingLowerLibraryKeepsFocusOnSelectedItem() {
+        var currentState by mutableStateOf(
+            state().copy(
+                libraries = listOf(
+                    MediaLibrary(21, "剧集库", MediaLibraryType.TvShow),
+                    MediaLibrary(22, "电影库", MediaLibraryType.Movie),
+                ),
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = currentState,
+                    restoreMediaId = null,
+                    onSelectLibrary = { libraryId ->
+                        currentState = currentState.copy(
+                            selectedLibraryId = libraryId,
+                            items = LibraryItemsState.Loading,
+                            focusedMediaId = null,
+                        )
+                    },
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-sidebar-item-22")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("library-sidebar-item-22")
+            .assertIsSelected()
+            .assertIsFocused()
+        composeRule.onNodeWithTag("library-sidebar-item-21").assertIsNotFocused()
+    }
+
+    @Test
     fun singleLibraryInitialFocusesSearchInput() {
         composeRule.setContent {
             KaloscopeTheme {

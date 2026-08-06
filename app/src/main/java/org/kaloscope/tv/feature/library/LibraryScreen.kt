@@ -191,12 +191,9 @@ private fun LibraryContent(
     }
     val restoreTargetId = restoreMediaId ?: state.focusedMediaId
 
+    // Source changes refresh content in-place and must not replay root-entry focus.
     // Returning from detail restores its card before applying root entry focus.
-    LaunchedEffect(
-        state.selectedLibraryId,
-        restoreTargetId,
-        requestInitialFocus,
-    ) {
+    LaunchedEffect(Unit) {
         if (requestInitialFocus && restoreTargetId == null) {
             if (hasMultipleLibraries) {
                 firstLibraryFocus.requestFocus()

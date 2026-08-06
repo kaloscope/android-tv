@@ -185,11 +185,8 @@ private fun SearchContent(
     }
     val filterButtonFocus = remember { FocusRequester() }
     var restoreFilterFocus by remember { mutableStateOf(false) }
-    LaunchedEffect(
-        state.selectedIndexerId,
-        state.focusedResultId,
-        requestInitialFocus,
-    ) {
+    // Source changes refresh content in-place and must not replay root-entry focus.
+    LaunchedEffect(Unit) {
         if (requestInitialFocus && state.focusedResultId == null) {
             if (hasMultipleIndexers) {
                 firstIndexerFocus.requestFocus()

@@ -1239,6 +1239,57 @@ class SearchScreenTest {
     }
 
     @Test
+    fun selectingLowerIndexerKeepsFocusOnSelectedItem() {
+        val firstProfile = state().profiles.single()
+        var currentState by mutableStateOf(
+            state().copy(
+                profiles = listOf(
+                    firstProfile,
+                    firstProfile.copy(
+                        indexer = NetworkIndexer(22, "云端站", null),
+                    ),
+                ),
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = currentState,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = { indexerId ->
+                        currentState = currentState.copy(
+                            selectedIndexerId = indexerId,
+                            results = SearchResultsState.AwaitingQuery,
+                            focusedResultId = null,
+                        )
+                    },
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("indexer-22")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("indexer-22")
+            .assertIsSelected()
+            .assertIsFocused()
+        composeRule.onNodeWithTag("indexer-11").assertIsNotFocused()
+    }
+
+    @Test
     fun appliedFiltersMarkFilterActionSelected() {
         composeRule.setContent {
             KaloscopeTheme {
