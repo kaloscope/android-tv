@@ -31,7 +31,7 @@ jobs:
           failOnError: "true"
           configurationJson: |
             {
-              "template": "#{{CHANGELOG}}\n\n<details>\n<summary>:wrench: Maintenance changes</summary>\n\n#{{UNCATEGORIZED}}\n</details>\n\n#{{RELEASE_DIFF}}",
+              "template": "#{{CHANGELOG}}\n\n<details>\n<summary>:gear: Maintenance changes</summary>\n\n#{{UNCATEGORIZED}}\n</details>\n\n#{{RELEASE_DIFF}}",
               "empty_template": "No changes were detected.\n\n#{{RELEASE_DIFF}}",
               "categories": [
                 {
