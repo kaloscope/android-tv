@@ -404,7 +404,10 @@ internal fun PlayerControls(
                         .testTag("player-control-row"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         PlayerCircleButton(
                             label = stringResource(R.string.previous_episode),
                             iconRes = R.drawable.ic_action_previous,

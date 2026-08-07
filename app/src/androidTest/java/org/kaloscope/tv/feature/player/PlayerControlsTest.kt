@@ -146,6 +146,65 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun transportControlsShareVerticalCenterline() {
+        lateinit var density: Density
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState().copy(playWhenReady = true),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val playPauseCenterY = composeRule.onNodeWithTag("player-play-pause")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .center
+            .y
+        val tolerance = with(density) { 1.dp.toPx() }
+
+        listOf(
+            "player-previous",
+            "player-rewind",
+            "player-forward",
+            "player-next",
+        ).forEach { tag ->
+            val siblingCenterY = composeRule.onNodeWithTag(tag)
+                .fetchSemanticsNode()
+                .boundsInRoot
+                .center
+                .y
+            assertEquals(
+                "$tag should share the play/pause centerline",
+                playPauseCenterY,
+                siblingCenterY,
+                tolerance,
+            )
+        }
+    }
+
+    @Test
     fun transportAndCollapsedAuxiliaryControlsMatchApprovedShapes() {
         lateinit var density: Density
 
