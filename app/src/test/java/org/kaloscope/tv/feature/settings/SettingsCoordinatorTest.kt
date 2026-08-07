@@ -10,12 +10,16 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
+import org.kaloscope.tv.core.model.ImageReadMode
+import org.kaloscope.tv.core.model.ImageReaderSettings
+import org.kaloscope.tv.core.model.ReaderChapterOrder
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleDisplayMode
 import org.kaloscope.tv.core.model.SubtitleSettings
+import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.data.server.ServerRepository
@@ -120,6 +124,48 @@ class SettingsCoordinatorTest {
         val state = coordinator.state.value as SettingsUiState.Content
         assertEquals(expected, state.settings.subtitle)
         assertEquals(expected, repository.saved?.subtitle)
+    }
+
+    @Test
+    fun `reader defaults persist and text values are sanitized`() = runTest {
+        val repository = FakeSettingsRepository(TvSettings())
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+
+        coordinator.setReaderChapterOrder(ReaderChapterOrder.Descending)
+        coordinator.setImageReaderSettings(
+            ImageReaderSettings(readMode = ImageReadMode.Paged),
+        )
+        coordinator.setTextReaderSettings(
+            TextReaderSettings(
+                fontSizeSp = 31,
+                lineHeight = 3.2f,
+                paragraphSpacingEm = -1f,
+                horizontalPaddingDp = 50,
+            ),
+        )
+
+        val state = coordinator.state.value as SettingsUiState.Content
+        assertEquals(ReaderChapterOrder.Descending, state.settings.readerChapterOrder)
+        assertEquals(ImageReadMode.Paged, state.settings.imageReader.readMode)
+        assertEquals(32, state.settings.textReader.fontSizeSp)
+        assertEquals(3f, state.settings.textReader.lineHeight)
+        assertEquals(0f, state.settings.textReader.paragraphSpacingEm)
+        assertEquals(48, state.settings.textReader.horizontalPaddingDp)
+        assertEquals(state.settings, repository.saved)
+    }
+
+    @Test
+    fun `reading section can be selected`() = runTest {
+        val coordinator = coordinator(TvSettings())
+        coordinator.load()
+
+        coordinator.selectSection(SettingsSection.Reading)
+
+        assertEquals(
+            SettingsSection.Reading,
+            (coordinator.state.value as SettingsUiState.Content).section,
+        )
     }
 
     @Test

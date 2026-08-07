@@ -1,5 +1,6 @@
 package org.kaloscope.tv.data.search
 
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,6 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.model.SearchFilterType
+import org.kaloscope.tv.core.model.NetworkMediaType
 import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.search.remote.IndexerChapterData
@@ -101,12 +103,14 @@ class SearchMapperTest {
     }
 
     @Test
-    fun `search page removes non video and invalid resources`() {
+    fun `search page keeps supported media and removes audio and invalid resources`() {
         val page = IndexerResourcePageData(
             total = 42,
             items = listOf(
                 resource(id = "v1", title = "视频", mediaType = "video"),
                 resource(id = "v2", title = "兼容视频", mediaType = null),
+                resource(id = "i1", title = "图片", mediaType = "image"),
+                resource(id = "t1", title = "文本", mediaType = "text"),
                 resource(id = "a1", title = "音频", mediaType = "audio"),
                 resource(id = null, title = "无标识", mediaType = "video"),
             ),
@@ -114,9 +118,97 @@ class SearchMapperTest {
 
         val model = page.toModel(pageNumber = 1, pageSize = 20)
 
-        assertEquals(listOf("v1", "v2"), model.items.map { it.id })
+        assertEquals(listOf("v1", "v2", "i1", "t1"), model.items.map { it.id })
+        assertEquals(
+            listOf(
+                NetworkMediaType.Video,
+                NetworkMediaType.Video,
+                NetworkMediaType.Image,
+                NetworkMediaType.Text,
+            ),
+            model.items.map { it.mediaType },
+        )
         assertEquals(8.6, model.items.first().rating)
         assertTrue(model.hasNext)
+    }
+
+    @Test
+    fun `item media type wins profile hint and missing type uses hint`() {
+        val model = IndexerResourcePageData(
+            items = listOf(
+                resource(id = "text", title = "文本", mediaType = "text"),
+                resource(id = "hint", title = "图片", mediaType = null),
+                resource(id = "audio", title = "音频", mediaType = "audio"),
+            ),
+        ).toModel(
+            pageNumber = 1,
+            pageSize = 20,
+            mediaTypeHint = NetworkMediaType.Image,
+        )
+
+        assertEquals(listOf("text", "hint"), model.items.map { it.id })
+        assertEquals(
+            listOf(NetworkMediaType.Text, NetworkMediaType.Image),
+            model.items.map { it.mediaType },
+        )
+
+        val audioProfile = IndexerResourcePageData(
+            items = listOf(resource(id = "missing", title = "音频", mediaType = null)),
+        ).toModel(
+            pageNumber = 1,
+            pageSize = 20,
+            mediaTypeHint = NetworkMediaType.Audio,
+        )
+        assertTrue(audioProfile.items.isEmpty())
+    }
+
+    @Test
+    fun `search items use video hint unless the item overrides it`() {
+        val model = IndexerResourcePageData(
+            items = listOf(
+                resource(id = "hint", title = "配置类型", mediaType = "video"),
+                resource(id = "item", title = "资源类型", mediaType = "video")
+                    .copy(videoType = "mp4"),
+            ),
+        ).toModel(
+            pageNumber = 1,
+            pageSize = 20,
+            videoTypeHint = NetworkVideoType.Dash,
+        )
+
+        assertEquals(
+            listOf(NetworkVideoType.Dash, NetworkVideoType.Mp4),
+            model.items.map { it.videoTypeHint },
+        )
+    }
+
+    @Test
+    fun `reader payload parses string array images and image count`() {
+        val parser = Json { ignoreUnknownKeys = true }
+        val stringText = parser.decodeFromString<IndexerResourceData>(
+            """{"id":"t1","text":"first\nsecond"}""",
+        )
+        val arrayText = parser.decodeFromString<IndexerResourceData>(
+            """{"id":"t2","text":["first","second"]}""",
+        )
+        val image = parser.decodeFromString<IndexerResourceData>(
+            """{"id":"i1","images":["one.jpg","two.jpg"],"image_count":8}""",
+        )
+
+        assertEquals("first\nsecond", stringText.toTextBody())
+        assertEquals("first\n\nsecond", arrayText.toTextBody())
+        assertEquals(listOf("one.jpg", "two.jpg"), image.images)
+        assertEquals(8, image.imageCount)
+    }
+
+    @Test
+    fun `image count accepts numeric workflow string`() {
+        val parser = Json { ignoreUnknownKeys = true }
+        val image = parser.decodeFromString<IndexerResourceData>(
+            """{"id":"i1","images":["one.jpg"],"image_count":"8"}""",
+        )
+
+        assertEquals(8, image.imageCount)
     }
 
     @Test

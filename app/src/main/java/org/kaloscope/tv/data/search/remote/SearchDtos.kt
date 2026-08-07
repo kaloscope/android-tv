@@ -102,6 +102,7 @@ data class IndexerDetailsRequestData(
     val dashSupported: Boolean = true,
     @EncodeDefault
     val ua: IndexerUserAgentData = IndexerUserAgentData(),
+    val page: Int? = null,
 )
 
 @Serializable
@@ -168,6 +169,10 @@ data class IndexerResourceData(
     val definitions: List<IndexerDefinitionData>? = null,
     val chapters: List<IndexerChapterData>? = null,
     val danmakus: List<IndexerDanmakuData>? = null,
+    val text: JsonElement? = null,
+    val images: List<String>? = null,
+    @SerialName("image_count")
+    val imageCount: Int? = null,
 )
 
 @Serializable

@@ -76,6 +76,9 @@ import org.kaloscope.tv.core.model.MediaLibraryType
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkVideoType
+import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderTextContent
+import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
@@ -83,6 +86,7 @@ import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.player.PlayerUiState
+import org.kaloscope.tv.feature.reader.ReaderUiState
 import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.settings.SettingsConnection
@@ -1728,6 +1732,100 @@ class MainShellTest {
     }
 
     @Test
+    fun readerOpenedFromSearchClosesRequestAndRestoresResultFocus() {
+        var closedRequestId: String? = null
+        var searchState by mutableStateOf(
+            deepSearchState().copy(
+                results = SearchResultsState.Content(
+                    items = listOf(
+                        NetworkSearchResult(
+                            id = "t1",
+                            title = "文本1",
+                            coverPath = null,
+                            rating = null,
+                            category = null,
+                            uploader = null,
+                            uploadedAt = null,
+                        ),
+                    ),
+                    total = 1,
+                    pageNumber = 1,
+                    hasNext = false,
+                ),
+                focusedResultId = "t1",
+                gridViewport = GridViewportSnapshot.Top,
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    searchActions = SearchActions(
+                        consumeDestination = { requestId ->
+                            if (searchState.pendingReaderRequestId == requestId) {
+                                searchState = searchState.copy(
+                                    pendingReaderRequestId = null,
+                                )
+                            }
+                        },
+                    ),
+                    readerState = ReaderUiState.Text(
+                        requestId = "reader-request",
+                        serverId = "server-id",
+                        content = ReaderTextContent.network(
+                            indexerId = 11,
+                            resourceId = "t1",
+                            title = "文本1",
+                            text = "正文",
+                        ),
+                        settings = TextReaderSettings(),
+                        chapterOrder = ReaderChapterOrder.Ascending,
+                    ),
+                    readerActions = ReaderActions(
+                        close = { closedRequestId = it },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("network-result-t1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.runOnIdle {
+            searchState = searchState.copy(
+                pendingReaderRequestId = "reader-request",
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("text-reader-content") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("text-reader-content"))
+                .fetchSemanticsNodes().isEmpty()
+        }
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("network-result-t1") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        composeRule.runOnIdle {
+            assertEquals("reader-request", closedRequestId)
+        }
+    }
+
+    @Test
     fun topLevelRoundTripKeepsLibraryFocusAndDeepViewport() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -1809,6 +1907,8 @@ private fun TestMainShell(
     settingsActions: SettingsActions = SettingsActions(),
     playerState: PlayerUiState = PlayerUiState.Loading,
     playbackControllerFactory: PlaybackControllerFactory? = null,
+    readerState: ReaderUiState = ReaderUiState.Idle,
+    readerActions: ReaderActions = ReaderActions(),
 ) {
     MainShell(
         session = session,
@@ -1826,6 +1926,8 @@ private fun TestMainShell(
         playerState = playerState,
         playbackControllerFactory = playbackControllerFactory,
         playerActions = PlayerActions(),
+        readerState = readerState,
+        readerActions = readerActions,
     )
 }
 

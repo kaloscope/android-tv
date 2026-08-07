@@ -17,9 +17,17 @@ import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
+import org.kaloscope.tv.core.model.ImagePageDirection
+import org.kaloscope.tv.core.model.ImageReadMode
+import org.kaloscope.tv.core.model.ImageReaderSettings
+import org.kaloscope.tv.core.model.ImageZoomMode
+import org.kaloscope.tv.core.model.ReaderChapterOrder
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleDisplayMode
 import org.kaloscope.tv.core.model.SubtitleSettings
+import org.kaloscope.tv.core.model.TextReaderFont
+import org.kaloscope.tv.core.model.TextReaderSettings
+import org.kaloscope.tv.core.model.TextReaderTheme
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -108,12 +116,50 @@ class PreferencesSettingsRepositoryTest {
                 fontScalePercent = 125,
                 verticalPositionPercent = 8,
             ),
+            readerChapterOrder = ReaderChapterOrder.Descending,
+            imageReader = ImageReaderSettings(
+                readMode = ImageReadMode.Paged,
+                zoomMode = ImageZoomMode.FitHeight,
+                pageDirection = ImagePageDirection.Down,
+            ),
+            textReader = TextReaderSettings(
+                theme = TextReaderTheme.Slate,
+                font = TextReaderFont.Monospace,
+                fontSizeSp = 40,
+                lineHeight = 2.6f,
+                paragraphSpacingEm = 1.5f,
+                horizontalPaddingDp = 84,
+            ),
         )
 
         assertEquals(AppResult.Success(expected), first.saveSettings(expected))
         val restored = PreferencesSettingsRepository(dataStore).getSettings()
 
         assertEquals(expected, (restored as AppResult.Success).value)
+    }
+
+    @Test
+    fun `invalid reader values fall back independently`() = runTest {
+        val store = dataStore(this)
+        store.edit { preferences ->
+            preferences[stringPreferencesKey("reader_chapter_order")] = "random"
+            preferences[stringPreferencesKey("image_reader_read_mode")] = "book"
+            preferences[stringPreferencesKey("image_reader_zoom_mode")] = "stretch"
+            preferences[stringPreferencesKey("image_reader_page_direction")] = "diagonal"
+            preferences[stringPreferencesKey("text_reader_theme")] = "rainbow"
+            preferences[stringPreferencesKey("text_reader_font")] = "comic"
+            preferences[intPreferencesKey("text_reader_font_size_sp")] = 31
+            preferences[intPreferencesKey("text_reader_line_height_tenths")] = 17
+            preferences[intPreferencesKey("text_reader_paragraph_spacing_halves")] = 7
+            preferences[intPreferencesKey("text_reader_horizontal_padding_dp")] = 49
+        }
+
+        val result = PreferencesSettingsRepository(store).getSettings()
+        val settings = (result as AppResult.Success).value
+
+        assertEquals(ReaderChapterOrder.Ascending, settings.readerChapterOrder)
+        assertEquals(ImageReaderSettings(), settings.imageReader)
+        assertEquals(TextReaderSettings(), settings.textReader)
     }
 
     @Test

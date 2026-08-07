@@ -36,11 +36,13 @@ import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.LibraryRoute
 import org.kaloscope.tv.app.navigation.MediaDetailRoute
 import org.kaloscope.tv.app.navigation.PlayerRoute
+import org.kaloscope.tv.app.navigation.ReaderRoute
 import org.kaloscope.tv.app.navigation.SearchRoute
 import org.kaloscope.tv.app.navigation.SettingsRoute
 import org.kaloscope.tv.app.navigation.handleMainBack
 import org.kaloscope.tv.app.navigation.openMediaDetail
 import org.kaloscope.tv.app.navigation.openPlayer
+import org.kaloscope.tv.app.navigation.openReader
 import org.kaloscope.tv.app.navigation.openSettings
 import org.kaloscope.tv.app.navigation.selectRoot
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
@@ -60,7 +62,10 @@ import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.player.PlayerScreen
 import org.kaloscope.tv.feature.player.PlayerUiState
+import org.kaloscope.tv.feature.reader.ReaderScreen
+import org.kaloscope.tv.feature.reader.ReaderUiState
 import org.kaloscope.tv.feature.search.SearchScreen
+import org.kaloscope.tv.feature.search.SearchPendingDestination
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.settings.SettingsScreen
 import org.kaloscope.tv.feature.settings.SettingsUiState
@@ -82,6 +87,8 @@ internal fun MainShell(
     playerState: PlayerUiState = PlayerUiState.Loading,
     playbackControllerFactory: PlaybackControllerFactory? = null,
     playerActions: PlayerActions,
+    readerState: ReaderUiState = ReaderUiState.Idle,
+    readerActions: ReaderActions = ReaderActions(),
 ) {
     // Saved start-page changes take effect only when a new authenticated shell is created.
     val launchRoute = remember(session.server.id, session.user.id) { initialRoute }
@@ -180,7 +187,8 @@ internal fun MainShell(
         val returnRoute = backStack.getOrNull(backStack.lastIndex - 1) ?: HomeRoute
         // Releasing player focus can briefly focus Home before Search restores its result.
         restoringSearchFocusAfterPlayer =
-            leavingRoute is PlayerRoute && returnRoute == SearchRoute
+            (leavingRoute is PlayerRoute || leavingRoute is ReaderRoute) &&
+            returnRoute == SearchRoute
         if (leavingRoute is MediaDetailRoute &&
             returnRoute in setOf(HomeRoute, LibraryRoute)
         ) {
@@ -190,11 +198,18 @@ internal fun MainShell(
         if (leavingRoute is PlayerRoute) {
             playerActions.close(leavingRoute.requestId)
         }
+        if (leavingRoute is ReaderRoute) {
+            readerActions.close(leavingRoute.requestId)
+        }
         backStack.handleMainBack()
         currentRoute = backStack.lastOrNull() ?: HomeRoute
     }
 
-    BackHandler(enabled = currentRoute != HomeRoute && currentRoute !is PlayerRoute) {
+    BackHandler(
+        enabled = currentRoute != HomeRoute &&
+            currentRoute !is PlayerRoute &&
+            currentRoute !is ReaderRoute,
+    ) {
         goBack()
     }
 
@@ -204,7 +219,7 @@ internal fun MainShell(
                 backStack = backStack,
                 onBack = ::goBack,
                 transitionSpec = {
-                    if (initialState.key is PlayerRoute || targetState.key is PlayerRoute) {
+                    if (initialState.key.isFullscreenMedia() || targetState.key.isFullscreenMedia()) {
                         EnterTransition.None togetherWith ExitTransition.None
                     } else {
                         fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
@@ -212,7 +227,7 @@ internal fun MainShell(
                     }
                 },
                 popTransitionSpec = {
-                    if (initialState.key is PlayerRoute || targetState.key is PlayerRoute) {
+                    if (initialState.key.isFullscreenMedia() || targetState.key.isFullscreenMedia()) {
                         EnterTransition.None togetherWith ExitTransition.None
                     } else {
                         fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
@@ -267,16 +282,31 @@ internal fun MainShell(
                     }
                     entry<SearchRoute> {
                         RootDestinationFrame {
-                            val pendingRequestId = (
+                            val pendingDestination = (
                                 searchState as? SearchUiState.Content
-                            )?.pendingPlaybackRequestId
-                            LaunchedEffect(pendingRequestId) {
-                                pendingRequestId?.let { requestId ->
-                                    destinationEntryKeepsTopFocus = false
-                                    backStack.openPlayer(requestId)
-                                    currentRoute = PlayerRoute(requestId)
-                                    playerActions.load(requestId)
-                                    searchActions.consumePlaybackRequest(requestId)
+                            )?.pendingDestination
+                            LaunchedEffect(pendingDestination) {
+                                when (val destination = pendingDestination) {
+                                    is SearchPendingDestination.Player -> {
+                                        val requestId = destination.requestId
+                                        destinationEntryKeepsTopFocus = false
+                                        backStack.openPlayer(requestId)
+                                        currentRoute = PlayerRoute(requestId)
+                                        playerActions.load(requestId)
+                                        searchActions.consumePlaybackRequest(requestId)
+                                        searchActions.consumeDestination(requestId)
+                                    }
+
+                                    is SearchPendingDestination.Reader -> {
+                                        val requestId = destination.requestId
+                                        destinationEntryKeepsTopFocus = false
+                                        backStack.openReader(requestId)
+                                        currentRoute = ReaderRoute(requestId)
+                                        readerActions.load(requestId)
+                                        searchActions.consumeDestination(requestId)
+                                    }
+
+                                    null -> Unit
                                 }
                             }
                             SearchScreen(
@@ -361,6 +391,12 @@ internal fun MainShell(
                                 onDanmakuSettings = settingsActions.setDanmaku,
                                 onSubtitleSettings = settingsActions.setSubtitles,
                                 onStartPage = settingsActions.setStartPage,
+                                onReaderChapterOrder =
+                                    settingsActions.setReaderChapterOrder,
+                                onImageReaderSettings =
+                                    settingsActions.setImageReaderSettings,
+                                onTextReaderSettings =
+                                    settingsActions.setTextReaderSettings,
                                 onTestConnection = settingsActions.testConnection,
                                 onManageServers = settingsActions.manageServers,
                                 onLogout = settingsActions.logout,
@@ -410,9 +446,23 @@ internal fun MainShell(
                             onBack = ::goBack,
                         )
                     }
+                    entry<ReaderRoute> {
+                        ReaderScreen(
+                            session = session,
+                            state = readerState,
+                            onBack = ::goBack,
+                            onSelectChapter = readerActions.selectChapter,
+                            onLoadMoreImages = readerActions.loadMoreImages,
+                            onImageSettings = readerActions.setImageSettings,
+                            onTextSettings = readerActions.setTextSettings,
+                            onChapterOrder = readerActions.setChapterOrder,
+                            onDismissChapterError = readerActions.dismissChapterError,
+                            onDismissPageError = readerActions.dismissPageError,
+                        )
+                    }
                 },
             )
-            if (currentRoute !is PlayerRoute) {
+            if (!currentRoute.isFullscreenMedia()) {
                 AnimatedVisibility(
                     visible = currentRoute !is MediaDetailRoute,
                     enter = fadeIn(tween(KaloscopeMotion.ContentMillis)),
@@ -450,6 +500,9 @@ internal fun MainShell(
         }
     }
 }
+
+private fun Any?.isFullscreenMedia(): Boolean =
+    this is PlayerRoute || this is ReaderRoute
 
 @Composable
 private fun RootDestinationFrame(

@@ -16,6 +16,8 @@ import org.kaloscope.tv.feature.detail.MediaDetailViewModel
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.library.LibraryViewModel
 import org.kaloscope.tv.feature.player.PlayerViewModel
+import org.kaloscope.tv.feature.reader.ReaderUiState
+import org.kaloscope.tv.feature.reader.ReaderViewModel
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.search.SearchViewModel
 import org.kaloscope.tv.feature.settings.SettingsUiState
@@ -30,6 +32,7 @@ fun KaloscopeApp(
     detailViewModel: MediaDetailViewModel,
     playerViewModel: PlayerViewModel,
     settingsViewModel: SettingsViewModel,
+    readerViewModel: ReaderViewModel,
     playbackControllerFactory: PlaybackControllerFactory,
 ) {
     val bootstrapState by viewModel.bootstrapState.collectAsStateWithLifecycle()
@@ -39,6 +42,7 @@ fun KaloscopeApp(
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val readerState by readerViewModel.uiState.collectAsStateWithLifecycle()
     val accentColor = (settingsState as? SettingsUiState.Content)
         ?.settings
         ?.accentColor
@@ -81,12 +85,20 @@ fun KaloscopeApp(
                 LaunchedEffect(state.session.server.id, state.session.user.id) {
                     mainViewModel.loadHome(state.session)
                 }
-                LaunchedEffect(homeState, searchState, libraryState, detailState, playerState) {
+                LaunchedEffect(
+                    homeState,
+                    searchState,
+                    libraryState,
+                    detailState,
+                    playerState,
+                    readerState,
+                ) {
                     if (homeState.hasUnauthorized() ||
                         searchState.hasUnauthorized() ||
                         libraryState.hasUnauthorized() ||
                         detailState.hasUnauthorized() ||
-                        playerState.hasUnauthorized()
+                        playerState.hasUnauthorized() ||
+                        readerState.hasUnauthorized()
                     ) {
                         viewModel.handleUnauthorized(state.session)
                     }
@@ -99,6 +111,7 @@ fun KaloscopeApp(
                         libraryViewModel.reset()
                         detailViewModel.reset()
                         playerViewModel.clearServer(state.session.server.id)
+                        readerViewModel.clearServer(state.session.server.id)
                     }
                 }
                 if (settingsState == SettingsUiState.Loading) {
@@ -161,6 +174,7 @@ fun KaloscopeApp(
                             searchViewModel.clearFilters(state.session)
                         },
                         consumePlaybackRequest = searchViewModel::consumePlaybackRequest,
+                        consumeDestination = searchViewModel::consumeDestination,
                     ),
                     libraryActions = LibraryActions(
                         open = { libraryViewModel.load(state.session) },
@@ -227,6 +241,12 @@ fun KaloscopeApp(
                         setDanmaku = settingsViewModel::setDanmakuSettings,
                         setSubtitles = settingsViewModel::setSubtitleSettings,
                         setStartPage = settingsViewModel::setStartPage,
+                        setReaderChapterOrder =
+                            settingsViewModel::setReaderChapterOrder,
+                        setImageReaderSettings =
+                            settingsViewModel::setImageReaderSettings,
+                        setTextReaderSettings =
+                            settingsViewModel::setTextReaderSettings,
                         testConnection = {
                             settingsViewModel.testConnection(state.session)
                         },
@@ -262,6 +282,24 @@ fun KaloscopeApp(
                             playerViewModel.retryExtra(state.session, extra)
                         },
                         close = playerViewModel::close,
+                    ),
+                    readerState = readerState,
+                    readerActions = ReaderActions(
+                        load = { requestId ->
+                            readerViewModel.load(requestId, state.session)
+                        },
+                        selectChapter = { chapterIndex ->
+                            readerViewModel.selectChapter(state.session, chapterIndex)
+                        },
+                        loadMoreImages = {
+                            readerViewModel.loadMoreImages(state.session)
+                        },
+                        setImageSettings = readerViewModel::updateImageSettings,
+                        setTextSettings = readerViewModel::updateTextSettings,
+                        setChapterOrder = readerViewModel::updateChapterOrder,
+                        dismissChapterError = readerViewModel::dismissChapterError,
+                        dismissPageError = readerViewModel::dismissPageError,
+                        close = readerViewModel::close,
                     ),
                 )
             }

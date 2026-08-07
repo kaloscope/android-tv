@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.NetworkIndexer
+import org.kaloscope.tv.core.model.NetworkMediaType
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.model.SavedServer
@@ -35,7 +36,12 @@ class DefaultSearchRepositoryTest {
             ignoreUnknownKeys = true
             explicitNulls = false
         }
-        repository = DefaultSearchRepository(ApiClientFactory(json), json)
+        val apiClientFactory = ApiClientFactory(json)
+        repository = DefaultSearchRepository(
+            apiClientFactory = apiClientFactory,
+            json = json,
+            networkResourceRepository = DefaultNetworkResourceRepository(apiClientFactory, json),
+        )
     }
 
     @After
@@ -75,6 +81,26 @@ class DefaultSearchRepositoryTest {
             listOf(11L),
             (result as AppResult.Success).value.map { it.indexer.id },
         )
+    }
+
+    @Test
+    fun `catalog carries details media and video hints`() = runTest {
+        server.dispatcher = catalogDispatcher(
+            mapOf(
+                11L to CatalogSite(
+                    loginRequired = false,
+                    mediaType = "image",
+                    videoType = "hls",
+                ),
+            ),
+        )
+
+        val profile = (repository.getAvailableProfiles(session()) as AppResult.Success)
+            .value
+            .single()
+
+        assertEquals(NetworkMediaType.Image, profile.mediaTypeHint)
+        assertEquals(NetworkVideoType.Hls, profile.videoTypeHint)
     }
 
     @Test
@@ -178,10 +204,15 @@ class DefaultSearchRepositoryTest {
                 """.trimIndent(),
             ),
         )
+        val apiClientFactory = ApiClientFactory(json)
         val compatibleRepository = DefaultSearchRepository(
-            apiClientFactory = ApiClientFactory(json),
+            apiClientFactory = apiClientFactory,
             json = json,
-            videoCodecSupport = NetworkVideoCodecSupport { true },
+            networkResourceRepository = DefaultNetworkResourceRepository(
+                apiClientFactory = apiClientFactory,
+                json = json,
+                videoCodecSupport = NetworkVideoCodecSupport { true },
+            ),
         )
 
         val playback = compatibleRepository.resolvePlayback(
@@ -343,11 +374,32 @@ class DefaultSearchRepositoryTest {
                     MockResponse().setResponseCode(500)
 
                 path.endsWith("/config") -> jsonResponse(
-                    """{"status":200,"message":"","data":{"auth":{"login":{""" +
-                        """"required":${site.loginRequired}}},"search":{""" +
-                        """"display":{"page_size":20,"cover_ratio":"2/3"},""" +
-                        """"keyword":{"required":true},"filters":{"region":{""" +
-                        """"type":"select","label":"地区","options":{"cn":"中国"}}}}}}""",
+                    """
+                    {
+                      "status": 200,
+                      "message": "",
+                      "data": {
+                        "auth": {"login": {"required": ${site.loginRequired}}},
+                        "search": {
+                          "display": {"page_size": 20, "cover_ratio": "2/3"},
+                          "keyword": {"required": true},
+                          "filters": {
+                            "region": {
+                              "type": "select",
+                              "label": "地区",
+                              "options": {"cn": "中国"}
+                            }
+                          }
+                        },
+                        "details": {
+                          "specific": {
+                            "media_type": ${site.mediaType?.let { "\"$it\"" } ?: "null"},
+                            "video_type": ${site.videoType?.let { "\"$it\"" } ?: "null"}
+                          }
+                        }
+                      }
+                    }
+                    """.trimIndent(),
                 )
 
                 path.endsWith("/auth") -> {
@@ -365,6 +417,8 @@ private data class CatalogSite(
     val loginRequired: Boolean,
     val authName: String? = null,
     val failConfig: Boolean = false,
+    val mediaType: String? = null,
+    val videoType: String? = null,
 )
 
 private fun indexer() = NetworkIndexer(11, "星海站", null)

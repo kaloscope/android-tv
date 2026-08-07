@@ -9,9 +9,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.ImageReaderSettings
+import org.kaloscope.tv.core.model.ReaderChapterOrder
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleSettings
+import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.server.ServerRepository
@@ -56,6 +59,15 @@ class SettingsViewModel @Inject constructor(
 
     fun setStartPage(value: StartPage) =
         launchSettingsOperation { coordinator.setStartPage(value) }
+
+    fun setReaderChapterOrder(value: ReaderChapterOrder) =
+        launchSettingsOperation { coordinator.setReaderChapterOrder(value) }
+
+    fun setImageReaderSettings(value: ImageReaderSettings) =
+        launchSettingsOperation { coordinator.setImageReaderSettings(value) }
+
+    fun setTextReaderSettings(value: TextReaderSettings) =
+        launchSettingsOperation { coordinator.setTextReaderSettings(value) }
 
     fun testConnection(session: Session) {
         if (connectionJob?.isActive == true) {

@@ -6,6 +6,7 @@ import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.player.PlayerUiState
+import org.kaloscope.tv.feature.reader.ReaderUiState
 import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchUiState
 
@@ -56,3 +57,12 @@ internal fun PlayerUiState.hasUnauthorized(): Boolean =
             progressError == AppError.Unauthorized ||
                 extraFailures.values.any { it == AppError.Unauthorized }
         )
+
+internal fun ReaderUiState.hasUnauthorized(): Boolean =
+    when (this) {
+        is ReaderUiState.Error -> error == AppError.Unauthorized
+        is ReaderUiState.Image ->
+            chapterError == AppError.Unauthorized || pageError == AppError.Unauthorized
+        is ReaderUiState.Text -> chapterError == AppError.Unauthorized
+        ReaderUiState.Idle -> false
+    }

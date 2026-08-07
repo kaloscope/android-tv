@@ -101,6 +101,7 @@ class SettingsScreenTest {
             "播放设置",
             "弹幕设置",
             "字幕设置",
+            "阅读设置",
             "外观与行为",
             "服务器与账户",
         )
@@ -115,6 +116,75 @@ class SettingsScreenTest {
         assertEquals(verticalPositions.sorted(), verticalPositions)
         composeRule.onNode(hasClickAction() and hasText("外观", substring = false))
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun readingCategoryShowsSeparateImageAndTextDefaults() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Reading,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("reading-default-settings").assertExists()
+        composeRule.onNodeWithText("图片阅读").assertExists()
+        composeRule.onNodeWithText("文本阅读").assertExists()
+        composeRule.onNode(hasClickAction() and hasText("阅读模式")).assertExists()
+        composeRule.onNode(hasClickAction() and hasText("阅读主题")).assertExists()
+    }
+
+    @Test
+    fun readingFontSizeAdjustsOnlyAfterEnteringAdjustmentMode() {
+        var updatedFontSize: Int? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Reading,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTextReaderSettings = { updatedFontSize = it.fontSizeSp },
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val fontSizeRow = composeRule.onNode(hasClickAction() and hasText("字号"))
+        fontSizeRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.runOnIdle { assertEquals(30, updatedFontSize) }
     }
 
     @Test

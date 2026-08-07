@@ -7,10 +7,14 @@ import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.ImageReaderSettings
+import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderSettingsPolicy
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
+import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -35,6 +39,7 @@ enum class SettingsSection {
     Playback,
     Danmaku,
     Subtitle,
+    Reading,
     Behavior,
     ServerAccount,
 }
@@ -89,6 +94,15 @@ class SettingsCoordinator(
 
     suspend fun setStartPage(value: StartPage) =
         update { copy(startPage = value) }
+
+    suspend fun setReaderChapterOrder(value: ReaderChapterOrder) =
+        update { copy(readerChapterOrder = value) }
+
+    suspend fun setImageReaderSettings(value: ImageReaderSettings) =
+        update { copy(imageReader = value) }
+
+    suspend fun setTextReaderSettings(value: TextReaderSettings) =
+        update { copy(textReader = ReaderSettingsPolicy.sanitize(value)) }
 
     suspend fun testConnection(session: Session) {
         val content = mutableState.value as? SettingsUiState.Content ?: return

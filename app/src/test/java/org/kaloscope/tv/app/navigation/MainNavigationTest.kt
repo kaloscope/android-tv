@@ -51,6 +51,26 @@ class MainNavigationTest {
     }
 
     @Test
+    fun `reader route contains only request id and returns to search`() {
+        val backStack = mutableListOf<NavKey>(SearchRoute)
+
+        backStack.openReader("reader-1")
+        val route = backStack.last() as ReaderRoute
+        val handled = backStack.handleMainBack()
+
+        assertEquals("reader-1", route.requestId)
+        assertEquals(listOf("requestId"), ReaderRoute::class.java.declaredFields
+            .filterNot {
+                it.isSynthetic ||
+                    it.name.startsWith("$") ||
+                    java.lang.reflect.Modifier.isStatic(it.modifiers)
+            }
+            .map { it.name })
+        assertTrue(handled)
+        assertEquals(listOf(SearchRoute), backStack)
+    }
+
+    @Test
     fun `home delegates back to the system`() {
         val backStack = mutableListOf<NavKey>(HomeRoute)
 

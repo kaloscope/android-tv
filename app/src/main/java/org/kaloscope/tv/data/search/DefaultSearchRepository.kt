@@ -7,9 +7,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonPrimitive
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DEFAULT_COVER_ASPECT_RATIO
@@ -23,16 +21,13 @@ import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.network.ApiClientFactory
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
-import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
 import org.kaloscope.tv.core.player.TranscodeResolution
-import org.kaloscope.tv.data.search.remote.IndexerDetailsRequestData
 
 @Singleton
 class DefaultSearchRepository @Inject constructor(
     private val apiClientFactory: ApiClientFactory,
     private val json: Json,
-    private val videoCodecSupport: NetworkVideoCodecSupport =
-        NetworkVideoCodecSupport.KeepServerOrder,
+    private val networkResourceRepository: NetworkResourceRepository,
 ) : SearchRepository {
     override suspend fun getAvailableProfiles(
         session: Session,
@@ -97,6 +92,8 @@ class DefaultSearchRepository @Inject constructor(
                 keywordRequired = config.search?.keyword?.required ?: true,
                 coverRatio = config.search?.display?.coverRatio.toCoverAspectRatio(),
                 filters = config.search?.toFilterDefinitions().orEmpty(),
+                mediaTypeHint = config.details?.specific?.mediaType.toNetworkMediaType(),
+                videoTypeHint = config.details?.specific?.videoType.toNetworkVideoType(),
             )
         }
 
@@ -117,7 +114,12 @@ class DefaultSearchRepository @Inject constructor(
                     filters = filters,
                     pageNumber = pageNumber,
                 ),
-            ).dataOrThrow().toModel(pageNumber, profile.pageSize)
+            ).dataOrThrow().toModel(
+                pageNumber = pageNumber,
+                pageSize = profile.pageSize,
+                mediaTypeHint = profile.mediaTypeHint,
+                videoTypeHint = profile.videoTypeHint,
+            )
         }
 
     override suspend fun resolvePlayback(
@@ -126,25 +128,23 @@ class DefaultSearchRepository @Inject constructor(
         result: NetworkSearchResult,
         preferredDefinition: TranscodeResolution,
     ): AppResult<NetworkPlaybackSource> =
-        networkCall(json) {
-            val resource = api(session).executeIndexerDetails(
-                authorization = session.authorization(),
+        when (
+            val resolved = networkResourceRepository.resolveResource(
+                session = session,
                 indexerId = indexerId,
-                body = IndexerDetailsRequestData(resourceId = result.id),
-            ).dataOrThrow() ?: throw SerializationException("Missing network details")
-            resource.toPlaybackSource(
-                indexerId = indexerId,
-                fallbackTitle = result.title,
+                result = result,
                 preferredDefinition = preferredDefinition,
-                preferHevcForDash = videoCodecSupport.shouldPreferHevcForDash(),
             )
-                ?: resolveInitialChapter(
-                    session = session,
-                    indexerId = indexerId,
-                    fallbackTitle = result.title,
-                    resource = resource,
-                    preferredDefinition = preferredDefinition,
-                )
+        ) {
+            is AppResult.Failure -> resolved
+            is AppResult.Success -> {
+                val video = resolved.value as? org.kaloscope.tv.core.model.ResolvedNetworkResource.Video
+                if (video == null) {
+                    AppResult.Failure(AppError.InvalidData("network_playback"))
+                } else {
+                    AppResult.Success(video.source)
+                }
+            }
         }
 
     override suspend fun resolveChapter(
@@ -153,75 +153,12 @@ class DefaultSearchRepository @Inject constructor(
         chapterIndex: Int,
         preferredDefinition: TranscodeResolution,
     ): AppResult<NetworkPlaybackSource> =
-        networkCall(json) {
-            val chapter = source.chapters.getOrNull(chapterIndex)
-                ?: throw SerializationException("Missing network chapter")
-            chapter.url?.let { directUrl ->
-                return@networkCall source.copy(
-                    title = chapter.title,
-                    url = directUrl,
-                    danmakus = emptyList(),
-                    definitions = emptyList(),
-                    selectedDefinitionIndex = null,
-                    selectedChapterIndex = chapterIndex,
-                )
-            }
-            val chapterId = chapter.id
-                ?: throw SerializationException("Missing network chapter source")
-            val resolved = api(session).executeIndexerDetails(
-                authorization = session.authorization(),
-                indexerId = source.indexerId,
-                body = IndexerDetailsRequestData(
-                    resourceId = source.resourceId,
-                    chapterId = JsonPrimitive(chapterId),
-                ),
-            ).dataOrThrow()
-                ?.toPlaybackSource(
-                    indexerId = source.indexerId,
-                    fallbackTitle = chapter.title,
-                    preferredDefinition = preferredDefinition,
-                    preferHevcForDash = videoCodecSupport.shouldPreferHevcForDash(),
-                )
-                ?: throw SerializationException("Missing playable network chapter")
-            resolved.copy(
-                chapters = source.chapters,
-                selectedChapterIndex = chapterIndex,
-            )
-        }
-
-    private suspend fun resolveInitialChapter(
-        session: Session,
-        indexerId: Long,
-        fallbackTitle: String,
-        resource: org.kaloscope.tv.data.search.remote.IndexerResourceData,
-        preferredDefinition: TranscodeResolution,
-    ): NetworkPlaybackSource {
-        val firstChapter = resource.chapters.orEmpty().firstOrNull()
-            ?: throw SerializationException("Missing playable network source")
-        // Some indexers expose only chapter IDs until details runs for one chapter.
-        val chapterId = firstChapter.id?.trim()?.takeIf(String::isNotEmpty)
-            ?: throw SerializationException("Missing playable network source")
-        val resolved = api(session).executeIndexerDetails(
-            authorization = session.authorization(),
-            indexerId = indexerId,
-            body = IndexerDetailsRequestData(
-                resourceId = resource.id ?: throw SerializationException("Missing resource id"),
-                chapterId = JsonPrimitive(chapterId),
-            ),
-        ).dataOrThrow()
-            ?.toPlaybackSource(
-                indexerId = indexerId,
-                fallbackTitle = firstChapter.title ?: fallbackTitle,
-                preferredDefinition = preferredDefinition,
-                preferHevcForDash = videoCodecSupport.shouldPreferHevcForDash(),
-            )
-            ?: throw SerializationException("Missing playable network chapter")
-        val chapters = resource.toChapters()
-        return resolved.copy(
-            chapters = chapters,
-            selectedChapterIndex = chapters.indices.firstOrNull(),
+        networkResourceRepository.resolveVideoChapter(
+            session = session,
+            source = source,
+            chapterIndex = chapterIndex,
+            preferredDefinition = preferredDefinition,
         )
-    }
 
     private fun api(session: Session) = apiClientFactory.create(session.server.origin)
 

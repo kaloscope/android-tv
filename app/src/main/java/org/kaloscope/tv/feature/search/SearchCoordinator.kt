@@ -10,12 +10,24 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkSearchResult
+import org.kaloscope.tv.core.model.ResolvedNetworkResource
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
+import org.kaloscope.tv.core.reader.ReaderRequest
+import org.kaloscope.tv.core.reader.ReaderRequestStore
+import org.kaloscope.tv.data.search.NetworkResourceRepository
 import org.kaloscope.tv.data.search.SearchRepository
+
+sealed interface SearchPendingDestination {
+    val requestId: String
+
+    data class Player(override val requestId: String) : SearchPendingDestination
+
+    data class Reader(override val requestId: String) : SearchPendingDestination
+}
 
 sealed interface SearchUiState {
     data object Loading : SearchUiState
@@ -37,12 +49,17 @@ sealed interface SearchUiState {
         val resolvingResultId: String? = null,
         val playbackError: AppError? = null,
         val pendingPlaybackRequestId: String? = null,
+        val pendingReaderRequestId: String? = null,
     ) : SearchUiState {
         val indexers
             get() = profiles.map(IndexerSourceProfile::indexer)
 
         val selectedProfile: IndexerSourceProfile
             get() = profiles.first { it.indexer.id == selectedIndexerId }
+
+        val pendingDestination: SearchPendingDestination?
+            get() = pendingPlaybackRequestId?.let { SearchPendingDestination.Player(it) }
+                ?: pendingReaderRequestId?.let { SearchPendingDestination.Reader(it) }
     }
 }
 
@@ -74,6 +91,9 @@ class SearchCoordinator(
     private val repository: SearchRepository,
     private val requestStore: PlaybackRequestStore,
     private val requestIdFactory: () -> String = { UUID.randomUUID().toString() },
+    private val networkResourceRepository: NetworkResourceRepository =
+        SearchRepositoryResourceAdapter(repository),
+    private val readerRequestStore: ReaderRequestStore = ReaderRequestStore(),
 ) {
     private val mutableState = MutableStateFlow<SearchUiState>(SearchUiState.Loading)
 
@@ -127,6 +147,7 @@ class SearchCoordinator(
             results = SearchResultsState.AwaitingQuery,
             focusedResultId = null,
             gridViewport = GridViewportSnapshot.Top,
+            resolvingResultId = null,
             playbackError = null,
         )
         if (!profile.keywordRequired) {
@@ -152,6 +173,7 @@ class SearchCoordinator(
             results = SearchResultsState.Loading,
             focusedResultId = null,
             gridViewport = GridViewportSnapshot.Top,
+            resolvingResultId = null,
             playbackError = null,
         )
         loadFirstPage(session, profile, keyword, content.appliedFilters)
@@ -245,6 +267,7 @@ class SearchCoordinator(
             filterDrawerOpen = false,
             focusedResultId = null,
             gridViewport = GridViewportSnapshot.Top,
+            resolvingResultId = null,
         )
         search(session)
     }
@@ -281,45 +304,105 @@ class SearchCoordinator(
             resolvingResultId = resultId,
             playbackError = null,
         )
-        when (
-            val playback = repository.resolvePlayback(
-                session,
-                content.selectedIndexerId,
-                result,
-                settings.transcodeResolution,
+        val resolved = try {
+            networkResourceRepository.resolveResource(
+                session = session,
+                indexerId = content.selectedIndexerId,
+                result = result,
+                preferredDefinition = settings.transcodeResolution,
             )
-        ) {
+        } catch (error: CancellationException) {
+            updateContent {
+                if (resolvingResultId == resultId) {
+                    copy(resolvingResultId = null)
+                } else {
+                    this
+                }
+            }
+            throw error
+        }
+        when (resolved) {
             is AppResult.Failure -> updateContent {
-                copy(resolvingResultId = null, playbackError = playback.error)
+                copy(resolvingResultId = null, playbackError = resolved.error)
             }
 
-            is AppResult.Success -> {
-                val request = PlaybackRequest.NetworkVideo(
-                    requestId = requestIdFactory(),
-                    serverId = session.server.id,
-                    title = playback.value.title,
-                    source = playback.value,
-                    preferredDefinition = settings.transcodeResolution,
-                    autoplayNext = settings.autoplayNext,
-                    danmakuSettings = settings.danmaku,
-                    subtitleSettings = settings.subtitle,
-                )
-                requestStore.put(request)
-                updateContent {
-                    copy(
-                        resolvingResultId = null,
-                        playbackError = null,
-                        pendingPlaybackRequestId = request.requestId,
+            is AppResult.Success -> when (val resource = resolved.value) {
+                is ResolvedNetworkResource.Video -> {
+                    val request = PlaybackRequest.NetworkVideo(
+                        requestId = requestIdFactory(),
+                        serverId = session.server.id,
+                        title = resource.source.title,
+                        source = resource.source,
+                        preferredDefinition = settings.transcodeResolution,
+                        autoplayNext = settings.autoplayNext,
+                        danmakuSettings = settings.danmaku,
+                        subtitleSettings = settings.subtitle,
                     )
+                    requestStore.put(request)
+                    updateContent {
+                        copy(
+                            resolvingResultId = null,
+                            playbackError = null,
+                            pendingPlaybackRequestId = request.requestId,
+                            pendingReaderRequestId = null,
+                        )
+                    }
+                }
+
+                is ResolvedNetworkResource.Image -> {
+                    val request = ReaderRequest.Image(
+                        requestId = requestIdFactory(),
+                        serverId = session.server.id,
+                        content = resource.content,
+                        settings = settings.imageReader,
+                        chapterOrder = settings.readerChapterOrder,
+                    )
+                    readerRequestStore.put(request)
+                    publishReaderRequest(request.requestId)
+                }
+
+                is ResolvedNetworkResource.Text -> {
+                    val request = ReaderRequest.Text(
+                        requestId = requestIdFactory(),
+                        serverId = session.server.id,
+                        content = resource.content,
+                        settings = settings.textReader,
+                        chapterOrder = settings.readerChapterOrder,
+                    )
+                    readerRequestStore.put(request)
+                    publishReaderRequest(request.requestId)
                 }
             }
         }
     }
 
     fun consumePlaybackRequest(requestId: String) {
+        consumeDestination(requestId)
+    }
+
+    fun consumeDestination(requestId: String) {
         val content = mutableState.value as? SearchUiState.Content ?: return
-        if (content.pendingPlaybackRequestId == requestId) {
-            mutableState.value = content.copy(pendingPlaybackRequestId = null)
+        if (
+            content.pendingPlaybackRequestId == requestId ||
+            content.pendingReaderRequestId == requestId
+        ) {
+            mutableState.value = content.copy(
+                pendingPlaybackRequestId = content.pendingPlaybackRequestId
+                    ?.takeUnless { it == requestId },
+                pendingReaderRequestId = content.pendingReaderRequestId
+                    ?.takeUnless { it == requestId },
+            )
+        }
+    }
+
+    private fun publishReaderRequest(requestId: String) {
+        updateContent {
+            copy(
+                resolvingResultId = null,
+                playbackError = null,
+                pendingPlaybackRequestId = null,
+                pendingReaderRequestId = requestId,
+            )
         }
     }
 
@@ -357,4 +440,48 @@ class SearchCoordinator(
         val content = mutableState.value as? SearchUiState.Content ?: return
         mutableState.value = content.transform()
     }
+}
+
+private class SearchRepositoryResourceAdapter(
+    private val repository: SearchRepository,
+) : NetworkResourceRepository {
+    override suspend fun resolveResource(
+        session: Session,
+        indexerId: Long,
+        result: NetworkSearchResult,
+        preferredDefinition: org.kaloscope.tv.core.player.TranscodeResolution,
+    ): AppResult<ResolvedNetworkResource> =
+        when (
+            val playback = repository.resolvePlayback(
+                session,
+                indexerId,
+                result,
+                preferredDefinition,
+            )
+        ) {
+            is AppResult.Failure -> playback
+            is AppResult.Success -> AppResult.Success(
+                ResolvedNetworkResource.Video(playback.value),
+            )
+        }
+
+    override suspend fun resolveVideoChapter(
+        session: Session,
+        source: org.kaloscope.tv.core.model.NetworkPlaybackSource,
+        chapterIndex: Int,
+        preferredDefinition: org.kaloscope.tv.core.player.TranscodeResolution,
+    ) = repository.resolveChapter(session, source, chapterIndex, preferredDefinition)
+
+    override suspend fun resolveReaderChapter(
+        session: Session,
+        content: org.kaloscope.tv.core.model.ReaderContent,
+        chapterIndex: Int,
+    ): AppResult<org.kaloscope.tv.core.model.ReaderContent> =
+        AppResult.Failure(AppError.InvalidData("reader_resource"))
+
+    override suspend fun loadImagePage(
+        session: Session,
+        content: org.kaloscope.tv.core.model.ReaderImageContent,
+    ): AppResult<org.kaloscope.tv.core.model.ReaderImagePage> =
+        AppResult.Failure(AppError.InvalidData("reader_resource"))
 }

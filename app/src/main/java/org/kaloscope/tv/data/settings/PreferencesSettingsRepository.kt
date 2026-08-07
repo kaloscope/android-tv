@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import org.kaloscope.tv.core.common.AppError
@@ -17,10 +18,19 @@ import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
+import org.kaloscope.tv.core.model.ImagePageDirection
+import org.kaloscope.tv.core.model.ImageReadMode
+import org.kaloscope.tv.core.model.ImageReaderSettings
+import org.kaloscope.tv.core.model.ImageZoomMode
+import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderSettingsPolicy
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleDisplayMode
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
+import org.kaloscope.tv.core.model.TextReaderFont
+import org.kaloscope.tv.core.model.TextReaderSettings
+import org.kaloscope.tv.core.model.TextReaderTheme
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
@@ -62,6 +72,21 @@ class PreferencesSettingsRepository @Inject constructor(
                     (subtitle.timeOffsetSeconds * 10).toInt()
                 preferences[SUBTITLE_FONT_SCALE] = subtitle.fontScalePercent
                 preferences[SUBTITLE_VERTICAL_POSITION] = subtitle.verticalPositionPercent
+                preferences[READER_CHAPTER_ORDER] = settings.readerChapterOrder.storedValue
+                preferences[IMAGE_READER_READ_MODE] = settings.imageReader.readMode.storedValue
+                preferences[IMAGE_READER_ZOOM_MODE] = settings.imageReader.zoomMode.storedValue
+                preferences[IMAGE_READER_PAGE_DIRECTION] =
+                    settings.imageReader.pageDirection.storedValue
+                val textReader = ReaderSettingsPolicy.sanitize(settings.textReader)
+                preferences[TEXT_READER_THEME] = textReader.theme.storedValue
+                preferences[TEXT_READER_FONT] = textReader.font.storedValue
+                preferences[TEXT_READER_FONT_SIZE_SP] = textReader.fontSizeSp
+                preferences[TEXT_READER_LINE_HEIGHT_TENTHS] =
+                    (textReader.lineHeight * 10).roundToInt()
+                preferences[TEXT_READER_PARAGRAPH_SPACING_HALVES] =
+                    (textReader.paragraphSpacingEm * 2).roundToInt()
+                preferences[TEXT_READER_HORIZONTAL_PADDING_DP] =
+                    textReader.horizontalPaddingDp
             }
             settings
         }
@@ -120,6 +145,45 @@ class PreferencesSettingsRepository @Inject constructor(
                     verticalPositionPercent = this[SUBTITLE_VERTICAL_POSITION] ?: 2,
                 ),
             ),
+            readerChapterOrder = enumValue(
+                stored = this[READER_CHAPTER_ORDER],
+                fallback = ReaderChapterOrder.Ascending,
+            ),
+            imageReader = ImageReaderSettings(
+                readMode = enumValue(
+                    stored = this[IMAGE_READER_READ_MODE],
+                    fallback = ImageReadMode.Scroll,
+                ),
+                zoomMode = enumValue(
+                    stored = this[IMAGE_READER_ZOOM_MODE],
+                    fallback = ImageZoomMode.Auto,
+                ),
+                pageDirection = enumValue(
+                    stored = this[IMAGE_READER_PAGE_DIRECTION],
+                    fallback = ImagePageDirection.Right,
+                ),
+            ),
+            textReader = TextReaderSettings(
+                theme = enumValue(
+                    stored = this[TEXT_READER_THEME],
+                    fallback = TextReaderTheme.White,
+                ),
+                font = enumValue(
+                    stored = this[TEXT_READER_FONT],
+                    fallback = TextReaderFont.System,
+                ),
+                fontSizeSp = this[TEXT_READER_FONT_SIZE_SP]
+                    .validValue(READER_FONT_SIZES, ReaderSettingsPolicy.DEFAULT_FONT_SIZE_SP),
+                lineHeight = this[TEXT_READER_LINE_HEIGHT_TENTHS]
+                    .validValue(READER_LINE_HEIGHT_TENTHS, 18) / 10f,
+                paragraphSpacingEm = this[TEXT_READER_PARAGRAPH_SPACING_HALVES]
+                    .validValue(READER_PARAGRAPH_SPACING_HALVES, 2) / 2f,
+                horizontalPaddingDp = this[TEXT_READER_HORIZONTAL_PADDING_DP]
+                    .validValue(
+                        READER_HORIZONTAL_PADDINGS,
+                        ReaderSettingsPolicy.DEFAULT_HORIZONTAL_PADDING_DP,
+                    ),
+            ),
         )
 
     private suspend fun <T> localCall(
@@ -146,8 +210,15 @@ class PreferencesSettingsRepository @Inject constructor(
     private fun Int?.validPercent(fallback: Int): Int =
         this?.takeIf(ALLOWED_PERCENTAGES::contains) ?: fallback
 
+    private fun Int?.validValue(allowed: Set<Int>, fallback: Int): Int =
+        this?.takeIf(allowed::contains) ?: fallback
+
     private companion object {
         val ALLOWED_PERCENTAGES = setOf(25, 50, 75, 100)
+        val READER_FONT_SIZES = (20..44 step 2).toSet()
+        val READER_LINE_HEIGHT_TENTHS = (14..30 step 2).toSet()
+        val READER_PARAGRAPH_SPACING_HALVES = (0..4).toSet()
+        val READER_HORIZONTAL_PADDINGS = (0..96 step 12).toSet()
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val START_PAGE = stringPreferencesKey("start_page")
         val PLAYBACK_MODE = stringPreferencesKey("playback_mode")
@@ -171,5 +242,19 @@ class PreferencesSettingsRepository @Inject constructor(
         val SUBTITLE_FONT_SCALE = intPreferencesKey("subtitle_font_scale")
         val SUBTITLE_VERTICAL_POSITION =
             intPreferencesKey("subtitle_vertical_position")
+        val READER_CHAPTER_ORDER = stringPreferencesKey("reader_chapter_order")
+        val IMAGE_READER_READ_MODE = stringPreferencesKey("image_reader_read_mode")
+        val IMAGE_READER_ZOOM_MODE = stringPreferencesKey("image_reader_zoom_mode")
+        val IMAGE_READER_PAGE_DIRECTION =
+            stringPreferencesKey("image_reader_page_direction")
+        val TEXT_READER_THEME = stringPreferencesKey("text_reader_theme")
+        val TEXT_READER_FONT = stringPreferencesKey("text_reader_font")
+        val TEXT_READER_FONT_SIZE_SP = intPreferencesKey("text_reader_font_size_sp")
+        val TEXT_READER_LINE_HEIGHT_TENTHS =
+            intPreferencesKey("text_reader_line_height_tenths")
+        val TEXT_READER_PARAGRAPH_SPACING_HALVES =
+            intPreferencesKey("text_reader_paragraph_spacing_halves")
+        val TEXT_READER_HORIZONTAL_PADDING_DP =
+            intPreferencesKey("text_reader_horizontal_padding_dp")
     }
 }

@@ -12,6 +12,7 @@ import org.kaloscope.tv.app.MainViewModel
 import org.kaloscope.tv.feature.detail.MediaDetailViewModel
 import org.kaloscope.tv.feature.library.LibraryViewModel
 import org.kaloscope.tv.feature.player.PlayerViewModel
+import org.kaloscope.tv.feature.reader.ReaderViewModel
 import org.kaloscope.tv.feature.search.SearchViewModel
 import org.kaloscope.tv.feature.settings.SettingsViewModel
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
@@ -25,6 +26,7 @@ class MainActivity : ComponentActivity() {
     private val detailViewModel: MediaDetailViewModel by viewModels()
     private val playerViewModel: PlayerViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
+    private val readerViewModel: ReaderViewModel by viewModels()
 
     @Inject
     lateinit var playbackControllerFactory: PlaybackControllerFactory
@@ -40,6 +42,7 @@ class MainActivity : ComponentActivity() {
                 detailViewModel = detailViewModel,
                 playerViewModel = playerViewModel,
                 settingsViewModel = settingsViewModel,
+                readerViewModel = readerViewModel,
                 playbackControllerFactory = playbackControllerFactory,
             )
         }

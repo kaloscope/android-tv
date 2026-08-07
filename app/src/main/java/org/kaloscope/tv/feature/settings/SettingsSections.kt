@@ -23,6 +23,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
@@ -40,11 +43,21 @@ import org.kaloscope.tv.core.model.DanmakuBlockType
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
+import org.kaloscope.tv.core.model.ImagePageDirection
+import org.kaloscope.tv.core.model.ImageReadMode
+import org.kaloscope.tv.core.model.ImageReaderSettings
+import org.kaloscope.tv.core.model.ImageZoomMode
+import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderSettingsPolicy
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleDisplayMode
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
+import org.kaloscope.tv.core.model.TextReaderFont
+import org.kaloscope.tv.core.model.TextReaderSettings
+import org.kaloscope.tv.core.model.TextReaderTheme
+import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
 
@@ -105,6 +118,306 @@ internal fun PlaybackSettings(
         onToggle = { onAutoplayNext(!state.settings.autoplayNext) },
     )
 }
+
+@Composable
+internal fun ReadingSettings(
+    settings: TvSettings,
+    interactionsEnabled: Boolean,
+    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
+    onChapterOrder: (ReaderChapterOrder) -> Unit,
+    onImageChange: (ImageReaderSettings) -> Unit,
+    onTextChange: (TextReaderSettings) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("reading-default-settings"),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        ReaderSettingsGroupTitle(stringResource(R.string.reader_common_settings))
+        ChoiceSettingRow(
+            title = stringResource(R.string.reader_chapter_order),
+            description = stringResource(R.string.reader_chapter_order_description),
+            value = readerChapterOrderLabel(settings.readerChapterOrder),
+            interactionsEnabled = interactionsEnabled,
+            createChoice = {
+                SettingsChoice(
+                    title = stringResource(R.string.reader_chapter_order),
+                    options = ReaderChapterOrder.entries.map { order ->
+                        KaloscopeChoiceDialogOption(
+                            label = readerChapterOrderLabel(order),
+                            selected = { order == settings.readerChapterOrder },
+                            onSelect = { onChapterOrder(order) },
+                        )
+                    },
+                )
+            },
+            onOpenChoice = onOpenChoice,
+        )
+
+        Spacer(Modifier.height(6.dp))
+        ReaderSettingsGroupTitle(stringResource(R.string.reader_image_settings))
+        ReaderChoiceRow(
+            title = R.string.reader_image_read_mode,
+            description = R.string.reader_image_read_mode_description,
+            value = imageReadModeLabel(settings.imageReader.readMode),
+            options = ImageReadMode.entries,
+            selected = { it == settings.imageReader.readMode },
+            label = { imageReadModeLabel(it) },
+            interactionsEnabled = interactionsEnabled,
+            onOpenChoice = onOpenChoice,
+            onSelect = { onImageChange(settings.imageReader.copy(readMode = it)) },
+        )
+        ReaderChoiceRow(
+            title = R.string.reader_image_zoom,
+            description = R.string.reader_image_zoom_description,
+            value = imageZoomModeLabel(settings.imageReader.zoomMode),
+            options = ImageZoomMode.entries,
+            selected = { it == settings.imageReader.zoomMode },
+            label = { imageZoomModeLabel(it) },
+            interactionsEnabled = interactionsEnabled,
+            onOpenChoice = onOpenChoice,
+            onSelect = { onImageChange(settings.imageReader.copy(zoomMode = it)) },
+        )
+        ReaderChoiceRow(
+            title = R.string.reader_page_direction,
+            description = R.string.reader_page_direction_description,
+            value = imagePageDirectionLabel(settings.imageReader.pageDirection),
+            options = ImagePageDirection.entries,
+            selected = { it == settings.imageReader.pageDirection },
+            label = { imagePageDirectionLabel(it) },
+            interactionsEnabled = interactionsEnabled,
+            onOpenChoice = onOpenChoice,
+            onSelect = { onImageChange(settings.imageReader.copy(pageDirection = it)) },
+        )
+
+        Spacer(Modifier.height(6.dp))
+        ReaderSettingsGroupTitle(stringResource(R.string.reader_text_settings))
+        ReaderChoiceRow(
+            title = R.string.reader_text_theme,
+            description = R.string.reader_text_theme_description,
+            value = textReaderThemeLabel(settings.textReader.theme),
+            options = TextReaderTheme.entries,
+            selected = { it == settings.textReader.theme },
+            label = { textReaderThemeLabel(it) },
+            interactionsEnabled = interactionsEnabled,
+            onOpenChoice = onOpenChoice,
+            onSelect = { onTextChange(settings.textReader.copy(theme = it)) },
+        )
+        ReaderChoiceRow(
+            title = R.string.reader_text_font,
+            description = R.string.reader_text_font_description,
+            value = textReaderFontLabel(settings.textReader.font),
+            options = TextReaderFont.entries,
+            selected = { it == settings.textReader.font },
+            label = { textReaderFontLabel(it) },
+            interactionsEnabled = interactionsEnabled,
+            onOpenChoice = onOpenChoice,
+            onSelect = { onTextChange(settings.textReader.copy(font = it)) },
+        )
+        AdjustableSettingRow(
+            title = stringResource(R.string.reader_font_size),
+            description = stringResource(R.string.reader_font_size_description),
+            value = stringResource(R.string.reader_sp_value, settings.textReader.fontSizeSp),
+            interactionsEnabled = interactionsEnabled,
+            onDecrease = {
+                onTextChange(
+                    settings.textReader.copy(
+                        fontSizeSp = settings.textReader.fontSizeSp -
+                            ReaderSettingsPolicy.FONT_SIZE_STEP_SP,
+                    ),
+                )
+            },
+            onIncrease = {
+                onTextChange(
+                    settings.textReader.copy(
+                        fontSizeSp = settings.textReader.fontSizeSp +
+                            ReaderSettingsPolicy.FONT_SIZE_STEP_SP,
+                    ),
+                )
+            },
+        )
+        AdjustableSettingRow(
+            title = stringResource(R.string.reader_line_height),
+            description = stringResource(R.string.reader_line_height_description),
+            value = stringResource(
+                R.string.reader_multiplier_value,
+                settings.textReader.lineHeight,
+            ),
+            interactionsEnabled = interactionsEnabled,
+            onDecrease = {
+                onTextChange(
+                    settings.textReader.copy(
+                        lineHeight = settings.textReader.lineHeight -
+                            ReaderSettingsPolicy.LINE_HEIGHT_STEP,
+                    ),
+                )
+            },
+            onIncrease = {
+                onTextChange(
+                    settings.textReader.copy(
+                        lineHeight = settings.textReader.lineHeight +
+                            ReaderSettingsPolicy.LINE_HEIGHT_STEP,
+                    ),
+                )
+            },
+        )
+        AdjustableSettingRow(
+            title = stringResource(R.string.reader_paragraph_spacing),
+            description = stringResource(R.string.reader_paragraph_spacing_description),
+            value = stringResource(
+                R.string.reader_em_value,
+                settings.textReader.paragraphSpacingEm,
+            ),
+            interactionsEnabled = interactionsEnabled,
+            onDecrease = {
+                onTextChange(
+                    settings.textReader.copy(
+                        paragraphSpacingEm = settings.textReader.paragraphSpacingEm -
+                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_EM,
+                    ),
+                )
+            },
+            onIncrease = {
+                onTextChange(
+                    settings.textReader.copy(
+                        paragraphSpacingEm = settings.textReader.paragraphSpacingEm +
+                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_EM,
+                    ),
+                )
+            },
+        )
+        AdjustableSettingRow(
+            title = stringResource(R.string.reader_horizontal_padding),
+            description = stringResource(R.string.reader_horizontal_padding_description),
+            value = stringResource(
+                R.string.reader_dp_value,
+                settings.textReader.horizontalPaddingDp,
+            ),
+            interactionsEnabled = interactionsEnabled,
+            onDecrease = {
+                onTextChange(
+                    settings.textReader.copy(
+                        horizontalPaddingDp = settings.textReader.horizontalPaddingDp -
+                            ReaderSettingsPolicy.HORIZONTAL_PADDING_STEP_DP,
+                    ),
+                )
+            },
+            onIncrease = {
+                onTextChange(
+                    settings.textReader.copy(
+                        horizontalPaddingDp = settings.textReader.horizontalPaddingDp +
+                            ReaderSettingsPolicy.HORIZONTAL_PADDING_STEP_DP,
+                    ),
+                )
+            },
+        )
+    }
+}
+
+@Composable
+private fun ReaderSettingsGroupTitle(text: String) {
+    Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+}
+
+@Composable
+private fun <T> ReaderChoiceRow(
+    title: Int,
+    description: Int,
+    value: String,
+    options: List<T>,
+    selected: (T) -> Boolean,
+    label: @Composable (T) -> String,
+    interactionsEnabled: Boolean,
+    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
+    onSelect: (T) -> Unit,
+) {
+    val titleText = stringResource(title)
+    ChoiceSettingRow(
+        title = titleText,
+        description = stringResource(description),
+        value = value,
+        interactionsEnabled = interactionsEnabled,
+        createChoice = {
+            SettingsChoice(
+                title = titleText,
+                options = options.map { option ->
+                    KaloscopeChoiceDialogOption(
+                        label = label(option),
+                        selected = { selected(option) },
+                        onSelect = { onSelect(option) },
+                    )
+                },
+            )
+        },
+        onOpenChoice = onOpenChoice,
+    )
+}
+
+@Composable
+internal fun readerChapterOrderLabel(value: ReaderChapterOrder): String =
+    stringResource(
+        when (value) {
+            ReaderChapterOrder.Ascending -> R.string.reader_order_ascending
+            ReaderChapterOrder.Descending -> R.string.reader_order_descending
+        },
+    )
+
+@Composable
+internal fun imageReadModeLabel(value: ImageReadMode): String =
+    stringResource(
+        when (value) {
+            ImageReadMode.Scroll -> R.string.reader_mode_scroll
+            ImageReadMode.Paged -> R.string.reader_mode_paged
+        },
+    )
+
+@Composable
+internal fun imageZoomModeLabel(value: ImageZoomMode): String =
+    stringResource(
+        when (value) {
+            ImageZoomMode.Auto -> R.string.reader_zoom_auto
+            ImageZoomMode.FitWidth -> R.string.reader_zoom_fit_width
+            ImageZoomMode.FitHeight -> R.string.reader_zoom_fit_height
+        },
+    )
+
+@Composable
+internal fun imagePageDirectionLabel(value: ImagePageDirection): String =
+    stringResource(
+        when (value) {
+            ImagePageDirection.Right -> R.string.reader_direction_right
+            ImagePageDirection.Left -> R.string.reader_direction_left
+            ImagePageDirection.Down -> R.string.reader_direction_down
+        },
+    )
+
+@Composable
+internal fun textReaderThemeLabel(value: TextReaderTheme): String =
+    stringResource(
+        when (value) {
+            TextReaderTheme.White -> R.string.reader_theme_white
+            TextReaderTheme.Cream -> R.string.reader_theme_cream
+            TextReaderTheme.Sepia -> R.string.reader_theme_sepia
+            TextReaderTheme.LightGray -> R.string.reader_theme_light_gray
+            TextReaderTheme.Green -> R.string.reader_theme_green
+            TextReaderTheme.Dark -> R.string.reader_theme_dark
+            TextReaderTheme.Slate -> R.string.reader_theme_slate
+            TextReaderTheme.Black -> R.string.reader_theme_black
+        },
+    )
+
+@Composable
+internal fun textReaderFontLabel(value: TextReaderFont): String =
+    stringResource(
+        when (value) {
+            TextReaderFont.System -> R.string.reader_font_system
+            TextReaderFont.Sans -> R.string.reader_font_sans
+            TextReaderFont.Serif -> R.string.reader_font_serif
+            TextReaderFont.Kai -> R.string.reader_font_kai
+            TextReaderFont.Monospace -> R.string.reader_font_monospace
+        },
+    )
 
 @Composable
 internal fun SubtitleDefaultSettings(

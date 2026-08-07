@@ -1,7 +1,9 @@
 package org.kaloscope.tv.data.search
 
 import kotlin.math.roundToInt
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -9,6 +11,7 @@ import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.NetworkChapter
 import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.NetworkIndexer
+import org.kaloscope.tv.core.model.NetworkMediaType
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
@@ -77,8 +80,12 @@ internal fun IndexerSearchConfigData.toFilterDefinitions(): List<SearchFilterDef
 internal fun IndexerResourcePageData.toModel(
     pageNumber: Int,
     pageSize: Int,
+    mediaTypeHint: NetworkMediaType? = null,
+    videoTypeHint: NetworkVideoType = NetworkVideoType.Unknown,
 ): NetworkSearchPage {
-    val visibleItems = items.mapNotNull(IndexerResourceData::toSearchResult)
+    val visibleItems = items.mapNotNull {
+        it.toSearchResult(mediaTypeHint, videoTypeHint)
+    }
     val hasNext = when {
         total != null -> pageNumber * pageSize < total
         totalPages != null -> pageNumber < totalPages
@@ -98,9 +105,10 @@ internal fun IndexerResourceData.toPlaybackSource(
     fallbackTitle: String,
     preferredDefinition: TranscodeResolution,
     preferHevcForDash: Boolean = false,
+    fallbackVideoType: NetworkVideoType = NetworkVideoType.Unknown,
 ): NetworkPlaybackSource? {
     val resolvedId = id.clean() ?: return null
-    if (!mediaType.isVideo()) {
+    if (mediaType.resolveMediaType() != NetworkMediaType.Video) {
         return null
     }
     val mappedDefinitions = definitions.orEmpty().mapNotNull { definition ->
@@ -115,11 +123,10 @@ internal fun IndexerResourceData.toPlaybackSource(
             NetworkDefinition(label = label, url = definitionUrl)
         }
     }
-    val videoType = when (videoType?.lowercase()) {
-        "hls", "m3u8" -> NetworkVideoType.Hls
-        "dash", "mpd" -> NetworkVideoType.Dash
-        "mp4" -> NetworkVideoType.Mp4
-        else -> NetworkVideoType.Unknown
+    val videoType = if (videoType.clean() == null) {
+        fallbackVideoType
+    } else {
+        videoType.toNetworkVideoType()
     }
     val serverSelectedDefinitionIndex = mappedDefinitions
         .indexOfFirst { it.label.matches(preferredDefinition) }
@@ -183,12 +190,14 @@ internal fun IndexerResourceData.toChapters(): List<NetworkChapter> =
         }
     }
 
-private fun IndexerResourceData.toSearchResult(): NetworkSearchResult? {
+private fun IndexerResourceData.toSearchResult(
+    mediaTypeHint: NetworkMediaType?,
+    videoTypeHint: NetworkVideoType,
+): NetworkSearchResult? {
     val resolvedId = id.clean() ?: return null
     val resolvedTitle = title.clean() ?: return null
-    if (!mediaType.isVideo()) {
-        return null
-    }
+    val resolvedMediaType = mediaType.resolveMediaType(mediaTypeHint) ?: return null
+    if (resolvedMediaType == NetworkMediaType.Audio) return null
     return NetworkSearchResult(
         id = resolvedId,
         title = resolvedTitle,
@@ -200,16 +209,54 @@ private fun IndexerResourceData.toSearchResult(): NetworkSearchResult? {
         ranking = ranking.toRankingOrNull(),
         misc = misc.clean(),
         size = size.clean(),
+        mediaType = resolvedMediaType,
+        videoTypeHint = if (videoType.clean() == null) {
+            videoTypeHint
+        } else {
+            videoType.toNetworkVideoType()
+        },
     )
 }
+
+internal fun IndexerResourceData.toTextBody(): String? =
+    when (val value = text) {
+        is JsonPrimitive -> value.contentOrNull
+        is JsonArray -> value.map { element ->
+            (element as? JsonPrimitive)?.contentOrNull ?: return null
+        }.joinToString("\n\n")
+        else -> null
+    }
 
 private fun JsonElement?.toRankingOrNull(): Int? {
     val value = this?.jsonPrimitive?.doubleOrNull ?: return null
     return value.takeIf { it.isFinite() && it in 1.0..100.0 }?.roundToInt()
 }
 
-private fun String?.isVideo(): Boolean =
-    this == null || equals("video", ignoreCase = true)
+internal fun String?.toNetworkVideoType(): NetworkVideoType =
+    when (clean()?.lowercase()) {
+        "hls", "m3u8" -> NetworkVideoType.Hls
+        "dash", "mpd" -> NetworkVideoType.Dash
+        "mp4" -> NetworkVideoType.Mp4
+        else -> NetworkVideoType.Unknown
+    }
+
+internal fun String?.toNetworkMediaType(): NetworkMediaType? =
+    when (clean()?.lowercase()) {
+        "video" -> NetworkMediaType.Video
+        "audio" -> NetworkMediaType.Audio
+        "image" -> NetworkMediaType.Image
+        "text" -> NetworkMediaType.Text
+        else -> null
+    }
+
+private fun String?.resolveMediaType(
+    hint: NetworkMediaType? = null,
+): NetworkMediaType? =
+    if (clean() == null) {
+        hint ?: NetworkMediaType.Video
+    } else {
+        toNetworkMediaType()
+    }
 
 private fun String?.clean(): String? =
     this?.trim()?.takeIf(String::isNotEmpty)

@@ -14,7 +14,16 @@ data class IndexerSourceProfile(
     val keywordRequired: Boolean,
     val coverRatio: Float = DEFAULT_COVER_ASPECT_RATIO,
     val filters: List<SearchFilterDefinition> = emptyList(),
+    val mediaTypeHint: NetworkMediaType? = null,
+    val videoTypeHint: NetworkVideoType = NetworkVideoType.Unknown,
 )
+
+enum class NetworkMediaType {
+    Video,
+    Audio,
+    Image,
+    Text,
+}
 
 data class NetworkSearchResult(
     val id: String,
@@ -27,6 +36,8 @@ data class NetworkSearchResult(
     val ranking: Int? = null,
     val misc: String? = null,
     val size: String? = null,
+    val mediaType: NetworkMediaType = NetworkMediaType.Video,
+    val videoTypeHint: NetworkVideoType = NetworkVideoType.Unknown,
 )
 
 data class NetworkSearchPage(

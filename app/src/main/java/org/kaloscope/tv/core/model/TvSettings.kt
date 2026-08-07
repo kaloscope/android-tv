@@ -11,6 +11,9 @@ data class TvSettings(
     val autoplayNext: Boolean = true,
     val danmaku: DanmakuSettings = DanmakuSettings(),
     val subtitle: SubtitleSettings = SubtitleSettings(),
+    val readerChapterOrder: ReaderChapterOrder = ReaderChapterOrder.Ascending,
+    val imageReader: ImageReaderSettings = ImageReaderSettings(),
+    val textReader: TextReaderSettings = TextReaderSettings(),
 )
 
 enum class StartPage {

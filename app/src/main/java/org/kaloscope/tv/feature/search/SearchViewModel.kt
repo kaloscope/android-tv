@@ -12,14 +12,23 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackRequestStore
+import org.kaloscope.tv.core.reader.ReaderRequestStore
+import org.kaloscope.tv.data.search.NetworkResourceRepository
 import org.kaloscope.tv.data.search.SearchRepository
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     repository: SearchRepository,
     requestStore: PlaybackRequestStore,
+    networkResourceRepository: NetworkResourceRepository,
+    readerRequestStore: ReaderRequestStore,
 ) : ViewModel() {
-    private val coordinator = SearchCoordinator(repository, requestStore)
+    private val coordinator = SearchCoordinator(
+        repository = repository,
+        requestStore = requestStore,
+        networkResourceRepository = networkResourceRepository,
+        readerRequestStore = readerRequestStore,
+    )
     private var loadedServerId: String? = null
     private var requestJob: Job? = null
 
@@ -75,6 +84,9 @@ class SearchViewModel @Inject constructor(
 
     fun consumePlaybackRequest(requestId: String) =
         coordinator.consumePlaybackRequest(requestId)
+
+    fun consumeDestination(requestId: String) =
+        coordinator.consumeDestination(requestId)
 
     fun reset() {
         requestJob?.cancel()

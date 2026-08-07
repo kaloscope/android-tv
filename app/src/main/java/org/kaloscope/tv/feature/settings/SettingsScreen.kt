@@ -64,9 +64,12 @@ import org.kaloscope.tv.core.designsystem.TvTextField
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.ImageReaderSettings
+import org.kaloscope.tv.core.model.ReaderChapterOrder
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleSettings
+import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeResolution
 
@@ -86,6 +89,9 @@ fun SettingsScreen(
     onDanmakuSettings: (DanmakuSettings) -> Unit,
     onSubtitleSettings: (SubtitleSettings) -> Unit,
     onStartPage: (StartPage) -> Unit,
+    onReaderChapterOrder: (ReaderChapterOrder) -> Unit = {},
+    onImageReaderSettings: (ImageReaderSettings) -> Unit = {},
+    onTextReaderSettings: (TextReaderSettings) -> Unit = {},
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
     onLogout: () -> Unit,
@@ -113,6 +119,9 @@ fun SettingsScreen(
             onDanmakuSettings = onDanmakuSettings,
             onSubtitleSettings = onSubtitleSettings,
             onStartPage = onStartPage,
+            onReaderChapterOrder = onReaderChapterOrder,
+            onImageReaderSettings = onImageReaderSettings,
+            onTextReaderSettings = onTextReaderSettings,
             onTestConnection = onTestConnection,
             onManageServers = onManageServers,
             onLogout = onLogout,
@@ -135,6 +144,9 @@ private fun SettingsContent(
     onDanmakuSettings: (DanmakuSettings) -> Unit,
     onSubtitleSettings: (SubtitleSettings) -> Unit,
     onStartPage: (StartPage) -> Unit,
+    onReaderChapterOrder: (ReaderChapterOrder) -> Unit,
+    onImageReaderSettings: (ImageReaderSettings) -> Unit,
+    onTextReaderSettings: (TextReaderSettings) -> Unit,
     onTestConnection: () -> Unit,
     onManageServers: () -> Unit,
     onLogout: () -> Unit,
@@ -221,6 +233,9 @@ private fun SettingsContent(
                 onPlaybackMode = onPlaybackMode,
                 onTranscodeResolution = onTranscodeResolution,
                 onStartPage = onStartPage,
+                onReaderChapterOrder = onReaderChapterOrder,
+                onImageReaderSettings = onImageReaderSettings,
+                onTextReaderSettings = onTextReaderSettings,
             )
         }
         choice?.let { current ->
@@ -355,6 +370,9 @@ private fun SettingsPanel(
     onTranscodeResolution: (TranscodeResolution) -> Unit,
     onAccentColor: (AccentColor) -> Unit,
     onStartPage: (StartPage) -> Unit,
+    onReaderChapterOrder: (ReaderChapterOrder) -> Unit,
+    onImageReaderSettings: (ImageReaderSettings) -> Unit,
+    onTextReaderSettings: (TextReaderSettings) -> Unit,
 ) {
     key(state.section) {
         LazyColumn(
@@ -401,6 +419,15 @@ private fun SettingsPanel(
                             onOpenChoice = onOpenChoice,
                             onOpenLanguage = onOpenSubtitleLanguage,
                             onChange = onSubtitleSettings,
+                        )
+
+                        SettingsSection.Reading -> ReadingSettings(
+                            settings = state.settings,
+                            interactionsEnabled = interactionsEnabled,
+                            onOpenChoice = onOpenChoice,
+                            onChapterOrder = onReaderChapterOrder,
+                            onImageChange = onImageReaderSettings,
+                            onTextChange = onTextReaderSettings,
                         )
 
                         SettingsSection.Behavior -> BehaviorSettings(
@@ -654,6 +681,7 @@ private fun SettingsSection.iconResource(): Int =
         SettingsSection.Playback -> R.drawable.ic_settings_playback
         SettingsSection.Danmaku -> R.drawable.ic_settings_danmaku
         SettingsSection.Subtitle -> R.drawable.ic_settings_subtitle
+        SettingsSection.Reading -> R.drawable.ic_settings_reading
         SettingsSection.Behavior -> R.drawable.ic_settings_behavior
         SettingsSection.ServerAccount -> R.drawable.ic_settings_server_account
     }
@@ -663,6 +691,7 @@ private fun SettingsSection.iconTestTag(): String =
         SettingsSection.Playback -> "settings-section-icon-playback"
         SettingsSection.Danmaku -> "settings-section-icon-danmaku"
         SettingsSection.Subtitle -> "settings-section-icon-subtitle"
+        SettingsSection.Reading -> "settings-section-icon-reading"
         SettingsSection.Behavior -> "settings-section-icon-behavior"
         SettingsSection.ServerAccount -> "settings-section-icon-server-account"
     }
@@ -673,6 +702,7 @@ private fun sectionLabel(section: SettingsSection): String =
         SettingsSection.Playback -> stringResource(R.string.playback_settings)
         SettingsSection.Danmaku -> stringResource(R.string.danmaku)
         SettingsSection.Subtitle -> stringResource(R.string.subtitle)
+        SettingsSection.Reading -> stringResource(R.string.reading_settings)
         SettingsSection.Behavior -> stringResource(R.string.client_behavior)
         SettingsSection.ServerAccount -> stringResource(R.string.server_and_account)
     }
@@ -683,6 +713,7 @@ private fun sectionTitle(section: SettingsSection): String =
         SettingsSection.Playback -> stringResource(R.string.playback_settings_title)
         SettingsSection.Danmaku -> stringResource(R.string.danmaku_settings_title)
         SettingsSection.Subtitle -> stringResource(R.string.subtitle_settings_title)
+        SettingsSection.Reading -> stringResource(R.string.reading_settings_title)
         SettingsSection.Behavior -> stringResource(R.string.client_behavior)
         SettingsSection.ServerAccount -> stringResource(R.string.server_and_account)
     }
@@ -693,6 +724,7 @@ private fun sectionDescription(section: SettingsSection): String =
         SettingsSection.Playback -> stringResource(R.string.playback_settings_description)
         SettingsSection.Danmaku -> stringResource(R.string.danmaku_settings_description)
         SettingsSection.Subtitle -> stringResource(R.string.subtitle_settings_description)
+        SettingsSection.Reading -> stringResource(R.string.reading_settings_description)
         SettingsSection.Behavior -> stringResource(R.string.client_behavior_description)
         SettingsSection.ServerAccount -> stringResource(R.string.server_account_description)
     }

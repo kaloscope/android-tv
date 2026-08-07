@@ -19,6 +19,19 @@ import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.NetworkVideoType
+import org.kaloscope.tv.core.model.ImagePageDirection
+import org.kaloscope.tv.core.model.ImageReadMode
+import org.kaloscope.tv.core.model.ImageReaderSettings
+import org.kaloscope.tv.core.model.ImageZoomMode
+import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderContent
+import org.kaloscope.tv.core.model.ReaderImageContent
+import org.kaloscope.tv.core.model.ReaderImagePage
+import org.kaloscope.tv.core.model.ReaderTextContent
+import org.kaloscope.tv.core.model.ResolvedNetworkResource
+import org.kaloscope.tv.core.model.TextReaderFont
+import org.kaloscope.tv.core.model.TextReaderSettings
+import org.kaloscope.tv.core.model.TextReaderTheme
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
@@ -29,8 +42,11 @@ import org.kaloscope.tv.core.player.PlaybackOrigin
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.reader.ReaderRequest
+import org.kaloscope.tv.core.reader.ReaderRequestStore
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.data.search.SearchRepository
+import org.kaloscope.tv.data.search.NetworkResourceRepository
 
 class SearchCoordinatorTest {
     @Test
@@ -284,7 +300,11 @@ class SearchCoordinatorTest {
             pages = mutableListOf(AppResult.Success(page("v1"))),
             playback = AppResult.Success(playback()),
         )
-        val coordinator = SearchCoordinator(repository, store) { "network-request" }
+        val coordinator = SearchCoordinator(
+            repository = repository,
+            requestStore = store,
+            requestIdFactory = { "network-request" },
+        )
         coordinator.load(session())
         coordinator.updateQuery("星际")
         coordinator.search(session())
@@ -324,7 +344,11 @@ class SearchCoordinatorTest {
             pages = mutableListOf(AppResult.Success(page("v1"))),
             playback = AppResult.Success(playback()),
         )
-        val coordinator = SearchCoordinator(repository, store) { "settings-request" }
+        val coordinator = SearchCoordinator(
+            repository = repository,
+            requestStore = store,
+            requestIdFactory = { "settings-request" },
+        )
         coordinator.load(session())
         coordinator.updateQuery("星际")
         coordinator.search(session())
@@ -339,6 +363,176 @@ class SearchCoordinatorTest {
         val request = store.get("settings-request") as PlaybackRequest.NetworkVideo
         assertEquals(TranscodeResolution.P720, request.preferredDefinition)
     }
+
+    @Test
+    fun `image result creates reader request with a settings snapshot`() = runTest {
+        val playbackStore = PlaybackRequestStore()
+        val readerStore = ReaderRequestStore()
+        val imageSettings = ImageReaderSettings(
+            readMode = ImageReadMode.Paged,
+            zoomMode = ImageZoomMode.FitHeight,
+            pageDirection = ImagePageDirection.Left,
+        )
+        val resourceRepository = FakeNetworkResourceRepository(
+            resolution = AppResult.Success(
+                ResolvedNetworkResource.Image(
+                    ReaderImageContent.network(
+                        indexerId = 11,
+                        resourceId = "v1",
+                        title = "Comic",
+                        images = listOf("one.jpg"),
+                        imageCount = 1,
+                    ),
+                ),
+            ),
+        )
+        val repository = FakeSearchRepository(
+            pages = mutableListOf(AppResult.Success(page("v1"))),
+        )
+        val coordinator = SearchCoordinator(
+            repository = repository,
+            requestStore = playbackStore,
+            requestIdFactory = { "reader-request" },
+            networkResourceRepository = resourceRepository,
+            readerRequestStore = readerStore,
+        )
+        coordinator.load(session())
+        coordinator.updateQuery("comic")
+        coordinator.search(session())
+
+        coordinator.play(
+            session(),
+            "v1",
+            TvSettings(
+                imageReader = imageSettings,
+                readerChapterOrder = ReaderChapterOrder.Descending,
+            ),
+        )
+
+        val state = coordinator.state.value as SearchUiState.Content
+        assertEquals(
+            SearchPendingDestination.Reader("reader-request"),
+            state.pendingDestination,
+        )
+        val request = readerStore.get("reader-request") as ReaderRequest.Image
+        assertEquals(imageSettings, request.settings)
+        assertEquals(ReaderChapterOrder.Descending, request.chapterOrder)
+        assertNull(playbackStore.get("reader-request"))
+    }
+
+    @Test
+    fun `text destination is consumed exactly once`() = runTest {
+        val readerStore = ReaderRequestStore()
+        val textSettings = TextReaderSettings(
+            theme = TextReaderTheme.Black,
+            font = TextReaderFont.Serif,
+            fontSizeSp = 34,
+        )
+        val repository = FakeSearchRepository(
+            pages = mutableListOf(AppResult.Success(page("v1"))),
+        )
+        val coordinator = SearchCoordinator(
+            repository = repository,
+            requestStore = PlaybackRequestStore(),
+            requestIdFactory = { "text-request" },
+            networkResourceRepository = FakeNetworkResourceRepository(
+                resolution = AppResult.Success(
+                    ResolvedNetworkResource.Text(
+                        ReaderTextContent.network(
+                            indexerId = 11,
+                            resourceId = "v1",
+                            title = "Book",
+                            text = "Body",
+                        ),
+                    ),
+                ),
+            ),
+            readerRequestStore = readerStore,
+        )
+        coordinator.load(session())
+        coordinator.updateQuery("book")
+        coordinator.search(session())
+        coordinator.play(
+            session(),
+            "v1",
+            TvSettings(textReader = textSettings),
+        )
+
+        val request = readerStore.get("text-request") as ReaderRequest.Text
+        assertEquals(textSettings, request.settings)
+
+        coordinator.consumeDestination("text-request")
+        coordinator.consumeDestination("text-request")
+
+        val state = coordinator.state.value as SearchUiState.Content
+        assertNull(state.pendingDestination)
+        assertTrue(readerStore.get("text-request") is ReaderRequest.Text)
+    }
+
+    @Test
+    fun `cancelled resource resolution clears the resolving card`() = runTest {
+        val resolutionStarted = CompletableDeferred<Unit>()
+        val resolutionResult = CompletableDeferred<AppResult<ResolvedNetworkResource>>()
+        val coordinator = SearchCoordinator(
+            repository = FakeSearchRepository(
+                pages = mutableListOf(AppResult.Success(page("v1"))),
+            ),
+            requestStore = PlaybackRequestStore(),
+            networkResourceRepository = FakeNetworkResourceRepository(
+                resolutionStarted = resolutionStarted,
+                deferredResolution = resolutionResult,
+            ),
+        )
+        coordinator.load(session())
+        coordinator.updateQuery("video")
+        coordinator.search(session())
+
+        val job = launch { coordinator.play(session(), "v1") }
+        resolutionStarted.await()
+        assertEquals(
+            "v1",
+            (coordinator.state.value as SearchUiState.Content).resolvingResultId,
+        )
+
+        job.cancelAndJoin()
+
+        assertNull((coordinator.state.value as SearchUiState.Content).resolvingResultId)
+    }
+}
+
+private class FakeNetworkResourceRepository(
+    private val resolution: AppResult<ResolvedNetworkResource> =
+        AppResult.Failure(AppError.NotFound),
+    private val resolutionStarted: CompletableDeferred<Unit>? = null,
+    private val deferredResolution: CompletableDeferred<AppResult<ResolvedNetworkResource>>? = null,
+) : NetworkResourceRepository {
+    override suspend fun resolveResource(
+        session: Session,
+        indexerId: Long,
+        result: NetworkSearchResult,
+        preferredDefinition: TranscodeResolution,
+    ): AppResult<ResolvedNetworkResource> {
+        resolutionStarted?.complete(Unit)
+        return deferredResolution?.await() ?: resolution
+    }
+
+    override suspend fun resolveVideoChapter(
+        session: Session,
+        source: NetworkPlaybackSource,
+        chapterIndex: Int,
+        preferredDefinition: TranscodeResolution,
+    ): AppResult<NetworkPlaybackSource> = error("Not used")
+
+    override suspend fun resolveReaderChapter(
+        session: Session,
+        content: ReaderContent,
+        chapterIndex: Int,
+    ): AppResult<ReaderContent> = error("Not used")
+
+    override suspend fun loadImagePage(
+        session: Session,
+        content: ReaderImageContent,
+    ): AppResult<ReaderImagePage> = error("Not used")
 }
 
 private class FakeSearchRepository(
@@ -417,7 +611,11 @@ private data class SearchCall(
 )
 
 private fun coordinator(repository: SearchRepository) =
-    SearchCoordinator(repository, PlaybackRequestStore()) { "request-id" }
+    SearchCoordinator(
+        repository = repository,
+        requestStore = PlaybackRequestStore(),
+        requestIdFactory = { "request-id" },
+    )
 
 private fun indexer() = NetworkIndexer(11, "星海站", null)
 
