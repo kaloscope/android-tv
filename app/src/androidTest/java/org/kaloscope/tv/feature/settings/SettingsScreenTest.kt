@@ -36,6 +36,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
@@ -119,7 +120,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun readingCategoryShowsSeparateImageAndTextDefaults() {
+    fun readingCategoryUsesApprovedGroupLabels() {
         composeRule.setContent {
             KaloscopeTheme {
                 SettingsScreen(
@@ -144,10 +145,43 @@ class SettingsScreenTest {
         }
 
         composeRule.onNodeWithTag("reading-default-settings").assertExists()
-        composeRule.onNodeWithText("图片阅读").assertExists()
-        composeRule.onNodeWithText("文本阅读").assertExists()
+        composeRule.onNodeWithText("通用").assertExists()
+        composeRule.onNodeWithText("图片").assertExists()
+        composeRule.onNodeWithText("文本").assertExists()
+        composeRule.onNodeWithText("图片阅读").assertDoesNotExist()
+        composeRule.onNodeWithText("文本阅读").assertDoesNotExist()
         composeRule.onNode(hasClickAction() and hasText("阅读模式")).assertExists()
         composeRule.onNode(hasClickAction() and hasText("阅读主题")).assertExists()
+    }
+
+    @Test
+    fun readingGroupLabelsUseReadableForegroundColor() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Reading,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        listOf("通用", "图片", "文本").forEach { label ->
+            assertEquals(OnBackground, textLayoutFor(label).layoutInput.style.color)
+        }
     }
 
     @Test
@@ -583,6 +617,34 @@ class SettingsScreenTest {
             assertEquals(1, manages)
             assertEquals(1, tests)
         }
+    }
+
+    @Test
+    fun logoutUsernameUsesReadableForegroundColor() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.ServerAccount,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        assertEquals(OnBackground, textLayoutFor("tv_user").layoutInput.style.color)
     }
 
     @Test
@@ -1172,6 +1234,15 @@ class SettingsScreenTest {
 
         composeRule.onNodeWithText("保存").assertDoesNotExist()
         composeRule.onNodeWithText("首选语言").assertIsFocused()
+    }
+
+    private fun textLayoutFor(text: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText(text, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(results)
+            }
+        return results.single()
     }
 }
 

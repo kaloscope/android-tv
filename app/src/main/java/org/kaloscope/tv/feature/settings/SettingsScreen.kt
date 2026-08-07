@@ -526,6 +526,7 @@ internal fun SettingActionRow(
     value: String = "",
     interactionsEnabled: Boolean,
     danger: Boolean,
+    valueColor: Color? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -543,7 +544,7 @@ internal fun SettingActionRow(
         },
         modifier = modifier.fillMaxWidth(),
     ) {
-        SettingRowContent(title, description, value)
+        SettingRowContent(title, description, value, valueColor)
     }
 }
 
@@ -552,6 +553,7 @@ internal fun SettingRowContent(
     title: String,
     description: String,
     value: String,
+    valueColor: Color? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -566,7 +568,11 @@ internal fun SettingRowContent(
             )
         }
         if (value.isNotEmpty()) {
-            Text(value, fontSize = 15.sp)
+            Text(
+                text = value,
+                color = valueColor ?: LocalContentColor.current,
+                fontSize = 15.sp,
+            )
         }
     }
 }

@@ -30,6 +30,7 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.accentPalette
 import org.kaloscope.tv.core.designsystem.danmakuBlockSummary
 import org.kaloscope.tv.core.designsystem.danmakuBlockTypeLabel
@@ -317,7 +318,12 @@ internal fun ReadingSettings(
 
 @Composable
 private fun ReaderSettingsGroupTitle(text: String) {
-    Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    Text(
+        text = text,
+        color = OnBackground,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable
@@ -848,6 +854,7 @@ internal fun ServerAccountSettings(
             value = session.user.username,
             interactionsEnabled = interactionsEnabled,
             danger = true,
+            valueColor = OnBackground,
             modifier = Modifier.focusRequester(logoutFocus),
             onClick = { onRequestLogout(logoutFocus) },
         )

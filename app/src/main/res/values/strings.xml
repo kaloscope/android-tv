@@ -184,8 +184,8 @@
     <string name="reading_settings_title">阅读设置</string>
     <string name="reading_settings_description">设置每次进入图片或文本阅读器时使用的默认值。</string>
     <string name="reader_common_settings">通用</string>
-    <string name="reader_image_settings">图片阅读</string>
-    <string name="reader_text_settings">文本阅读</string>
+    <string name="reader_image_settings">图片</string>
+    <string name="reader_text_settings">文本</string>
     <string name="reader_chapter_order">章节显示顺序</string>
     <string name="reader_chapter_order_description">仅影响章节列表显示，上一章和下一章仍按资源原顺序切换。</string>
     <string name="reader_order_ascending">正序</string>
