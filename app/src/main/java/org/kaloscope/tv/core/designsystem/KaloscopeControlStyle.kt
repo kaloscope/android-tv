@@ -89,6 +89,7 @@ internal fun resolveKaloscopeControlState(
     focused: Boolean,
     pressed: Boolean,
     scaleOnFocus: Boolean = true,
+    preserveSelectionOnFocus: Boolean = false,
 ): KaloscopeResolvedControlState {
     val effectivelyFocused = enabled && focused
     val baseMaterial = when {
@@ -106,6 +107,9 @@ internal fun resolveKaloscopeControlState(
         !effectivelyFocused -> KaloscopeControlFocusMaterial.None
         tone == KaloscopeControlTone.Danger ->
             KaloscopeControlFocusMaterial.DangerFocused
+
+        selected && preserveSelectionOnFocus ->
+            KaloscopeControlFocusMaterial.None
 
         selected && variant != KaloscopeControlVariant.Sidebar ->
             KaloscopeControlFocusMaterial.SelectedFocused
@@ -132,6 +136,9 @@ internal fun resolveKaloscopeControlState(
     val contentColor = when {
         effectivelyFocused && tone == KaloscopeControlTone.Danger ->
             OnDangerFocused
+
+        effectivelyFocused && selected && preserveSelectionOnFocus ->
+            OnBackground
 
         effectivelyFocused -> OnControlFocused
         tone == KaloscopeControlTone.Danger -> Danger

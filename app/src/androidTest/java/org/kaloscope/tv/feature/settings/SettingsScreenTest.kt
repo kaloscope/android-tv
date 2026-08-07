@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.settings
 
+import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -9,13 +10,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -44,6 +49,7 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.SubtitleSettings
+import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 
@@ -271,6 +277,191 @@ class SettingsScreenTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
 
         composeRule.runOnIdle { assertEquals(30, updatedFontSize) }
+    }
+
+    @Test
+    fun readingAdjustmentModeUsesAccentSurfaceWhileFocused() {
+        composeRule.mainClock.autoAdvance = false
+        setSettingsContent(TvSettings(), SettingsSection.Reading)
+
+        val fontSizeRow = composeRule.onNode(hasClickAction() and hasText("字号"))
+        fontSizeRow.performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(500)
+        assertCenterColor(
+            label = "focused adjustment row",
+            expected = AndroidColor.rgb(0xE8, 0xED, 0xF4),
+            actual = fontSizeRow.captureToImage().asAndroidBitmap(),
+        )
+
+        fontSizeRow.performKeyInput { pressKey(Key.Enter) }
+        composeRule.mainClock.advanceTimeBy(500)
+        assertCenterColor(
+            label = "active adjustment row",
+            expected = AndroidColor.rgb(0x28, 0x35, 0x5F),
+            actual = fontSizeRow.captureToImage().asAndroidBitmap(),
+        )
+    }
+
+    @Test
+    fun readerMinimumRendersDecreaseArrowDisabled() {
+        setSettingsContent(
+            settings = TvSettings(
+                textReader = TextReaderSettings(fontSizeSp = 20),
+            ),
+            section = SettingsSection.Reading,
+        )
+
+        val fontSizeRow = composeRule.onNode(hasClickAction() and hasText("字号"))
+        fontSizeRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsEnabled()
+
+        composeRule.onNodeWithTag(
+            testTag = "reader-font-size-decrease",
+            useUnmergedTree = true,
+        ).assertIsNotEnabled()
+        composeRule.onNodeWithTag(
+            testTag = "reader-font-size-increase",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        assertEquals(
+            OnBackground.copy(alpha = 0.42f),
+            textLayoutForTag("reader-font-size-decrease").layoutInput.style.color,
+        )
+    }
+
+    @Test
+    fun allReaderAdjustmentRowsDisableDecreaseAtMinimums() {
+        setSettingsContent(
+            settings = TvSettings(
+                textReader = TextReaderSettings(
+                    fontSizeSp = 20,
+                    lineHeight = 1.4f,
+                    paragraphSpacingEm = 0f,
+                    horizontalPaddingDp = 0,
+                ),
+            ),
+            section = SettingsSection.Reading,
+        )
+
+        listOf(
+            "reader-font-size",
+            "reader-line-height",
+            "reader-paragraph-spacing",
+            "reader-horizontal-padding",
+        ).forEach { tagPrefix ->
+            composeRule.onNodeWithTag(
+                testTag = "$tagPrefix-decrease",
+                useUnmergedTree = true,
+            ).assertIsNotEnabled()
+            composeRule.onNodeWithTag(
+                testTag = "$tagPrefix-increase",
+                useUnmergedTree = true,
+            ).assertIsEnabled()
+        }
+    }
+
+    @Test
+    fun readerMinimumDoesNotInvokeDecrease() {
+        var updates = 0
+        setSettingsContent(
+            settings = TvSettings(
+                textReader = TextReaderSettings(fontSizeSp = 20),
+            ),
+            section = SettingsSection.Reading,
+            onTextReaderSettings = { updates += 1 },
+        )
+
+        val fontSizeRow = composeRule.onNode(hasClickAction() and hasText("字号"))
+        fontSizeRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.Enter)
+                pressKey(Key.DirectionLeft)
+            }
+
+        composeRule.runOnIdle { assertEquals(0, updates) }
+        fontSizeRow.assertIsFocused().assertIsSelected()
+    }
+
+    @Test
+    fun subtitleMaximumRendersIncreaseArrowDisabled() {
+        setSettingsContent(
+            settings = TvSettings(
+                subtitle = SubtitleSettings(fontScalePercent = 200),
+            ),
+            section = SettingsSection.Subtitle,
+        )
+
+        composeRule.onNode(hasClickAction() and hasText("字幕字号"))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag(
+            testTag = "subtitle-font-scale-decrease",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        composeRule.onNodeWithTag(
+            testTag = "subtitle-font-scale-increase",
+            useUnmergedTree = true,
+        ).assertIsNotEnabled()
+        assertEquals(
+            OnBackground.copy(alpha = 0.42f),
+            textLayoutForTag("subtitle-font-scale-increase").layoutInput.style.color,
+        )
+    }
+
+    @Test
+    fun allSubtitleAdjustmentRowsDisableIncreaseAtMaximums() {
+        setSettingsContent(
+            settings = TvSettings(
+                subtitle = SubtitleSettings(
+                    timeOffsetSeconds = 3_600f,
+                    fontScalePercent = 200,
+                    verticalPositionPercent = 15,
+                ),
+            ),
+            section = SettingsSection.Subtitle,
+        )
+
+        listOf(
+            "subtitle-font-scale",
+            "subtitle-vertical-position",
+            "subtitle-time-offset",
+        ).forEach { tagPrefix ->
+            composeRule.onNodeWithTag(
+                testTag = "$tagPrefix-decrease",
+                useUnmergedTree = true,
+            ).assertIsEnabled()
+            composeRule.onNodeWithTag(
+                testTag = "$tagPrefix-increase",
+                useUnmergedTree = true,
+            ).assertIsNotEnabled()
+        }
+    }
+
+    @Test
+    fun subtitleMaximumDoesNotInvokeIncrease() {
+        var updates = 0
+        setSettingsContent(
+            settings = TvSettings(
+                subtitle = SubtitleSettings(fontScalePercent = 200),
+            ),
+            section = SettingsSection.Subtitle,
+            onSubtitleSettings = { updates += 1 },
+        )
+
+        val fontScaleRow = composeRule.onNode(hasClickAction() and hasText("字幕字号"))
+        fontScaleRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.Enter)
+                pressKey(Key.DirectionRight)
+            }
+
+        composeRule.runOnIdle { assertEquals(0, updates) }
+        fontScaleRow.assertIsFocused().assertIsSelected()
     }
 
     @Test
@@ -1296,6 +1487,66 @@ class SettingsScreenTest {
             }
         return results.single()
     }
+
+    private fun textLayoutForTag(tag: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithTag(tag, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(results)
+            }
+        return results.single()
+    }
+
+    private fun setSettingsContent(
+        settings: TvSettings,
+        section: SettingsSection,
+        onTextReaderSettings: (TextReaderSettings) -> Unit = {},
+        onSubtitleSettings: (SubtitleSettings) -> Unit = {},
+    ) {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = settings,
+                        section = section,
+                    ),
+                    requestInitialFocus = false,
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = onSubtitleSettings,
+                    onStartPage = {},
+                    onTextReaderSettings = onTextReaderSettings,
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+    }
+}
+
+private fun assertCenterColor(
+    label: String,
+    expected: Int,
+    actual: android.graphics.Bitmap,
+    tolerance: Int = 3,
+) {
+    val actualColor = actual.getPixel(actual.width / 2, actual.height / 2)
+    val channelDifferences = listOf(
+        kotlin.math.abs(AndroidColor.red(expected) - AndroidColor.red(actualColor)),
+        kotlin.math.abs(AndroidColor.green(expected) - AndroidColor.green(actualColor)),
+        kotlin.math.abs(AndroidColor.blue(expected) - AndroidColor.blue(actualColor)),
+    )
+    assertTrue(
+        "$label expected ${Integer.toHexString(expected)} but was " +
+            Integer.toHexString(actualColor),
+        channelDifferences.all { it <= tolerance },
+    )
 }
 
 private fun session() = Session(

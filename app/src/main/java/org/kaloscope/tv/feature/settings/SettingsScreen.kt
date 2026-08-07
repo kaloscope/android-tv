@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -555,6 +556,23 @@ internal fun SettingRowContent(
     value: String,
     valueColor: Color? = null,
 ) {
+    SettingRowContent(title, description) {
+        if (value.isNotEmpty()) {
+            Text(
+                text = value,
+                color = valueColor ?: LocalContentColor.current,
+                fontSize = 15.sp,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun SettingRowContent(
+    title: String,
+    description: String,
+    trailingContent: @Composable RowScope.() -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -567,13 +585,7 @@ internal fun SettingRowContent(
                 fontSize = 13.sp,
             )
         }
-        if (value.isNotEmpty()) {
-            Text(
-                text = value,
-                color = valueColor ?: LocalContentColor.current,
-                fontSize = 15.sp,
-            )
-        }
+        trailingContent()
     }
 }
 

@@ -47,6 +47,7 @@ internal fun rememberKaloscopeControlVisuals(
     selected: Boolean,
     enabled: Boolean,
     scaleOnFocus: Boolean = true,
+    preserveSelectionOnFocus: Boolean = false,
 ): KaloscopeControlVisuals {
     val accentPalette = LocalAccentPalette.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -61,6 +62,7 @@ internal fun rememberKaloscopeControlVisuals(
         focused = focused,
         pressed = pressed,
         scaleOnFocus = scaleOnFocus,
+        preserveSelectionOnFocus = preserveSelectionOnFocus,
     )
     val duration = if (pressed) {
         KaloscopeMotion.PressMillis
@@ -178,6 +180,7 @@ fun KaloscopeButton(
     tone: KaloscopeControlTone = KaloscopeControlTone.Default,
     shape: Shape = CircleShape,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    preserveSelectionOnFocus: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
     val visuals = rememberKaloscopeControlVisuals(
@@ -186,6 +189,7 @@ fun KaloscopeButton(
         tone = tone,
         selected = selected,
         enabled = enabled,
+        preserveSelectionOnFocus = preserveSelectionOnFocus,
     )
     val colors = ButtonDefaults.colors(
         containerColor = Color.Transparent,

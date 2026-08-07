@@ -2,6 +2,7 @@ package org.kaloscope.tv.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,14 +24,18 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlTokens
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.accentPalette
 import org.kaloscope.tv.core.designsystem.danmakuBlockSummary
@@ -230,6 +235,11 @@ internal fun ReadingSettings(
             description = stringResource(R.string.reader_font_size_description),
             value = stringResource(R.string.reader_sp_value, settings.textReader.fontSizeSp),
             interactionsEnabled = interactionsEnabled,
+            canDecrease = settings.textReader.fontSizeSp >
+                ReaderSettingsPolicy.MIN_FONT_SIZE_SP,
+            canIncrease = settings.textReader.fontSizeSp <
+                ReaderSettingsPolicy.MAX_FONT_SIZE_SP,
+            testTagPrefix = "reader-font-size",
             onDecrease = {
                 onTextChange(
                     settings.textReader.copy(
@@ -255,6 +265,11 @@ internal fun ReadingSettings(
                 settings.textReader.lineHeight,
             ),
             interactionsEnabled = interactionsEnabled,
+            canDecrease = settings.textReader.lineHeight >
+                ReaderSettingsPolicy.MIN_LINE_HEIGHT,
+            canIncrease = settings.textReader.lineHeight <
+                ReaderSettingsPolicy.MAX_LINE_HEIGHT,
+            testTagPrefix = "reader-line-height",
             onDecrease = {
                 onTextChange(
                     settings.textReader.copy(
@@ -280,6 +295,11 @@ internal fun ReadingSettings(
                 settings.textReader.paragraphSpacingEm,
             ),
             interactionsEnabled = interactionsEnabled,
+            canDecrease = settings.textReader.paragraphSpacingEm >
+                ReaderSettingsPolicy.MIN_PARAGRAPH_SPACING_EM,
+            canIncrease = settings.textReader.paragraphSpacingEm <
+                ReaderSettingsPolicy.MAX_PARAGRAPH_SPACING_EM,
+            testTagPrefix = "reader-paragraph-spacing",
             onDecrease = {
                 onTextChange(
                     settings.textReader.copy(
@@ -305,6 +325,11 @@ internal fun ReadingSettings(
                 settings.textReader.horizontalPaddingDp,
             ),
             interactionsEnabled = interactionsEnabled,
+            canDecrease = settings.textReader.horizontalPaddingDp >
+                ReaderSettingsPolicy.MIN_HORIZONTAL_PADDING_DP,
+            canIncrease = settings.textReader.horizontalPaddingDp <
+                ReaderSettingsPolicy.MAX_HORIZONTAL_PADDING_DP,
+            testTagPrefix = "reader-horizontal-padding",
             onDecrease = {
                 onTextChange(
                     settings.textReader.copy(
@@ -490,6 +515,11 @@ internal fun SubtitleDefaultSettings(
             description = stringResource(R.string.subtitle_font_scale_description),
             value = stringResource(R.string.percentage_value, settings.fontScalePercent),
             interactionsEnabled = interactionsEnabled,
+            canDecrease = SubtitleSettingsPolicy.adjustFontScale(settings, -1)
+                .fontScalePercent != settings.fontScalePercent,
+            canIncrease = SubtitleSettingsPolicy.adjustFontScale(settings, 1)
+                .fontScalePercent != settings.fontScalePercent,
+            testTagPrefix = "subtitle-font-scale",
             onDecrease = {
                 onChange(SubtitleSettingsPolicy.adjustFontScale(settings, -1))
             },
@@ -505,6 +535,11 @@ internal fun SubtitleDefaultSettings(
                 settings.verticalPositionPercent,
             ),
             interactionsEnabled = interactionsEnabled,
+            canDecrease = SubtitleSettingsPolicy.adjustVerticalPosition(settings, -1)
+                .verticalPositionPercent != settings.verticalPositionPercent,
+            canIncrease = SubtitleSettingsPolicy.adjustVerticalPosition(settings, 1)
+                .verticalPositionPercent != settings.verticalPositionPercent,
+            testTagPrefix = "subtitle-vertical-position",
             onDecrease = {
                 onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, -1))
             },
@@ -517,6 +552,11 @@ internal fun SubtitleDefaultSettings(
             description = stringResource(R.string.subtitle_time_offset_description),
             value = formatSubtitleOffset(settings.timeOffsetSeconds),
             interactionsEnabled = interactionsEnabled,
+            canDecrease = SubtitleSettingsPolicy.adjustTimeOffset(settings, -1)
+                .timeOffsetSeconds != settings.timeOffsetSeconds,
+            canIncrease = SubtitleSettingsPolicy.adjustTimeOffset(settings, 1)
+                .timeOffsetSeconds != settings.timeOffsetSeconds,
+            testTagPrefix = "subtitle-time-offset",
             onDecrease = {
                 onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, -1))
             },
@@ -561,6 +601,9 @@ private fun AdjustableSettingRow(
     description: String,
     value: String,
     interactionsEnabled: Boolean,
+    canDecrease: Boolean,
+    canIncrease: Boolean,
+    testTagPrefix: String,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
 ) {
@@ -573,6 +616,7 @@ private fun AdjustableSettingRow(
             }
         },
         selected = isAdjusting,
+        preserveSelectionOnFocus = true,
         size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
@@ -602,7 +646,7 @@ private fun AdjustableSettingRow(
                     event.type == KeyEventType.KeyDown &&
                         isAdjusting &&
                         event.key == Key.DirectionLeft -> {
-                        if (interactionsEnabled) {
+                        if (interactionsEnabled && canDecrease) {
                             onDecrease()
                         }
                         true
@@ -611,7 +655,7 @@ private fun AdjustableSettingRow(
                     event.type == KeyEventType.KeyDown &&
                         isAdjusting &&
                         event.key == Key.DirectionRight -> {
-                        if (interactionsEnabled) {
+                        if (interactionsEnabled && canIncrease) {
                             onIncrease()
                         }
                         true
@@ -621,8 +665,62 @@ private fun AdjustableSettingRow(
                 }
             },
     ) {
-        SettingRowContent(title, description, "‹  $value  ›")
+        SettingRowContent(title, description) {
+            AdjustableSettingValue(
+                value = value,
+                canDecrease = canDecrease,
+                canIncrease = canIncrease,
+                testTagPrefix = testTagPrefix,
+            )
+        }
     }
+}
+
+@Composable
+private fun AdjustableSettingValue(
+    value: String,
+    canDecrease: Boolean,
+    canIncrease: Boolean,
+    testTagPrefix: String,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        AdjustmentArrow(
+            text = "‹",
+            enabled = canDecrease,
+            testTag = "$testTagPrefix-decrease",
+        )
+        Text(text = value, fontSize = 15.sp)
+        AdjustmentArrow(
+            text = "›",
+            enabled = canIncrease,
+            testTag = "$testTagPrefix-increase",
+        )
+    }
+}
+
+@Composable
+private fun AdjustmentArrow(
+    text: String,
+    enabled: Boolean,
+    testTag: String,
+) {
+    val contentColor = LocalContentColor.current
+    Text(
+        text = text,
+        color = if (enabled) {
+            contentColor
+        } else {
+            contentColor.copy(alpha = KaloscopeControlTokens.DisabledAlpha)
+        },
+        fontSize = 15.sp,
+        modifier = Modifier
+            .testTag(testTag)
+            .semantics(mergeDescendants = true) {
+                if (!enabled) {
+                    disabled()
+                }
+            },
+    )
 }
 
 @Composable
