@@ -155,6 +155,58 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun readingThemeDialogShowsAColorSwatchForEveryTheme() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.Reading,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeResolution = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNode(hasClickAction() and hasText("阅读主题"))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        val themeTags = listOf(
+            "white",
+            "cream",
+            "sepia",
+            "lightgray",
+            "green",
+            "dark",
+            "slate",
+            "black",
+        )
+        themeTags.forEachIndexed { index, themeTag ->
+            val option = composeRule.onNodeWithTag("reader-theme-option-$themeTag")
+                .assertIsFocused()
+            composeRule.onNodeWithTag(
+                testTag = "reader-theme-swatch-$themeTag",
+                useUnmergedTree = true,
+            ).assertExists()
+            if (index != themeTags.lastIndex) {
+                option.performKeyInput { pressKey(Key.DirectionDown) }
+            }
+        }
+    }
+
+    @Test
     fun readingGroupLabelsUseReadableForegroundColor() {
         composeRule.setContent {
             KaloscopeTheme {

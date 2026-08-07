@@ -1,7 +1,5 @@
 package org.kaloscope.tv.feature.detail
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -10,19 +8,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
-import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
@@ -37,7 +31,6 @@ import org.kaloscope.tv.core.network.ServerImagePolicy
 internal fun MediaChildCard(
     session: Session,
     child: MediaSummary,
-    sectionKind: MediaChildSectionKind,
     focusedTarget: Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
@@ -55,37 +48,20 @@ internal fun MediaChildCard(
             .testTag("media-child-card-${child.id}"),
     ) {
         Column(Modifier.padding(8.dp)) {
-            Box {
-                ServerImage(
-                    session = session,
-                    rawValue = child.posterPath,
-                    fallbackText = child.title,
-                    contentDescription = null,
-                    policy = ServerImagePolicy.Store,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(10.dp)),
-                )
-                if (sectionKind == MediaChildSectionKind.Episodes) {
-                    child.episode?.let { number ->
-                        Text(
-                            text = stringResource(R.string.episode_number, number),
-                            color = OnBackground,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(7.dp)
-                                .background(Color(0xD9121824), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 7.dp, vertical = 4.dp),
-                        )
-                    }
-                }
-            }
+            ServerImage(
+                session = session,
+                rawValue = child.posterPath,
+                fallbackText = child.title,
+                contentDescription = null,
+                policy = ServerImagePolicy.Store,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(10.dp)),
+            )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = child.title,
+                text = mediaChildDisplayTitle(child),
                 color = OnBackground,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,

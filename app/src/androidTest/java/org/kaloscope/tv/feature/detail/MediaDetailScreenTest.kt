@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -28,6 +29,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -89,8 +91,36 @@ class MediaDetailScreenTest {
         }
 
         composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
-        composeRule.onNodeWithText("第 1 集").assertExists()
+        composeRule.onNodeWithText("S1E1 - 启程").assertExists()
+        composeRule.onNodeWithText("第 1 集").assertDoesNotExist()
         composeRule.onNodeWithText("2026-01-02").assertExists()
+    }
+
+    @Test
+    fun parentPosterClipsItsCorners() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(series()),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+
+        val poster = composeRule.onNodeWithTag("detail-parent-poster-201")
+            .captureToImage()
+            .asAndroidBitmap()
+        val corner = poster.getPixel(0, 0)
+        val interior = poster.getPixel(poster.width / 2, 8.coerceAtMost(poster.height - 1))
+
+        assertNotEquals("Expected the poster corner to be clipped", interior, corner)
     }
 
     @Test
@@ -550,13 +580,14 @@ class MediaDetailScreenTest {
         }
 
         composeRule.onNodeWithText("分集").assertExists()
-        composeRule.onNodeWithText("第 1 集").assertExists()
+        composeRule.onNodeWithText("S1E1 - 启程").assertExists()
 
         composeRule.runOnIdle {
             state = MediaDetailUiState.Content(parent = movieCollection())
         }
         composeRule.onNodeWithText("分段").assertExists()
-        composeRule.onNodeWithText("第 1 集").assertDoesNotExist()
+        composeRule.onNodeWithTag("media-child-card-602").assertTextContains("第一部")
+        composeRule.onNodeWithText("S1E1 - 启程").assertDoesNotExist()
     }
 
     private fun setStatefulDetailContent(

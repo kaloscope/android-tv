@@ -3,14 +3,21 @@ package org.kaloscope.tv.feature.reader
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -154,6 +161,53 @@ class ReaderScreenTest {
         val settingsCenter = composeRule.onNodeWithTag("reader-settings-drawer")
             .fetchSemanticsNode().boundsInRoot.center.x
         assertTrue(settingsCenter > screenCenter)
+    }
+
+    @Test
+    fun textSettingsThemeSwatchTracksTheSessionTheme() {
+        var state by mutableStateOf(textState(text = "正文"))
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = {},
+                    onLoadMoreImages = {},
+                    onImageSettings = {},
+                    onTextSettings = { settings ->
+                        state = state.copy(settings = settings)
+                    },
+                    onChapterOrder = {},
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                )
+            }
+        }
+
+        val content = composeRule.onNodeWithTag("text-reader-content")
+        content.performKeyInput { pressKey(Key.DirectionCenter) }
+        content.performKeyInput { pressKey(Key.DirectionDown) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+
+        val themeRow = composeRule.onNodeWithTag("reader-text-theme-setting")
+        fun currentSwatchColor(): Int {
+            val bitmap = composeRule.onNodeWithTag(
+                testTag = "reader-current-theme-swatch",
+                useUnmergedTree = true,
+            ).captureToImage().asAndroidBitmap()
+            return bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)
+        }
+
+        assertEquals(Color(0xFFFAFAF5).toArgb(), currentSwatchColor())
+        themeRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+
+        assertEquals(Color(0xFFFDF6E3).toArgb(), currentSwatchColor())
     }
 
     private fun setReader(

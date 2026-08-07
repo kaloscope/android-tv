@@ -60,6 +60,57 @@ class MediaDetailPresentationTest {
             childSectionKind(detail(MediaLibraryType.Unknown)),
         )
     }
+
+    @Test
+    fun `child title follows WebUI season episode prefix`() {
+        assertEquals(
+            "S2E3 - Pilot",
+            mediaChildDisplayTitle(child(id = 301, title = "Pilot", season = 2, episode = 3)),
+        )
+    }
+
+    @Test
+    fun `child title needs both season and episode for a prefix`() {
+        assertEquals(
+            "Pilot",
+            mediaChildDisplayTitle(child(id = 301, title = "Pilot", season = null, episode = 3)),
+        )
+        assertEquals(
+            "Pilot",
+            mediaChildDisplayTitle(child(id = 301, title = "Pilot", season = 2, episode = null)),
+        )
+    }
+
+    @Test
+    fun `child title canonicalizes duplicate episode prefixes`() {
+        val titles = listOf(
+            "S2E3 - Pilot",
+            "s02e03 · Pilot",
+            "E03 Pilot",
+            "第 03 集：Pilot",
+        )
+
+        titles.forEach { title ->
+            assertEquals(
+                "S2E3 - Pilot",
+                mediaChildDisplayTitle(child(id = 301, title = title, season = 2, episode = 3)),
+            )
+        }
+        assertEquals(
+            "S2E3",
+            mediaChildDisplayTitle(child(id = 301, title = "第3集", season = 2, episode = 3)),
+        )
+    }
+
+    @Test
+    fun `child title preserves mismatched episode markers`() {
+        assertEquals(
+            "S2E3 - S2E4 - Other",
+            mediaChildDisplayTitle(
+                child(id = 301, title = "S2E4 - Other", season = 2, episode = 3),
+            ),
+        )
+    }
 }
 
 private fun detail(

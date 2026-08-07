@@ -1,14 +1,19 @@
 package org.kaloscope.tv.core.designsystem
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -53,6 +58,9 @@ fun KaloscopeChoiceDialog(
     val initialFocusIndex = remember {
         options.indexOfFirst { it.selected() }.coerceAtLeast(0)
     }
+    val optionListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = initialFocusIndex,
+    )
     var initialFocusRequested by remember { mutableStateOf(false) }
     Popup(
         alignment = Alignment.Center,
@@ -74,6 +82,9 @@ fun KaloscopeChoiceDialog(
             Column(
                 modifier = Modifier
                     .width(420.dp)
+                    .heightIn(
+                        max = (viewportSize.height - 48.dp).coerceAtLeast(1.dp),
+                    )
                     .testTag("kaloscope-choice-dialog-panel")
                     .background(PanelElevated, RoundedCornerShape(22.dp))
                     .padding(28.dp),
@@ -85,61 +96,67 @@ fun KaloscopeChoiceDialog(
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.height(16.dp))
-                options.forEachIndexed { index, option ->
-                    KaloscopeButton(
-                        onClick = {
-                            option.onSelect()
-                            if (dismissOnSelect) {
-                                onDismiss()
-                            }
-                        },
-                        selected = option.selected(),
-                        size = KaloscopeControlSize.Row,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(
-                                if (index == initialFocusIndex) {
-                                    Modifier
-                                        .focusRequester(initialFocus)
-                                        .onGloballyPositioned {
-                                            if (!initialFocusRequested) {
-                                                initialFocusRequested = true
-                                                initialFocus.requestFocus()
-                                            }
-                                        }
-                                } else {
-                                    Modifier
-                                },
-                            )
-                            .then(option.testTag?.let(Modifier::testTag) ?: Modifier)
-                            .focusProperties {
-                                left = FocusRequester.Cancel
-                                right = FocusRequester.Cancel
-                                if (index == 0) {
-                                    up = FocusRequester.Cancel
-                                }
-                                if (index == options.lastIndex) {
-                                    down = FocusRequester.Cancel
+                LazyColumn(
+                    state = optionListState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .testTag("kaloscope-choice-dialog-options"),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    itemsIndexed(options) { index, option ->
+                        KaloscopeButton(
+                            onClick = {
+                                option.onSelect()
+                                if (dismissOnSelect) {
+                                    onDismiss()
                                 }
                             },
-                    ) {
-                        option.swatchColor?.let { swatchColor ->
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .background(swatchColor, CircleShape)
-                                    .then(
-                                        option.swatchTestTag
-                                            ?.let(Modifier::testTag)
-                                            ?: Modifier,
-                                    ),
-                            )
-                            Spacer(Modifier.width(10.dp))
+                            selected = option.selected(),
+                            size = KaloscopeControlSize.Row,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (index == initialFocusIndex) {
+                                        Modifier
+                                            .focusRequester(initialFocus)
+                                            .onGloballyPositioned {
+                                                if (!initialFocusRequested) {
+                                                    initialFocusRequested = true
+                                                    initialFocus.requestFocus()
+                                                }
+                                            }
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                                .then(option.testTag?.let(Modifier::testTag) ?: Modifier)
+                                .focusProperties {
+                                    left = FocusRequester.Cancel
+                                    right = FocusRequester.Cancel
+                                    if (index == 0) {
+                                        up = FocusRequester.Cancel
+                                    }
+                                    if (index == options.lastIndex) {
+                                        down = FocusRequester.Cancel
+                                    }
+                                },
+                        ) {
+                            option.swatchColor?.let { swatchColor ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .background(swatchColor, CircleShape)
+                                        .then(
+                                            option.swatchTestTag
+                                                ?.let(Modifier::testTag)
+                                                ?: Modifier,
+                                        ),
+                                )
+                                Spacer(Modifier.width(10.dp))
+                            }
+                            Text(option.label)
                         }
-                        Text(option.label)
-                    }
-                    if (index != options.lastIndex) {
-                        Spacer(Modifier.height(10.dp))
                     }
                 }
             }

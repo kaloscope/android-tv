@@ -2,11 +2,15 @@ package org.kaloscope.tv.core.designsystem
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -19,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
@@ -61,6 +66,78 @@ class KaloscopeChoiceDialogTest {
             (overlayBounds.top + overlayBounds.bottom) / 2,
             (panelBounds.top + panelBounds.bottom) / 2,
         )
+    }
+
+    @Test
+    fun overflowingOptionsKeepDpadFocusVisibleInsideTheViewport() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    KaloscopeChoiceDialog(
+                        title = "阅读主题",
+                        viewportSize = DpSize(maxWidth, maxHeight),
+                        options = List(8) { index ->
+                            option(
+                                label = "主题 $index",
+                                selected = index == 0,
+                                tag = "overflow-choice-$index",
+                            )
+                        },
+                        onDismiss = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("overflow-choice-0")
+            .assertIsFocused()
+            .performKeyInput {
+                repeat(7) { pressKey(Key.DirectionDown) }
+            }
+
+        composeRule.onNodeWithTag("overflow-choice-7")
+            .assertIsFocused()
+            .assertIsDisplayed()
+        val overlayBounds = composeRule.onNodeWithTag("kaloscope-choice-dialog-overlay")
+            .getUnclippedBoundsInRoot()
+        val panelBounds = composeRule.onNodeWithTag("kaloscope-choice-dialog-panel")
+            .getUnclippedBoundsInRoot()
+        assertTrue(panelBounds.top >= overlayBounds.top)
+        assertTrue(panelBounds.bottom <= overlayBounds.bottom)
+    }
+
+    @Test
+    fun overflowingOptionsInitiallyShowTheSelectedFinalOption() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    KaloscopeChoiceDialog(
+                        title = "阅读主题",
+                        viewportSize = DpSize(maxWidth, maxHeight),
+                        options = List(8) { index ->
+                            option(
+                                label = "主题 $index",
+                                selected = index == 7,
+                                tag = "selected-final-choice-$index",
+                            )
+                        },
+                        onDismiss = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("selected-final-choice-7")
+            .assertIsFocused()
+            .assertIsDisplayed()
     }
 
     @Test

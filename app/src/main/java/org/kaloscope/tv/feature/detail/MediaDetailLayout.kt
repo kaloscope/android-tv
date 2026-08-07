@@ -22,12 +22,14 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -208,6 +210,7 @@ private fun DetailHero(
             modifier = Modifier
                 .width(posterWidth)
                 .aspectRatio(2f / 3f)
+                .clip(RoundedCornerShape(12.dp))
                 .testTag("detail-parent-poster-${parent.id}"),
         )
         Spacer(Modifier.width(24.dp))
@@ -381,7 +384,6 @@ private fun DetailChildRibbon(
                 MediaChildCard(
                     session = session,
                     child = child,
-                    sectionKind = sectionKind,
                     focusedTarget = child.id == focusedChild?.id,
                     onFocused = { onChildFocused(child.id) },
                     onClick = {

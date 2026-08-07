@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -37,6 +38,7 @@ import org.kaloscope.tv.core.designsystem.danmakuBlockTypeLabel
 import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
 import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
 import org.kaloscope.tv.core.designsystem.formatSubtitleOffset
+import org.kaloscope.tv.core.designsystem.readerBackgroundColor
 import org.kaloscope.tv.core.designsystem.subtitleDisplayModeLabel
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuBlockPolicy
@@ -201,6 +203,13 @@ internal fun ReadingSettings(
             options = TextReaderTheme.entries,
             selected = { it == settings.textReader.theme },
             label = { textReaderThemeLabel(it) },
+            swatchColor = TextReaderTheme::readerBackgroundColor,
+            optionTestTag = {
+                "reader-theme-option-${it.name.lowercase()}"
+            },
+            swatchTestTag = {
+                "reader-theme-swatch-${it.name.lowercase()}"
+            },
             interactionsEnabled = interactionsEnabled,
             onOpenChoice = onOpenChoice,
             onSelect = { onTextChange(settings.textReader.copy(theme = it)) },
@@ -334,6 +343,9 @@ private fun <T> ReaderChoiceRow(
     options: List<T>,
     selected: (T) -> Boolean,
     label: @Composable (T) -> String,
+    swatchColor: ((T) -> Color)? = null,
+    optionTestTag: ((T) -> String)? = null,
+    swatchTestTag: ((T) -> String)? = null,
     interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onSelect: (T) -> Unit,
@@ -351,6 +363,9 @@ private fun <T> ReaderChoiceRow(
                     KaloscopeChoiceDialogOption(
                         label = label(option),
                         selected = { selected(option) },
+                        swatchColor = swatchColor?.invoke(option),
+                        testTag = optionTestTag?.invoke(option),
+                        swatchTestTag = swatchTestTag?.invoke(option),
                         onSelect = { onSelect(option) },
                     )
                 },

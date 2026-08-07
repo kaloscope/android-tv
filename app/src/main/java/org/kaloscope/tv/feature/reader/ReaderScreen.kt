@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +54,7 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.appErrorText
+import org.kaloscope.tv.core.designsystem.readerBackgroundColor
 import org.kaloscope.tv.core.model.ImagePageDirection
 import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
@@ -757,6 +760,9 @@ private fun TextReaderSettingsDrawer(
             values = TextReaderTheme.entries,
             selected = settings.theme,
             onSelect = { onSettings(settings.copy(theme = it)) },
+            valueSwatchColor = settings.theme.readerBackgroundColor(),
+            testTag = "reader-text-theme-setting",
+            swatchTestTag = "reader-current-theme-swatch",
         )
         ReaderEnumSettingRow(
             title = stringResource(R.string.reader_text_font),
@@ -925,6 +931,9 @@ private fun <T> ReaderEnumSettingRow(
     selected: T,
     onSelect: (T) -> Unit,
     requestInitialFocus: Boolean = false,
+    valueSwatchColor: Color? = null,
+    testTag: String? = null,
+    swatchTestTag: String? = null,
 ) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(requestInitialFocus) {
@@ -944,6 +953,9 @@ private fun <T> ReaderEnumSettingRow(
         focusRequester = focus.takeIf { requestInitialFocus },
         onDecrease = { move(-1) },
         onIncrease = { move(1) },
+        valueSwatchColor = valueSwatchColor,
+        testTag = testTag,
+        swatchTestTag = swatchTestTag,
     )
 }
 
@@ -964,6 +976,9 @@ private fun ReaderSettingButton(
     focusRequester: FocusRequester?,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
+    valueSwatchColor: Color? = null,
+    testTag: String? = null,
+    swatchTestTag: String? = null,
 ) {
     KaloscopeButton(
         onClick = onIncrease,
@@ -971,6 +986,7 @@ private fun ReaderSettingButton(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(testTag?.let(Modifier::testTag) ?: Modifier)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
@@ -988,8 +1004,20 @@ private fun ReaderSettingButton(
                 }
             },
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(text = title, modifier = Modifier.weight(1f), maxLines = 1)
+            valueSwatchColor?.let { color ->
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .background(color, CircleShape)
+                        .then(swatchTestTag?.let(Modifier::testTag) ?: Modifier),
+                )
+                Spacer(Modifier.width(10.dp))
+            }
             Text(text = "‹  $value  ›", maxLines = 1)
         }
     }
