@@ -245,7 +245,6 @@
     <string name="reader_switching_chapter">正在切换章节…</string>
     <string name="reader_switch_chapter_failed">章节切换失败，请重试</string>
     <string name="reader_load_more_failed">后续图片加载失败</string>
-    <string name="reader_loading_more">正在加载后续图片…</string>
     <string name="reader_image_progress">第 %1$d / %2$d 页</string>
     <string name="reader_image_retry">重试图片</string>
     <string name="reader_image_failed">图片加载失败</string>

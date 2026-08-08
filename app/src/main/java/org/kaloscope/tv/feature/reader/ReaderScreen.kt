@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -45,14 +46,19 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeControlTokens
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.designsystem.readerBackgroundColor
 import org.kaloscope.tv.core.model.ImagePageDirection
@@ -134,8 +140,7 @@ private fun ActiveReader(
     var lastRequestedChapterIndex by remember(state.requestId) {
         mutableStateOf<Int?>(null)
     }
-    var titleInteractionRevision by remember(state.requestId) { mutableIntStateOf(0) }
-    var transientTitleVisible by remember(state.requestId) { mutableStateOf(true) }
+    var initialTitleVisible by remember(state.requestId) { mutableStateOf(true) }
     var imagePosition by remember(state.requestId, state.contentRevision) {
         mutableIntStateOf(
             if ((state as? ReaderUiState.Image)?.content?.images?.isNotEmpty() == true) 1 else 0,
@@ -187,6 +192,20 @@ private fun ActiveReader(
             ?.takeIf(::controlTargetIsEnabled)
             ?: defaultControlTarget(content.chapters)
 
+    fun hideControls() {
+        controlsVisible = false
+        pendingControlFocus = null
+        contentFocus.requestFocus()
+    }
+
+    fun toggleControls() {
+        if (controlsVisible) {
+            hideControls()
+        } else {
+            requestControl(entryControlTarget())
+        }
+    }
+
     fun openBoundary(boundary: ReaderBoundary) {
         requestControl(
             ReaderRemoteKeyPolicy.boundaryTarget(
@@ -210,18 +229,10 @@ private fun ActiveReader(
         withFrameNanos { }
         contentFocus.requestFocus()
     }
-    LaunchedEffect(
-        state.requestId,
-        state.contentRevision,
-        titleInteractionRevision,
-        controlsVisible,
-        drawer,
-    ) {
-        transientTitleVisible = true
-        if (!controlsVisible && drawer == null) {
-            delay(TITLE_HIDE_DELAY_MILLIS)
-            transientTitleVisible = false
-        }
+    LaunchedEffect(state.requestId) {
+        initialTitleVisible = true
+        delay(TITLE_HIDE_DELAY_MILLIS)
+        initialTitleVisible = false
     }
     LaunchedEffect(controlsVisible, pendingControlFocus, drawer) {
         val target = pendingControlFocus
@@ -262,8 +273,7 @@ private fun ActiveReader(
             }
 
             controlsVisible -> {
-                controlsVisible = false
-                contentFocus.requestFocus()
+                hideControls()
             }
 
             else -> onBack()
@@ -283,19 +293,15 @@ private fun ActiveReader(
                 settings = state.settings,
                 contentRevision = state.contentRevision,
                 imagesExhausted = state.imagesExhausted,
+                isLoadingMore = state.isLoadingMore,
                 controlsVisible = controlsVisible,
                 focusRequester = contentFocus,
-                onToggleControls = {
-                    controlsVisible = !controlsVisible
-                    pendingControlFocus = null
-                    contentFocus.requestFocus()
-                },
+                onToggleControls = ::toggleControls,
                 onEnterControls = {
                     requestControl(entryControlTarget())
                 },
                 onBoundary = ::openBoundary,
                 onLoadMore = onLoadMoreImages,
-                onNavigate = { titleInteractionRevision += 1 },
                 onPositionChanged = {
                     imagePosition = it.coerceIn(0, state.content.images.size)
                 },
@@ -309,21 +315,16 @@ private fun ActiveReader(
                 contentRevision = state.contentRevision,
                 controlsVisible = controlsVisible,
                 focusRequester = contentFocus,
-                onToggleControls = {
-                    controlsVisible = !controlsVisible
-                    pendingControlFocus = null
-                    contentFocus.requestFocus()
-                },
+                onToggleControls = ::toggleControls,
                 onEnterControls = {
                     requestControl(entryControlTarget())
                 },
                 onBoundary = ::openBoundary,
-                onNavigate = { titleInteractionRevision += 1 },
             )
         }
 
         AnimatedVisibility(
-            visible = transientTitleVisible || controlsVisible || drawer != null,
+            visible = initialTitleVisible || controlsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter),
@@ -442,17 +443,6 @@ private fun ActiveReader(
                     onDismiss = onDismissPageError,
                     onRetry = onLoadMoreImages,
                     modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
-            if (state.isLoadingMore) {
-                Text(
-                    text = stringResource(R.string.reader_loading_more),
-                    color = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(28.dp)
-                        .background(Color.Black.copy(alpha = 0.72f))
-                        .padding(12.dp),
                 )
             }
         }
@@ -710,6 +700,8 @@ private fun ImageReaderSettingsDrawer(
             selected = chapterOrder,
             onSelect = onChapterOrder,
             requestInitialFocus = true,
+            testTag = "reader-chapter-order-setting",
+            adjustmentTestTagPrefix = "reader-chapter-order",
         )
         ReaderEnumSettingRow(
             title = stringResource(R.string.reader_image_read_mode),
@@ -717,6 +709,8 @@ private fun ImageReaderSettingsDrawer(
             values = ImageReadMode.entries,
             selected = settings.readMode,
             onSelect = { onSettings(settings.copy(readMode = it)) },
+            testTag = "reader-image-read-mode-setting",
+            adjustmentTestTagPrefix = "reader-image-read-mode",
         )
         ReaderEnumSettingRow(
             title = stringResource(R.string.reader_image_zoom),
@@ -724,6 +718,8 @@ private fun ImageReaderSettingsDrawer(
             values = ImageZoomMode.entries,
             selected = settings.zoomMode,
             onSelect = { onSettings(settings.copy(zoomMode = it)) },
+            testTag = "reader-image-zoom-setting",
+            adjustmentTestTagPrefix = "reader-image-zoom",
         )
         ReaderEnumSettingRow(
             title = stringResource(R.string.reader_page_direction),
@@ -731,6 +727,8 @@ private fun ImageReaderSettingsDrawer(
             values = ImagePageDirection.entries,
             selected = settings.pageDirection,
             onSelect = { onSettings(settings.copy(pageDirection = it)) },
+            testTag = "reader-page-direction-setting",
+            adjustmentTestTagPrefix = "reader-page-direction",
         )
     }
 }
@@ -753,6 +751,8 @@ private fun TextReaderSettingsDrawer(
             selected = chapterOrder,
             onSelect = onChapterOrder,
             requestInitialFocus = true,
+            testTag = "reader-chapter-order-setting",
+            adjustmentTestTagPrefix = "reader-chapter-order",
         )
         ReaderEnumSettingRow(
             title = stringResource(R.string.reader_text_theme),
@@ -762,6 +762,7 @@ private fun TextReaderSettingsDrawer(
             onSelect = { onSettings(settings.copy(theme = it)) },
             valueSwatchColor = settings.theme.readerBackgroundColor(),
             testTag = "reader-text-theme-setting",
+            adjustmentTestTagPrefix = "reader-text-theme",
             swatchTestTag = "reader-current-theme-swatch",
         )
         ReaderEnumSettingRow(
@@ -770,10 +771,16 @@ private fun TextReaderSettingsDrawer(
             values = TextReaderFont.entries,
             selected = settings.font,
             onSelect = { onSettings(settings.copy(font = it)) },
+            testTag = "reader-text-font-setting",
+            adjustmentTestTagPrefix = "reader-text-font",
         )
         ReaderNumericSettingRow(
             title = stringResource(R.string.reader_font_size),
             value = stringResource(R.string.reader_sp_value, settings.fontSizeSp),
+            canDecrease = settings.fontSizeSp > ReaderSettingsPolicy.MIN_FONT_SIZE_SP,
+            canIncrease = settings.fontSizeSp < ReaderSettingsPolicy.MAX_FONT_SIZE_SP,
+            testTag = "reader-font-size-setting",
+            adjustmentTestTagPrefix = "reader-font-size",
             onDecrease = {
                 onSettings(
                     settings.copy(
@@ -792,6 +799,10 @@ private fun TextReaderSettingsDrawer(
         ReaderNumericSettingRow(
             title = stringResource(R.string.reader_line_height),
             value = stringResource(R.string.reader_multiplier_value, settings.lineHeight),
+            canDecrease = settings.lineHeight > ReaderSettingsPolicy.MIN_LINE_HEIGHT,
+            canIncrease = settings.lineHeight < ReaderSettingsPolicy.MAX_LINE_HEIGHT,
+            testTag = "reader-line-height-setting",
+            adjustmentTestTagPrefix = "reader-line-height",
             onDecrease = {
                 onSettings(
                     settings.copy(
@@ -810,6 +821,12 @@ private fun TextReaderSettingsDrawer(
         ReaderNumericSettingRow(
             title = stringResource(R.string.reader_paragraph_spacing),
             value = stringResource(R.string.reader_em_value, settings.paragraphSpacingEm),
+            canDecrease = settings.paragraphSpacingEm >
+                ReaderSettingsPolicy.MIN_PARAGRAPH_SPACING_EM,
+            canIncrease = settings.paragraphSpacingEm <
+                ReaderSettingsPolicy.MAX_PARAGRAPH_SPACING_EM,
+            testTag = "reader-paragraph-spacing-setting",
+            adjustmentTestTagPrefix = "reader-paragraph-spacing",
             onDecrease = {
                 onSettings(
                     settings.copy(
@@ -830,6 +847,12 @@ private fun TextReaderSettingsDrawer(
         ReaderNumericSettingRow(
             title = stringResource(R.string.reader_horizontal_padding),
             value = stringResource(R.string.reader_dp_value, settings.horizontalPaddingDp),
+            canDecrease = settings.horizontalPaddingDp >
+                ReaderSettingsPolicy.MIN_HORIZONTAL_PADDING_DP,
+            canIncrease = settings.horizontalPaddingDp <
+                ReaderSettingsPolicy.MAX_HORIZONTAL_PADDING_DP,
+            testTag = "reader-horizontal-padding-setting",
+            adjustmentTestTagPrefix = "reader-horizontal-padding",
             onDecrease = {
                 onSettings(
                     settings.copy(
@@ -880,11 +903,30 @@ private fun ReaderSettingsDrawerFrame(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.reader_session_settings_description),
-                color = mutedColor,
-                fontSize = 12.sp,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .border(1.dp, mutedColor, CircleShape)
+                        .testTag("reader-session-settings-hint-icon"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "!",
+                        color = mutedColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clearAndSetSemantics { },
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.reader_session_settings_description),
+                    color = mutedColor,
+                    fontSize = 12.sp,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }
@@ -933,6 +975,7 @@ private fun <T> ReaderEnumSettingRow(
     requestInitialFocus: Boolean = false,
     valueSwatchColor: Color? = null,
     testTag: String? = null,
+    adjustmentTestTagPrefix: String? = null,
     swatchTestTag: String? = null,
 ) {
     val focus = remember { FocusRequester() }
@@ -942,19 +985,23 @@ private fun <T> ReaderEnumSettingRow(
             focus.requestFocus()
         }
     }
+    val currentIndex = values.indexOf(selected).coerceAtLeast(0)
+    val canDecrease = currentIndex > 0
+    val canIncrease = currentIndex < values.lastIndex
     fun move(offset: Int) {
-        val current = values.indexOf(selected).coerceAtLeast(0)
-        val next = (current + offset).coerceIn(values.indices)
-        onSelect(values[next])
+        values.getOrNull(currentIndex + offset)?.let(onSelect)
     }
     ReaderSettingButton(
         title = title,
         value = value,
         focusRequester = focus.takeIf { requestInitialFocus },
+        canDecrease = canDecrease,
+        canIncrease = canIncrease,
         onDecrease = { move(-1) },
         onIncrease = { move(1) },
         valueSwatchColor = valueSwatchColor,
         testTag = testTag,
+        adjustmentTestTagPrefix = adjustmentTestTagPrefix,
         swatchTestTag = swatchTestTag,
     )
 }
@@ -963,10 +1010,24 @@ private fun <T> ReaderEnumSettingRow(
 private fun ReaderNumericSettingRow(
     title: String,
     value: String,
+    canDecrease: Boolean,
+    canIncrease: Boolean,
+    testTag: String,
+    adjustmentTestTagPrefix: String,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
 ) {
-    ReaderSettingButton(title, value, null, onDecrease, onIncrease)
+    ReaderSettingButton(
+        title = title,
+        value = value,
+        focusRequester = null,
+        canDecrease = canDecrease,
+        canIncrease = canIncrease,
+        onDecrease = onDecrease,
+        onIncrease = onIncrease,
+        testTag = testTag,
+        adjustmentTestTagPrefix = adjustmentTestTagPrefix,
+    )
 }
 
 @Composable
@@ -974,14 +1035,19 @@ private fun ReaderSettingButton(
     title: String,
     value: String,
     focusRequester: FocusRequester?,
+    canDecrease: Boolean,
+    canIncrease: Boolean,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
     valueSwatchColor: Color? = null,
     testTag: String? = null,
+    adjustmentTestTagPrefix: String? = null,
     swatchTestTag: String? = null,
 ) {
     KaloscopeButton(
-        onClick = onIncrease,
+        onClick = {
+            if (canIncrease) onIncrease()
+        },
         size = KaloscopeControlSize.Row,
         modifier = Modifier
             .fillMaxWidth()
@@ -991,12 +1057,12 @@ private fun ReaderSettingButton(
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
                     Key.DirectionLeft -> {
-                        onDecrease()
+                        if (canDecrease) onDecrease()
                         true
                     }
 
                     Key.DirectionRight -> {
-                        onIncrease()
+                        if (canIncrease) onIncrease()
                         true
                     }
 
@@ -1018,9 +1084,59 @@ private fun ReaderSettingButton(
                 )
                 Spacer(Modifier.width(10.dp))
             }
-            Text(text = "‹  $value  ›", maxLines = 1)
+            ReaderAdjustmentValue(
+                value = value,
+                canDecrease = canDecrease,
+                canIncrease = canIncrease,
+                testTagPrefix = adjustmentTestTagPrefix,
+            )
         }
     }
+}
+
+@Composable
+private fun ReaderAdjustmentValue(
+    value: String,
+    canDecrease: Boolean,
+    canIncrease: Boolean,
+    testTagPrefix: String?,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ReaderAdjustmentArrow(
+            text = "‹",
+            enabled = canDecrease,
+            testTag = testTagPrefix?.let { "$it-decrease" },
+        )
+        Text(text = value, maxLines = 1)
+        ReaderAdjustmentArrow(
+            text = "›",
+            enabled = canIncrease,
+            testTag = testTagPrefix?.let { "$it-increase" },
+        )
+    }
+}
+
+@Composable
+private fun ReaderAdjustmentArrow(
+    text: String,
+    enabled: Boolean,
+    testTag: String?,
+) {
+    val contentColor = LocalContentColor.current
+    Text(
+        text = text,
+        color = if (enabled) {
+            contentColor
+        } else {
+            contentColor.copy(alpha = KaloscopeControlTokens.DisabledAlpha)
+        },
+        maxLines = 1,
+        modifier = Modifier
+            .then(testTag?.let(Modifier::testTag) ?: Modifier)
+            .semantics(mergeDescendants = true) {
+                if (!enabled) disabled()
+            },
+    )
 }
 
 @Composable

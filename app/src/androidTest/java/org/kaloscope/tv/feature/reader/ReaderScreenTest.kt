@@ -10,26 +10,32 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.core.designsystem.KaloscopeControlTokens
 import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ReaderChapter
 import org.kaloscope.tv.core.model.ReaderChapterOrder
 import org.kaloscope.tv.core.model.ReaderImageContent
+import org.kaloscope.tv.core.model.ReaderSettingsPolicy
 import org.kaloscope.tv.core.model.ReaderTextContent
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
@@ -63,16 +69,26 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun centerKeepsContentFocusAndDownEntersVisibleControls() {
+    fun centerOpensControlsWithDefaultActionFocused() {
         setReader(textState(text = "正文"))
         val content = composeRule.onNodeWithTag("text-reader-content")
 
         content.performKeyInput { pressKey(Key.DirectionCenter) }
 
         composeRule.onNodeWithTag("reader-bottom-controls").assertExists()
-        content.assertIsFocused()
+        composeRule.onNodeWithTag("reader-chapter-drawer").assertDoesNotExist()
+        control("章节").assertIsFocused()
+    }
 
-        content.performKeyInput { pressKey(Key.DirectionDown) }
+    @Test
+    fun imageCenterOpensControlsWithDefaultActionFocused() {
+        setReader(imageState())
+        val content = composeRule.onNodeWithTag("image-reader-scroll")
+
+        content.performKeyInput { pressKey(Key.DirectionCenter) }
+
+        composeRule.onNodeWithTag("reader-bottom-controls").assertExists()
+        composeRule.onNodeWithTag("reader-chapter-drawer").assertDoesNotExist()
         control("章节").assertIsFocused()
     }
 
@@ -82,14 +98,12 @@ class ReaderScreenTest {
         val content = composeRule.onNodeWithTag("text-reader-content")
         content.performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.onNodeWithTag("reader-bottom-controls").assertExists()
-        content.performKeyInput { pressKey(Key.DirectionDown) }
         control("章节").performKeyInput { pressKey(Key.DirectionRight) }
         control("阅读设置").assertIsFocused()
 
         pressBack()
         content.assertIsFocused().performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.onNodeWithTag("reader-bottom-controls").assertExists()
-        content.performKeyInput { pressKey(Key.DirectionDown) }
 
         control("阅读设置").assertIsFocused()
     }
@@ -104,7 +118,6 @@ class ReaderScreenTest {
         val content = composeRule.onNodeWithTag("text-reader-content")
         content.performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.onNodeWithTag("reader-bottom-controls").assertExists()
-        content.performKeyInput { pressKey(Key.DirectionDown) }
         control("章节").performKeyInput { pressKey(Key.Enter) }
         composeRule.onNodeWithTag("reader-chapter-drawer").assertExists()
 
@@ -124,7 +137,7 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun titleAutoHidesAndVisibleControlsRevealItAgain() {
+    fun titleInitiallyAutoHidesAndThenFollowsControlsVisibility() {
         composeRule.mainClock.autoAdvance = false
         setReader(textState(text = "正文"))
         composeRule.mainClock.advanceTimeByFrame()
@@ -137,6 +150,110 @@ class ReaderScreenTest {
             .performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag("reader-title-overlay").assertExists()
+
+        pressBack()
+        composeRule.mainClock.advanceTimeBy(500)
+
+        composeRule.onNodeWithTag("reader-bottom-controls").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+    }
+
+    @Test
+    fun textScrollingDoesNotRevealHiddenTitle() {
+        composeRule.mainClock.autoAdvance = false
+        val text = List(80) { index -> "第 $index 段测试正文，用于确认遥控器滚动不会显示标题栏。" }
+            .joinToString("\n\n")
+        setReader(textState(text = text))
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.advanceTimeBy(3_400)
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.mainClock.advanceTimeByFrame()
+
+        composeRule.onNodeWithTag("reader-bottom-controls").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+    }
+
+    @Test
+    fun imageScrollingDoesNotRevealHiddenTitle() {
+        composeRule.mainClock.autoAdvance = false
+        setReader(
+            imageState(
+                images = listOf(
+                    "https://cdn.example.test/page-1.jpg",
+                    "https://cdn.example.test/page-2.jpg",
+                ),
+            ),
+        )
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.advanceTimeBy(3_400)
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("image-reader-scroll")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.mainClock.advanceTimeByFrame()
+
+        composeRule.onNodeWithTag("reader-bottom-controls").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+    }
+
+    @Test
+    fun imagePagingDoesNotRevealHiddenTitle() {
+        composeRule.mainClock.autoAdvance = false
+        setReader(
+            imageState(
+                readMode = ImageReadMode.Paged,
+                images = listOf(
+                    "https://cdn.example.test/page-1.jpg",
+                    "https://cdn.example.test/page-2.jpg",
+                ),
+            ),
+        )
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.advanceTimeBy(3_400)
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("image-reader-paged")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.advanceTimeByFrame()
+
+        composeRule.onNodeWithTag("reader-bottom-controls").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+    }
+
+    @Test
+    fun contentRevisionDoesNotRevealHiddenTitle() {
+        composeRule.mainClock.autoAdvance = false
+        var state by mutableStateOf(textState(text = "正文"))
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = {},
+                    onLoadMoreImages = {},
+                    onImageSettings = {},
+                    onTextSettings = {},
+                    onChapterOrder = {},
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                )
+            }
+        }
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.advanceTimeBy(3_400)
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+
+        composeRule.runOnIdle {
+            state = state.copy(contentRevision = state.contentRevision + 1)
+        }
+        composeRule.mainClock.advanceTimeBy(500)
+
+        composeRule.onNodeWithTag("reader-bottom-controls").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
     }
 
     @Test
@@ -145,7 +262,6 @@ class ReaderScreenTest {
         val content = composeRule.onNodeWithTag("text-reader-content")
         content.performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.onNodeWithTag("reader-bottom-controls").assertExists()
-        content.performKeyInput { pressKey(Key.DirectionDown) }
         control("章节").performKeyInput { pressKey(Key.Enter) }
 
         val screenCenter = composeRule.onNodeWithTag("reader-screen")
@@ -187,7 +303,6 @@ class ReaderScreenTest {
 
         val content = composeRule.onNodeWithTag("text-reader-content")
         content.performKeyInput { pressKey(Key.DirectionCenter) }
-        content.performKeyInput { pressKey(Key.DirectionDown) }
         control("章节").performKeyInput { pressKey(Key.DirectionRight) }
         control("阅读设置").performKeyInput { pressKey(Key.Enter) }
 
@@ -208,6 +323,205 @@ class ReaderScreenTest {
         composeRule.waitForIdle()
 
         assertEquals(Color(0xFFFDF6E3).toArgb(), currentSwatchColor())
+    }
+
+    @Test
+    fun imageSettingsEnumArrowsDisableAtBoundariesWithoutWrapping() {
+        var state by mutableStateOf(imageState())
+        var updates = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = {},
+                    onLoadMoreImages = {},
+                    onImageSettings = {},
+                    onTextSettings = {},
+                    onChapterOrder = { chapterOrder ->
+                        updates += 1
+                        state = state.copy(chapterOrder = chapterOrder)
+                    },
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("image-reader-scroll")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+
+        val row = composeRule.onNodeWithTag("reader-chapter-order-setting")
+            .assertIsFocused()
+        composeRule.onNodeWithTag(
+            testTag = "reader-chapter-order-decrease",
+            useUnmergedTree = true,
+        ).assertIsNotEnabled()
+        composeRule.onNodeWithTag(
+            testTag = "reader-chapter-order-increase",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        assertEquals(
+            textLayoutForTag("reader-chapter-order-increase")
+                .layoutInput.style.color.copy(alpha = KaloscopeControlTokens.DisabledAlpha),
+            textLayoutForTag("reader-chapter-order-decrease").layoutInput.style.color,
+        )
+
+        row.performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.runOnIdle { assertEquals(0, updates) }
+
+        row.performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(
+            testTag = "reader-chapter-order-decrease",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        composeRule.onNodeWithTag(
+            testTag = "reader-chapter-order-increase",
+            useUnmergedTree = true,
+        ).assertIsNotEnabled()
+        composeRule.runOnIdle { assertEquals(1, updates) }
+
+        row.performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.runOnIdle { assertEquals(1, updates) }
+        composeRule.onNodeWithTag(
+            testTag = "reader-session-settings-hint-icon",
+            useUnmergedTree = true,
+        ).assertExists()
+    }
+
+    @Test
+    fun textNumericArrowsDisableAtPolicyBoundsWithoutInvalidUpdates() {
+        var state by mutableStateOf(
+            textState(
+                text = "正文",
+                settings = TextReaderSettings(
+                    fontSizeSp = ReaderSettingsPolicy.MIN_FONT_SIZE_SP,
+                ),
+            ),
+        )
+        var updates = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = {},
+                    onLoadMoreImages = {},
+                    onImageSettings = {},
+                    onTextSettings = { settings ->
+                        updates += 1
+                        state = state.copy(settings = settings)
+                    },
+                    onChapterOrder = {},
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+
+        val row = composeRule.onNodeWithTag("reader-font-size-setting")
+        composeRule.onNodeWithTag(
+            testTag = "reader-font-size-decrease",
+            useUnmergedTree = true,
+        ).assertIsNotEnabled()
+        composeRule.onNodeWithTag(
+            testTag = "reader-font-size-increase",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        row.performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.runOnIdle { assertEquals(0, updates) }
+
+        composeRule.runOnIdle {
+            state = state.copy(
+                settings = state.settings.copy(
+                    fontSizeSp = ReaderSettingsPolicy.MAX_FONT_SIZE_SP,
+                ),
+            )
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(
+            testTag = "reader-font-size-decrease",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        composeRule.onNodeWithTag(
+            testTag = "reader-font-size-increase",
+            useUnmergedTree = true,
+        ).assertIsNotEnabled()
+        row.performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.runOnIdle { assertEquals(0, updates) }
+        composeRule.onNodeWithTag(
+            testTag = "reader-session-settings-hint-icon",
+            useUnmergedTree = true,
+        ).assertExists()
+    }
+
+    @Test
+    fun pagedLoadingUsesCenteredIndicatorWithoutLegacyText() {
+        setReader(
+            imageState(
+                readMode = ImageReadMode.Paged,
+                images = listOf("https://cdn.example.test/page-1.jpg"),
+                isLoadingMore = true,
+            ),
+        )
+
+        val screen = composeRule.onNodeWithTag("reader-screen")
+            .fetchSemanticsNode().boundsInRoot
+        val indicator = composeRule.onNodeWithTag(
+            testTag = "reader-image-loading-more-paged-indicator",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+
+        assertEquals(screen.center.x, indicator.center.x, 1f)
+        assertEquals(screen.center.y, indicator.center.y, 1f)
+        composeRule.onNodeWithText("正在加载后续图片…").assertDoesNotExist()
+    }
+
+    @Test
+    fun scrollingLoadingAppearsInlineAfterTheLastImage() {
+        setReader(
+            imageState(
+                images = listOf("https://cdn.example.test/page-1.jpg"),
+                isLoadingMore = true,
+            ),
+        )
+
+        val screen = composeRule.onNodeWithTag("reader-screen")
+            .fetchSemanticsNode().boundsInRoot
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runCatching {
+                val loadingSlot = composeRule.onNodeWithTag(
+                    testTag = "reader-image-loading-more-scroll",
+                    useUnmergedTree = true,
+                ).fetchSemanticsNode().boundsInRoot
+                loadingSlot.center.y > screen.center.y && loadingSlot.bottom <= screen.bottom + 1f
+            }.getOrDefault(false)
+        }
+        composeRule.onNodeWithTag(
+            testTag = "reader-image-loading-more-scroll-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithText("正在加载后续图片…").assertDoesNotExist()
+    }
+
+    private fun textLayoutForTag(tag: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithTag(tag, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(results)
+            }
+        return results.single()
     }
 
     private fun setReader(
@@ -250,7 +564,10 @@ private val chapters = listOf(
     ReaderChapter("chapter-3", "第三章", "第一卷"),
 )
 
-private fun textState(text: String) = ReaderUiState.Text(
+private fun textState(
+    text: String,
+    settings: TextReaderSettings = TextReaderSettings(),
+) = ReaderUiState.Text(
     requestId = "reader-request",
     serverId = "server-id",
     content = ReaderTextContent.network(
@@ -262,11 +579,15 @@ private fun textState(text: String) = ReaderUiState.Text(
         chapters = chapters,
         selectedChapterIndex = 1,
     ),
-    settings = TextReaderSettings(),
+    settings = settings,
     chapterOrder = ReaderChapterOrder.Ascending,
 )
 
-private fun imageState() = ReaderUiState.Image(
+private fun imageState(
+    readMode: ImageReadMode = ImageReadMode.Scroll,
+    images: List<String> = emptyList(),
+    isLoadingMore: Boolean = false,
+) = ReaderUiState.Image(
     requestId = "reader-request",
     serverId = "server-id",
     content = ReaderImageContent.network(
@@ -274,13 +595,15 @@ private fun imageState() = ReaderUiState.Image(
         resourceId = "image-resource",
         chapterId = "chapter-2",
         title = "测试图片",
-        images = emptyList(),
-        imageCount = 0,
+        images = images,
+        imageCount = images.size,
         chapters = chapters,
         selectedChapterIndex = 1,
     ),
-    settings = ImageReaderSettings(readMode = ImageReadMode.Scroll),
+    settings = ImageReaderSettings(readMode = readMode),
     chapterOrder = ReaderChapterOrder.Ascending,
+    isLoadingMore = isLoadingMore,
+    imagesExhausted = !isLoadingMore,
 )
 
 private fun session() = Session(

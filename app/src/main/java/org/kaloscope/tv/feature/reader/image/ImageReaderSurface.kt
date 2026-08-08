@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -25,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -54,6 +54,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ImageZoomMode
@@ -73,13 +74,13 @@ internal fun ImageReaderSurface(
     settings: ImageReaderSettings,
     contentRevision: Long,
     imagesExhausted: Boolean,
+    isLoadingMore: Boolean,
     controlsVisible: Boolean,
     focusRequester: FocusRequester,
     onToggleControls: () -> Unit,
     onEnterControls: () -> Unit,
     onBoundary: (ReaderBoundary) -> Unit,
     onLoadMore: () -> Unit,
-    onNavigate: () -> Unit,
     onPositionChanged: (Int) -> Unit,
     manualRetryRevision: Int,
     onFailedImagesChanged: (Boolean) -> Unit,
@@ -107,6 +108,7 @@ internal fun ImageReaderSurface(
                 settings = settings,
                 contentRevision = contentRevision,
                 imagesExhausted = imagesExhausted,
+                isLoadingMore = isLoadingMore,
                 controlsVisible = controlsVisible,
                 viewportHeight = maxHeight,
                 focusRequester = focusRequester,
@@ -114,7 +116,6 @@ internal fun ImageReaderSurface(
                 onEnterControls = onEnterControls,
                 onBoundary = onBoundary,
                 onLoadMore = onLoadMore,
-                onNavigate = onNavigate,
                 onPositionChanged = onPositionChanged,
                 manualRetryRevision = manualRetryRevision,
                 onFinalFailureChanged = ::updateImageFailure,
@@ -126,13 +127,13 @@ internal fun ImageReaderSurface(
                 settings = settings,
                 contentRevision = contentRevision,
                 imagesExhausted = imagesExhausted,
+                isLoadingMore = isLoadingMore,
                 controlsVisible = controlsVisible,
                 focusRequester = focusRequester,
                 onToggleControls = onToggleControls,
                 onEnterControls = onEnterControls,
                 onBoundary = onBoundary,
                 onLoadMore = onLoadMore,
-                onNavigate = onNavigate,
                 onPositionChanged = onPositionChanged,
                 manualRetryRevision = manualRetryRevision,
                 onFinalFailureChanged = ::updateImageFailure,
@@ -148,6 +149,7 @@ private fun ScrollingImages(
     settings: ImageReaderSettings,
     contentRevision: Long,
     imagesExhausted: Boolean,
+    isLoadingMore: Boolean,
     controlsVisible: Boolean,
     viewportHeight: Dp,
     focusRequester: FocusRequester,
@@ -155,7 +157,6 @@ private fun ScrollingImages(
     onEnterControls: () -> Unit,
     onBoundary: (ReaderBoundary) -> Unit,
     onLoadMore: () -> Unit,
-    onNavigate: () -> Unit,
     onPositionChanged: (Int) -> Unit,
     manualRetryRevision: Int,
     onFinalFailureChanged: (String, Boolean) -> Unit,
@@ -169,7 +170,7 @@ private fun ScrollingImages(
         horizontalBias = 0f
     }
     LaunchedEffect(settings.zoomMode) { horizontalBias = 0f }
-    if (content.images.isEmpty()) {
+    if (content.images.isEmpty() && !isLoadingMore) {
         LaunchedEffect(contentRevision) { onPositionChanged(0) }
         EmptyImageContent(
             imagesExhausted = imagesExhausted,
@@ -182,10 +183,18 @@ private fun ScrollingImages(
         )
         return
     }
-    LaunchedEffect(contentRevision, listState) {
+    LaunchedEffect(contentRevision, listState, content.images.isEmpty()) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
-            .collect { onPositionChanged(it + 1) }
+            .collect { index ->
+                onPositionChanged(if (content.images.isEmpty()) 0 else index + 1)
+            }
+    }
+    LaunchedEffect(isLoadingMore, content.images.size) {
+        if (isLoadingMore) {
+            withFrameNanos { }
+            listState.animateScrollToItem(content.images.size)
+        }
     }
     LazyColumn(
         state = listState,
@@ -195,11 +204,13 @@ private fun ScrollingImages(
             .focusable()
             .testTag("image-reader-scroll")
             .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-                    onToggleControls()
+                    if (event.type == KeyEventType.KeyUp) {
+                        onToggleControls()
+                    }
                     return@onPreviewKeyEvent true
                 }
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 if (controlsVisible && event.key == Key.DirectionDown) {
                     onEnterControls()
                     return@onPreviewKeyEvent true
@@ -208,13 +219,11 @@ private fun ScrollingImages(
                     when (event.key) {
                         Key.DirectionLeft -> {
                             horizontalBias = (horizontalBias - IMAGE_PAN_STEP).coerceAtLeast(-1f)
-                            onNavigate()
                             return@onPreviewKeyEvent true
                         }
 
                         Key.DirectionRight -> {
                             horizontalBias = (horizontalBias + IMAGE_PAN_STEP).coerceAtMost(1f)
-                            onNavigate()
                             return@onPreviewKeyEvent true
                         }
                     }
@@ -226,14 +235,12 @@ private fun ScrollingImages(
                     ReaderNavigationStep.Backward -> if (!listState.canScrollBackward) {
                         onBoundary(ReaderBoundary.Start)
                     } else {
-                        onNavigate()
                         scope.launch { listState.animateScrollBy(-viewportPixels * 0.85f) }
                     }
 
                     ReaderNavigationStep.Forward -> if (!listState.canScrollForward) {
                         if (imagesExhausted) onBoundary(ReaderBoundary.End) else onLoadMore()
                     } else {
-                        onNavigate()
                         scope.launch { listState.animateScrollBy(viewportPixels * 0.85f) }
                     }
 
@@ -256,10 +263,21 @@ private fun ScrollingImages(
                 manualRetryRevision = manualRetryRevision,
                 onFinalFailureChanged = onFinalFailureChanged,
                 viewportHeight = viewportHeight,
+                loadingTestTag = "reader-image-$index-loading",
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("reader-image-$index"),
             )
+        }
+        if (isLoadingMore) {
+            item(key = LOADING_MORE_ITEM_KEY) {
+                KaloscopeLoadingLayout(
+                    testTag = "reader-image-loading-more-scroll",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(INLINE_LOADING_HEIGHT),
+                )
+            }
         }
     }
 }
@@ -271,13 +289,13 @@ private fun PagedImages(
     settings: ImageReaderSettings,
     contentRevision: Long,
     imagesExhausted: Boolean,
+    isLoadingMore: Boolean,
     controlsVisible: Boolean,
     focusRequester: FocusRequester,
     onToggleControls: () -> Unit,
     onEnterControls: () -> Unit,
     onBoundary: (ReaderBoundary) -> Unit,
     onLoadMore: () -> Unit,
-    onNavigate: () -> Unit,
     onPositionChanged: (Int) -> Unit,
     manualRetryRevision: Int,
     onFinalFailureChanged: (String, Boolean) -> Unit,
@@ -292,7 +310,6 @@ private fun PagedImages(
             index = (index + 1).coerceAtMost(content.images.lastIndex)
             advanceAfterLoad = false
             pageTransitioning = true
-            onNavigate()
             scope.launch {
                 delay(PAGE_TRANSITION_MILLIS)
                 pageTransitioning = false
@@ -310,23 +327,24 @@ private fun PagedImages(
             .focusable()
             .testTag("image-reader-paged")
             .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-                    onToggleControls()
+                    if (event.type == KeyEventType.KeyUp) {
+                        onToggleControls()
+                    }
                     return@onPreviewKeyEvent true
                 }
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 if (controlsVisible && event.key == Key.DirectionDown) {
                     onEnterControls()
                     return@onPreviewKeyEvent true
                 }
-                if (pageTransitioning) return@onPreviewKeyEvent true
+                if (pageTransitioning || isLoadingMore) return@onPreviewKeyEvent true
                 val direction = event.key.toReaderDirection()
                     ?: return@onPreviewKeyEvent false
                 when (ReaderRemoteKeyPolicy.pagedStep(direction, settings.pageDirection)) {
                     ReaderNavigationStep.Backward -> if (index > 0) {
                         index -= 1
                         pageTransitioning = true
-                        onNavigate()
                         scope.launch {
                             delay(PAGE_TRANSITION_MILLIS)
                             pageTransitioning = false
@@ -338,7 +356,6 @@ private fun PagedImages(
                     ReaderNavigationStep.Forward -> if (index < content.images.lastIndex) {
                         index += 1
                         pageTransitioning = true
-                        onNavigate()
                         scope.launch {
                             delay(PAGE_TRANSITION_MILLIS)
                             pageTransitioning = false
@@ -356,25 +373,35 @@ private fun PagedImages(
             },
         contentAlignment = Alignment.Center,
     ) {
-        val url = content.images.getOrNull(index)
-        if (url == null) {
-            Text(
-                text = stringResource(R.string.reader_empty_images),
-                color = Color.LightGray,
-                fontSize = 22.sp,
+        if (isLoadingMore) {
+            KaloscopeLoadingLayout(
+                testTag = "reader-image-loading-more-paged",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
             )
         } else {
-            ReaderRemoteImage(
-                session = session,
-                url = url,
-                contentDescription = content.title,
-                zoomMode = settings.zoomMode,
-                horizontalBias = 0f,
-                manualRetryRevision = manualRetryRevision,
-                onFinalFailureChanged = onFinalFailureChanged,
-                viewportHeight = Dp.Unspecified,
-                modifier = Modifier.fillMaxSize(),
-            )
+            val url = content.images.getOrNull(index)
+            if (url == null) {
+                Text(
+                    text = stringResource(R.string.reader_empty_images),
+                    color = Color.LightGray,
+                    fontSize = 22.sp,
+                )
+            } else {
+                ReaderRemoteImage(
+                    session = session,
+                    url = url,
+                    contentDescription = content.title,
+                    zoomMode = settings.zoomMode,
+                    horizontalBias = 0f,
+                    manualRetryRevision = manualRetryRevision,
+                    onFinalFailureChanged = onFinalFailureChanged,
+                    viewportHeight = Dp.Unspecified,
+                    loadingTestTag = "reader-image-current-loading",
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
@@ -396,9 +423,14 @@ private fun EmptyImageContent(
             .focusable()
             .testTag("image-reader-scroll")
             .onPreviewKeyEvent { event ->
+                if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
+                    if (event.type == KeyEventType.KeyUp) {
+                        onToggleControls()
+                    }
+                    return@onPreviewKeyEvent true
+                }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
-                    Key.DirectionCenter, Key.Enter -> onToggleControls()
                     Key.DirectionUp -> onBoundary(ReaderBoundary.Start)
                     Key.DirectionDown -> when {
                         controlsVisible -> onEnterControls()
@@ -430,6 +462,7 @@ private fun ReaderRemoteImage(
     manualRetryRevision: Int,
     onFinalFailureChanged: (String, Boolean) -> Unit,
     viewportHeight: Dp,
+    loadingTestTag: String,
     modifier: Modifier,
 ) {
     val resolved = remember(session.server.origin, session.token, url) {
@@ -439,6 +472,9 @@ private fun ReaderRemoteImage(
     var automaticRetries by remember(url) { mutableIntStateOf(0) }
     var failed by remember(url, resolved) { mutableStateOf(resolved == null) }
     var errorSignal by remember(url) { mutableIntStateOf(0) }
+    var imageLoading by remember(url, resolved, requestGeneration) {
+        mutableStateOf(resolved != null)
+    }
     LaunchedEffect(resolved) {
         if (resolved == null) {
             automaticRetries = MAX_AUTOMATIC_RETRIES
@@ -514,16 +550,35 @@ private fun ReaderRemoteImage(
                 },
                 onState = { state ->
                     when (state) {
+                        is AsyncImagePainter.State.Empty,
+                        is AsyncImagePainter.State.Loading,
+                        -> imageLoading = true
+
                         is AsyncImagePainter.State.Success -> {
+                            imageLoading = false
                             failed = false
                             onFinalFailureChanged(url, false)
                         }
                         is AsyncImagePainter.State.Error -> {
+                            imageLoading = automaticRetries < MAX_AUTOMATIC_RETRIES
                             failed = true
                             errorSignal += 1
                         }
-                        else -> Unit
                     }
+                },
+            )
+        }
+        if (resolved != null && imageLoading) {
+            KaloscopeLoadingLayout(
+                testTag = loadingTestTag,
+                modifier = when {
+                    viewportHeight == Dp.Unspecified -> Modifier.fillMaxSize()
+                    zoomMode == ImageZoomMode.FitWidth -> Modifier
+                        .fillMaxWidth()
+                        .height(INLINE_LOADING_HEIGHT)
+                    else -> Modifier
+                        .fillMaxWidth()
+                        .height(viewportHeight)
                 },
             )
         }
@@ -549,3 +604,5 @@ private fun Key.toReaderDirection(): ReaderDirection? =
 private const val MAX_AUTOMATIC_RETRIES = 3
 private const val IMAGE_PAN_STEP = 0.5f
 private const val PAGE_TRANSITION_MILLIS = 200L
+private const val LOADING_MORE_ITEM_KEY = "reader-loading-more"
+private val INLINE_LOADING_HEIGHT = 120.dp

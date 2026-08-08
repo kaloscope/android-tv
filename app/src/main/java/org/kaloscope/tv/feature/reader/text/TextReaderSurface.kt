@@ -46,7 +46,6 @@ internal fun TextReaderSurface(
     onToggleControls: () -> Unit,
     onEnterControls: () -> Unit,
     onBoundary: (ReaderBoundary) -> Unit,
-    onNavigate: () -> Unit,
 ) {
     val palette = TextReaderPalettes.forTheme(settings.theme)
     val scrollState = rememberScrollState()
@@ -66,11 +65,13 @@ internal fun TextReaderSurface(
                 .focusable()
                 .testTag("text-reader-content")
                 .onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-                        onToggleControls()
+                        if (event.type == KeyEventType.KeyUp) {
+                            onToggleControls()
+                        }
                         return@onPreviewKeyEvent true
                     }
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     if (controlsVisible && event.key == Key.DirectionDown) {
                         onEnterControls()
                         return@onPreviewKeyEvent true
@@ -79,14 +80,12 @@ internal fun TextReaderSurface(
                         Key.DirectionUp -> if (scrollState.value == 0) {
                             onBoundary(ReaderBoundary.Start)
                         } else {
-                            onNavigate()
                             scope.launch { scrollState.animateScrollBy(-viewportPixels * 0.85f) }
                         }
 
                         Key.DirectionDown -> if (scrollState.value >= scrollState.maxValue) {
                             onBoundary(ReaderBoundary.End)
                         } else {
-                            onNavigate()
                             scope.launch { scrollState.animateScrollBy(viewportPixels * 0.85f) }
                         }
 
