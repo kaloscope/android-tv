@@ -490,8 +490,8 @@ private fun LibraryItems(
                         end = 8.dp,
                         bottom = 24.dp,
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     itemsIndexed(
                         items = state.items,
@@ -589,7 +589,6 @@ private fun MediaCard(
     KaloscopeFocusSurface(
         onClick = onClick,
         shape = RoundedCornerShape(15.dp),
-        containerColor = Panel.copy(alpha = 0.65f),
         focusedContainerColor = ContentCardFocused,
         focusScale = 1.03f,
         modifier = Modifier
@@ -604,12 +603,7 @@ private fun MediaCard(
             .semantics(mergeDescendants = true) {},
     ) {
         Column(
-            modifier = Modifier.padding(
-                start = 8.dp,
-                top = 8.dp,
-                end = 8.dp,
-                bottom = 6.dp,
-            ),
+            modifier = Modifier.padding(4.dp),
         ) {
             Box {
                 ServerImage(

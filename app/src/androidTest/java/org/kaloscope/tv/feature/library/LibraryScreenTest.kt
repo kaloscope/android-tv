@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -26,7 +27,6 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
-import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -132,6 +132,47 @@ class LibraryScreenTest {
         val layout = layoutResults.single()
         assertEquals(1, layout.lineCount)
         assertTrue("Long library name should end with an ellipsis", layout.isLineEllipsized(0))
+    }
+
+    @Test
+    fun restingMediaCardShowsScreenBackground() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background),
+                ) {
+                    LibraryScreen(
+                        session = session(),
+                        state = state(),
+                        restoreMediaId = null,
+                        requestInitialFocus = false,
+                        onSelectLibrary = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onMediaFocused = {},
+                        onOpenMedia = {},
+                    )
+                }
+            }
+        }
+
+        val card = composeRule.onNodeWithTag("media-card-1")
+            .captureToImage()
+            .asAndroidBitmap()
+        val sampleX = with(composeRule.density) { 20.dp.roundToPx() }
+            .coerceIn(0, card.width - 1)
+        val sampleY = with(composeRule.density) { card.height - 8.dp.roundToPx() }
+            .coerceIn(0, card.height - 1)
+
+        assertEquals(
+            "Resting media card should reveal the screen background",
+            Background.toArgb(),
+            card.getPixel(sampleX, sampleY),
+        )
     }
 
     @Test
@@ -445,7 +486,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun portraitGridFitsExactlyFourCardsPerRowInAuthenticatedFrameAt1080p() {
+    fun portraitGridKeepsFourCardsWithCompactSpacingAt1080p() {
         val width = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.widthPixels
         if (width != 1920) return
@@ -473,18 +514,30 @@ class LibraryScreenTest {
             }
         }
 
-        val cardTops = (1..5).map { id ->
+        val cardBounds = (1..5).map { id ->
             composeRule.onNodeWithTag("media-card-$id")
                 .fetchSemanticsNode()
-                .boundsInRoot.top
+                .boundsInRoot
         }
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
 
-        cardTops.take(4).forEach { top ->
-            assertEquals(cardTops.first(), top, 0.5f)
+        cardBounds.take(4).forEach { bounds ->
+            assertEquals(cardBounds.first().top, bounds.top, 0.5f)
         }
         assertTrue(
             "The fifth portrait card should start the second row",
-            cardTops[4] > cardTops.first(),
+            cardBounds[4].top > cardBounds.first().top,
+        )
+        assertEquals(
+            10f * density,
+            cardBounds[1].left - cardBounds[0].right,
+            1f,
+        )
+        assertEquals(
+            14f * density,
+            cardBounds[4].top - cardBounds[0].bottom,
+            1f,
         )
     }
 
@@ -858,7 +911,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun mediaCardUsesCompactVerticalMetadataSpacing() {
+    fun mediaCardUsesProminentPosterAndCompactMetadataSpacing() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -885,6 +938,10 @@ class LibraryScreenTest {
         val cardBounds = composeRule.onNodeWithTag("media-card-1")
             .fetchSemanticsNode()
             .boundsInRoot
+        val posterBounds = composeRule.onNodeWithTag(
+            testTag = "server-image-missing",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
         val titleBounds = composeRule.onNodeWithTag(
             testTag = "media-title-1",
             useUnmergedTree = true,
@@ -893,19 +950,19 @@ class LibraryScreenTest {
             testTag = "media-year-1",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
-        val posterWidth = cardBounds.width - 16f * density
-        val posterHeight = posterWidth / (2f / 3f)
-        val posterBottom = cardBounds.top + 8f * density + posterHeight
-        val posterTitleGap = titleBounds.top - posterBottom
+        val posterWidthRatio = posterBounds.width / cardBounds.width
+        val posterTitleGap = titleBounds.top - posterBounds.bottom
         val bottomPadding = cardBounds.bottom - yearBounds.bottom
 
         assertTrue(
-            "Expected compact metadata spacing but was " +
-                "posterTitleGap=${posterTitleGap / density}dp " +
-                "bottomPadding=${bottomPadding / density}dp",
-            abs(posterTitleGap - 6f * density) <= 1f &&
-                abs(bottomPadding - 6f * density) <= 1f,
+            "Poster should occupy at least 94% of the card width but was " +
+                "${posterWidthRatio * 100f}%",
+            posterWidthRatio >= 0.94f,
         )
+        assertEquals(4f * density, posterBounds.left - cardBounds.left, 1f)
+        assertEquals(4f * density, cardBounds.right - posterBounds.right, 1f)
+        assertEquals(6f * density, posterTitleGap, 1f)
+        assertEquals(4f * density, bottomPadding, 1f)
     }
 
     @Test
