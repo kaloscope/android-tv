@@ -307,7 +307,7 @@ class PlayerViewModel @Inject constructor(
             resumePositionSeconds = resumePositionSeconds?.coerceAtLeast(0),
             origin = origin,
             playbackMode = settings.playbackMode,
-            transcodeResolution = settings.transcodeResolution,
+            transcodeQuality = settings.transcodeQuality,
             parentTitle = parentTitle?.takeIf(String::isNotBlank),
             seasonNumber = seasonNumber,
             episodeNumber = episodeNumber,

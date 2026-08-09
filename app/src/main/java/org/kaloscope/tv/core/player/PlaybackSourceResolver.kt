@@ -15,16 +15,16 @@ object PlaybackSourceResolver {
     fun directStreamUrl(
         session: Session,
         path: String,
-    ): String = streamUrl(session, path, PlaybackSourceKind.Direct, TranscodeResolution.P1080)
+    ): String = streamUrl(session, path, PlaybackSourceKind.Direct, TranscodeQuality.Medium)
 
     fun localMediaSource(
         session: Session,
         path: String,
         sourceKind: PlaybackSourceKind,
-        resolution: TranscodeResolution,
+        quality: TranscodeQuality,
     ): ResolvedPlaybackSource {
         return ResolvedPlaybackSource(
-            url = streamUrl(session, path, sourceKind, resolution),
+            url = streamUrl(session, path, sourceKind, quality),
             // The redirect target is HLS, but the initial stream URL has no file extension.
             mimeType = MimeTypes.APPLICATION_M3U8.takeIf {
                 sourceKind == PlaybackSourceKind.HlsTranscode
@@ -72,7 +72,7 @@ object PlaybackSourceResolver {
         session: Session,
         path: String,
         sourceKind: PlaybackSourceKind,
-        resolution: TranscodeResolution,
+        quality: TranscodeQuality,
     ): String {
         val builder = "${session.server.origin}/_api/media/stream"
             .toHttpUrl()
@@ -81,8 +81,7 @@ object PlaybackSourceResolver {
         if (sourceKind == PlaybackSourceKind.HlsTranscode) {
             builder
                 .addQueryParameter("transcode", "true")
-                .addQueryParameter("quality", "medium")
-                .addQueryParameter("resolution", resolution.queryValue)
+                .addQueryParameter("quality", quality.queryValue)
         }
         return builder.build().toString()
     }

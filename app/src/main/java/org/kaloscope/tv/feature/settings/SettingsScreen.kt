@@ -72,7 +72,7 @@ import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.player.PlaybackMode
-import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.player.TranscodeQuality
 
 @Composable
 fun SettingsScreen(
@@ -84,7 +84,7 @@ fun SettingsScreen(
     onRetry: () -> Unit,
     onSelectSection: (SettingsSection) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
-    onTranscodeResolution: (TranscodeResolution) -> Unit,
+    onTranscodeQuality: (TranscodeQuality) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
     onAccentColor: (AccentColor) -> Unit = {},
     onDanmakuSettings: (DanmakuSettings) -> Unit,
@@ -114,7 +114,7 @@ fun SettingsScreen(
             topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectSection = onSelectSection,
             onPlaybackMode = onPlaybackMode,
-            onTranscodeResolution = onTranscodeResolution,
+            onTranscodeQuality = onTranscodeQuality,
             onAutoplayNext = onAutoplayNext,
             onAccentColor = onAccentColor,
             onDanmakuSettings = onDanmakuSettings,
@@ -139,7 +139,7 @@ private fun SettingsContent(
     topNavigationFocusRequester: FocusRequester?,
     onSelectSection: (SettingsSection) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
-    onTranscodeResolution: (TranscodeResolution) -> Unit,
+    onTranscodeQuality: (TranscodeQuality) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
     onAccentColor: (AccentColor) -> Unit,
     onDanmakuSettings: (DanmakuSettings) -> Unit,
@@ -232,7 +232,7 @@ private fun SettingsContent(
                     logoutConfirmationOpen = true
                 },
                 onPlaybackMode = onPlaybackMode,
-                onTranscodeResolution = onTranscodeResolution,
+                onTranscodeQuality = onTranscodeQuality,
                 onStartPage = onStartPage,
                 onReaderChapterOrder = onReaderChapterOrder,
                 onImageReaderSettings = onImageReaderSettings,
@@ -368,7 +368,7 @@ private fun SettingsPanel(
     onManageServers: () -> Unit,
     onRequestLogout: (FocusRequester) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
-    onTranscodeResolution: (TranscodeResolution) -> Unit,
+    onTranscodeQuality: (TranscodeQuality) -> Unit,
     onAccentColor: (AccentColor) -> Unit,
     onStartPage: (StartPage) -> Unit,
     onReaderChapterOrder: (ReaderChapterOrder) -> Unit,
@@ -403,7 +403,7 @@ private fun SettingsPanel(
                             interactionsEnabled = interactionsEnabled,
                             onOpenChoice = onOpenChoice,
                             onPlaybackMode = onPlaybackMode,
-                            onTranscodeResolution = onTranscodeResolution,
+                            onTranscodeQuality = onTranscodeQuality,
                             onAutoplayNext = onAutoplayNext,
                         )
 
@@ -756,12 +756,11 @@ internal fun playbackModeLabel(mode: PlaybackMode): String =
     }
 
 @Composable
-internal fun resolutionLabel(resolution: TranscodeResolution): String =
-    when (resolution) {
-        TranscodeResolution.Original -> stringResource(R.string.resolution_original)
-        TranscodeResolution.P1080 -> stringResource(R.string.resolution_1080p)
-        TranscodeResolution.P720 -> stringResource(R.string.resolution_720p)
-        TranscodeResolution.P480 -> stringResource(R.string.resolution_480p)
+internal fun transcodeQualityLabel(quality: TranscodeQuality): String =
+    when (quality) {
+        TranscodeQuality.High -> stringResource(R.string.transcode_quality_high)
+        TranscodeQuality.Medium -> stringResource(R.string.transcode_quality_medium)
+        TranscodeQuality.Low -> stringResource(R.string.transcode_quality_low)
     }
 
 @Composable

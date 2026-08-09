@@ -16,7 +16,7 @@ import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.player.PlaybackMode
-import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.player.TranscodeQuality
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.data.settings.SettingsRepository
 
@@ -42,8 +42,8 @@ class SettingsViewModel @Inject constructor(
     fun setPlaybackMode(value: PlaybackMode) =
         launchSettingsOperation { coordinator.setPlaybackMode(value) }
 
-    fun setTranscodeResolution(value: TranscodeResolution) =
-        launchSettingsOperation { coordinator.setTranscodeResolution(value) }
+    fun setTranscodeQuality(value: TranscodeQuality) =
+        launchSettingsOperation { coordinator.setTranscodeQuality(value) }
 
     fun setAutoplayNext(value: Boolean) =
         launchSettingsOperation { coordinator.setAutoplayNext(value) }

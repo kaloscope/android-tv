@@ -41,6 +41,7 @@ import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.player.PlaybackOrigin
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
+import org.kaloscope.tv.core.player.TranscodeQuality
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.core.reader.ReaderRequest
 import org.kaloscope.tv.core.reader.ReaderRequestStore
@@ -338,7 +339,7 @@ class SearchCoordinatorTest {
     }
 
     @Test
-    fun `playback resolution follows persisted TV settings`() = runTest {
+    fun `network definition stays independent from local transcode quality`() = runTest {
         val store = PlaybackRequestStore()
         val repository = FakeSearchRepository(
             pages = mutableListOf(AppResult.Success(page("v1"))),
@@ -356,12 +357,12 @@ class SearchCoordinatorTest {
         coordinator.play(
             session = session(),
             resultId = "v1",
-            settings = TvSettings(transcodeResolution = TranscodeResolution.P720),
+            settings = TvSettings(transcodeQuality = TranscodeQuality.Low),
         )
 
-        assertEquals(TranscodeResolution.P720, repository.preferredDefinition)
+        assertEquals(TranscodeResolution.P1080, repository.preferredDefinition)
         val request = store.get("settings-request") as PlaybackRequest.NetworkVideo
-        assertEquals(TranscodeResolution.P720, request.preferredDefinition)
+        assertEquals(TranscodeResolution.P1080, request.preferredDefinition)
     }
 
     @Test

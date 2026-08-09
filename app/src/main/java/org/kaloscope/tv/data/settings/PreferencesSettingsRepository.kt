@@ -33,7 +33,7 @@ import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TextReaderTheme
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
-import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.player.TranscodeQuality
 
 @Singleton
 class PreferencesSettingsRepository @Inject constructor(
@@ -50,7 +50,7 @@ class PreferencesSettingsRepository @Inject constructor(
                 preferences[ACCENT_COLOR] = settings.accentColor.storedValue
                 preferences[START_PAGE] = settings.startPage.storedValue
                 preferences[PLAYBACK_MODE] = settings.playbackMode.storedValue
-                preferences[TRANSCODE_RESOLUTION] = settings.transcodeResolution.queryValue
+                preferences[TRANSCODE_QUALITY] = settings.transcodeQuality.queryValue
                 preferences[AUTOPLAY_NEXT] = settings.autoplayNext
                 preferences[DANMAKU_ENABLED] = settings.danmaku.enabled
                 preferences[DANMAKU_TEXT_SIZE] = settings.danmaku.textSize.storedValue
@@ -103,9 +103,9 @@ class PreferencesSettingsRepository @Inject constructor(
             playbackMode = PlaybackMode.entries.firstOrNull {
                 it.storedValue == this[PLAYBACK_MODE]
             } ?: PlaybackMode.Auto,
-            transcodeResolution = TranscodeResolution.entries.firstOrNull {
-                it.queryValue == this[TRANSCODE_RESOLUTION]
-            } ?: TranscodeResolution.P1080,
+            transcodeQuality = TranscodeQuality.entries.firstOrNull {
+                it.queryValue == this[TRANSCODE_QUALITY]
+            } ?: TranscodeQuality.Medium,
             autoplayNext = this[AUTOPLAY_NEXT] ?: true,
             danmaku = DanmakuSettings(
                 enabled = this[DANMAKU_ENABLED] ?: true,
@@ -222,7 +222,7 @@ class PreferencesSettingsRepository @Inject constructor(
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val START_PAGE = stringPreferencesKey("start_page")
         val PLAYBACK_MODE = stringPreferencesKey("playback_mode")
-        val TRANSCODE_RESOLUTION = stringPreferencesKey("transcode_resolution")
+        val TRANSCODE_QUALITY = stringPreferencesKey("transcode_quality")
         val AUTOPLAY_NEXT = booleanPreferencesKey("autoplay_next")
         val DANMAKU_ENABLED = booleanPreferencesKey("danmaku_enabled")
         val DANMAKU_TEXT_SIZE = stringPreferencesKey("danmaku_text_size")

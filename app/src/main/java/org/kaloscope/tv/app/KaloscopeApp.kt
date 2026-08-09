@@ -235,7 +235,7 @@ fun KaloscopeApp(
                         retry = settingsViewModel::load,
                         selectSection = settingsViewModel::selectSection,
                         setPlaybackMode = settingsViewModel::setPlaybackMode,
-                        setTranscodeResolution = settingsViewModel::setTranscodeResolution,
+                        setTranscodeQuality = settingsViewModel::setTranscodeQuality,
                         setAutoplayNext = settingsViewModel::setAutoplayNext,
                         setAccentColor = settingsViewModel::setAccentColor,
                         setDanmaku = settingsViewModel::setDanmakuSettings,

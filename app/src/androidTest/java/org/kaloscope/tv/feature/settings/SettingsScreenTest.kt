@@ -24,6 +24,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -52,6 +53,7 @@ import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
+import org.kaloscope.tv.core.player.TranscodeQuality
 
 class SettingsScreenTest {
     @get:Rule
@@ -67,7 +69,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -93,7 +95,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -126,6 +128,47 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun playbackCategoryShowsAndSelectsTranscodeQuality() {
+        var selectedQuality: TranscodeQuality? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(TvSettings()),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeQuality = { selectedQuality = it },
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNode(
+            hasClickAction() and hasText("转码质量") and hasText("中"),
+        )
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNode(hasClickAction() and hasText("高")).assertExists()
+        composeRule.onNode(hasClickAction() and hasText("中") and isFocused()).assertExists()
+        composeRule.onNode(hasClickAction() and hasText("低")).assertExists()
+        composeRule.onNode(hasClickAction() and hasText("高"))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(TranscodeQuality.High, selectedQuality)
+        }
+    }
+
+    @Test
     fun readingCategoryUsesApprovedGroupLabels() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -138,7 +181,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -173,7 +216,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -225,7 +268,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -256,7 +299,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -478,7 +521,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onAccentColor = { selectedAccent = it },
                     onDanmakuSettings = {},
@@ -540,7 +583,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onAccentColor = { selectedAccent = it },
                     onDanmakuSettings = {},
@@ -588,7 +631,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onAccentColor = { selectedAccent = it },
                     onDanmakuSettings = {},
@@ -627,7 +670,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = { selectedMode = it },
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -667,7 +710,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -703,7 +746,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -742,7 +785,7 @@ class SettingsScreenTest {
                         state = state.copy(section = section)
                     },
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -782,7 +825,7 @@ class SettingsScreenTest {
                         state = state.copy(section = section)
                     },
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -819,7 +862,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -875,7 +918,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -910,7 +953,7 @@ class SettingsScreenTest {
                         onRetry = {},
                         onSelectSection = {},
                         onPlaybackMode = {},
-                        onTranscodeResolution = {},
+                        onTranscodeQuality = {},
                         onAutoplayNext = {},
                         onDanmakuSettings = {},
                         onSubtitleSettings = {},
@@ -962,7 +1005,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -1011,7 +1054,7 @@ class SettingsScreenTest {
                     onRetry = { retries += 1 },
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -1047,7 +1090,7 @@ class SettingsScreenTest {
                         onRetry = {},
                         onSelectSection = {},
                         onPlaybackMode = {},
-                        onTranscodeResolution = {},
+                        onTranscodeQuality = {},
                         onAutoplayNext = {},
                         onDanmakuSettings = {},
                         onSubtitleSettings = {},
@@ -1120,7 +1163,7 @@ class SettingsScreenTest {
                         onRetry = {},
                         onSelectSection = {},
                         onPlaybackMode = {},
-                        onTranscodeResolution = {},
+                        onTranscodeQuality = {},
                         onAutoplayNext = {},
                         onDanmakuSettings = {},
                         onSubtitleSettings = {},
@@ -1167,7 +1210,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = { updatedSettings = it },
                     onSubtitleSettings = {},
@@ -1211,7 +1254,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = { updatedSettings = it },
                     onSubtitleSettings = {},
@@ -1275,7 +1318,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = { updatedSettings = it },
@@ -1326,7 +1369,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = { state = state.copy(section = it) },
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = { subtitle ->
@@ -1374,7 +1417,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = { state = state.copy(section = it) },
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = { subtitle ->
@@ -1440,7 +1483,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
@@ -1515,7 +1558,7 @@ class SettingsScreenTest {
                     onRetry = {},
                     onSelectSection = {},
                     onPlaybackMode = {},
-                    onTranscodeResolution = {},
+                    onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = onSubtitleSettings,

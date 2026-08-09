@@ -30,7 +30,7 @@ import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TextReaderTheme
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
-import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.player.TranscodeQuality
 
 class PreferencesSettingsRepositoryTest {
     @Test
@@ -105,7 +105,7 @@ class PreferencesSettingsRepositoryTest {
         val expected = TvSettings(
             startPage = StartPage.Library,
             playbackMode = PlaybackMode.Transcode,
-            transcodeResolution = TranscodeResolution.P720,
+            transcodeQuality = TranscodeQuality.High,
             autoplayNext = false,
             danmaku = DanmakuSettings(enabled = false),
             subtitle = SubtitleSettings(
@@ -136,6 +136,21 @@ class PreferencesSettingsRepositoryTest {
         val restored = PreferencesSettingsRepository(dataStore).getSettings()
 
         assertEquals(expected, (restored as AppResult.Success).value)
+    }
+
+    @Test
+    fun `invalid transcode quality falls back to medium`() = runTest {
+        val store = dataStore(this)
+        store.edit { preferences ->
+            preferences[stringPreferencesKey("transcode_quality")] = "ultra"
+        }
+
+        val result = PreferencesSettingsRepository(store).getSettings()
+
+        assertEquals(
+            TranscodeQuality.Medium,
+            (result as AppResult.Success).value.transcodeQuality,
+        )
     }
 
     @Test

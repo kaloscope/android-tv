@@ -36,6 +36,7 @@ import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.LocalEpisodeRef
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
+import org.kaloscope.tv.core.player.TranscodeQuality
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.history.HistoryRepository
 import org.kaloscope.tv.data.media.MediaRepository
@@ -58,7 +59,7 @@ class PlayerViewModelSettingsTest {
         )
         val settings = TvSettings(
             playbackMode = PlaybackMode.Transcode,
-            transcodeResolution = TranscodeResolution.P720,
+            transcodeQuality = TranscodeQuality.High,
             autoplayNext = false,
             danmaku = expectedDanmaku,
             subtitle = SubtitleSettings(enabled = false),
@@ -68,7 +69,7 @@ class PlayerViewModelSettingsTest {
 
         val request = store.get(checkNotNull(requestId)) as PlaybackRequest.LocalMedia
         assertEquals(PlaybackMode.Transcode, request.playbackMode)
-        assertEquals(TranscodeResolution.P720, request.transcodeResolution)
+        assertEquals(TranscodeQuality.High, request.transcodeQuality)
         assertFalse(request.autoplayNext)
         assertEquals(expectedDanmaku, request.danmakuSettings)
         assertFalse(request.subtitleSettings.enabled)

@@ -272,7 +272,7 @@ class PlaybackController internal constructor(
                 session = session,
                 path = request.path,
                 sourceKind = target,
-                resolution = request.transcodeResolution,
+                quality = request.transcodeQuality,
             )
 
             is PlaybackRequest.NetworkVideo -> PlaybackSourceResolver.networkMediaSource(

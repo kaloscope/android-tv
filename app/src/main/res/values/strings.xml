@@ -80,8 +80,11 @@
     <string name="server_account_description">查看当前连接并管理服务器与登录状态。</string>
     <string name="default_playback_mode">默认播放模式</string>
     <string name="default_playback_mode_description">自动模式会优先直连，并在可恢复失败后转码。</string>
-    <string name="default_transcode_resolution">默认转码画质</string>
-    <string name="default_transcode_resolution_description">用于本地转码和网络站点默认清晰度选择。</string>
+    <string name="transcode_quality">转码质量</string>
+    <string name="transcode_quality_description">更高质量产生更好的画质，但消耗更多存储空间和 CPU/GPU 资源。</string>
+    <string name="transcode_quality_high">高</string>
+    <string name="transcode_quality_medium">中</string>
+    <string name="transcode_quality_low">低</string>
     <string name="autoplay_next">自动播放下一集</string>
     <string name="autoplay_next_description">当前内容结束且存在下一集时自动继续。</string>
     <string name="accent_color">强调色</string>
@@ -287,10 +290,6 @@
     <string name="playback_status_with_definition">%1$s · %2$s</string>
     <string name="network_source_playback_failed">网络资源播放失败</string>
     <string name="switching_to_transcode">正在准备 HLS 转码…</string>
-    <string name="resolution_original">原画</string>
-    <string name="resolution_1080p">1080P</string>
-    <string name="resolution_720p">720P</string>
-    <string name="resolution_480p">480P</string>
     <string name="progress_save_failed">播放继续进行，但进度暂时无法保存</string>
     <string name="previous_episode">上一集</string>
     <string name="next_episode">下一集</string>

@@ -23,6 +23,14 @@ enum class TranscodeResolution(
     P480("480p"),
 }
 
+enum class TranscodeQuality(
+    val queryValue: String,
+) {
+    Low("low"),
+    Medium("medium"),
+    High("high"),
+}
+
 enum class PlaybackFailure {
     Source,
     Decoder,

@@ -67,7 +67,7 @@ import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TextReaderTheme
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
-import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.player.TranscodeQuality
 
 @Composable
 internal fun PlaybackSettings(
@@ -75,7 +75,7 @@ internal fun PlaybackSettings(
     interactionsEnabled: Boolean,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onPlaybackMode: (PlaybackMode) -> Unit,
-    onTranscodeResolution: (TranscodeResolution) -> Unit,
+    onTranscodeQuality: (TranscodeQuality) -> Unit,
     onAutoplayNext: (Boolean) -> Unit,
 ) {
     ChoiceSettingRow(
@@ -99,18 +99,22 @@ internal fun PlaybackSettings(
     )
     Spacer(Modifier.height(10.dp))
     ChoiceSettingRow(
-        title = stringResource(R.string.default_transcode_resolution),
-        description = stringResource(R.string.default_transcode_resolution_description),
-        value = resolutionLabel(state.settings.transcodeResolution),
+        title = stringResource(R.string.transcode_quality),
+        description = stringResource(R.string.transcode_quality_description),
+        value = transcodeQualityLabel(state.settings.transcodeQuality),
         interactionsEnabled = interactionsEnabled,
         createChoice = {
             SettingsChoice(
-                title = stringResource(R.string.default_transcode_resolution),
-                options = TranscodeResolution.entries.map { resolution ->
+                title = stringResource(R.string.transcode_quality),
+                options = listOf(
+                    TranscodeQuality.High,
+                    TranscodeQuality.Medium,
+                    TranscodeQuality.Low,
+                ).map { quality ->
                     KaloscopeChoiceDialogOption(
-                        label = resolutionLabel(resolution),
-                        selected = { resolution == state.settings.transcodeResolution },
-                        onSelect = { onTranscodeResolution(resolution) },
+                        label = transcodeQualityLabel(quality),
+                        selected = { quality == state.settings.transcodeQuality },
+                        onSelect = { onTranscodeQuality(quality) },
                     )
                 },
             )

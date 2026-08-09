@@ -15,7 +15,7 @@ import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.ProgressReason
-import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.player.TranscodeQuality
 import org.kaloscope.tv.feature.player.PlayerExtra
 import org.kaloscope.tv.feature.settings.SettingsSection
 
@@ -67,7 +67,7 @@ internal data class SettingsActions(
     val retry: () -> Unit = {},
     val selectSection: (SettingsSection) -> Unit = {},
     val setPlaybackMode: (PlaybackMode) -> Unit = {},
-    val setTranscodeResolution: (TranscodeResolution) -> Unit = {},
+    val setTranscodeQuality: (TranscodeQuality) -> Unit = {},
     val setAutoplayNext: (Boolean) -> Unit = {},
     val setAccentColor: (AccentColor) -> Unit = {},
     val setDanmaku: (DanmakuSettings) -> Unit = {},

@@ -22,6 +22,7 @@ import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
+import org.kaloscope.tv.core.player.TranscodeQuality
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.data.settings.SettingsRepository
 
@@ -52,6 +53,20 @@ class SettingsCoordinatorTest {
         val state = coordinator.state.value as SettingsUiState.Content
         assertEquals(PlaybackMode.Auto, state.settings.playbackMode)
         assertEquals(AppError.InvalidData("settings_write"), state.saveError)
+        assertFalse(state.isSaving)
+    }
+
+    @Test
+    fun `transcode quality persists through the settings update path`() = runTest {
+        val repository = FakeSettingsRepository(TvSettings())
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+
+        coordinator.setTranscodeQuality(TranscodeQuality.High)
+
+        val state = coordinator.state.value as SettingsUiState.Content
+        assertEquals(TranscodeQuality.High, state.settings.transcodeQuality)
+        assertEquals(TranscodeQuality.High, repository.saved?.transcodeQuality)
         assertFalse(state.isSaving)
     }
 

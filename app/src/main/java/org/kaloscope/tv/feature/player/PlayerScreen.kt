@@ -544,7 +544,7 @@ private fun PlayerContent(
             val playbackMode = playbackModeLabel(
                 mode = localRequest?.playbackMode,
                 sourceKind = status.sourceKind,
-                resolution = localRequest?.transcodeResolution,
+                quality = localRequest?.transcodeQuality,
             )
             val selectedDefinitionLabel = networkRequest?.source?.let { source ->
                 source.selectedDefinition?.label

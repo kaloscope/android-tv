@@ -384,8 +384,7 @@ internal fun MainShell(
                                 onRetry = settingsActions.retry,
                                 onSelectSection = settingsActions.selectSection,
                                 onPlaybackMode = settingsActions.setPlaybackMode,
-                                onTranscodeResolution =
-                                    settingsActions.setTranscodeResolution,
+                                onTranscodeQuality = settingsActions.setTranscodeQuality,
                                 onAutoplayNext = settingsActions.setAutoplayNext,
                                 onAccentColor = settingsActions.setAccentColor,
                                 onDanmakuSettings = settingsActions.setDanmaku,

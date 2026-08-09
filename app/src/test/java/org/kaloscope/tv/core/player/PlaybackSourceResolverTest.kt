@@ -24,18 +24,18 @@ class PlaybackSourceResolverTest {
     }
 
     @Test
-    fun `transcode stream URL includes the fixed quality and selected resolution`() {
+    fun `transcode stream URL includes selected quality without resolution override`() {
         val source = PlaybackSourceResolver.localMediaSource(
             session = session(),
             path = "/媒体/Season 01/Episode 1.mkv",
             sourceKind = PlaybackSourceKind.HlsTranscode,
-            resolution = TranscodeResolution.P1080,
+            quality = TranscodeQuality.High,
         )
 
         assertEquals(
             "http://127.0.0.1:8000/_api/media/stream" +
                 "?path=%2F%E5%AA%92%E4%BD%93%2FSeason%2001%2FEpisode%201.mkv" +
-                "&transcode=true&quality=medium&resolution=1080p",
+                "&transcode=true&quality=high",
             source.url,
         )
         assertEquals("application/x-mpegURL", source.mimeType)

@@ -22,7 +22,7 @@ sealed interface PlaybackRequest {
         val resumePositionSeconds: Long?,
         override val origin: PlaybackOrigin,
         val playbackMode: PlaybackMode = PlaybackMode.Auto,
-        val transcodeResolution: TranscodeResolution = TranscodeResolution.P1080,
+        val transcodeQuality: TranscodeQuality = TranscodeQuality.Medium,
         val siblings: List<LocalEpisodeRef> = emptyList(),
         val parentTitle: String? = null,
         val seasonNumber: Int? = null,

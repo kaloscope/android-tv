@@ -17,7 +17,7 @@ import org.kaloscope.tv.core.model.SubtitleSettingsPolicy
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
-import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.player.TranscodeQuality
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.data.settings.SettingsRepository
 
@@ -77,8 +77,8 @@ class SettingsCoordinator(
     suspend fun setPlaybackMode(value: PlaybackMode) =
         update { copy(playbackMode = value) }
 
-    suspend fun setTranscodeResolution(value: TranscodeResolution) =
-        update { copy(transcodeResolution = value) }
+    suspend fun setTranscodeQuality(value: TranscodeQuality) =
+        update { copy(transcodeQuality = value) }
 
     suspend fun setAutoplayNext(value: Boolean) =
         update { copy(autoplayNext = value) }

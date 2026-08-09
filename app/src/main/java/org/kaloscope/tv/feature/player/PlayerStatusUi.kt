@@ -21,19 +21,18 @@ import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.PlaybackSourceKind
-import org.kaloscope.tv.core.player.TranscodeResolution
+import org.kaloscope.tv.core.player.TranscodeQuality
 
 @Composable
 internal fun playbackModeLabel(
     mode: PlaybackMode?,
     sourceKind: PlaybackSourceKind,
-    resolution: TranscodeResolution?,
+    quality: TranscodeQuality?,
 ): String {
-    val resolutionLabel = when (resolution) {
-        TranscodeResolution.Original -> stringResource(R.string.resolution_original)
-        TranscodeResolution.P1080 -> "1080P"
-        TranscodeResolution.P720 -> "720P"
-        TranscodeResolution.P480 -> "480P"
+    val qualityLabel = when (quality) {
+        TranscodeQuality.High -> stringResource(R.string.transcode_quality_high)
+        TranscodeQuality.Medium -> stringResource(R.string.transcode_quality_medium)
+        TranscodeQuality.Low -> stringResource(R.string.transcode_quality_low)
         null -> ""
     }
     return when {
@@ -44,10 +43,10 @@ internal fun playbackModeLabel(
             stringResource(R.string.playback_auto_direct)
 
         mode == PlaybackMode.Auto ->
-            stringResource(R.string.playback_auto_transcode, resolutionLabel)
+            stringResource(R.string.playback_auto_transcode, qualityLabel)
 
         mode == PlaybackMode.Direct -> stringResource(R.string.playback_direct)
-        else -> stringResource(R.string.playback_transcode, resolutionLabel)
+        else -> stringResource(R.string.playback_transcode, qualityLabel)
     }
 }
 

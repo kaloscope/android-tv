@@ -16,6 +16,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
+import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.core.reader.ReaderRequest
 import org.kaloscope.tv.core.reader.ReaderRequestStore
 import org.kaloscope.tv.data.search.NetworkResourceRepository
@@ -309,7 +310,7 @@ class SearchCoordinator(
                 session = session,
                 indexerId = content.selectedIndexerId,
                 result = result,
-                preferredDefinition = settings.transcodeResolution,
+                preferredDefinition = TranscodeResolution.P1080,
             )
         } catch (error: CancellationException) {
             updateContent {
@@ -333,7 +334,7 @@ class SearchCoordinator(
                         serverId = session.server.id,
                         title = resource.source.title,
                         source = resource.source,
-                        preferredDefinition = settings.transcodeResolution,
+                        preferredDefinition = TranscodeResolution.P1080,
                         autoplayNext = settings.autoplayNext,
                         danmakuSettings = settings.danmaku,
                         subtitleSettings = settings.subtitle,
