@@ -4,8 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -37,8 +37,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -46,7 +49,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -904,19 +906,28 @@ private fun ReaderSettingsDrawerFrame(
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
+                Canvas(
                     modifier = Modifier
-                        .size(16.dp)
-                        .border(1.dp, mutedColor, CircleShape)
+                        .size(14.dp)
                         .testTag("reader-session-settings-hint-icon"),
-                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "!",
+                    val strokeWidth = 1.dp.toPx()
+                    drawCircle(
                         color = mutedColor,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clearAndSetSemantics { },
+                        radius = (size.minDimension - strokeWidth) / 2f,
+                        style = Stroke(width = strokeWidth),
+                    )
+                    drawLine(
+                        color = mutedColor,
+                        start = Offset(center.x, size.height * 0.27f),
+                        end = Offset(center.x, size.height * 0.57f),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round,
+                    )
+                    drawCircle(
+                        color = mutedColor,
+                        radius = strokeWidth * 0.7f,
+                        center = Offset(center.x, size.height * 0.73f),
                     )
                 }
                 Spacer(Modifier.width(8.dp))
@@ -924,7 +935,9 @@ private fun ReaderSettingsDrawerFrame(
                     text = stringResource(R.string.reader_session_settings_description),
                     color = mutedColor,
                     fontSize = 12.sp,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("reader-session-settings-hint-text"),
                 )
             }
         }

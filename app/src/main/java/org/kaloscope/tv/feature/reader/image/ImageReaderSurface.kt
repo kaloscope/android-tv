@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -45,11 +46,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -60,8 +59,6 @@ import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ImageZoomMode
 import org.kaloscope.tv.core.model.ReaderImageContent
 import org.kaloscope.tv.core.model.Session
-import org.kaloscope.tv.core.network.ServerImagePolicy
-import org.kaloscope.tv.core.network.ServerImageResolver
 import org.kaloscope.tv.core.reader.ReaderBoundary
 import org.kaloscope.tv.core.reader.ReaderDirection
 import org.kaloscope.tv.core.reader.ReaderNavigationStep
@@ -86,6 +83,7 @@ internal fun ImageReaderSurface(
     onFailedImagesChanged: (Boolean) -> Unit,
 ) {
     val failedImages = remember(contentRevision) { mutableStateMapOf<String, Boolean>() }
+    val preloadController = rememberReaderImagePreloadController(session)
     LaunchedEffect(failedImages.size) {
         onFailedImagesChanged(failedImages.isNotEmpty())
     }
@@ -119,6 +117,7 @@ internal fun ImageReaderSurface(
                 onPositionChanged = onPositionChanged,
                 manualRetryRevision = manualRetryRevision,
                 onFinalFailureChanged = ::updateImageFailure,
+                preloadController = preloadController,
             )
 
             ImageReadMode.Paged -> PagedImages(
@@ -137,6 +136,7 @@ internal fun ImageReaderSurface(
                 onPositionChanged = onPositionChanged,
                 manualRetryRevision = manualRetryRevision,
                 onFinalFailureChanged = ::updateImageFailure,
+                preloadController = preloadController,
             )
         }
     }
@@ -160,6 +160,7 @@ private fun ScrollingImages(
     onPositionChanged: (Int) -> Unit,
     manualRetryRevision: Int,
     onFinalFailureChanged: (String, Boolean) -> Unit,
+    preloadController: ReaderImagePreloadController,
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -170,6 +171,16 @@ private fun ScrollingImages(
         horizontalBias = 0f
     }
     LaunchedEffect(settings.zoomMode) { horizontalBias = 0f }
+    LaunchedEffect(contentRevision, listState, content.images) {
+        snapshotFlow {
+            ReaderImagePreloadPolicy.scrollingTarget(
+                images = content.images,
+                visibleItemIndices = listState.layoutInfo.visibleItemsInfo.map { it.index },
+            )
+        }
+            .distinctUntilChanged()
+            .collect(preloadController::updateTarget)
+    }
     if (content.images.isEmpty() && !isLoadingMore) {
         LaunchedEffect(contentRevision) { onPositionChanged(0) }
         EmptyImageContent(
@@ -299,6 +310,7 @@ private fun PagedImages(
     onPositionChanged: (Int) -> Unit,
     manualRetryRevision: Int,
     onFinalFailureChanged: (String, Boolean) -> Unit,
+    preloadController: ReaderImagePreloadController,
 ) {
     var index by remember(contentRevision) { mutableIntStateOf(0) }
     var advanceAfterLoad by remember(contentRevision) { mutableStateOf(false) }
@@ -319,6 +331,11 @@ private fun PagedImages(
     }
     LaunchedEffect(index, content.images.size) {
         onPositionChanged(if (content.images.isEmpty()) 0 else index + 1)
+    }
+    LaunchedEffect(contentRevision, content.images, index, preloadController) {
+        preloadController.updateTarget(
+            ReaderImagePreloadPolicy.pagedTarget(content.images, index),
+        )
     }
     Box(
         modifier = Modifier
@@ -407,6 +424,32 @@ private fun PagedImages(
 }
 
 @Composable
+private fun rememberReaderImagePreloadController(
+    session: Session,
+): ReaderImagePreloadController {
+    val context = LocalContext.current
+    val imageLoader = remember(context) { SingletonImageLoader.get(context) }
+    val controller = remember(
+        context,
+        imageLoader,
+        session.server.origin,
+        session.token,
+    ) {
+        ReaderImagePreloadController { rawUrl ->
+            ReaderImageRequestFactory.create(context, session, rawUrl)?.let { request ->
+                val disposable = imageLoader.enqueue(request)
+                val cancel: () -> Unit = { disposable.dispose() }
+                cancel
+            }
+        }
+    }
+    DisposableEffect(controller) {
+        onDispose(controller::close)
+    }
+    return controller
+}
+
+@Composable
 private fun EmptyImageContent(
     imagesExhausted: Boolean,
     controlsVisible: Boolean,
@@ -465,18 +508,38 @@ private fun ReaderRemoteImage(
     loadingTestTag: String,
     modifier: Modifier,
 ) {
-    val resolved = remember(session.server.origin, session.token, url) {
-        ServerImageResolver.resolve(session, url, ServerImagePolicy.Auto)
-    }
+    val context = LocalContext.current
     var requestGeneration by remember(url) { mutableIntStateOf(0) }
     var automaticRetries by remember(url) { mutableIntStateOf(0) }
-    var failed by remember(url, resolved) { mutableStateOf(resolved == null) }
-    var errorSignal by remember(url) { mutableIntStateOf(0) }
-    var imageLoading by remember(url, resolved, requestGeneration) {
-        mutableStateOf(resolved != null)
+    val imageRequest = remember(
+        context,
+        session.server.origin,
+        session.token,
+        url,
+        requestGeneration,
+    ) {
+        ReaderImageRequestFactory.create(context, session, url)
     }
-    LaunchedEffect(resolved) {
-        if (resolved == null) {
+    var failed by remember(
+        url,
+        session.server.origin,
+        session.token,
+        imageRequest?.data,
+    ) {
+        mutableStateOf(imageRequest == null)
+    }
+    var errorSignal by remember(url) { mutableIntStateOf(0) }
+    var imageLoading by remember(
+        url,
+        session.server.origin,
+        session.token,
+        imageRequest?.data,
+        requestGeneration,
+    ) {
+        mutableStateOf(imageRequest != null)
+    }
+    LaunchedEffect(url, session.server.origin, session.token, imageRequest?.data) {
+        if (imageRequest == null) {
             automaticRetries = MAX_AUTOMATIC_RETRIES
             failed = true
             onFinalFailureChanged(url, false)
@@ -496,7 +559,7 @@ private fun ReaderRemoteImage(
         if (
             manualRetryRevision > 0 &&
             automaticRetries >= MAX_AUTOMATIC_RETRIES &&
-            resolved != null
+            imageRequest != null
         ) {
             automaticRetries = 0
             failed = false
@@ -504,24 +567,12 @@ private fun ReaderRemoteImage(
         }
     }
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        if (resolved == null) {
+        if (imageRequest == null) {
             Text(
                 text = stringResource(R.string.reader_image_failed),
                 color = Color.LightGray,
             )
         } else {
-            val context = LocalContext.current
-            val headers = remember(resolved.authorization) {
-                resolved.authorization?.let { authorization ->
-                    NetworkHeaders.Builder().set("Authorization", authorization).build()
-                }
-            }
-            val imageRequest = remember(resolved.url, headers, requestGeneration) {
-                ImageRequest.Builder(context)
-                    .data(resolved.url)
-                    .apply { if (headers != null) httpHeaders(headers) }
-                    .build()
-            }
             val imageModifier = when {
                 viewportHeight == Dp.Unspecified -> Modifier.fillMaxSize()
                 zoomMode == ImageZoomMode.Auto -> Modifier
@@ -568,7 +619,7 @@ private fun ReaderRemoteImage(
                 },
             )
         }
-        if (resolved != null && imageLoading) {
+        if (imageRequest != null && imageLoading) {
             KaloscopeLoadingLayout(
                 testTag = loadingTestTag,
                 modifier = when {
@@ -582,7 +633,7 @@ private fun ReaderRemoteImage(
                 },
             )
         }
-        if (resolved != null && failed && automaticRetries >= MAX_AUTOMATIC_RETRIES) {
+        if (imageRequest != null && failed && automaticRetries >= MAX_AUTOMATIC_RETRIES) {
             Text(
                 text = stringResource(R.string.reader_image_failed),
                 color = Color.LightGray,

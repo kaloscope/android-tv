@@ -467,6 +467,30 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun readerSettingsHintUsesSmallVerticallyCenteredIcon() {
+        setReader(textState(text = "正文"))
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+
+        val icon = composeRule.onNodeWithTag(
+            testTag = "reader-session-settings-hint-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val text = composeRule.onNodeWithTag(
+            testTag = "reader-session-settings-hint-text",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+
+        assertEquals(14f * density, icon.width, 0.5f)
+        assertEquals(text.center.y, icon.center.y, density)
+    }
+
+    @Test
     fun pagedLoadingUsesCenteredIndicatorWithoutLegacyText() {
         setReader(
             imageState(
