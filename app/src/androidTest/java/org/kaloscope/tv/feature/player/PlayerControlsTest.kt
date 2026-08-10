@@ -1673,6 +1673,7 @@ class PlayerControlsTest {
                     ),
                     selectedIndex = 1,
                     onSelect = {},
+                    onDismiss = {},
                 )
             }
         }

@@ -1,19 +1,17 @@
 package org.kaloscope.tv.feature.reader
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,33 +32,30 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.LocalContentColor
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
-import org.kaloscope.tv.core.designsystem.KaloscopeControlTokens
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanel
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelAdjustmentRow
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelPalette
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSectionHeader
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSelectionRow
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSessionHint
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSide
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.designsystem.readerBackgroundColor
 import org.kaloscope.tv.core.model.ImagePageDirection
@@ -194,6 +189,12 @@ private fun ActiveReader(
             ?.takeIf(::controlTargetIsEnabled)
             ?: defaultControlTarget(content.chapters)
 
+    fun dismissDrawer() {
+        drawer = null
+        controlsVisible = true
+        pendingControlFocus = entryControlTarget()
+    }
+
     fun hideControls() {
         controlsVisible = false
         pendingControlFocus = null
@@ -266,19 +267,11 @@ private fun ActiveReader(
         }
     }
 
-    BackHandler {
-        when {
-            drawer != null -> {
-                drawer = null
-                controlsVisible = true
-                pendingControlFocus = entryControlTarget()
-            }
-
-            controlsVisible -> {
-                hideControls()
-            }
-
-            else -> onBack()
+    BackHandler(enabled = drawer == null) {
+        if (controlsVisible) {
+            hideControls()
+        } else {
+            onBack()
         }
     }
 
@@ -398,9 +391,9 @@ private fun ActiveReader(
                 panelColor = overlayPanel,
                 textColor = overlayText,
                 mutedColor = overlayMuted,
+                onDismiss = ::dismissDrawer,
                 onSelect = { chapterIndex ->
-                    drawer = null
-                    pendingControlFocus = entryControlTarget()
+                    dismissDrawer()
                     selectChapter(chapterIndex)
                 },
             )
@@ -412,6 +405,7 @@ private fun ActiveReader(
                     chapterOrder = state.chapterOrder,
                     onSettings = onImageSettings,
                     onChapterOrder = onChapterOrder,
+                    onDismiss = ::dismissDrawer,
                 )
 
                 is ReaderUiState.Text -> TextReaderSettingsDrawer(
@@ -422,6 +416,7 @@ private fun ActiveReader(
                     mutedColor = overlayMuted,
                     onSettings = onTextSettings,
                     onChapterOrder = onChapterOrder,
+                    onDismiss = ::dismissDrawer,
                 )
             }
         }
@@ -564,6 +559,8 @@ private fun ReaderBottomControls(
     ) {
         ReaderControlButton(
             text = stringResource(R.string.reader_previous_chapter),
+            iconRes = R.drawable.ic_action_previous,
+            iconTag = "reader-previous-chapter-icon",
             enabled = previousEnabled,
             focusRequester = focusRequesters.getValue(ReaderControlTarget.PreviousChapter),
             onFocused = { onFocused(ReaderControlTarget.PreviousChapter) },
@@ -572,6 +569,8 @@ private fun ReaderBottomControls(
         Spacer(Modifier.width(14.dp))
         ReaderControlButton(
             text = stringResource(R.string.reader_chapters),
+            iconRes = R.drawable.ic_settings_reading,
+            iconTag = "reader-chapters-icon",
             enabled = chaptersEnabled,
             focusRequester = focusRequesters.getValue(ReaderControlTarget.Chapters),
             onFocused = { onFocused(ReaderControlTarget.Chapters) },
@@ -580,6 +579,8 @@ private fun ReaderBottomControls(
         Spacer(Modifier.width(14.dp))
         ReaderControlButton(
             text = stringResource(R.string.reader_settings),
+            iconRes = R.drawable.ic_nav_settings,
+            iconTag = "reader-settings-icon",
             enabled = true,
             focusRequester = focusRequesters.getValue(ReaderControlTarget.Settings),
             onFocused = { onFocused(ReaderControlTarget.Settings) },
@@ -589,6 +590,8 @@ private fun ReaderBottomControls(
             Spacer(Modifier.width(14.dp))
             ReaderControlButton(
                 text = stringResource(R.string.reader_image_retry),
+                iconRes = R.drawable.ic_refresh,
+                iconTag = "reader-retry-images-icon",
                 enabled = true,
                 focusRequester = focusRequesters.getValue(ReaderControlTarget.RetryImages),
                 onFocused = { onFocused(ReaderControlTarget.RetryImages) },
@@ -598,6 +601,8 @@ private fun ReaderBottomControls(
         Spacer(Modifier.width(14.dp))
         ReaderControlButton(
             text = stringResource(R.string.reader_next_chapter),
+            iconRes = R.drawable.ic_action_next,
+            iconTag = "reader-next-chapter-icon",
             enabled = nextEnabled,
             focusRequester = focusRequesters.getValue(ReaderControlTarget.NextChapter),
             onFocused = { onFocused(ReaderControlTarget.NextChapter) },
@@ -609,6 +614,8 @@ private fun ReaderBottomControls(
 @Composable
 private fun ReaderControlButton(
     text: String,
+    @DrawableRes iconRes: Int,
+    iconTag: String,
     enabled: Boolean,
     focusRequester: FocusRequester,
     onFocused: () -> Unit,
@@ -623,6 +630,14 @@ private fun ReaderControlButton(
             .focusRequester(focusRequester)
             .onFocusChanged { if (it.isFocused) onFocused() },
     ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier
+                .size(22.dp)
+                .testTag(iconTag),
+        )
+        Spacer(Modifier.width(8.dp))
         Text(text = text, maxLines = 1)
     }
 }
@@ -635,65 +650,81 @@ private fun ReaderChapterDrawer(
     panelColor: Color,
     textColor: Color,
     mutedColor: Color,
+    onDismiss: () -> Unit,
     onSelect: (Int) -> Unit,
 ) {
     val requesters = remember(chapters) {
         chapters.associate { it.id to FocusRequester() }
     }
     val groups = ReaderChapterPolicy.displayGroups(chapters, order)
+    val listState = rememberLazyListState()
+    val selectedChapterId = selectedIndex
+        ?.let(chapters::getOrNull)
+        ?.id
+    val selectedListIndex = remember(groups, selectedChapterId) {
+        var itemIndex = 0
+        var match: Int? = null
+        groups.forEach { group ->
+            if (group.volume != null) {
+                itemIndex += 1
+            }
+            group.chapters.forEach { chapter ->
+                if (chapter.id == selectedChapterId) {
+                    match = itemIndex
+                }
+                itemIndex += 1
+            }
+        }
+        match
+    }
     LaunchedEffect(chapters, selectedIndex, order) {
+        selectedListIndex?.let { listState.scrollToItem(it) }
         withFrameNanos { }
-        selectedIndex
-            ?.let(chapters::getOrNull)
-            ?.id
+        selectedChapterId
             ?.let(requesters::get)
             ?.requestFocus()
             ?: groups.firstOrNull()?.chapters?.firstOrNull()?.id
                 ?.let(requesters::get)
                 ?.requestFocus()
     }
-    ReaderDrawerFrame(
+    KaloscopeSidePanel(
         title = stringResource(R.string.reader_chapters),
-        panelColor = panelColor,
-        textColor = textColor,
-        alignment = Alignment.CenterStart,
+        palette = KaloscopeSidePanelPalette(
+            panelColor = panelColor,
+            textColor = textColor,
+            mutedColor = mutedColor,
+        ),
+        onDismiss = onDismiss,
+        side = KaloscopeSidePanelSide.Start,
         modifier = Modifier.testTag("reader-chapter-drawer"),
     ) {
         if (chapters.isEmpty()) {
             Text(stringResource(R.string.reader_no_chapters), color = mutedColor)
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .focusGroup()
-                    .focusProperties {
-                        onExit = { cancelFocusChange() }
-                    },
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 groups.forEach { group ->
                     group.volume?.let { volume ->
                         item(key = "volume:$volume") {
-                            Text(
-                                text = volume,
+                            KaloscopeSidePanelSectionHeader(
+                                title = volume,
                                 color = mutedColor,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
                             )
                         }
                     }
                     items(group.chapters, key = ReaderChapter::id) { chapter ->
                         val sourceIndex = chapters.indexOfFirst { it.id == chapter.id }
-                        KaloscopeButton(
+                        KaloscopeSidePanelSelectionRow(
+                            title = chapter.title,
                             onClick = { onSelect(sourceIndex) },
                             selected = sourceIndex == selectedIndex,
-                            size = KaloscopeControlSize.Row,
                             modifier = Modifier
-                                .fillMaxWidth()
                                 .focusRequester(requesters.getValue(chapter.id)),
-                        ) {
-                            Text(chapter.title, maxLines = 2)
-                        }
+                            maxLines = 2,
+                        )
                     }
                 }
             }
@@ -707,11 +738,13 @@ private fun ImageReaderSettingsDrawer(
     chapterOrder: ReaderChapterOrder,
     onSettings: (ImageReaderSettings) -> Unit,
     onChapterOrder: (ReaderChapterOrder) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     ReaderSettingsDrawerFrame(
         panelColor = Color(0xFF121212),
         textColor = Color.White,
         mutedColor = Color(0xFFAAAAAA),
+        onDismiss = onDismiss,
     ) {
         ReaderEnumSettingRow(
             title = stringResource(R.string.reader_chapter_order),
@@ -762,8 +795,14 @@ private fun TextReaderSettingsDrawer(
     mutedColor: Color,
     onSettings: (TextReaderSettings) -> Unit,
     onChapterOrder: (ReaderChapterOrder) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    ReaderSettingsDrawerFrame(panelColor, textColor, mutedColor) {
+    ReaderSettingsDrawerFrame(
+        panelColor = panelColor,
+        textColor = textColor,
+        mutedColor = mutedColor,
+        onDismiss = onDismiss,
+    ) {
         ReaderEnumSettingRow(
             title = stringResource(R.string.reader_chapter_order),
             value = chapterOrder.label(),
@@ -898,100 +937,36 @@ private fun ReaderSettingsDrawerFrame(
     panelColor: Color,
     textColor: Color,
     mutedColor: Color,
+    onDismiss: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    ReaderDrawerFrame(
+    KaloscopeSidePanel(
         title = stringResource(R.string.reader_settings),
-        panelColor = panelColor,
-        textColor = textColor,
+        palette = KaloscopeSidePanelPalette(
+            panelColor = panelColor,
+            textColor = textColor,
+            mutedColor = mutedColor,
+        ),
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("reader-settings-drawer"),
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .focusGroup()
-                    .focusProperties {
-                        onExit = { cancelFocusChange() }
-                    },
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        content()
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Canvas(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .testTag("reader-session-settings-hint-icon"),
-                ) {
-                    val strokeWidth = 1.dp.toPx()
-                    drawCircle(
-                        color = mutedColor,
-                        radius = (size.minDimension - strokeWidth) / 2f,
-                        style = Stroke(width = strokeWidth),
-                    )
-                    drawLine(
-                        color = mutedColor,
-                        start = Offset(center.x, size.height * 0.27f),
-                        end = Offset(center.x, size.height * 0.57f),
-                        strokeWidth = strokeWidth,
-                        cap = StrokeCap.Round,
-                    )
-                    drawCircle(
-                        color = mutedColor,
-                        radius = strokeWidth * 0.7f,
-                        center = Offset(center.x, size.height * 0.73f),
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.reader_session_settings_description),
-                    color = mutedColor,
-                    fontSize = 12.sp,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("reader-session-settings-hint-text"),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReaderDrawerFrame(
-    title: String,
-    panelColor: Color,
-    textColor: Color,
-    alignment: Alignment = Alignment.CenterEnd,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.58f)),
-        contentAlignment = alignment,
-    ) {
-        Column(
-            modifier = modifier
-                .fillMaxHeight()
-                .width(500.dp)
-                .background(panelColor.copy(alpha = 0.99f))
-                .padding(horizontal = 28.dp, vertical = 32.dp),
-        ) {
-            Text(
-                text = title,
-                color = textColor,
-                fontSize = 25.sp,
-                fontWeight = FontWeight.Bold,
+        footer = {
+            KaloscopeSidePanelSessionHint(
+                text = stringResource(R.string.reader_session_settings_description),
+                color = mutedColor,
+                iconTestTag = "reader-session-settings-hint-icon",
+                textTestTag = "reader-session-settings-hint-text",
             )
-            Spacer(Modifier.height(20.dp))
-            Box(modifier = Modifier.weight(1f)) { content() }
+        },
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    content()
+                }
+            }
         }
     }
 }
@@ -1022,16 +997,23 @@ private fun <T> ReaderEnumSettingRow(
     fun move(offset: Int) {
         values.getOrNull(currentIndex + offset)?.let(onSelect)
     }
-    ReaderSettingButton(
+    KaloscopeSidePanelAdjustmentRow(
         title = title,
         value = value,
-        focusRequester = focus.takeIf { requestInitialFocus },
         canDecrease = canDecrease,
         canIncrease = canIncrease,
         onDecrease = { move(-1) },
         onIncrease = { move(1) },
+        modifier = Modifier
+            .then(
+                if (requestInitialFocus) {
+                    Modifier.focusRequester(focus)
+                } else {
+                    Modifier
+                },
+            )
+            .then(testTag?.let(Modifier::testTag) ?: Modifier),
         valueSwatchColor = valueSwatchColor,
-        testTag = testTag,
         adjustmentTestTagPrefix = adjustmentTestTagPrefix,
         swatchTestTag = swatchTestTag,
     )
@@ -1048,125 +1030,15 @@ private fun ReaderNumericSettingRow(
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
 ) {
-    ReaderSettingButton(
+    KaloscopeSidePanelAdjustmentRow(
         title = title,
         value = value,
-        focusRequester = null,
         canDecrease = canDecrease,
         canIncrease = canIncrease,
         onDecrease = onDecrease,
         onIncrease = onIncrease,
-        testTag = testTag,
+        modifier = Modifier.testTag(testTag),
         adjustmentTestTagPrefix = adjustmentTestTagPrefix,
-    )
-}
-
-@Composable
-private fun ReaderSettingButton(
-    title: String,
-    value: String,
-    focusRequester: FocusRequester?,
-    canDecrease: Boolean,
-    canIncrease: Boolean,
-    onDecrease: () -> Unit,
-    onIncrease: () -> Unit,
-    valueSwatchColor: Color? = null,
-    testTag: String? = null,
-    adjustmentTestTagPrefix: String? = null,
-    swatchTestTag: String? = null,
-) {
-    KaloscopeButton(
-        onClick = {
-            if (canIncrease) onIncrease()
-        },
-        size = KaloscopeControlSize.Row,
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .then(testTag?.let(Modifier::testTag) ?: Modifier)
-            .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                when (event.key) {
-                    Key.DirectionLeft -> {
-                        if (canDecrease) onDecrease()
-                        true
-                    }
-
-                    Key.DirectionRight -> {
-                        if (canIncrease) onIncrease()
-                        true
-                    }
-
-                    else -> false
-                }
-            },
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = title, modifier = Modifier.weight(1f), maxLines = 1)
-            valueSwatchColor?.let { color ->
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .background(color, CircleShape)
-                        .then(swatchTestTag?.let(Modifier::testTag) ?: Modifier),
-                )
-                Spacer(Modifier.width(10.dp))
-            }
-            ReaderAdjustmentValue(
-                value = value,
-                canDecrease = canDecrease,
-                canIncrease = canIncrease,
-                testTagPrefix = adjustmentTestTagPrefix,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ReaderAdjustmentValue(
-    value: String,
-    canDecrease: Boolean,
-    canIncrease: Boolean,
-    testTagPrefix: String?,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ReaderAdjustmentArrow(
-            text = "‹",
-            enabled = canDecrease,
-            testTag = testTagPrefix?.let { "$it-decrease" },
-        )
-        Text(text = value, maxLines = 1)
-        ReaderAdjustmentArrow(
-            text = "›",
-            enabled = canIncrease,
-            testTag = testTagPrefix?.let { "$it-increase" },
-        )
-    }
-}
-
-@Composable
-private fun ReaderAdjustmentArrow(
-    text: String,
-    enabled: Boolean,
-    testTag: String?,
-) {
-    val contentColor = LocalContentColor.current
-    Text(
-        text = text,
-        color = if (enabled) {
-            contentColor
-        } else {
-            contentColor.copy(alpha = KaloscopeControlTokens.DisabledAlpha)
-        },
-        maxLines = 1,
-        modifier = Modifier
-            .then(testTag?.let(Modifier::testTag) ?: Modifier)
-            .semantics(mergeDescendants = true) {
-                if (!enabled) disabled()
-            },
     )
 }
 

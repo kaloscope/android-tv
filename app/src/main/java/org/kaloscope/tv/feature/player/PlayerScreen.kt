@@ -205,6 +205,7 @@ private fun PlayerContent(
     var restoreSettingsFocus by remember { mutableStateOf(false) }
     var speedDrawerOpen by remember { mutableStateOf(false) }
     var restoreSpeedFocus by remember { mutableStateOf(false) }
+    val sidePanelOpen = definitionDrawerOpen || settingsDrawerOpen || speedDrawerOpen
     var interactionVersion by remember { mutableLongStateOf(0) }
     var playbackToggleFeedbackId by remember(playbackIdentity) { mutableLongStateOf(0) }
     var playbackToggleFeedback by remember(playbackIdentity) {
@@ -227,37 +228,20 @@ private fun PlayerContent(
         )
     }
 
-    BackHandler {
-        val context = when {
-            settingsDrawerOpen -> PlayerBackContext.SettingsDrawer
-            speedDrawerOpen -> PlayerBackContext.SpeedDrawer
-            definitionDrawerOpen -> PlayerBackContext.DefinitionDrawer
+    BackHandler(enabled = !sidePanelOpen) {
+        val context = if (
             controlLayer != PlayerControlLayer.Hidden &&
                 feedback in setOf(
                     PlaybackFeedback.Ready,
                     PlaybackFeedback.Rebuffering,
                     PlaybackFeedback.FallingBack,
-                ) ->
-                PlayerBackContext.Controls
-
-            else -> PlayerBackContext.Player
+                )
+        ) {
+            PlayerBackContext.Controls
+        } else {
+            PlayerBackContext.Player
         }
         when (PlayerControlKeyPolicy.backCommand(context)) {
-            PlayerControlCommand.CloseSettingsDrawer -> {
-                settingsDrawerOpen = false
-                restoreSettingsFocus = true
-            }
-
-            PlayerControlCommand.CloseSpeedDrawer -> {
-                speedDrawerOpen = false
-                restoreSpeedFocus = true
-            }
-
-            PlayerControlCommand.CloseDefinitionDrawer -> {
-                definitionDrawerOpen = false
-                restoreDefinitionFocus = true
-            }
-
             PlayerControlCommand.HideControls -> controlLayer = PlayerControlLayer.Hidden
             PlayerControlCommand.ExitPlayer -> onBack()
             else -> Unit
@@ -732,6 +716,10 @@ private fun PlayerContent(
                     definitionDrawerOpen = false
                     restoreDefinitionFocus = true
                     onSelectDefinition(index, controller.player.currentPosition)
+                },
+                onDismiss = {
+                    definitionDrawerOpen = false
+                    restoreDefinitionFocus = true
                 },
             )
         }

@@ -50,6 +50,7 @@ internal fun rememberKaloscopeControlVisuals(
     preserveSelectionOnFocus: Boolean = false,
 ): KaloscopeControlVisuals {
     val accentPalette = LocalAccentPalette.current
+    val restingContentColor = LocalKaloscopeControlRestingContentColor.current
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
     val pressed by interactionSource.collectIsPressedAsState()
@@ -63,6 +64,7 @@ internal fun rememberKaloscopeControlVisuals(
         pressed = pressed,
         scaleOnFocus = scaleOnFocus,
         preserveSelectionOnFocus = preserveSelectionOnFocus,
+        restingContentColor = restingContentColor,
     )
     val duration = if (pressed) {
         KaloscopeMotion.PressMillis

@@ -13,6 +13,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -106,7 +108,7 @@ class PlayerSettingsDrawerTest {
         val harness = DrawerHarness()
         setDrawer(harness)
 
-        composeRule.onNodeWithText("时间偏移")
+        composeRule.onNodeWithTag("player-subtitle-offset-reset")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionDown) }
 
@@ -151,7 +153,7 @@ class PlayerSettingsDrawerTest {
         )
 
         assertTopBoundaryStaysOn("简体中文")
-        composeRule.onNodeWithText("时间偏移")
+        composeRule.onNodeWithTag("player-subtitle-offset-reset")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionDown) }
             .assertIsFocused()
@@ -171,6 +173,122 @@ class PlayerSettingsDrawerTest {
         assertBottomBoundaryStaysOnBlockRow()
     }
 
+    @Test
+    fun subtitleFontScaleUpperBoundaryDisablesIncreaseWithoutUpdating() {
+        val harness = DrawerHarness(
+            initialSubtitleSettings = SubtitleSettings(fontScalePercent = 200),
+        )
+        setDrawer(harness)
+        scrollRowIntoView("player-subtitle-font-scale-row")
+
+        composeRule.onNodeWithTag(
+            testTag = "player-subtitle-font-scale-increase",
+            useUnmergedTree = true,
+        ).assertIsNotEnabled()
+        composeRule.onNodeWithTag("player-subtitle-font-scale-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.DirectionRight)
+                pressKey(Key.Enter)
+            }
+
+        composeRule.runOnIdle {
+            assertEquals(200, harness.subtitleSettings.fontScalePercent)
+            assertEquals(0, harness.subtitleUpdateCount)
+        }
+    }
+
+    @Test
+    fun centerIncreasesSubtitleFontScaleOneStep() {
+        val harness = DrawerHarness()
+        setDrawer(harness)
+        scrollRowIntoView("player-subtitle-font-scale-row")
+
+        composeRule.onNodeWithTag("player-subtitle-font-scale-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(105, harness.subtitleSettings.fontScalePercent)
+            assertEquals(1, harness.subtitleUpdateCount)
+        }
+    }
+
+    @Test
+    fun centerIncreasesSubtitleOffsetInsteadOfResettingIt() {
+        val harness = DrawerHarness(
+            initialSubtitleSettings = SubtitleSettings(timeOffsetSeconds = 0.5f),
+        )
+        setDrawer(harness)
+        scrollRowIntoView("player-subtitle-offset-row")
+
+        composeRule.onNodeWithTag("player-subtitle-offset-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(0.6f, harness.subtitleSettings.timeOffsetSeconds)
+            assertEquals(1, harness.subtitleUpdateCount)
+        }
+    }
+
+    @Test
+    fun explicitSubtitleOffsetResetKeepsDrawerOpenAndFocused() {
+        val harness = DrawerHarness(
+            initialSubtitleSettings = SubtitleSettings(timeOffsetSeconds = 0.5f),
+        )
+        setDrawer(harness)
+        scrollRowIntoView("player-subtitle-offset-reset")
+
+        composeRule.onNodeWithTag("player-subtitle-offset-reset")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsFocused()
+
+        composeRule.onNodeWithTag("player-settings-drawer").assertExists()
+        composeRule.runOnIdle {
+            assertEquals(0f, harness.subtitleSettings.timeOffsetSeconds)
+            assertEquals(1, harness.subtitleUpdateCount)
+        }
+    }
+
+    @Test
+    fun drawerShowsPlaybackSessionHint() {
+        setDrawer(DrawerHarness())
+
+        composeRule.onNodeWithText(
+            "此处调整仅对本次播放生效，不会修改全局默认值。",
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "player-session-settings-hint-icon",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "player-session-settings-hint-text",
+            useUnmergedTree = true,
+        ).assertExists()
+    }
+
+    @Test
+    fun deepSelectedSubtitleTrackScrollsIntoViewBeforeFocus() {
+        val tracks = List(24) { index ->
+            SubtitleTrack(
+                id = "track-$index",
+                label = "Track ${index + 1}",
+                url = "/track-$index.vtt",
+                language = "lang-$index",
+            )
+        }
+        setDrawer(
+            harness = DrawerHarness(initialSelectedTrackId = "track-19"),
+            subtitleTracks = tracks,
+        )
+
+        composeRule.onNodeWithText("Track 20")
+            .assertIsSelected()
+            .assertIsFocused()
+    }
+
     private fun assertTopBoundaryStaysOn(label: String) {
         composeRule.onNodeWithText(label)
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -188,6 +306,11 @@ class PlayerSettingsDrawerTest {
     private fun scrollBlockRowIntoView() {
         composeRule.onNodeWithTag("player-settings-list")
             .performScrollToNode(hasTestTag("player-settings-block-types"))
+    }
+
+    private fun scrollRowIntoView(tag: String) {
+        composeRule.onNodeWithTag("player-settings-list")
+            .performScrollToNode(hasTestTag(tag))
     }
 
     private fun setDrawer(
@@ -229,7 +352,10 @@ class PlayerSettingsDrawerTest {
                             includeDanmakuSettings
                         },
                         onSelectSubtitleTrack = { harness.selectedTrackId = it },
-                        onChangeSubtitleSettings = { harness.subtitleSettings = it },
+                        onChangeSubtitleSettings = {
+                            harness.subtitleUpdateCount += 1
+                            harness.subtitleSettings = it
+                        },
                         onChangeDanmakuSettings = { harness.danmakuSettings = it },
                         onDismiss = { harness.dismissCount += 1 },
                     )
@@ -238,10 +364,14 @@ class PlayerSettingsDrawerTest {
         }
     }
 
-    private class DrawerHarness {
-        var selectedTrackId by mutableStateOf<String?>("zh")
-        var subtitleSettings by mutableStateOf(SubtitleSettings())
+    private class DrawerHarness(
+        initialSubtitleSettings: SubtitleSettings = SubtitleSettings(),
+        initialSelectedTrackId: String? = "zh",
+    ) {
+        var selectedTrackId by mutableStateOf(initialSelectedTrackId)
+        var subtitleSettings by mutableStateOf(initialSubtitleSettings)
         var danmakuSettings by mutableStateOf(DanmakuSettings())
+        var subtitleUpdateCount = 0
         var dismissCount = 0
     }
 }

@@ -94,6 +94,60 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun textBottomControlsShowIconsBesideEveryVisibleAction() {
+        setReader(textState(text = "正文"))
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        listOf(
+            "reader-previous-chapter-icon",
+            "reader-chapters-icon",
+            "reader-settings-icon",
+            "reader-next-chapter-icon",
+        ).forEach { tag ->
+            val bounds = composeRule.onNodeWithTag(
+                testTag = tag,
+                useUnmergedTree = true,
+            ).fetchSemanticsNode().boundsInRoot
+            assertEquals(22f * density, bounds.width, 1f)
+            assertEquals(22f * density, bounds.height, 1f)
+        }
+
+        val chaptersIcon = composeRule.onNodeWithTag(
+            testTag = "reader-chapters-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val chaptersLabel = composeRule.onNodeWithText(
+            text = "章节",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        assertTrue(chaptersIcon.right <= chaptersLabel.left)
+    }
+
+    @Test
+    fun imageBottomControlsUseTheSharedActionIcons() {
+        setReader(imageState())
+
+        composeRule.onNodeWithTag("image-reader-scroll")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+
+        listOf(
+            "reader-previous-chapter-icon",
+            "reader-chapters-icon",
+            "reader-settings-icon",
+            "reader-next-chapter-icon",
+        ).forEach { tag ->
+            composeRule.onNodeWithTag(
+                testTag = tag,
+                useUnmergedTree = true,
+            ).assertExists()
+        }
+    }
+
+    @Test
     fun reopeningControlsReturnsToLastFocusedAvailableAction() {
         setReader(textState(text = "正文"))
         val content = composeRule.onNodeWithTag("text-reader-content")
@@ -366,6 +420,172 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun chapterDrawerUsesStandardStartGeometryAndFocusesDeepSelection() {
+        val manyChapters = List(24) { index ->
+            ReaderChapter(
+                id = "chapter-$index",
+                title = "第 ${index + 1} 章",
+                volume = "长篇",
+            )
+        }
+        setReader(
+            textState(
+                text = "正文",
+                chapterItems = manyChapters,
+                selectedChapterIndex = 15,
+            ),
+        )
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.Enter) }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val screen = composeRule.onNodeWithTag("reader-screen")
+            .fetchSemanticsNode().boundsInRoot
+        val drawer = composeRule.onNodeWithTag("reader-chapter-drawer")
+            .fetchSemanticsNode().boundsInRoot
+        assertEquals(500f * density, drawer.width, density)
+        assertEquals(screen.left, drawer.left, 1f)
+        control("第 16 章").assertIsFocused()
+    }
+
+    @Test
+    fun selectingChapterClosesDrawerAndRestoresChapterControlAfterLoading() {
+        var selectedIndex = -1
+        var state by mutableStateOf(textState(text = "正文"))
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = { index ->
+                        selectedIndex = index
+                        state = state.copy(isChapterLoading = true)
+                    },
+                    onLoadMoreImages = {},
+                    onImageSettings = {},
+                    onTextSettings = {},
+                    onChapterOrder = {},
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithText("第三章")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("reader-chapter-drawer").assertDoesNotExist()
+        composeRule.runOnIdle { assertEquals(2, selectedIndex) }
+        composeRule.runOnIdle {
+            state = state.copy(
+                content = state.content.copy(selectedChapterIndex = selectedIndex),
+                contentRevision = state.contentRevision + 1,
+                isChapterLoading = false,
+            )
+        }
+        composeRule.waitForIdle()
+
+        control("章节").assertIsFocused()
+    }
+
+    @Test
+    fun textSettingsKeepThemePanelAndRestingTextColors() {
+        setReader(
+            textState(
+                text = "正文",
+                settings = TextReaderSettings(theme = TextReaderTheme.White),
+            ),
+        )
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("reader-text-theme-setting")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(500)
+
+        val panel = composeRule.onNodeWithTag("reader-settings-drawer")
+            .captureToImage().asAndroidBitmap()
+        assertEquals(Color(0xFFFDFDFD).toArgb(), panel.getPixel(2, panel.height / 2))
+        assertEquals(
+            Color(0xFF333333),
+            textLayoutForText("章节显示顺序").layoutInput.style.color,
+        )
+    }
+
+    @Test
+    fun centerIncreasesTextFontSizeOneStep() {
+        var state by mutableStateOf(textState(text = "正文"))
+        var updates = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = {},
+                    onLoadMoreImages = {},
+                    onImageSettings = {},
+                    onTextSettings = { settings ->
+                        updates += 1
+                        state = state.copy(settings = settings)
+                    },
+                    onChapterOrder = {},
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        val initialSize = state.settings.fontSizeSp
+        composeRule.onNodeWithTag("reader-font-size-setting")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(initialSize + ReaderSettingsPolicy.FONT_SIZE_STEP_SP, state.settings.fontSizeSp)
+            assertEquals(1, updates)
+        }
+    }
+
+    @Test
+    fun centerAtMaximumTextFontSizeDoesNotUpdate() {
+        var updates = 0
+        setReaderWithCallbacks(
+            state = textState(
+                text = "正文",
+                settings = TextReaderSettings(
+                    fontSizeSp = ReaderSettingsPolicy.MAX_FONT_SIZE_SP,
+                ),
+            ),
+            onTextSettings = { updates += 1 },
+        )
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("reader-font-size-setting")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle { assertEquals(0, updates) }
+    }
+
+    @Test
     fun textSettingsThemeSwatchTracksTheSessionTheme() {
         var state by mutableStateOf(textState(text = "正文"))
         composeRule.setContent {
@@ -634,6 +854,37 @@ class ReaderScreenTest {
         return results.single()
     }
 
+    private fun textLayoutForText(text: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText(text, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(results)
+            }
+        return results.single()
+    }
+
+    private fun setReaderWithCallbacks(
+        state: ReaderUiState.Active,
+        onTextSettings: (TextReaderSettings) -> Unit,
+    ) {
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = {},
+                    onLoadMoreImages = {},
+                    onImageSettings = {},
+                    onTextSettings = onTextSettings,
+                    onChapterOrder = {},
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                )
+            }
+        }
+    }
+
     private fun setReader(
         state: ReaderUiState.Active,
         onBack: () -> Unit = {},
@@ -677,17 +928,19 @@ private val chapters = listOf(
 private fun textState(
     text: String,
     settings: TextReaderSettings = TextReaderSettings(),
+    chapterItems: List<ReaderChapter> = chapters,
+    selectedChapterIndex: Int = 1,
 ) = ReaderUiState.Text(
     requestId = "reader-request",
     serverId = "server-id",
     content = ReaderTextContent.network(
         indexerId = 7,
         resourceId = "text-resource",
-        chapterId = "chapter-2",
+        chapterId = chapterItems.getOrNull(selectedChapterIndex)?.id,
         title = "测试文本",
         text = text,
-        chapters = chapters,
-        selectedChapterIndex = 1,
+        chapters = chapterItems,
+        selectedChapterIndex = selectedChapterIndex,
     ),
     settings = settings,
     chapterOrder = ReaderChapterOrder.Ascending,

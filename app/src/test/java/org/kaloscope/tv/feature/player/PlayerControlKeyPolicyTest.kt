@@ -187,19 +187,7 @@ class PlayerControlKeyPolicyTest {
     }
 
     @Test
-    fun `back closes the active player layer before leaving playback`() {
-        assertEquals(
-            PlayerControlCommand.CloseSettingsDrawer,
-            PlayerControlKeyPolicy.backCommand(PlayerBackContext.SettingsDrawer),
-        )
-        assertEquals(
-            PlayerControlCommand.CloseSpeedDrawer,
-            PlayerControlKeyPolicy.backCommand(PlayerBackContext.SpeedDrawer),
-        )
-        assertEquals(
-            PlayerControlCommand.CloseDefinitionDrawer,
-            PlayerControlKeyPolicy.backCommand(PlayerBackContext.DefinitionDrawer),
-        )
+    fun `back hides controls before leaving playback`() {
         assertEquals(
             PlayerControlCommand.HideControls,
             PlayerControlKeyPolicy.backCommand(PlayerBackContext.Controls),

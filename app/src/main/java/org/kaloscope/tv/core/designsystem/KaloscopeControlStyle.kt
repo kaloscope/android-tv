@@ -1,5 +1,6 @@
 package org.kaloscope.tv.core.designsystem
 
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,9 @@ object KaloscopeControlTokens {
     const val RowFocusedScale = 1.02f
     const val RestingScale = 1f
 }
+
+internal val LocalKaloscopeControlRestingContentColor =
+    staticCompositionLocalOf { OnBackground }
 
 internal fun resolveKaloscopeControlBaseColor(
     material: KaloscopeControlBaseMaterial,
@@ -90,6 +94,7 @@ internal fun resolveKaloscopeControlState(
     pressed: Boolean,
     scaleOnFocus: Boolean = true,
     preserveSelectionOnFocus: Boolean = false,
+    restingContentColor: Color = OnBackground,
 ): KaloscopeResolvedControlState {
     val effectivelyFocused = enabled && focused
     val baseMaterial = when {
@@ -142,7 +147,8 @@ internal fun resolveKaloscopeControlState(
 
         effectivelyFocused -> OnControlFocused
         tone == KaloscopeControlTone.Danger -> Danger
-        else -> OnBackground
+        selected -> OnBackground
+        else -> restingContentColor
     }
     return KaloscopeResolvedControlState(
         baseMaterial = baseMaterial,

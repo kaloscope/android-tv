@@ -1,20 +1,14 @@
 package org.kaloscope.tv.feature.search
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,17 +16,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +30,8 @@ import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanel
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelPalette
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -63,68 +52,31 @@ internal fun SearchFilterDrawer(
         mutableStateOf(appliedValues.toMap())
     }
     val initialFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        withFrameNanos { }
-        initialFocus.requestFocus()
+    val listState = rememberLazyListState()
+    val initialFocusableIndex = definitions.indexOfFirst { definition ->
+        definition.type == SearchFilterType.Text ||
+            definition.type == SearchFilterType.DateTime ||
+            definition.options.isNotEmpty()
     }
-    BackHandler(onBack = onDismiss)
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .onPreviewKeyEvent { event ->
-                if (event.key != Key.Back) {
-                    return@onPreviewKeyEvent false
-                }
-                if (event.type == KeyEventType.KeyUp) {
-                    onDismiss()
-                }
-                true
-            }
-            .background(Color(0x66000000))
-            .testTag("search-filter-drawer"),
-        contentAlignment = Alignment.CenterEnd,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(460.dp)
-                .background(Panel.copy(alpha = 0.98f))
-                .padding(horizontal = 28.dp, vertical = 34.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.search_filters),
-                color = OnBackground,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(R.string.search_filters_description),
-                color = Muted,
-                fontSize = 13.sp,
-            )
-            Spacer(Modifier.height(18.dp))
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                itemsIndexed(definitions, key = { _, definition -> definition.key }) {
-                        index, definition,
-                    ->
-                    SearchFilterField(
-                        definition = definition,
-                        value = draft[definition.key],
-                        onValueChange = { value ->
-                            draft = if (value == null) {
-                                draft - definition.key
-                            } else {
-                                draft + (definition.key to value)
-                            }
-                        },
-                        initialFocus = initialFocus.takeIf { index == 0 },
-                    )
-                }
-            }
-            Spacer(Modifier.height(18.dp))
+    LaunchedEffect(definitions) {
+        if (initialFocusableIndex >= 0) {
+            listState.scrollToItem(initialFocusableIndex)
+            withFrameNanos { }
+            initialFocus.requestFocus()
+        }
+    }
+    KaloscopeSidePanel(
+        title = stringResource(R.string.search_filters),
+        description = stringResource(R.string.search_filters_description),
+        palette = KaloscopeSidePanelPalette(
+            panelColor = Panel,
+            textColor = OnBackground,
+            mutedColor = Muted,
+        ),
+        onDismiss = onDismiss,
+        trapFocus = false,
+        modifier = Modifier.testTag("search-filter-drawer"),
+        footer = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -150,6 +102,29 @@ internal fun SearchFilterDrawer(
                             right = FocusRequester.Cancel
                             down = FocusRequester.Cancel
                         },
+                )
+            }
+        },
+    ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            itemsIndexed(definitions, key = { _, definition -> definition.key }) {
+                    index, definition,
+                ->
+                SearchFilterField(
+                    definition = definition,
+                    value = draft[definition.key],
+                    onValueChange = { value ->
+                        draft = if (value == null) {
+                            draft - definition.key
+                        } else {
+                            draft + (definition.key to value)
+                        }
+                    },
+                    initialFocus = initialFocus.takeIf { index == initialFocusableIndex },
                 )
             }
         }

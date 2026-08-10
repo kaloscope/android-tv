@@ -37,6 +37,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.kaloscope.tv.R
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
@@ -876,7 +877,8 @@ class SearchScreenTest {
 
         assertEquals(initialBounds, resolvingBounds)
         composeRule.onNodeWithText(
-            text = "正在获取播放地址…",
+            text = InstrumentationRegistry.getInstrumentation()
+                .targetContext.getString(R.string.resolving_playback),
             useUnmergedTree = true,
         ).assertExists()
         composeRule.onNodeWithText(
@@ -1474,6 +1476,113 @@ class SearchScreenTest {
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
+    }
+
+    @Test
+    fun filterDrawerUsesStandardEndPanelGeometry() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(regionFilter()),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val drawer = composeRule.onNodeWithTag("search-filter-drawer")
+            .fetchSemanticsNode().boundsInRoot
+        assertEquals(500f * density, drawer.width, density)
+        assertEquals(root.right, drawer.right, 1f)
+    }
+
+    @Test
+    fun filterDrawerBackInvokesDismissExactlyOnce() {
+        var dismissCount = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(regionFilter()),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = { dismissCount += 1 },
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        InstrumentationRegistry.getInstrumentation().apply {
+            waitForIdleSync()
+            sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle { assertEquals(1, dismissCount) }
+    }
+
+    @Test
+    fun filterDrawerScrollsToFirstFocusableDynamicField() {
+        val emptyFields = List(18) { index ->
+            SearchFilterDefinition(
+                key = "empty-$index",
+                label = "空字段 $index",
+                type = SearchFilterType.Select,
+            )
+        }
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = emptyFields + textFilter(),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("filter-input-title").assertIsFocused()
     }
 
     @Test
