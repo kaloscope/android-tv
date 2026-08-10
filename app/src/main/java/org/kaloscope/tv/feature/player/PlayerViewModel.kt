@@ -23,14 +23,14 @@ import org.kaloscope.tv.core.player.LocalEpisodeRef
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.data.history.HistoryRepository
 import org.kaloscope.tv.data.media.MediaRepository
-import org.kaloscope.tv.data.search.SearchRepository
+import org.kaloscope.tv.data.search.NetworkResourceRepository
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val requestStore: PlaybackRequestStore,
     mediaRepository: MediaRepository,
     private val historyRepository: HistoryRepository,
-    private val searchRepository: SearchRepository,
+    private val networkResourceRepository: NetworkResourceRepository,
 ) : ViewModel() {
     private val coordinator = PlayerCoordinator(requestStore, mediaRepository)
     private var currentRequestId: String? = null
@@ -213,7 +213,7 @@ class PlayerViewModel @Inject constructor(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             when (
-                val result = searchRepository.resolveChapter(
+                val result = networkResourceRepository.resolveVideoChapter(
                     session = session,
                     source = networkRequest.source,
                     chapterIndex = chapterIndex,

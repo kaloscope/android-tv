@@ -5,6 +5,7 @@ import javax.inject.Singleton
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.common.trimmedOrNull
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.network.ApiClientFactory
@@ -67,10 +68,10 @@ internal fun HistoryItemData.toModel(): WatchHistoryItem? {
         return null
     }
     val parent = source.parent
-    val posterPath = parent?.poster.nonBlankOrNull()
-        ?: source.poster.nonBlankOrNull()
-    val backdropPath = parent?.backdrop.nonBlankOrNull()
-        ?: source.backdrop.nonBlankOrNull()
+    val posterPath = parent?.poster.trimmedOrNull()
+        ?: source.poster.trimmedOrNull()
+    val backdropPath = parent?.backdrop.trimmedOrNull()
+        ?: source.backdrop.trimmedOrNull()
         ?: posterPath
     return WatchHistoryItem(
         historyId = id,
@@ -88,11 +89,9 @@ internal fun HistoryItemData.toModel(): WatchHistoryItem? {
         backdropPath = backdropPath,
         rating = parent?.rating?.toDoubleOrNull() ?: source.rating?.toDoubleOrNull(),
         updatedAt = updatedAt,
-        parentTitle = parent?.resolvedTitle().nonBlankOrNull(),
+        parentTitle = parent?.resolvedTitle().trimmedOrNull(),
     )
 }
 
 private fun HistoryMediaData.resolvedTitle(): String =
-    title?.trim().orEmpty().ifBlank { name.trim() }
-
-private fun String?.nonBlankOrNull(): String? = this?.trim()?.takeIf(String::isNotEmpty)
+    title.trimmedOrNull() ?: name.trim()

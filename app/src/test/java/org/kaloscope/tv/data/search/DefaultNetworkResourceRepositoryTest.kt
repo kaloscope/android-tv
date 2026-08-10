@@ -10,8 +10,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.model.DanmakuComment
+import org.kaloscope.tv.core.model.NetworkChapter
+import org.kaloscope.tv.core.model.NetworkDefinition
 import org.kaloscope.tv.core.model.NetworkMediaType
+import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchResult
+import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.model.ReaderChapter
 import org.kaloscope.tv.core.model.ReaderImageContent
 import org.kaloscope.tv.core.model.ReaderTextContent
@@ -19,19 +24,20 @@ import org.kaloscope.tv.core.model.ResolvedNetworkResource
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
-import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.network.ApiClientFactory
+import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
 import org.kaloscope.tv.core.player.TranscodeResolution
 
 class DefaultNetworkResourceRepositoryTest {
     private lateinit var server: MockWebServer
     private lateinit var repository: DefaultNetworkResourceRepository
+    private lateinit var json: Json
 
     @Before
     fun setUp() {
         server = MockWebServer()
         server.start()
-        val json = Json {
+        json = Json {
             ignoreUnknownKeys = true
             explicitNulls = false
         }
@@ -95,6 +101,136 @@ class DefaultNetworkResourceRepositoryTest {
 
         val video = (resolved as AppResult.Success).value as ResolvedNetworkResource.Video
         assertEquals(NetworkVideoType.Dash, video.source.videoType)
+    }
+
+    @Test
+    fun `software AVC capability selects matching HEVC DASH definition`() = runTest {
+        server.enqueue(
+            response(
+                """
+                {
+                  "status": 200,
+                  "message": "",
+                  "data": {
+                    "id": "video-1",
+                    "title": "Video",
+                    "media_type": "video",
+                    "video_type": "dash",
+                    "definitions": [
+                      {"url": "https://media.example/avc.mpd", "definition": "480P AVC"},
+                      {"url": "https://media.example/hevc.mpd", "definition": "480P HEVC"}
+                    ]
+                  }
+                }
+                """.trimIndent(),
+            ),
+        )
+        val compatibleRepository = DefaultNetworkResourceRepository(
+            apiClientFactory = ApiClientFactory(json),
+            json = json,
+            videoCodecSupport = NetworkVideoCodecSupport { true },
+        )
+
+        val resolved = compatibleRepository.resolveResource(
+            session = session(),
+            indexerId = 11,
+            result = result(
+                id = "video-1",
+                type = NetworkMediaType.Video,
+                videoTypeHint = NetworkVideoType.Dash,
+            ),
+            preferredDefinition = TranscodeResolution.P480,
+        )
+
+        val source = ((resolved as AppResult.Success).value as ResolvedNetworkResource.Video).source
+        assertEquals("https://media.example/hevc.mpd", source.url)
+        assertEquals(1, source.selectedDefinitionIndex)
+    }
+
+    @Test
+    fun `details re-resolves first id-only chapter`() = runTest {
+        server.enqueue(
+            response(
+                """{"status":200,"message":"","data":{""" +
+                    """"id":"series-1","title":"Series","media_type":"video",""" +
+                    """"video_type":"dash","chapters":[{"id":"episode-1",""" +
+                    """"title":"Episode 1"}]}}""",
+            ),
+        )
+        server.enqueue(
+            response(
+                """{"status":200,"message":"","data":{""" +
+                    """"id":"series-1","title":"Episode 1","media_type":"video",""" +
+                    """"video_type":"dash","url":"https://cdn.example/episode-1.mpd"}}""",
+            ),
+        )
+
+        val resolved = repository.resolveResource(
+            session = session(),
+            indexerId = 11,
+            result = result(
+                id = "series-1",
+                type = NetworkMediaType.Video,
+                videoTypeHint = NetworkVideoType.Dash,
+            ),
+            preferredDefinition = TranscodeResolution.P1080,
+        )
+
+        val source = ((resolved as AppResult.Success).value as ResolvedNetworkResource.Video).source
+        assertEquals("https://cdn.example/episode-1.mpd", source.url)
+        assertEquals(0, source.selectedChapterIndex)
+        server.takeRequest()
+        val chapterRequest = server.takeRequest()
+        assertTrue(chapterRequest.body.readUtf8().contains(""""chapter_id":"episode-1""""))
+    }
+
+    @Test
+    fun `direct chapter does not retain previous episode definitions or danmakus`() = runTest {
+        val current = NetworkPlaybackSource(
+            indexerId = 11,
+            resourceId = "series-1",
+            title = "Episode 1",
+            url = "https://cdn.example/episode-1.m3u8",
+            videoType = NetworkVideoType.Hls,
+            danmakus = listOf(
+                DanmakuComment(
+                    id = "old",
+                    text = "Old episode",
+                    mode = "scroll",
+                    color = null,
+                    startMillis = 1_000,
+                ),
+            ),
+            definitions = listOf(
+                NetworkDefinition(
+                    "1080P",
+                    "https://cdn.example/episode-1-1080.m3u8",
+                ),
+            ),
+            chapters = listOf(
+                NetworkChapter("ep-1", null, "Episode 1", null),
+                NetworkChapter(
+                    null,
+                    "https://cdn.example/episode-2.m3u8",
+                    "Episode 2",
+                    null,
+                ),
+            ),
+            selectedDefinitionIndex = 0,
+            selectedChapterIndex = 0,
+        )
+
+        val result = repository.resolveVideoChapter(
+            session = session(),
+            source = current,
+            chapterIndex = 1,
+            preferredDefinition = TranscodeResolution.P1080,
+        )
+
+        val next = (result as AppResult.Success).value
+        assertTrue(next.definitions.isEmpty())
+        assertTrue(next.danmakus.isEmpty())
+        assertEquals(1, next.selectedChapterIndex)
     }
 
     @Test

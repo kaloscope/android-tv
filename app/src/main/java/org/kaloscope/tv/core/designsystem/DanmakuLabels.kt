@@ -5,7 +5,6 @@ import androidx.compose.ui.res.stringResource
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.model.DanmakuBlockPolicy
 import org.kaloscope.tv.core.model.DanmakuBlockType
-import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
@@ -25,14 +24,6 @@ internal fun danmakuSpeedLabel(speed: DanmakuSpeed): String =
         DanmakuSpeed.Slow -> stringResource(R.string.danmaku_speed_slow)
         DanmakuSpeed.Standard -> stringResource(R.string.danmaku_speed_standard)
         DanmakuSpeed.Fast -> stringResource(R.string.danmaku_speed_fast)
-    }
-
-@Composable
-internal fun danmakuModeLabel(mode: DanmakuDisplayMode): String =
-    when (mode) {
-        DanmakuDisplayMode.Scroll -> stringResource(R.string.danmaku_mode_scroll)
-        DanmakuDisplayMode.Top -> stringResource(R.string.danmaku_mode_top)
-        DanmakuDisplayMode.Bottom -> stringResource(R.string.danmaku_mode_bottom)
     }
 
 @Composable

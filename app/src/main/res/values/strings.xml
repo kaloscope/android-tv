@@ -112,12 +112,6 @@
     <string name="danmaku_opacity_description">设置弹幕文字的默认不透明度。</string>
     <string name="danmaku_display_area">显示区域</string>
     <string name="danmaku_display_area_description">限制弹幕占用屏幕高度，避免遮挡画面。</string>
-    <string name="danmaku_mode_scroll">滚动弹幕</string>
-    <string name="danmaku_mode_scroll_description">显示从右向左移动的弹幕。</string>
-    <string name="danmaku_mode_top">顶部弹幕</string>
-    <string name="danmaku_mode_top_description">显示固定在画面顶部的弹幕。</string>
-    <string name="danmaku_mode_bottom">底部弹幕</string>
-    <string name="danmaku_mode_bottom_description">显示固定在画面底部的弹幕。</string>
     <string name="percentage_value">%1$d%%</string>
     <string name="default_subtitle">默认开启字幕</string>
     <string name="default_subtitle_description">有字幕时默认显示，播放中仍可临时关闭。</string>

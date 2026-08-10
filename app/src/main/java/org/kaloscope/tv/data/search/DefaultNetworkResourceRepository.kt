@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.common.trimmedOrNull
 import org.kaloscope.tv.core.model.NetworkMediaType
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchResult
@@ -173,7 +174,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
             )
             val knownImages = content.images.toHashSet()
             val appended = resource.images.orEmpty()
-                .mapNotNull { it.clean() }
+                .mapNotNull { it.trimmedOrNull() }
                 .distinct()
                 .filterNot(knownImages::contains)
             val imageCount = resource.imageCount
@@ -314,22 +315,22 @@ class DefaultNetworkResourceRepository @Inject constructor(
     private fun IndexerResourceData.resolveMediaType(
         fallback: NetworkMediaType,
     ): NetworkMediaType {
-        if (mediaType.clean() == null) return fallback
+        if (mediaType.trimmedOrNull() == null) return fallback
         return mediaType.toNetworkMediaType()
             ?: throw SerializationException("Unsupported network media type")
     }
 
     private fun IndexerResourceData.toReaderChapters(): List<ReaderChapter> =
         chapters.orEmpty().mapNotNull { chapter ->
-            val chapterId = chapter.id.clean()
-            val chapterTitle = chapter.title.clean()
+            val chapterId = chapter.id.trimmedOrNull()
+            val chapterTitle = chapter.title.trimmedOrNull()
             if (chapterId == null || chapterTitle == null) {
                 null
             } else {
                 ReaderChapter(
                     id = chapterId,
                     title = chapterTitle,
-                    volume = chapter.volume.clean(),
+                    volume = chapter.volume.trimmedOrNull(),
                 )
             }
         }.distinctBy(ReaderChapter::id)
@@ -341,12 +342,12 @@ class DefaultNetworkResourceRepository @Inject constructor(
         selectedChapterIndex: Int?,
     ): ReaderImageContent {
         val mappedImages = images
-            ?.mapNotNull { it.clean() }
+            ?.mapNotNull { it.trimmedOrNull() }
             ?.distinct()
             ?: throw SerializationException("Missing image reader content")
         return ReaderImageContent(
             source = source,
-            title = title.clean() ?: fallbackTitle,
+            title = title.trimmedOrNull() ?: fallbackTitle,
             images = mappedImages,
             imageCount = imageCount?.takeIf { it > 0 } ?: mappedImages.size,
             chapters = chapters,
@@ -361,13 +362,10 @@ class DefaultNetworkResourceRepository @Inject constructor(
         selectedChapterIndex: Int?,
     ): ReaderTextContent = ReaderTextContent(
         source = source,
-        title = title.clean() ?: fallbackTitle,
+        title = title.trimmedOrNull() ?: fallbackTitle,
         text = toTextBody()
             ?: throw SerializationException("Missing text reader content"),
         chapters = chapters,
         selectedChapterIndex = selectedChapterIndex,
     )
-
-    private fun String?.clean(): String? =
-        this?.trim()?.takeIf(String::isNotEmpty)
 }

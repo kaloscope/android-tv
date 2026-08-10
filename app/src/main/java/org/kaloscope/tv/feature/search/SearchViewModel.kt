@@ -82,9 +82,6 @@ class SearchViewModel @Inject constructor(
         settings: TvSettings = TvSettings(),
     ) = startRequest { coordinator.play(session, resultId, settings) }
 
-    fun consumePlaybackRequest(requestId: String) =
-        coordinator.consumePlaybackRequest(requestId)
-
     fun consumeDestination(requestId: String) =
         coordinator.consumeDestination(requestId)
 

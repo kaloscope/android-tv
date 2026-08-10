@@ -1653,7 +1653,7 @@ class MainShellTest {
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
                     searchActions = SearchActions(
-                        consumePlaybackRequest = { requestId ->
+                        consumeDestination = { requestId ->
                             if (searchState.pendingPlaybackRequestId == requestId) {
                                 searchState = searchState.copy(
                                     pendingPlaybackRequestId = null,

@@ -14,18 +14,18 @@ import org.junit.Test
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.NetworkIndexer
 import org.kaloscope.tv.core.model.NetworkMediaType
-import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.NetworkVideoType
+import org.kaloscope.tv.core.model.ResolvedNetworkResource
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.network.ApiClientFactory
-import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
 import org.kaloscope.tv.core.player.TranscodeResolution
 
 class DefaultSearchRepositoryTest {
     private lateinit var server: MockWebServer
     private lateinit var repository: DefaultSearchRepository
+    private lateinit var resourceRepository: DefaultNetworkResourceRepository
     private lateinit var json: Json
 
     @Before
@@ -37,10 +37,10 @@ class DefaultSearchRepositoryTest {
             explicitNulls = false
         }
         val apiClientFactory = ApiClientFactory(json)
+        resourceRepository = DefaultNetworkResourceRepository(apiClientFactory, json)
         repository = DefaultSearchRepository(
             apiClientFactory = apiClientFactory,
             json = json,
-            networkResourceRepository = DefaultNetworkResourceRepository(apiClientFactory, json),
         )
     }
 
@@ -166,168 +166,20 @@ class DefaultSearchRepositoryTest {
 
         val page = repository.search(session(), profile, "星际", emptyMap(), 1)
         val result = (page as AppResult.Success).value.items.single()
-        val playback = repository.resolvePlayback(
-            session(),
-            11,
-            result,
-            TranscodeResolution.P1080,
+        val resolved = resourceRepository.resolveResource(
+            session = session(),
+            indexerId = 11,
+            result = result,
+            preferredDefinition = TranscodeResolution.P1080,
         )
 
-        val source = (playback as AppResult.Success).value
+        val source = ((resolved as AppResult.Success).value as ResolvedNetworkResource.Video).source
         assertEquals("48716677", source.resourceId)
         assertEquals(NetworkVideoType.Hls, source.videoType)
         assertEquals("1001", source.chapters.first().id)
         assertEquals("episode-2", source.chapters.last().id)
         assertEquals("287683505", source.danmakus.single().id)
         assertEquals(12_500, source.danmakus.single().startMillis)
-    }
-
-    @Test
-    fun `software AVC capability selects matching HEVC DASH definition`() = runTest {
-        server.enqueue(
-            jsonResponse(
-                """
-                {
-                  "status": 200,
-                  "message": "",
-                  "data": {
-                    "id": "video-1",
-                    "title": "Video",
-                    "media_type": "video",
-                    "video_type": "dash",
-                    "definitions": [
-                      {"url": "https://media.example/avc.mpd", "definition": "480P AVC"},
-                      {"url": "https://media.example/hevc.mpd", "definition": "480P HEVC"}
-                    ]
-                  }
-                }
-                """.trimIndent(),
-            ),
-        )
-        val apiClientFactory = ApiClientFactory(json)
-        val compatibleRepository = DefaultSearchRepository(
-            apiClientFactory = apiClientFactory,
-            json = json,
-            networkResourceRepository = DefaultNetworkResourceRepository(
-                apiClientFactory = apiClientFactory,
-                json = json,
-                videoCodecSupport = NetworkVideoCodecSupport { true },
-            ),
-        )
-
-        val playback = compatibleRepository.resolvePlayback(
-            session = session(),
-            indexerId = 11,
-            result = NetworkSearchResult(
-                id = "video-1",
-                title = "Video",
-                coverPath = null,
-                rating = null,
-                category = null,
-                uploader = null,
-                uploadedAt = null,
-            ),
-            preferredDefinition = TranscodeResolution.P480,
-        )
-
-        val source = (playback as AppResult.Success).value
-        assertEquals("https://media.example/hevc.mpd", source.url)
-        assertEquals(1, source.selectedDefinitionIndex)
-    }
-
-    @Test
-    fun `details re-resolves first id-only chapter`() = runTest {
-        server.enqueue(
-            jsonResponse(
-                """{"status":200,"message":"","data":{""" +
-                    """"id":"series-1","title":"Series","media_type":"video",""" +
-                    """"video_type":"dash","chapters":[{"id":"episode-1",""" +
-                    """"title":"Episode 1"}]}}""",
-            ),
-        )
-        server.enqueue(
-            jsonResponse(
-                """{"status":200,"message":"","data":{""" +
-                    """"id":"series-1","title":"Episode 1","media_type":"video",""" +
-                    """"video_type":"dash","url":"https://cdn.example/episode-1.mpd"}}""",
-            ),
-        )
-
-        val playback = repository.resolvePlayback(
-            session = session(),
-            indexerId = 11,
-            result = NetworkSearchResult(
-                id = "series-1",
-                title = "Series",
-                coverPath = null,
-                rating = null,
-                category = null,
-                uploader = null,
-                uploadedAt = null,
-            ),
-            preferredDefinition = TranscodeResolution.P1080,
-        )
-
-        val source = (playback as AppResult.Success).value
-        assertEquals("https://cdn.example/episode-1.mpd", source.url)
-        assertEquals(0, source.selectedChapterIndex)
-        server.takeRequest()
-        val chapterRequest = server.takeRequest()
-        assertTrue(chapterRequest.body.readUtf8().contains(""""chapter_id":"episode-1""""))
-    }
-
-    @Test
-    fun `direct chapter does not retain previous episode definitions or danmakus`() = runTest {
-        val current = org.kaloscope.tv.core.model.NetworkPlaybackSource(
-            indexerId = 11,
-            resourceId = "series-1",
-            title = "Episode 1",
-            url = "https://cdn.example/episode-1.m3u8",
-            videoType = NetworkVideoType.Hls,
-            danmakus = listOf(
-                org.kaloscope.tv.core.model.DanmakuComment(
-                    id = "old",
-                    text = "Old episode",
-                    mode = "scroll",
-                    color = null,
-                    startMillis = 1_000,
-                ),
-            ),
-            definitions = listOf(
-                org.kaloscope.tv.core.model.NetworkDefinition(
-                    "1080P",
-                    "https://cdn.example/episode-1-1080.m3u8",
-                ),
-            ),
-            chapters = listOf(
-                org.kaloscope.tv.core.model.NetworkChapter(
-                    "ep-1",
-                    null,
-                    "Episode 1",
-                    null,
-                ),
-                org.kaloscope.tv.core.model.NetworkChapter(
-                    null,
-                    "https://cdn.example/episode-2.m3u8",
-                    "Episode 2",
-                    null,
-                ),
-            ),
-            selectedDefinitionIndex = 0,
-            selectedChapterIndex = 0,
-        )
-
-        val result = repository.resolveChapter(
-            session(),
-            current,
-            1,
-            TranscodeResolution.P1080,
-        )
-
-        val next = (result as AppResult.Success).value
-        assertTrue(next.definitions.isEmpty())
-        assertTrue(next.danmakus.isEmpty())
-        assertEquals(1, next.selectedChapterIndex)
     }
 
     private fun session() = Session(

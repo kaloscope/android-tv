@@ -299,12 +299,15 @@ class SearchCoordinatorTest {
         val store = PlaybackRequestStore()
         val repository = FakeSearchRepository(
             pages = mutableListOf(AppResult.Success(page("v1"))),
-            playback = AppResult.Success(playback()),
+        )
+        val resourceRepository = FakeNetworkResourceRepository(
+            resolution = AppResult.Success(ResolvedNetworkResource.Video(playback())),
         )
         val coordinator = SearchCoordinator(
             repository = repository,
             requestStore = store,
             requestIdFactory = { "network-request" },
+            networkResourceRepository = resourceRepository,
         )
         coordinator.load(session())
         coordinator.updateQuery("星际")
@@ -324,9 +327,13 @@ class SearchCoordinatorTest {
     fun `details failure keeps results available for retry`() = runTest {
         val repository = FakeSearchRepository(
             pages = mutableListOf(AppResult.Success(page("v1"))),
-            playback = AppResult.Failure(AppError.Offline),
         )
-        val coordinator = coordinator(repository)
+        val coordinator = coordinator(
+            repository = repository,
+            resourceRepository = FakeNetworkResourceRepository(
+                resolution = AppResult.Failure(AppError.Offline),
+            ),
+        )
         coordinator.load(session())
         coordinator.updateQuery("星际")
         coordinator.search(session())
@@ -343,12 +350,15 @@ class SearchCoordinatorTest {
         val store = PlaybackRequestStore()
         val repository = FakeSearchRepository(
             pages = mutableListOf(AppResult.Success(page("v1"))),
-            playback = AppResult.Success(playback()),
+        )
+        val resourceRepository = FakeNetworkResourceRepository(
+            resolution = AppResult.Success(ResolvedNetworkResource.Video(playback())),
         )
         val coordinator = SearchCoordinator(
             repository = repository,
             requestStore = store,
             requestIdFactory = { "settings-request" },
+            networkResourceRepository = resourceRepository,
         )
         coordinator.load(session())
         coordinator.updateQuery("星际")
@@ -360,7 +370,7 @@ class SearchCoordinatorTest {
             settings = TvSettings(transcodeQuality = TranscodeQuality.Low),
         )
 
-        assertEquals(TranscodeResolution.P1080, repository.preferredDefinition)
+        assertEquals(TranscodeResolution.P1080, resourceRepository.preferredDefinition)
         val request = store.get("settings-request") as PlaybackRequest.NetworkVideo
         assertEquals(TranscodeResolution.P1080, request.preferredDefinition)
     }
@@ -507,12 +517,16 @@ private class FakeNetworkResourceRepository(
     private val resolutionStarted: CompletableDeferred<Unit>? = null,
     private val deferredResolution: CompletableDeferred<AppResult<ResolvedNetworkResource>>? = null,
 ) : NetworkResourceRepository {
+    var preferredDefinition: TranscodeResolution? = null
+        private set
+
     override suspend fun resolveResource(
         session: Session,
         indexerId: Long,
         result: NetworkSearchResult,
         preferredDefinition: TranscodeResolution,
     ): AppResult<ResolvedNetworkResource> {
+        this.preferredDefinition = preferredDefinition
         resolutionStarted?.complete(Unit)
         return deferredResolution?.await() ?: resolution
     }
@@ -542,15 +556,12 @@ private class FakeSearchRepository(
     private val profile: AppResult<IndexerSourceProfile> =
         AppResult.Success(profile()),
     private val pages: MutableList<AppResult<NetworkSearchPage>> = mutableListOf(),
-    private val playback: AppResult<NetworkPlaybackSource> =
-        AppResult.Failure(AppError.NotFound),
     private val availableProfiles: AppResult<List<IndexerSourceProfile>>? = null,
     private val pagingStarted: CompletableDeferred<Unit>? = null,
     private val pagingResult: CompletableDeferred<AppResult<NetworkSearchPage>>? = null,
 ) : SearchRepository {
     val searchCalls = mutableListOf<SearchCall>()
     val searchFilters = mutableListOf<Map<String, SearchFilterValue>>()
-    var preferredDefinition: TranscodeResolution? = null
 
     override suspend fun getAvailableProfiles(
         session: Session,
@@ -587,22 +598,6 @@ private class FakeSearchRepository(
         return pages.removeAt(0)
     }
 
-    override suspend fun resolvePlayback(
-        session: Session,
-        indexerId: Long,
-        result: NetworkSearchResult,
-        preferredDefinition: TranscodeResolution,
-    ): AppResult<NetworkPlaybackSource> {
-        this.preferredDefinition = preferredDefinition
-        return playback
-    }
-
-    override suspend fun resolveChapter(
-        session: Session,
-        source: NetworkPlaybackSource,
-        chapterIndex: Int,
-        preferredDefinition: TranscodeResolution,
-    ): AppResult<NetworkPlaybackSource> = error("Not used")
 }
 
 private data class SearchCall(
@@ -611,11 +606,15 @@ private data class SearchCall(
     val pageNumber: Int,
 )
 
-private fun coordinator(repository: SearchRepository) =
+private fun coordinator(
+    repository: SearchRepository,
+    resourceRepository: NetworkResourceRepository = FakeNetworkResourceRepository(),
+) =
     SearchCoordinator(
         repository = repository,
         requestStore = PlaybackRequestStore(),
         requestIdFactory = { "request-id" },
+        networkResourceRepository = resourceRepository,
     )
 
 private fun indexer() = NetworkIndexer(11, "星海站", null)

@@ -173,7 +173,6 @@ fun KaloscopeApp(
                         clearFilters = {
                             searchViewModel.clearFilters(state.session)
                         },
-                        consumePlaybackRequest = searchViewModel::consumePlaybackRequest,
                         consumeDestination = searchViewModel::consumeDestination,
                     ),
                     libraryActions = LibraryActions(

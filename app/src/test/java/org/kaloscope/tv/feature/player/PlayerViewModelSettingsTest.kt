@@ -22,8 +22,11 @@ import org.kaloscope.tv.core.model.MediaPage
 import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
-import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.NetworkSearchResult
+import org.kaloscope.tv.core.model.ReaderContent
+import org.kaloscope.tv.core.model.ReaderImageContent
+import org.kaloscope.tv.core.model.ReaderImagePage
+import org.kaloscope.tv.core.model.ResolvedNetworkResource
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
@@ -40,7 +43,7 @@ import org.kaloscope.tv.core.player.TranscodeQuality
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.history.HistoryRepository
 import org.kaloscope.tv.data.media.MediaRepository
-import org.kaloscope.tv.data.search.SearchRepository
+import org.kaloscope.tv.data.search.NetworkResourceRepository
 
 class PlayerViewModelSettingsTest {
     @Test
@@ -50,7 +53,7 @@ class PlayerViewModelSettingsTest {
             requestStore = store,
             mediaRepository = unusedMediaRepository(),
             historyRepository = unusedHistoryRepository(),
-            searchRepository = unusedSearchRepository(),
+            networkResourceRepository = unusedNetworkResourceRepository(),
         )
         val expectedDanmaku = DanmakuSettings(
             enabled = false,
@@ -82,7 +85,7 @@ class PlayerViewModelSettingsTest {
             requestStore = store,
             mediaRepository = unusedMediaRepository(),
             historyRepository = unusedHistoryRepository(),
-            searchRepository = unusedSearchRepository(),
+            networkResourceRepository = unusedNetworkResourceRepository(),
         )
         val episodes = listOf(
             mediaSummary(301, "/episode-1.mkv", "Episode 1"),
@@ -124,7 +127,7 @@ class PlayerViewModelSettingsTest {
                 requestStore = store,
                 mediaRepository = unusedMediaRepository(),
                 historyRepository = historyRepository,
-                searchRepository = unusedSearchRepository(),
+                networkResourceRepository = unusedNetworkResourceRepository(),
             )
             val requestId = checkNotNull(
                 viewModel.createFromHistory(session(), history()),
@@ -163,7 +166,7 @@ class PlayerViewModelSettingsTest {
                 requestStore = store,
                 mediaRepository = unusedMediaRepository(),
                 historyRepository = historyRepository,
-                searchRepository = unusedSearchRepository(),
+                networkResourceRepository = unusedNetworkResourceRepository(),
             )
             val requestId = checkNotNull(
                 viewModel.createFromHistory(session(), history()),
@@ -206,7 +209,7 @@ class PlayerViewModelSettingsTest {
                 requestStore = store,
                 mediaRepository = mediaRepository,
                 historyRepository = unusedHistoryRepository(),
-                searchRepository = unusedSearchRepository(),
+                networkResourceRepository = unusedNetworkResourceRepository(),
             )
             val episodes = listOf(
                 mediaSummary(301, "/episode-1.mkv", "Episode 1"),
@@ -258,7 +261,7 @@ class PlayerViewModelSettingsTest {
                 requestStore = store,
                 mediaRepository = mediaRepository,
                 historyRepository = unusedHistoryRepository(),
-                searchRepository = unusedSearchRepository(),
+                networkResourceRepository = unusedNetworkResourceRepository(),
             )
             val episode = mediaSummary(301, "/episode-1.mkv", "Episode 1")
             val requestId = checkNotNull(
@@ -427,33 +430,31 @@ private fun unusedMediaRepository() = object : MediaRepository {
     ): AppResult<List<DanmakuComment>> = error("Not used")
 }
 
-private fun unusedSearchRepository() = object : SearchRepository {
-    override suspend fun getAvailableProfiles(
-        session: Session,
-    ): AppResult<List<org.kaloscope.tv.core.model.IndexerSourceProfile>> =
-        error("Not used")
-
-    override suspend fun search(
-        session: Session,
-        profile: org.kaloscope.tv.core.model.IndexerSourceProfile,
-        keyword: String,
-        filters: Map<String, org.kaloscope.tv.core.model.SearchFilterValue>,
-        pageNumber: Int,
-    ): AppResult<NetworkSearchPage> = error("Not used")
-
-    override suspend fun resolvePlayback(
+private fun unusedNetworkResourceRepository() = object : NetworkResourceRepository {
+    override suspend fun resolveResource(
         session: Session,
         indexerId: Long,
         result: NetworkSearchResult,
         preferredDefinition: TranscodeResolution,
-    ): AppResult<NetworkPlaybackSource> = error("Not used")
+    ): AppResult<ResolvedNetworkResource> = error("Not used")
 
-    override suspend fun resolveChapter(
+    override suspend fun resolveVideoChapter(
         session: Session,
         source: NetworkPlaybackSource,
         chapterIndex: Int,
         preferredDefinition: TranscodeResolution,
     ): AppResult<NetworkPlaybackSource> = error("Not used")
+
+    override suspend fun resolveReaderChapter(
+        session: Session,
+        content: ReaderContent,
+        chapterIndex: Int,
+    ): AppResult<ReaderContent> = error("Not used")
+
+    override suspend fun loadImagePage(
+        session: Session,
+        content: ReaderImageContent,
+    ): AppResult<ReaderImagePage> = error("Not used")
 }
 
 private fun session() = Session(

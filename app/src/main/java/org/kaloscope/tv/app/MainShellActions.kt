@@ -39,7 +39,6 @@ internal data class SearchActions(
     val dismissFilters: () -> Unit = {},
     val applyFilters: (Map<String, SearchFilterValue>) -> Unit = {},
     val clearFilters: () -> Unit = {},
-    val consumePlaybackRequest: (String) -> Unit = {},
     val consumeDestination: (String) -> Unit = {},
 )
 

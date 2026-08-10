@@ -91,9 +91,8 @@ sealed interface SearchResultsState {
 class SearchCoordinator(
     private val repository: SearchRepository,
     private val requestStore: PlaybackRequestStore,
+    private val networkResourceRepository: NetworkResourceRepository,
     private val requestIdFactory: () -> String = { UUID.randomUUID().toString() },
-    private val networkResourceRepository: NetworkResourceRepository =
-        SearchRepositoryResourceAdapter(repository),
     private val readerRequestStore: ReaderRequestStore = ReaderRequestStore(),
 ) {
     private val mutableState = MutableStateFlow<SearchUiState>(SearchUiState.Loading)
@@ -377,10 +376,6 @@ class SearchCoordinator(
         }
     }
 
-    fun consumePlaybackRequest(requestId: String) {
-        consumeDestination(requestId)
-    }
-
     fun consumeDestination(requestId: String) {
         val content = mutableState.value as? SearchUiState.Content ?: return
         if (
@@ -441,48 +436,4 @@ class SearchCoordinator(
         val content = mutableState.value as? SearchUiState.Content ?: return
         mutableState.value = content.transform()
     }
-}
-
-private class SearchRepositoryResourceAdapter(
-    private val repository: SearchRepository,
-) : NetworkResourceRepository {
-    override suspend fun resolveResource(
-        session: Session,
-        indexerId: Long,
-        result: NetworkSearchResult,
-        preferredDefinition: org.kaloscope.tv.core.player.TranscodeResolution,
-    ): AppResult<ResolvedNetworkResource> =
-        when (
-            val playback = repository.resolvePlayback(
-                session,
-                indexerId,
-                result,
-                preferredDefinition,
-            )
-        ) {
-            is AppResult.Failure -> playback
-            is AppResult.Success -> AppResult.Success(
-                ResolvedNetworkResource.Video(playback.value),
-            )
-        }
-
-    override suspend fun resolveVideoChapter(
-        session: Session,
-        source: org.kaloscope.tv.core.model.NetworkPlaybackSource,
-        chapterIndex: Int,
-        preferredDefinition: org.kaloscope.tv.core.player.TranscodeResolution,
-    ) = repository.resolveChapter(session, source, chapterIndex, preferredDefinition)
-
-    override suspend fun resolveReaderChapter(
-        session: Session,
-        content: org.kaloscope.tv.core.model.ReaderContent,
-        chapterIndex: Int,
-    ): AppResult<org.kaloscope.tv.core.model.ReaderContent> =
-        AppResult.Failure(AppError.InvalidData("reader_resource"))
-
-    override suspend fun loadImagePage(
-        session: Session,
-        content: org.kaloscope.tv.core.model.ReaderImageContent,
-    ): AppResult<org.kaloscope.tv.core.model.ReaderImagePage> =
-        AppResult.Failure(AppError.InvalidData("reader_resource"))
 }

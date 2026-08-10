@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.kaloscope.tv.core.common.trimmedOrNull
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.SearchFilterDefinition
 import org.kaloscope.tv.core.model.SearchFilterType
@@ -42,7 +43,7 @@ internal fun buildIndexerSearchRequest(
 private fun SearchFilterValue.Scalar.validScalar(
     definition: SearchFilterDefinition,
 ): String? {
-    val cleaned = value.trim().takeIf(String::isNotEmpty) ?: return null
+    val cleaned = value.trimmedOrNull() ?: return null
     return when (definition.type) {
         SearchFilterType.Text,
         SearchFilterType.DateTime,
@@ -64,7 +65,7 @@ private fun SearchFilterValue.Multiple.validValues(
     if (definition.type != SearchFilterType.Checkbox) {
         return emptyList()
     }
-    val selected = values.map(String::trim).filter(String::isNotEmpty).toSet()
+    val selected = values.mapNotNull(String::trimmedOrNull).toSet()
     return definition.options.map { it.value }.filter(selected::contains)
 }
 

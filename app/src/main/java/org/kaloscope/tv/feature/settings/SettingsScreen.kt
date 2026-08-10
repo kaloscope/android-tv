@@ -524,11 +524,11 @@ internal fun ToggleSettingRow(
 internal fun SettingActionRow(
     title: String,
     description: String,
-    value: String = "",
     interactionsEnabled: Boolean,
     danger: Boolean,
-    valueColor: Color? = null,
     modifier: Modifier = Modifier,
+    value: String = "",
+    valueColor: Color? = null,
     onClick: () -> Unit,
 ) {
     KaloscopeButton(

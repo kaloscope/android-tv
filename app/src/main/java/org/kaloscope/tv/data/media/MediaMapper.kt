@@ -4,6 +4,7 @@ import kotlin.math.roundToLong
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import org.kaloscope.tv.core.common.trimmedOrNull
 import org.kaloscope.tv.core.model.MediaActor
 import org.kaloscope.tv.core.model.MediaChapter
 import org.kaloscope.tv.core.model.MediaDetail
@@ -87,14 +88,14 @@ internal fun MediaItemData.toDetail(): MediaDetail? {
             ?.toModel(),
         title = resolvedTitle,
         path = path,
-        posterPath = poster.nonBlankOrNull() ?: detailMetadata?.poster.nonBlankOrNull(),
-        backdropPath = backdrop.nonBlankOrNull() ?: detailMetadata?.backdrop.nonBlankOrNull(),
+        posterPath = poster.trimmedOrNull() ?: detailMetadata?.poster.trimmedOrNull(),
+        backdropPath = backdrop.trimmedOrNull() ?: detailMetadata?.backdrop.trimmedOrNull(),
         year = year,
         rating = rating.asRating(),
         season = season,
         episode = episode,
-        aired = aired.nonBlankOrNull(),
-        plot = detailMetadata?.plot.nonBlankOrNull(),
+        aired = aired.trimmedOrNull(),
+        plot = detailMetadata?.plot.trimmedOrNull(),
         genres = detailMetadata?.genres.cleanValues(),
         directors = detailMetadata?.directors.cleanValues(),
         writers = detailMetadata?.writers.cleanValues(),
@@ -102,11 +103,11 @@ internal fun MediaItemData.toDetail(): MediaDetail? {
         actors = detailMetadata?.actors
             .orEmpty()
             .mapNotNull { actor ->
-                val actorName = actor.name.nonBlankOrNull() ?: return@mapNotNull null
+                val actorName = actor.name.trimmedOrNull() ?: return@mapNotNull null
                 MediaActor(
                     name = actorName,
-                    role = actor.role.nonBlankOrNull(),
-                    thumbPath = actor.thumb.nonBlankOrNull(),
+                    role = actor.role.trimmedOrNull(),
+                    thumbPath = actor.thumb.trimmedOrNull(),
                 )
             },
         children = visibleChildren,
@@ -122,13 +123,13 @@ private fun MediaItemData.toSummary(): MediaSummary? {
         id = id,
         title = resolvedTitle,
         path = path,
-        posterPath = poster.nonBlankOrNull(),
-        backdropPath = backdrop.nonBlankOrNull(),
+        posterPath = poster.trimmedOrNull(),
+        backdropPath = backdrop.trimmedOrNull(),
         year = year,
         rating = rating.asRating(),
         season = season,
         episode = episode,
-        aired = aired.nonBlankOrNull(),
+        aired = aired.trimmedOrNull(),
     )
 }
 
@@ -176,16 +177,13 @@ private fun compareNaturalTitles(left: String, right: String): Int {
 }
 
 private fun MediaItemData.displayTitle(): String =
-    title.nonBlankOrNull() ?: name.trim()
+    title.trimmedOrNull() ?: name.trim()
 
 private fun kotlinx.serialization.json.JsonElement?.asRating(): Double? =
     this?.jsonPrimitive?.doubleOrNull
 
-private fun String?.nonBlankOrNull(): String? =
-    this?.trim()?.takeIf(String::isNotEmpty)
-
 private fun List<String>?.cleanValues(): List<String> =
-    orEmpty().mapNotNull(String?::nonBlankOrNull)
+    orEmpty().mapNotNull(String?::trimmedOrNull)
 
 private fun Double.toMillis(): Long =
     (coerceAtMost(Long.MAX_VALUE / 1_000.0) * 1_000.0).roundToLong()

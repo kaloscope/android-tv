@@ -13,21 +13,17 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DEFAULT_COVER_ASPECT_RATIO
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
-import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchPage
-import org.kaloscope.tv.core.model.NetworkSearchResult
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.network.ApiClientFactory
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
-import org.kaloscope.tv.core.player.TranscodeResolution
 
 @Singleton
 class DefaultSearchRepository @Inject constructor(
     private val apiClientFactory: ApiClientFactory,
     private val json: Json,
-    private val networkResourceRepository: NetworkResourceRepository,
 ) : SearchRepository {
     override suspend fun getAvailableProfiles(
         session: Session,
@@ -121,44 +117,6 @@ class DefaultSearchRepository @Inject constructor(
                 videoTypeHint = profile.videoTypeHint,
             )
         }
-
-    override suspend fun resolvePlayback(
-        session: Session,
-        indexerId: Long,
-        result: NetworkSearchResult,
-        preferredDefinition: TranscodeResolution,
-    ): AppResult<NetworkPlaybackSource> =
-        when (
-            val resolved = networkResourceRepository.resolveResource(
-                session = session,
-                indexerId = indexerId,
-                result = result,
-                preferredDefinition = preferredDefinition,
-            )
-        ) {
-            is AppResult.Failure -> resolved
-            is AppResult.Success -> {
-                val video = resolved.value as? org.kaloscope.tv.core.model.ResolvedNetworkResource.Video
-                if (video == null) {
-                    AppResult.Failure(AppError.InvalidData("network_playback"))
-                } else {
-                    AppResult.Success(video.source)
-                }
-            }
-        }
-
-    override suspend fun resolveChapter(
-        session: Session,
-        source: NetworkPlaybackSource,
-        chapterIndex: Int,
-        preferredDefinition: TranscodeResolution,
-    ): AppResult<NetworkPlaybackSource> =
-        networkResourceRepository.resolveVideoChapter(
-            session = session,
-            source = source,
-            chapterIndex = chapterIndex,
-            preferredDefinition = preferredDefinition,
-        )
 
     private fun api(session: Session) = apiClientFactory.create(session.server.origin)
 

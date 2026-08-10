@@ -293,7 +293,6 @@ internal fun MainShell(
                                         backStack.openPlayer(requestId)
                                         currentRoute = PlayerRoute(requestId)
                                         playerActions.load(requestId)
-                                        searchActions.consumePlaybackRequest(requestId)
                                         searchActions.consumeDestination(requestId)
                                     }
 

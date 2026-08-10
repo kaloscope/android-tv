@@ -9,6 +9,7 @@ import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderContent
 import org.kaloscope.tv.core.model.ReaderImageContent
 import org.kaloscope.tv.core.model.ReaderSettingsPolicy
 import org.kaloscope.tv.core.model.ReaderTextContent
@@ -75,21 +76,22 @@ class ReaderCoordinator(
         session: Session,
     ) {
         generation.incrementAndGet()
-        when (val request = requestStore.get(requestId)) {
-            null -> mutableState.value = ReaderUiState.Error(
+        val request = requestStore.get(requestId)
+        if (request == null) {
+            mutableState.value = ReaderUiState.Error(
                 requestId = requestId,
                 error = AppError.InvalidData("reader_request"),
             )
-
-            else -> if (request.serverId != session.server.id) {
-                mutableState.value = ReaderUiState.Error(
-                    requestId = requestId,
-                    error = AppError.InvalidData("reader_server"),
-                )
-            } else {
-                mutableState.value = request.toUiState()
-            }
+            return
         }
+        if (request.serverId != session.server.id) {
+            mutableState.value = ReaderUiState.Error(
+                requestId = requestId,
+                error = AppError.InvalidData("reader_server"),
+            )
+            return
+        }
+        mutableState.value = request.toUiState()
     }
 
     suspend fun selectChapter(
@@ -220,7 +222,7 @@ class ReaderCoordinator(
             )
         }
 
-    private fun replaceChapterContent(content: org.kaloscope.tv.core.model.ReaderContent) {
+    private fun replaceChapterContent(content: ReaderContent) {
         val current = mutableState.value as? ReaderUiState.Active ?: return
         mutableState.value = when {
             current is ReaderUiState.Image && content is ReaderImageContent -> current.copy(
@@ -247,7 +249,7 @@ class ReaderCoordinator(
         }
     }
 
-    private fun ReaderUiState.Active.readerContent(): org.kaloscope.tv.core.model.ReaderContent =
+    private fun ReaderUiState.Active.readerContent(): ReaderContent =
         when (this) {
             is ReaderUiState.Image -> content
             is ReaderUiState.Text -> content
