@@ -336,7 +336,7 @@ private fun ActiveReader(
                 chapter = content.selectedChapterIndex?.let(content.chapters::getOrNull),
                 textColor = overlayText,
                 mutedColor = overlayMuted,
-                barColor = overlayBar,
+                scrimColor = background,
                 status = (state as? ReaderUiState.Image)?.content?.let { imageContent ->
                     imagePosition.takeIf { it > 0 }?.let { position ->
                         stringResource(
@@ -475,47 +475,65 @@ private fun ReaderTitleOverlay(
     chapter: ReaderChapter?,
     textColor: Color,
     mutedColor: Color,
-    barColor: Color,
+    scrimColor: Color,
     status: String?,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("reader-title-overlay")
-            .background(
-                Brush.verticalGradient(
-                    listOf(barColor, Color.Transparent),
-                ),
-            )
-            .padding(horizontal = 38.dp, vertical = 24.dp),
+            .testTag("reader-title-overlay"),
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = title,
-                color = textColor,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                modifier = Modifier.weight(1f),
-            )
-            status?.let {
-                Spacer(Modifier.width(18.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("reader-title-solid-scrim")
+                .background(scrimColor)
+                .padding(
+                    start = 38.dp,
+                    top = 24.dp,
+                    end = 38.dp,
+                    bottom = 12.dp,
+                ),
+        ) {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = it,
+                    text = title,
+                    color = textColor,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                status?.let {
+                    Spacer(Modifier.width(18.dp))
+                    Text(
+                        text = it,
+                        color = mutedColor,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
+            chapter?.let {
+                Text(
+                    text = it.title,
                     color = mutedColor,
                     fontSize = 14.sp,
                     maxLines = 1,
                 )
             }
         }
-        chapter?.let {
-            Text(
-                text = it.title,
-                color = mutedColor,
-                fontSize = 14.sp,
-                maxLines = 1,
-            )
-        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp)
+                .testTag("reader-title-gradient-tail")
+                .background(
+                    Brush.verticalGradient(
+                        listOf(scrimColor, scrimColor.copy(alpha = 0f)),
+                    ),
+                ),
+        )
     }
 }
 

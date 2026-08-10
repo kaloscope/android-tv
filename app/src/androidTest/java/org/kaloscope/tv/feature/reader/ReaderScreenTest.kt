@@ -41,6 +41,7 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.TextReaderSettings
+import org.kaloscope.tv.core.model.TextReaderTheme
 
 class ReaderScreenTest {
     @get:Rule
@@ -156,6 +157,91 @@ class ReaderScreenTest {
 
         composeRule.onNodeWithTag("reader-bottom-controls").assertDoesNotExist()
         composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+    }
+
+    @Test
+    fun textTitleUsesOpaqueActiveThemeBackgroundWithoutMovingContent() {
+        composeRule.mainClock.autoAdvance = false
+        val paragraphs = List(80) { index -> "第 $index 段正文" }
+        setReader(
+            textState(
+                text = paragraphs.joinToString("\n\n"),
+                settings = TextReaderSettings(theme = TextReaderTheme.Cream),
+            ),
+        )
+        composeRule.mainClock.advanceTimeBy(500)
+
+        val bitmap = composeRule.onNodeWithTag(
+            testTag = "reader-title-solid-scrim",
+            useUnmergedTree = true,
+        ).captureToImage().asAndroidBitmap()
+
+        assertEquals(Color(0xFFFDF6E3).toArgb(), bitmap.getPixel(bitmap.width / 2, 1))
+
+        composeRule.mainClock.advanceTimeBy(3_400)
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val screen = composeRule.onNodeWithTag("reader-screen")
+            .fetchSemanticsNode().boundsInRoot
+        val visibleParagraphIndex = paragraphs.indices.first { index ->
+            val bounds = composeRule.onNodeWithTag("text-reader-paragraph-$index")
+                .fetchSemanticsNode().boundsInRoot
+            bounds.height > 0f && bounds.top >= screen.top && bounds.bottom <= screen.bottom
+        }
+        val hiddenParagraphTop = composeRule.onNodeWithTag(
+            "text-reader-paragraph-$visibleParagraphIndex",
+        ).fetchSemanticsNode().boundsInRoot.top
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.mainClock.advanceTimeBy(500)
+        val revealedParagraphTop = composeRule.onNodeWithTag(
+            "text-reader-paragraph-$visibleParagraphIndex",
+        )
+            .fetchSemanticsNode().boundsInRoot.top
+
+        assertEquals(hiddenParagraphTop, revealedParagraphTop, 0.5f)
+    }
+
+    @Test
+    fun imageTitleUsesOpaqueBlackBackground() {
+        composeRule.mainClock.autoAdvance = false
+        setReader(imageState())
+        composeRule.mainClock.advanceTimeBy(500)
+
+        val bitmap = composeRule.onNodeWithTag(
+            testTag = "reader-title-solid-scrim",
+            useUnmergedTree = true,
+        ).captureToImage().asAndroidBitmap()
+
+        assertEquals(Color.Black.toArgb(), bitmap.getPixel(bitmap.width / 2, 1))
+    }
+
+    @Test
+    fun titleGradientStartsBelowAllTitleText() {
+        composeRule.mainClock.autoAdvance = false
+        setReader(textState(text = "正文"))
+        composeRule.mainClock.advanceTimeBy(500)
+
+        val solid = composeRule.onNodeWithTag(
+            testTag = "reader-title-solid-scrim",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val gradient = composeRule.onNodeWithTag(
+            testTag = "reader-title-gradient-tail",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val title = composeRule.onNodeWithText("测试文本")
+            .fetchSemanticsNode().boundsInRoot
+        val chapter = composeRule.onNodeWithText("第二章")
+            .fetchSemanticsNode().boundsInRoot
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+
+        assertTrue(title.bottom <= solid.bottom)
+        assertTrue(chapter.bottom <= solid.bottom)
+        assertEquals(solid.bottom, gradient.top, 1f)
+        assertEquals(28f * density, gradient.height, 1f)
     }
 
     @Test
