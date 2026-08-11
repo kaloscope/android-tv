@@ -1,5 +1,6 @@
 package org.kaloscope.tv.core.designsystem
 
+import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -7,25 +8,27 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
@@ -111,6 +114,41 @@ class KaloscopeSidePanelTest {
     }
 
     @Test
+    fun adjustmentArrowsUseFixedGeometryCenteredOnValue() {
+        setAdjustmentRow()
+
+        val decrease = composeRule.onNodeWithTag(
+            testTag = "sample-decrease",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val increase = composeRule.onNodeWithTag(
+            testTag = "sample-increase",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val value = composeRule.onNodeWithText("One", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+
+        listOf(decrease, increase).forEach { arrow ->
+            assertEquals(dpToPx(14f), arrow.width, 0.5f)
+            assertEquals(dpToPx(18f), arrow.height, 0.5f)
+            assertEquals(value.center.y, arrow.center.y, dpToPx(1f))
+        }
+    }
+
+    @Test
+    fun unavailableAdjustmentArrowHasClearlyLowerContrast() {
+        setAdjustmentRow()
+
+        assertAdjustmentArrowContrast()
+
+        composeRule.onNodeWithTag("sample-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(500)
+
+        assertAdjustmentArrowContrast()
+    }
+
+    @Test
     fun adjustmentRowDisablesBoundaryArrowAndConsumesInvalidDirection() {
         var decreaseCount = 0
         var increaseCount = 0
@@ -133,11 +171,6 @@ class KaloscopeSidePanelTest {
             .assertIsNotEnabled()
         composeRule.onNodeWithTag("sample-increase", useUnmergedTree = true)
             .assertIsEnabled()
-        assertEquals(
-            textLayoutForTag("sample-increase")
-                .layoutInput.style.color.copy(alpha = KaloscopeControlTokens.DisabledAlpha),
-            textLayoutForTag("sample-decrease").layoutInput.style.color,
-        )
 
         composeRule.onNodeWithTag("sample-row")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -276,6 +309,66 @@ class KaloscopeSidePanelTest {
         mutedColor = Color.Gray,
     )
 
+    private fun setAdjustmentRow() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeSidePanelAdjustmentRow(
+                    title = "Setting",
+                    value = "One",
+                    canDecrease = false,
+                    canIncrease = true,
+                    onDecrease = {},
+                    onIncrease = {},
+                    modifier = Modifier.testTag("sample-row"),
+                    adjustmentTestTagPrefix = "sample",
+                )
+            }
+        }
+    }
+
+    private fun assertAdjustmentArrowContrast() {
+        val unavailable = composeRule.onNodeWithTag(
+            testTag = "sample-decrease",
+            useUnmergedTree = true,
+        ).captureToImage().asAndroidBitmap()
+        val available = composeRule.onNodeWithTag(
+            testTag = "sample-increase",
+            useUnmergedTree = true,
+        ).captureToImage().asAndroidBitmap()
+        val unavailableContrast = maxLuminanceContrast(unavailable)
+        val availableContrast = maxLuminanceContrast(available)
+
+        assertTrue(
+            "Unavailable contrast $unavailableContrast must be at most 30% of " +
+                "available contrast $availableContrast",
+            unavailableContrast <= availableContrast * 0.3f,
+        )
+    }
+
+    private fun maxLuminanceContrast(bitmap: android.graphics.Bitmap): Float {
+        val background = listOf(
+            bitmap.getPixel(0, 0),
+            bitmap.getPixel(bitmap.width - 1, 0),
+            bitmap.getPixel(0, bitmap.height - 1),
+            bitmap.getPixel(bitmap.width - 1, bitmap.height - 1),
+        ).map(::luminance).average().toFloat()
+        var maxContrast = 0f
+        for (y in 0 until bitmap.height) {
+            for (x in 0 until bitmap.width) {
+                maxContrast = maxOf(
+                    maxContrast,
+                    kotlin.math.abs(luminance(bitmap.getPixel(x, y)) - background),
+                )
+            }
+        }
+        return maxContrast
+    }
+
+    private fun luminance(color: Int): Float =
+        AndroidColor.red(color) * 0.2126f +
+            AndroidColor.green(color) * 0.7152f +
+            AndroidColor.blue(color) * 0.0722f
+
     private fun pressBack() {
         InstrumentationRegistry.getInstrumentation().apply {
             waitForIdleSync()
@@ -288,12 +381,4 @@ class KaloscopeSidePanelTest {
         value * InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
 
-    private fun textLayoutForTag(tag: String): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        composeRule.onNodeWithTag(tag, useUnmergedTree = true)
-            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
-                it(results)
-            }
-        return results.single()
-    }
 }

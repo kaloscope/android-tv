@@ -36,7 +36,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
-import org.kaloscope.tv.core.designsystem.KaloscopeControlTokens
 import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ReaderChapter
@@ -749,11 +748,6 @@ class ReaderScreenTest {
             testTag = "reader-chapter-order-increase",
             useUnmergedTree = true,
         ).assertIsEnabled()
-        assertEquals(
-            textLayoutForTag("reader-chapter-order-increase")
-                .layoutInput.style.color.copy(alpha = KaloscopeControlTokens.DisabledAlpha),
-            textLayoutForTag("reader-chapter-order-decrease").layoutInput.style.color,
-        )
 
         row.performKeyInput { pressKey(Key.DirectionLeft) }
         composeRule.runOnIdle { assertEquals(0, updates) }
@@ -922,15 +916,6 @@ class ReaderScreenTest {
             useUnmergedTree = true,
         ).assertExists()
         composeRule.onNodeWithText("正在加载后续图片…").assertDoesNotExist()
-    }
-
-    private fun textLayoutForTag(tag: String): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        composeRule.onNodeWithTag(tag, useUnmergedTree = true)
-            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
-                it(results)
-            }
-        return results.single()
     }
 
     private fun textLayoutForText(text: String): TextLayoutResult {

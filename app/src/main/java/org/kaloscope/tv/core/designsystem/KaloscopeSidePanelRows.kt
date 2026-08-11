@@ -24,12 +24,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 
 @Composable
@@ -137,9 +134,12 @@ fun KaloscopeSidePanelAdjustmentRow(
                 )
                 Spacer(Modifier.width(10.dp))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SidePanelAdjustmentArrow(
-                    text = "‹",
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                KaloscopeAdjustmentArrow(
+                    direction = KaloscopeAdjustmentDirection.Decrease,
                     enabled = canDecrease,
                     testTag = adjustmentTestTagPrefix?.let { "$it-decrease" },
                 )
@@ -148,8 +148,8 @@ fun KaloscopeSidePanelAdjustmentRow(
                     fontSize = 15.sp,
                     maxLines = 1,
                 )
-                SidePanelAdjustmentArrow(
-                    text = "›",
+                KaloscopeAdjustmentArrow(
+                    direction = KaloscopeAdjustmentDirection.Increase,
                     enabled = canIncrease,
                     testTag = adjustmentTestTagPrefix?.let { "$it-increase" },
                 )
@@ -241,32 +241,6 @@ fun KaloscopeSidePanelSessionHint(
                 .then(textTestTag?.let(Modifier::testTag) ?: Modifier),
         )
     }
-}
-
-@Composable
-private fun SidePanelAdjustmentArrow(
-    text: String,
-    enabled: Boolean,
-    testTag: String?,
-) {
-    val contentColor = LocalContentColor.current
-    Text(
-        text = text,
-        color = if (enabled) {
-            contentColor
-        } else {
-            contentColor.copy(alpha = KaloscopeControlTokens.DisabledAlpha)
-        },
-        fontSize = 15.sp,
-        maxLines = 1,
-        modifier = Modifier
-            .then(testTag?.let(Modifier::testTag) ?: Modifier)
-            .semantics(mergeDescendants = true) {
-                if (!enabled) {
-                    disabled()
-                }
-            },
-    )
 }
 
 private fun Modifier.consumeHorizontalDirections(): Modifier =

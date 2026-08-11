@@ -30,6 +30,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
@@ -355,23 +356,23 @@ class SettingsScreenTest {
         )
 
         val fontSizeRow = composeRule.onNode(hasClickAction() and hasText("字号"))
-        fontSizeRow
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
-            .assertIsEnabled()
+        fontSizeRow.performScrollTo().assertIsEnabled()
 
-        composeRule.onNodeWithTag(
+        val decrease = composeRule.onNodeWithTag(
             testTag = "reader-font-size-decrease",
             useUnmergedTree = true,
-        ).assertIsNotEnabled()
-        composeRule.onNodeWithTag(
+        ).assertIsNotEnabled().fetchSemanticsNode().boundsInRoot
+        val increase = composeRule.onNodeWithTag(
             testTag = "reader-font-size-increase",
             useUnmergedTree = true,
-        ).assertIsEnabled()
-        assertEquals(
-            OnBackground.copy(alpha = 0.42f),
-            textLayoutForTag("reader-font-size-decrease").layoutInput.style.color,
-        )
+        ).assertIsEnabled().fetchSemanticsNode().boundsInRoot
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+
+        listOf(decrease, increase).forEach { arrow ->
+            assertEquals(14f * density, arrow.width, 0.5f)
+            assertEquals(18f * density, arrow.height, 0.5f)
+        }
     }
 
     @Test
@@ -449,10 +450,6 @@ class SettingsScreenTest {
             testTag = "subtitle-font-scale-increase",
             useUnmergedTree = true,
         ).assertIsNotEnabled()
-        assertEquals(
-            OnBackground.copy(alpha = 0.42f),
-            textLayoutForTag("subtitle-font-scale-increase").layoutInput.style.color,
-        )
     }
 
     @Test
@@ -1525,15 +1522,6 @@ class SettingsScreenTest {
     private fun textLayoutFor(text: String): TextLayoutResult {
         val results = mutableListOf<TextLayoutResult>()
         composeRule.onNodeWithText(text, useUnmergedTree = true)
-            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
-                it(results)
-            }
-        return results.single()
-    }
-
-    private fun textLayoutForTag(tag: String): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        composeRule.onNodeWithTag(tag, useUnmergedTree = true)
             .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
                 it(results)
             }

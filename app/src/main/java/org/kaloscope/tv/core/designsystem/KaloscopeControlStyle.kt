@@ -30,6 +30,7 @@ object KaloscopeControlTokens {
     val RowFocusElevation = 6.dp
     val PressedElevation = 2.dp
     const val DisabledAlpha = 0.42f
+    const val AdjustmentArrowDisabledAlpha = 0.24f
     const val CompactFocusedScale = 1.04f
     const val RowFocusedScale = 1.02f
     const val RestingScale = 1f

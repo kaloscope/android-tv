@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -24,18 +25,16 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.KaloscopeAdjustmentArrow
+import org.kaloscope.tv.core.designsystem.KaloscopeAdjustmentDirection
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
-import org.kaloscope.tv.core.designsystem.KaloscopeControlTokens
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.accentPalette
 import org.kaloscope.tv.core.designsystem.danmakuBlockSummary
@@ -687,44 +686,22 @@ private fun AdjustableSettingValue(
     canIncrease: Boolean,
     testTagPrefix: String,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        AdjustmentArrow(
-            text = "‹",
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        KaloscopeAdjustmentArrow(
+            direction = KaloscopeAdjustmentDirection.Decrease,
             enabled = canDecrease,
             testTag = "$testTagPrefix-decrease",
         )
         Text(text = value, fontSize = 15.sp)
-        AdjustmentArrow(
-            text = "›",
+        KaloscopeAdjustmentArrow(
+            direction = KaloscopeAdjustmentDirection.Increase,
             enabled = canIncrease,
             testTag = "$testTagPrefix-increase",
         )
     }
-}
-
-@Composable
-private fun AdjustmentArrow(
-    text: String,
-    enabled: Boolean,
-    testTag: String,
-) {
-    val contentColor = LocalContentColor.current
-    Text(
-        text = text,
-        color = if (enabled) {
-            contentColor
-        } else {
-            contentColor.copy(alpha = KaloscopeControlTokens.DisabledAlpha)
-        },
-        fontSize = 15.sp,
-        modifier = Modifier
-            .testTag(testTag)
-            .semantics(mergeDescendants = true) {
-                if (!enabled) {
-                    disabled()
-                }
-            },
-    )
 }
 
 @Composable
