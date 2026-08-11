@@ -258,7 +258,9 @@
     <string name="episode_preview">S%1$dE%2$d · %3$s</string>
     <string name="player_episode_summary">第 %1$d 集 · %2$s</string>
     <string name="cast_title">演职人员</string>
-    <string name="directors">导演：%1$s</string>
+    <string name="director_title">导演</string>
+    <string name="writer_title">编剧</string>
+    <string name="studio_title">制片公司</string>
     <string name="play">播放</string>
     <string name="play_from_start">从头播放</string>
     <string name="resume_playback">继续播放</string>

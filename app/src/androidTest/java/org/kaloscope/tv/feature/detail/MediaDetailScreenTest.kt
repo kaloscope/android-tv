@@ -1,5 +1,7 @@
 package org.kaloscope.tv.feature.detail
 
+import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -15,6 +17,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -90,6 +93,111 @@ class MediaDetailScreenTest {
     }
 
     @Test
+    fun detailUsesStarRatingAndStructuredMetadata() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(
+                        movie().copy(genres = listOf("科幻", "冒险")),
+                    ),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("detail-rating-badge").assertExists()
+        composeRule.onNodeWithText("★ 8.5", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("评分 8.5").assertDoesNotExist()
+        composeRule.onNodeWithTag("detail-metadata-year").assertTextContains("2026")
+        composeRule.onNodeWithTag("detail-genre-0").assertTextContains("科幻")
+        composeRule.onNodeWithTag("detail-genre-1").assertTextContains("冒险")
+    }
+
+    @Test
+    fun writersAndStudiosRenderWithoutDirectorOrCast() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(
+                        movie().copy(
+                            writers = listOf("顾远"),
+                            studios = listOf("星河影业"),
+                        ),
+                    ),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("编剧").assertExists()
+        composeRule.onNodeWithText("顾远").assertExists()
+        composeRule.onNodeWithText("制片公司").assertExists()
+        composeRule.onNodeWithText("星河影业").assertExists()
+    }
+
+    @Test
+    fun resumeActionsExposePrimaryAndSecondaryHierarchy() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(parent = series()),
+            resumePositions = mapOf(301L to 42L),
+        )
+
+        composeRule.onNodeWithTag("detail-primary-action").assertIsSelected()
+        composeRule.onNodeWithTag("detail-start-over-action").assertExists()
+        composeRule.onNodeWithTag(
+            "detail-start-over-icon",
+            useUnmergedTree = true,
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun heroUsesTvScaleAfterRemovingBackButton() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = MediaDetailUiState.Content(movie()),
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+
+        val poster = composeRule.onNodeWithTag("detail-parent-poster-501")
+            .fetchSemanticsNode().boundsInRoot
+        val maximumTop = with(composeRule.density) { 72.dp.toPx() }
+        val minimumPosterWidth = with(composeRule.density) { 136.dp.toPx() }
+
+        assertTrue("Hero should reclaim the removed back button space", poster.top <= maximumTop)
+        assertTrue("Poster should remain readable from TV distance", poster.width >= minimumPosterWidth)
+    }
+
+    @Test
     fun episodeCardShowsPosterMetadataAndKeepsInitialFocus() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -111,6 +219,102 @@ class MediaDetailScreenTest {
         composeRule.onNodeWithText("S1E1 - 启程").assertExists()
         composeRule.onNodeWithText("第 1 集").assertDoesNotExist()
         composeRule.onNodeWithText("2026-01-02").assertExists()
+    }
+
+    @Test
+    fun focusedEpisodeTitleUsesAccentColor() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(parent = series()),
+        )
+
+        composeRule.mainClock.advanceTimeBy(500)
+        val title = composeRule.onNodeWithTag(
+            "media-child-title-301",
+            useUnmergedTree = true,
+        )
+            .captureToImage()
+            .asAndroidBitmap()
+
+        assertTrue(
+            "Focused episode title should use the active accent color",
+            title.countPixelsNear(AndroidColor.rgb(0x7F, 0x96, 0xFF), tolerance = 8) >= 12,
+        )
+    }
+
+    @Test
+    fun episodeCardsKeepEqualHeightWhenMetadataIsMissing() {
+        val first = twoEpisodeSeries().children.first()
+        val second = twoEpisodeSeries().children.last().copy(
+            year = null,
+            aired = null,
+        )
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(
+                parent = twoEpisodeSeries().copy(children = listOf(first, second)),
+            ),
+        )
+        composeRule.onNodeWithTag("detail-primary-action")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.waitForIdle()
+
+        val firstHeight = composeRule.onNodeWithTag("media-child-card-301")
+            .fetchSemanticsNode().boundsInRoot.height
+        val secondHeight = composeRule.onNodeWithTag("media-child-card-302")
+            .fetchSemanticsNode().boundsInRoot.height
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertTrue(
+            "Episode cards should not jump in height when metadata is absent: " +
+                "first=$firstHeight, second=$secondHeight",
+            kotlin.math.abs(firstHeight - secondHeight) <= tolerance,
+        )
+    }
+
+    @Test
+    fun episodeCarouselShowsDirectionalEdgeFades() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(parent = longSeries()),
+        )
+
+        composeRule.onNodeWithTag("detail-child-carousel-end-fade").assertExists()
+        composeRule.onNodeWithTag("detail-child-carousel-start-fade").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("media-child-card-301")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("detail-child-carousel-start-fade").assertExists()
+        composeRule.onNodeWithTag("detail-child-carousel-end-fade").assertExists()
+    }
+
+    @Test
+    fun movingRightBringsFocusedEpisodeTowardLeadingEdge() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(parent = longSeries()),
+        )
+        val carouselLeft = composeRule.onNodeWithTag("detail-child-carousel")
+            .fetchSemanticsNode().boundsInRoot.left
+        val secondBefore = composeRule.onNodeWithTag("media-child-card-302")
+            .fetchSemanticsNode().boundsInRoot.left
+
+        composeRule.onNodeWithTag("media-child-card-301")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+
+        val focused = composeRule.onNodeWithTag("media-child-card-302")
+            .assertIsFocused()
+            .fetchSemanticsNode().boundsInRoot
+        val maximumLeadingInset = with(composeRule.density) { 140.dp.toPx() }
+        val minimumMovement = with(composeRule.density) { 48.dp.toPx() }
+
+        assertTrue(
+            "Focused episode should settle near the carousel leading edge: $focused",
+            focused.left - carouselLeft <= maximumLeadingInset,
+        )
+        assertTrue(
+            "Episode ribbon should visibly move instead of only changing focus",
+            secondBefore - focused.left >= minimumMovement,
+        )
     }
 
     @Test
@@ -477,6 +681,37 @@ class MediaDetailScreenTest {
     }
 
     @Test
+    fun visibleRememberedChildKeepsExactCarouselViewport() {
+        val expectedViewport = GridViewportSnapshot(2, 18)
+        var latestViewport: GridViewportSnapshot? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(
+                        parent = longSeries(),
+                        focusedChildId = 303,
+                        childViewport = expectedViewport,
+                    ),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = { latestViewport = it },
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("media-child-card-303").assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(expectedViewport, latestViewport)
+        }
+    }
+
+    @Test
     fun invalidRememberedChildFallsBackToFirstChild() {
         setStatefulDetailContent(
             initialState = MediaDetailUiState.Content(
@@ -758,3 +993,23 @@ private fun detail(
     actors = actors,
     children = children,
 )
+
+private fun Bitmap.countPixelsNear(
+    expected: Int,
+    tolerance: Int = 3,
+): Int {
+    var matches = 0
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            val pixel = getPixel(x, y)
+            if (
+                kotlin.math.abs(AndroidColor.red(expected) - AndroidColor.red(pixel)) <= tolerance &&
+                kotlin.math.abs(AndroidColor.green(expected) - AndroidColor.green(pixel)) <= tolerance &&
+                kotlin.math.abs(AndroidColor.blue(expected) - AndroidColor.blue(pixel)) <= tolerance
+            ) {
+                matches += 1
+            }
+        }
+    }
+    return matches
+}
