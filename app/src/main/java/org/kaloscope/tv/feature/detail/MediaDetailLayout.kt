@@ -160,8 +160,17 @@ internal fun MediaDetailCinematicLayout(
             .testTag("detail-cinematic-surface"),
     ) {
         val horizontalSafePadding = maxOf(28.dp, maxWidth * 0.045f)
-        val posterWidth = (maxWidth * 0.14f).coerceIn(136.dp, 196.dp)
-        val childCardWidth = (maxWidth * 0.18f).coerceIn(176.dp, 260.dp)
+        val compactSeriesLayout = parent.children.isNotEmpty() && maxHeight <= 600.dp
+        val posterWidth = if (compactSeriesLayout) {
+            (maxWidth * 0.13f).coerceIn(128.dp, 176.dp)
+        } else {
+            (maxWidth * 0.14f).coerceIn(136.dp, 196.dp)
+        }
+        val childCardWidth = if (compactSeriesLayout) {
+            (maxWidth * 0.16f).coerceIn(156.dp, 220.dp)
+        } else {
+            (maxWidth * 0.18f).coerceIn(176.dp, 260.dp)
+        }
         val sectionKind = childSectionKind(parent)
 
         ServerBackdrop(
@@ -207,12 +216,13 @@ internal fun MediaDetailCinematicLayout(
                         Modifier
                     },
                 ) {
-                    Spacer(Modifier.height(60.dp))
+                    Spacer(Modifier.height(if (compactSeriesLayout) 24.dp else 60.dp))
                     DetailHero(
                         session = session,
                         parent = parent,
                         focusedChild = focusedChild,
                         plot = displayedPlot,
+                        compactSeriesLayout = compactSeriesLayout,
                         sectionKind = sectionKind,
                         posterWidth = posterWidth,
                         horizontalSafePadding = horizontalSafePadding,
@@ -230,7 +240,7 @@ internal fun MediaDetailCinematicLayout(
                         onShowMoreInfo = { moreInfoOpen = true },
                     )
                     if (parent.children.isNotEmpty()) {
-                        Spacer(Modifier.height(30.dp))
+                        Spacer(Modifier.height(if (compactSeriesLayout) 16.dp else 30.dp))
                         DetailChildRibbon(
                             session = session,
                             parent = parent,
@@ -239,12 +249,13 @@ internal fun MediaDetailCinematicLayout(
                             sectionKind = sectionKind,
                             childViewport = childViewport,
                             childCardWidth = childCardWidth,
+                            compactLayout = compactSeriesLayout,
                             horizontalSafePadding = horizontalSafePadding,
                             resumePositionsByMediaId = resumePositionsByMediaId,
                             childFocusRequester = childFocusRequester,
                             onNavigateUp = { scrollToTop(requestPrimaryActionFocus = true) },
                             onNavigateDown = ::scrollToBottom,
-                            onInitialFocusSettled = {
+                            onFocusSettled = {
                                 detailScrollState.scrollToItem(0)
                             },
                             onChildFocused = onChildFocused,
@@ -290,6 +301,7 @@ private fun DetailHero(
     parent: MediaDetail,
     focusedChild: MediaSummary?,
     plot: String?,
+    compactSeriesLayout: Boolean,
     sectionKind: MediaChildSectionKind,
     posterWidth: Dp,
     horizontalSafePadding: Dp,
@@ -303,6 +315,11 @@ private fun DetailHero(
     onShowMoreInfo: () -> Unit,
 ) {
     val accentPalette = LocalAccentPalette.current
+    val synopsis = plot?.takeIf(String::isNotBlank)
+    val synopsisLines = if (compactSeriesLayout) 3 else 4
+    val synopsisHeight = with(LocalDensity.current) {
+        if (compactSeriesLayout) 66.sp.toDp() else 100.sp.toDp()
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -329,25 +346,25 @@ private fun DetailHero(
             Text(
                 text = parent.title,
                 color = OnBackground,
-                fontSize = 36.sp,
+                fontSize = if (compactSeriesLayout) 32.sp else 36.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             DetailMetadata(parent)
             focusedChild?.let { child ->
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(if (compactSeriesLayout) 6.dp else 10.dp))
                 Text(
                     text = focusedChildPreview(sectionKind, child),
                     color = accentPalette.primary,
-                    fontSize = 16.sp,
+                    fontSize = if (compactSeriesLayout) 15.sp else 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             if (parent.children.isEmpty() || focusedChild != null) {
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(if (compactSeriesLayout) 12.dp else 18.dp))
                 DetailPlaybackActions(
                     resumePositionSeconds = resumePositionSeconds,
                     primaryActionFocusRequester = primaryActionFocusRequester,
@@ -360,15 +377,20 @@ private fun DetailHero(
                     onShowMoreInfo = onShowMoreInfo,
                 )
             }
-            plot?.takeIf(String::isNotBlank)?.let { synopsis ->
-                Spacer(Modifier.height(18.dp))
+            if (synopsis != null || parent.children.isNotEmpty()) {
+                Spacer(Modifier.height(if (compactSeriesLayout) 10.dp else 18.dp))
                 Text(
-                    text = synopsis,
+                    text = synopsis.orEmpty(),
                     color = OnBackground,
-                    fontSize = 17.sp,
-                    lineHeight = 25.sp,
-                    maxLines = 4,
+                    fontSize = if (compactSeriesLayout) 15.sp else 17.sp,
+                    lineHeight = if (compactSeriesLayout) 22.sp else 25.sp,
+                    maxLines = synopsisLines,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = if (parent.children.isNotEmpty()) {
+                        Modifier.height(synopsisHeight)
+                    } else {
+                        Modifier
+                    },
                 )
             }
         }
@@ -477,12 +499,13 @@ private fun DetailChildRibbon(
     sectionKind: MediaChildSectionKind,
     childViewport: GridViewportSnapshot,
     childCardWidth: Dp,
+    compactLayout: Boolean,
     horizontalSafePadding: Dp,
     resumePositionsByMediaId: Map<Long, Long>,
     childFocusRequester: FocusRequester,
     onNavigateUp: () -> Unit,
     onNavigateDown: () -> Unit,
-    onInitialFocusSettled: suspend () -> Unit,
+    onFocusSettled: suspend () -> Unit,
     onChildFocused: (Long) -> Unit,
     onChildViewportChanged: (GridViewportSnapshot) -> Unit,
     onPlayChild: (MediaSummary, Long?) -> Unit,
@@ -495,11 +518,11 @@ private fun DetailChildRibbon(
             },
         ),
         color = OnBackground,
-        fontSize = 21.sp,
+        fontSize = if (compactLayout) 19.sp else 21.sp,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(horizontal = horizontalSafePadding),
     )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(if (compactLayout) 8.dp else 12.dp))
     val initialTargetIndex = parent.children
         .indexOfFirst { it.id == initialChildId }
         .takeIf { it >= 0 }
@@ -520,7 +543,8 @@ private fun DetailChildRibbon(
             derivedStateOf { childListState.canScrollForward }
         }
         val carouselEdgeOffset = with(LocalDensity.current) { 48.dp.roundToPx() }
-        val childCardHeight = childCardWidth * 9f / 16f + 56.dp
+        val childCardHeight = childCardWidth * 9f / 16f +
+            if (compactLayout) 52.dp else 56.dp
         var animateFocusedItem by remember { mutableStateOf(false) }
         var lastFocusedItemIndex by remember { mutableStateOf(initialTargetIndex) }
         var pendingFocusedItemIndex by remember { mutableStateOf<Int?>(null) }
@@ -547,7 +571,7 @@ private fun DetailChildRibbon(
                 )
                 withFrameNanos { }
             }
-            onInitialFocusSettled()
+            onFocusSettled()
             animateFocusedItem = true
         }
         LaunchedEffect(pendingFocusedItemIndex) {
@@ -556,6 +580,8 @@ private fun DetailChildRibbon(
                     index = targetIndex,
                     scrollOffset = -carouselEdgeOffset,
                 )
+                withFrameNanos { }
+                onFocusSettled()
                 if (pendingFocusedItemIndex == targetIndex) {
                     pendingFocusedItemIndex = null
                 }
@@ -574,7 +600,7 @@ private fun DetailChildRibbon(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(childCardHeight + 16.dp)
+                .height(childCardHeight + if (compactLayout) 12.dp else 16.dp)
                 .testTag("detail-child-carousel"),
         ) {
             LazyRow(
@@ -587,9 +613,9 @@ private fun DetailChildRibbon(
                     ),
                 contentPadding = PaddingValues(
                     start = horizontalSafePadding + 10.dp,
-                    top = 8.dp,
+                    top = if (compactLayout) 6.dp else 8.dp,
                     end = horizontalSafePadding + 10.dp,
-                    bottom = 8.dp,
+                    bottom = if (compactLayout) 6.dp else 8.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {

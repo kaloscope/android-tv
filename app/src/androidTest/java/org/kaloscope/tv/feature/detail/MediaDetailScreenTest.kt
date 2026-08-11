@@ -318,6 +318,71 @@ class MediaDetailScreenTest {
     }
 
     @Test
+    fun movingRightKeepsSeriesAtTop() {
+        var state by mutableStateOf(
+            MediaDetailUiState.Content(
+                parent = longSeries().copy(
+                    plot = "父级简介第一行\n父级简介第二行\n父级简介第三行",
+                    genres = listOf("剧情", "科幻", "冒险", "悬疑", "太空"),
+                    studios = listOf("Kaloscope Animation Studio"),
+                    actors = listOf(MediaActor("沈川", "队长", null)),
+                ),
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(960.dp)
+                        .height(540.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = state,
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = { childId ->
+                            state = state.copy(focusedChildId = childId)
+                        },
+                        onChildViewportChanged = { viewport ->
+                            state = state.copy(childViewport = viewport)
+                        },
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val detailScroll = composeRule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
+        )
+        composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+        assertEquals(
+            0f,
+            detailScroll.fetchSemanticsNode()
+                .config[SemanticsProperties.VerticalScrollAxisRange]
+                .value(),
+            0f,
+        )
+
+        composeRule.onNodeWithTag("media-child-card-301")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("media-child-card-302").assertIsFocused()
+        val verticalOffset = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+            .value()
+        assertEquals(
+            "Horizontal episode navigation must not move the detail page vertically",
+            0f,
+            verticalOffset,
+            0f,
+        )
+    }
+
+    @Test
     fun parentPosterClipsItsCorners() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -867,6 +932,125 @@ class MediaDetailScreenTest {
 
         composeRule.onNodeWithText("第一集独有的分集简介").assertExists()
         composeRule.onNodeWithText("整部剧的父级简介").assertDoesNotExist()
+    }
+
+    @Test
+    fun childDetailArrivalKeepsEpisodeCarouselStationary() {
+        val parentPlot = "父级简介第一行\n父级简介第二行\n父级简介第三行\n父级简介第四行"
+        val parent = series().copy(
+            plot = parentPlot,
+            genres = listOf("剧情", "科幻", "冒险", "悬疑", "太空"),
+        )
+        val childDetail = parent.copy(
+            id = 301,
+            title = "启程",
+            path = "/media/episode-1.mkv",
+            plot = "第一集简介",
+            season = 1,
+            episode = 1,
+            children = emptyList(),
+        )
+        var state by mutableStateOf(
+            MediaDetailUiState.Content(
+                parent = parent,
+                focusedChildId = 301,
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(960.dp)
+                        .height(540.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = state,
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+        val posterTop = composeRule.onNodeWithTag("detail-parent-poster-201")
+            .fetchSemanticsNode().boundsInRoot.top
+        val initialCarouselOffset = composeRule.onNodeWithTag("detail-child-carousel")
+            .fetchSemanticsNode().boundsInRoot.top - posterTop
+
+        composeRule.runOnIdle {
+            state = state.copy(focusedChildDetail = childDetail)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("第一集简介").assertExists()
+        val updatedPosterTop = composeRule.onNodeWithTag("detail-parent-poster-201")
+            .fetchSemanticsNode().boundsInRoot.top
+        val updatedCarouselOffset = composeRule.onNodeWithTag("detail-child-carousel")
+            .fetchSemanticsNode().boundsInRoot.top - updatedPosterTop
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+        assertTrue(
+            "Child plot replacement moved the episode carousel: " +
+                "before=$initialCarouselOffset, after=$updatedCarouselOffset",
+            kotlin.math.abs(initialCarouselOffset - updatedCarouselOffset) <= tolerance,
+        )
+    }
+
+    @Test
+    fun synopsisAndEpisodeSelectionFitInside1080pViewport() {
+        val plot = "简介第一行\n简介第二行\n简介第三行\n简介第四行"
+        val parent = series().copy(
+            title = "一段足够长以便在电视详情页面换成两行显示的媒体标题",
+            plot = plot,
+            genres = listOf("剧情", "科幻", "冒险", "悬疑", "太空"),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(960.dp)
+                        .height(540.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = MediaDetailUiState.Content(parent = parent),
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+
+        val viewport = composeRule.onNodeWithTag("detail-cinematic-surface")
+            .fetchSemanticsNode().boundsInRoot
+        val synopsisNode = composeRule.onNodeWithText(plot).fetchSemanticsNode()
+        val synopsis = synopsisNode.boundsInRoot
+        val episodeNode = composeRule.onNodeWithTag("media-child-card-301")
+            .fetchSemanticsNode()
+        val episode = episodeNode.boundsInRoot
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertTrue("Synopsis should remain inside the first viewport", synopsis.top >= viewport.top)
+        assertTrue(
+            "Synopsis should be fully visible in 960x540dp: $synopsis",
+            synopsis.height + tolerance >= synopsisNode.size.height,
+        )
+        assertTrue(
+            "Episode selection should be fully visible in 960x540dp: $episode",
+            episode.bottom <= viewport.bottom + tolerance &&
+                episode.height + tolerance >= episodeNode.size.height,
+        )
     }
 
     @Test
