@@ -1,11 +1,15 @@
 package org.kaloscope.tv.feature.search
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -21,11 +25,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
@@ -83,6 +89,8 @@ internal fun SearchFilterDrawer(
             ) {
                 DrawerActionButton(
                     text = stringResource(R.string.filter_clear),
+                    iconRes = R.drawable.ic_action_clockwise,
+                    iconTag = "filter-clear-icon",
                     tag = "filter-clear",
                     onClick = onClear,
                     modifier = Modifier
@@ -94,6 +102,8 @@ internal fun SearchFilterDrawer(
                 )
                 DrawerActionButton(
                     text = stringResource(R.string.filter_apply),
+                    iconRes = R.drawable.ic_action_search,
+                    iconTag = "filter-apply-icon",
                     tag = "filter-apply",
                     onClick = { onApply(draft.toMap()) },
                     modifier = Modifier
@@ -241,6 +251,8 @@ private fun FilterOptionButton(
 @Composable
 private fun DrawerActionButton(
     text: String,
+    @DrawableRes iconRes: Int,
+    iconTag: String,
     tag: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -251,6 +263,14 @@ private fun DrawerActionButton(
         modifier = modifier
             .testTag(tag),
     ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier
+                .size(22.dp)
+                .testTag(iconTag),
+        )
+        Spacer(Modifier.width(8.dp))
         Text(text = text)
     }
 }

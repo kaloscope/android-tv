@@ -412,7 +412,7 @@ internal fun PlayerControls(
                         PlayerPillButton(
                             visibleLabel = stringResource(R.string.seek_seconds_short),
                             accessibilityLabel = stringResource(R.string.rewind_seconds),
-                            iconRes = R.drawable.ic_action_seek_backward,
+                            iconRes = R.drawable.ic_action_counterclockwise,
                             action = PlayerActionUiState(enabled = true),
                             onClick = onRewind,
                             modifier = Modifier.testTag("player-rewind"),
@@ -446,7 +446,7 @@ internal fun PlayerControls(
                         PlayerPillButton(
                             visibleLabel = stringResource(R.string.seek_seconds_short),
                             accessibilityLabel = stringResource(R.string.forward_seconds),
-                            iconRes = R.drawable.ic_action_seek_forward,
+                            iconRes = R.drawable.ic_action_clockwise,
                             action = PlayerActionUiState(enabled = true),
                             onClick = onForward,
                             modifier = Modifier

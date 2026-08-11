@@ -1405,6 +1405,51 @@ class SearchScreenTest {
     }
 
     @Test
+    fun filterActionsShowIconsAtStandardSize() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(regionFilter()),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val clearIcon = composeRule.onNodeWithTag(
+            testTag = "filter-clear-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val applyIcon = composeRule.onNodeWithTag(
+            testTag = "filter-apply-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+
+        listOf(clearIcon, applyIcon).forEach { bounds ->
+            assertEquals(22f * density, bounds.width, 1f)
+            assertEquals(22f * density, bounds.height, 1f)
+        }
+        composeRule.onNodeWithText("清除", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("应用", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
     fun filterActionsFollowHorizontalDpadOrder() {
         composeRule.setContent {
             KaloscopeTheme {
