@@ -69,6 +69,53 @@ fun KaloscopeSidePanelSelectionRow(
 }
 
 @Composable
+fun KaloscopeSidePanelChoiceRow(
+    title: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    valueSwatchColor: Color? = null,
+    swatchTestTag: String? = null,
+) {
+    KaloscopeButton(
+        onClick = onClick,
+        size = KaloscopeControlSize.Row,
+        modifier = modifier
+            .fillMaxWidth()
+            .consumeHorizontalDirections(),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            valueSwatchColor?.let { color ->
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .background(color, CircleShape)
+                        .then(swatchTestTag?.let(Modifier::testTag) ?: Modifier),
+                )
+                Spacer(Modifier.width(10.dp))
+            }
+            Text(
+                text = value,
+                fontSize = 15.sp,
+                maxLines = 1,
+            )
+            Spacer(Modifier.width(8.dp))
+            KaloscopeChoiceIndicator()
+        }
+    }
+}
+
+@Composable
 fun KaloscopeSidePanelAdjustmentRow(
     title: String,
     value: String,
@@ -82,11 +129,7 @@ fun KaloscopeSidePanelAdjustmentRow(
     swatchTestTag: String? = null,
 ) {
     KaloscopeButton(
-        onClick = {
-            if (canIncrease) {
-                onIncrease()
-            }
-        },
+        onClick = {},
         size = KaloscopeControlSize.Row,
         modifier = modifier
             .fillMaxWidth()

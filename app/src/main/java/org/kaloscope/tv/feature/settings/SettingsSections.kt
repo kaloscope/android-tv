@@ -42,12 +42,19 @@ import org.kaloscope.tv.core.designsystem.danmakuBlockTypeLabel
 import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
 import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
 import org.kaloscope.tv.core.designsystem.formatSubtitleOffset
+import org.kaloscope.tv.core.designsystem.imagePageDirectionLabel
+import org.kaloscope.tv.core.designsystem.imageReadModeLabel
+import org.kaloscope.tv.core.designsystem.imageZoomModeLabel
+import org.kaloscope.tv.core.designsystem.readerChapterOrderLabel
 import org.kaloscope.tv.core.designsystem.readerBackgroundColor
 import org.kaloscope.tv.core.designsystem.subtitleDisplayModeLabel
+import org.kaloscope.tv.core.designsystem.textReaderFontLabel
+import org.kaloscope.tv.core.designsystem.textReaderThemeLabel
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuBlockPolicy
 import org.kaloscope.tv.core.model.DanmakuBlockType
 import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.DanmakuSettingsPolicy
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.ImagePageDirection
@@ -86,11 +93,12 @@ internal fun PlaybackSettings(
             SettingsChoice(
                 title = stringResource(R.string.default_playback_mode),
                 options = PlaybackMode.entries.map { mode ->
-                    KaloscopeChoiceDialogOption(
-                        label = playbackModeLabel(mode),
-                        selected = { mode == state.settings.playbackMode },
-                        onSelect = { onPlaybackMode(mode) },
-                    )
+                        KaloscopeChoiceDialogOption(
+                            label = playbackModeLabel(mode),
+                            selected = { mode == state.settings.playbackMode },
+                            testTag = "playback-mode-option-${mode.name.lowercase()}",
+                            onSelect = { onPlaybackMode(mode) },
+                        )
                 },
             )
         },
@@ -404,71 +412,6 @@ private fun <T> ReaderChoiceRow(
 }
 
 @Composable
-internal fun readerChapterOrderLabel(value: ReaderChapterOrder): String =
-    stringResource(
-        when (value) {
-            ReaderChapterOrder.Ascending -> R.string.reader_order_ascending
-            ReaderChapterOrder.Descending -> R.string.reader_order_descending
-        },
-    )
-
-@Composable
-internal fun imageReadModeLabel(value: ImageReadMode): String =
-    stringResource(
-        when (value) {
-            ImageReadMode.Scroll -> R.string.reader_mode_scroll
-            ImageReadMode.Paged -> R.string.reader_mode_paged
-        },
-    )
-
-@Composable
-internal fun imageZoomModeLabel(value: ImageZoomMode): String =
-    stringResource(
-        when (value) {
-            ImageZoomMode.Auto -> R.string.reader_zoom_auto
-            ImageZoomMode.FitWidth -> R.string.reader_zoom_fit_width
-            ImageZoomMode.FitHeight -> R.string.reader_zoom_fit_height
-        },
-    )
-
-@Composable
-internal fun imagePageDirectionLabel(value: ImagePageDirection): String =
-    stringResource(
-        when (value) {
-            ImagePageDirection.Right -> R.string.reader_direction_right
-            ImagePageDirection.Left -> R.string.reader_direction_left
-            ImagePageDirection.Down -> R.string.reader_direction_down
-        },
-    )
-
-@Composable
-internal fun textReaderThemeLabel(value: TextReaderTheme): String =
-    stringResource(
-        when (value) {
-            TextReaderTheme.White -> R.string.reader_theme_white
-            TextReaderTheme.Cream -> R.string.reader_theme_cream
-            TextReaderTheme.Sepia -> R.string.reader_theme_sepia
-            TextReaderTheme.LightGray -> R.string.reader_theme_light_gray
-            TextReaderTheme.Green -> R.string.reader_theme_green
-            TextReaderTheme.Dark -> R.string.reader_theme_dark
-            TextReaderTheme.Slate -> R.string.reader_theme_slate
-            TextReaderTheme.Black -> R.string.reader_theme_black
-        },
-    )
-
-@Composable
-internal fun textReaderFontLabel(value: TextReaderFont): String =
-    stringResource(
-        when (value) {
-            TextReaderFont.System -> R.string.reader_font_system
-            TextReaderFont.Sans -> R.string.reader_font_sans
-            TextReaderFont.Serif -> R.string.reader_font_serif
-            TextReaderFont.Kai -> R.string.reader_font_kai
-            TextReaderFont.Monospace -> R.string.reader_font_monospace
-        },
-    )
-
-@Composable
 internal fun SubtitleDefaultSettings(
     settings: SubtitleSettings,
     interactionsEnabled: Boolean,
@@ -714,7 +657,6 @@ internal fun DanmakuDefaultSettings(
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
     onChange: (DanmakuSettings) -> Unit,
 ) {
-    val percentages = listOf(25, 50, 75, 100)
     var blockDraft by remember { mutableStateOf(settings) }
     LaunchedEffect(settings) {
         blockDraft = settings
@@ -772,18 +714,23 @@ internal fun DanmakuDefaultSettings(
             title = stringResource(R.string.danmaku_opacity),
             description = stringResource(R.string.danmaku_opacity_description),
             value = settings.opacityPercent,
-            percentages = percentages,
             interactionsEnabled = interactionsEnabled,
-            onOpenChoice = onOpenChoice,
+            testTagPrefix = "danmaku-opacity",
+            adjustedValue = { offset ->
+                DanmakuSettingsPolicy.adjustOpacity(settings, offset).opacityPercent
+            },
             onSelect = { onChange(settings.copy(opacityPercent = it)) },
         )
         DanmakuPercentageSetting(
             title = stringResource(R.string.danmaku_display_area),
             description = stringResource(R.string.danmaku_display_area_description),
             value = settings.displayAreaPercent,
-            percentages = percentages,
             interactionsEnabled = interactionsEnabled,
-            onOpenChoice = onOpenChoice,
+            testTagPrefix = "danmaku-display-area",
+            adjustedValue = { offset ->
+                DanmakuSettingsPolicy.adjustDisplayArea(settings, offset)
+                    .displayAreaPercent
+            },
             onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
         )
         ChoiceSettingRow(
@@ -826,29 +773,23 @@ private fun DanmakuPercentageSetting(
     title: String,
     description: String,
     value: Int,
-    percentages: List<Int>,
     interactionsEnabled: Boolean,
-    onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
+    testTagPrefix: String,
+    adjustedValue: (Int) -> Int,
     onSelect: (Int) -> Unit,
 ) {
-    ChoiceSettingRow(
+    val decreasedValue = adjustedValue(-1)
+    val increasedValue = adjustedValue(1)
+    AdjustableSettingRow(
         title = title,
         description = description,
         value = stringResource(R.string.percentage_value, value),
         interactionsEnabled = interactionsEnabled,
-        createChoice = {
-            SettingsChoice(
-                title = title,
-                options = percentages.map { percentage ->
-                    KaloscopeChoiceDialogOption(
-                        label = stringResource(R.string.percentage_value, percentage),
-                        selected = { percentage == value },
-                        onSelect = { onSelect(percentage) },
-                    )
-                },
-            )
-        },
-        onOpenChoice = onOpenChoice,
+        canDecrease = decreasedValue != value,
+        canIncrease = increasedValue != value,
+        testTagPrefix = testTagPrefix,
+        onDecrease = { onSelect(decreasedValue) },
+        onIncrease = { onSelect(increasedValue) },
     )
 }
 

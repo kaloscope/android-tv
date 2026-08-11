@@ -16,6 +16,7 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.DanmakuSettingsPolicy
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.ImagePageDirection
@@ -117,8 +118,14 @@ class PreferencesSettingsRepository @Inject constructor(
                     stored = this[DANMAKU_SPEED],
                     fallback = DanmakuSpeed.Standard,
                 ),
-                opacityPercent = this[DANMAKU_OPACITY].validPercent(100),
-                displayAreaPercent = this[DANMAKU_DISPLAY_AREA].validPercent(75),
+                opacityPercent = DanmakuSettingsPolicy.validPercentage(
+                    this[DANMAKU_OPACITY],
+                    fallback = 100,
+                ),
+                displayAreaPercent = DanmakuSettingsPolicy.validPercentage(
+                    this[DANMAKU_DISPLAY_AREA],
+                    fallback = 75,
+                ),
                 visibleModes = buildSet {
                     if (this@toSettings[DANMAKU_SCROLL_VISIBLE] ?: true) {
                         add(DanmakuDisplayMode.Scroll)
@@ -207,14 +214,10 @@ class PreferencesSettingsRepository @Inject constructor(
     ): T = enumValues<T>().firstOrNull { it.name.equals(stored, ignoreCase = true) }
         ?: fallback
 
-    private fun Int?.validPercent(fallback: Int): Int =
-        this?.takeIf(ALLOWED_PERCENTAGES::contains) ?: fallback
-
     private fun Int?.validValue(allowed: Set<Int>, fallback: Int): Int =
         this?.takeIf(allowed::contains) ?: fallback
 
     private companion object {
-        val ALLOWED_PERCENTAGES = setOf(25, 50, 75, 100)
         val READER_FONT_SIZES = (20..44 step 2).toSet()
         val READER_LINE_HEIGHT_TENTHS = (14..30 step 2).toSet()
         val READER_PARAGRAPH_SPACING_HALVES = (0..4).toSet()

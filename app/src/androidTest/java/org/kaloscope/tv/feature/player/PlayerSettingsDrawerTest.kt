@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
@@ -32,6 +33,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.model.DanmakuBlockPolicy
 import org.kaloscope.tv.core.model.DanmakuBlockType
 import org.kaloscope.tv.core.model.DanmakuSettings
+import org.kaloscope.tv.core.model.SubtitleDisplayMode
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleTrack
 
@@ -199,7 +201,7 @@ class PlayerSettingsDrawerTest {
     }
 
     @Test
-    fun centerIncreasesSubtitleFontScaleOneStep() {
+    fun centerDoesNotAdjustSubtitleFontScale() {
         val harness = DrawerHarness()
         setDrawer(harness)
         scrollRowIntoView("player-subtitle-font-scale-row")
@@ -209,13 +211,13 @@ class PlayerSettingsDrawerTest {
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.runOnIdle {
-            assertEquals(105, harness.subtitleSettings.fontScalePercent)
-            assertEquals(1, harness.subtitleUpdateCount)
+            assertEquals(100, harness.subtitleSettings.fontScalePercent)
+            assertEquals(0, harness.subtitleUpdateCount)
         }
     }
 
     @Test
-    fun centerIncreasesSubtitleOffsetInsteadOfResettingIt() {
+    fun centerDoesNotAdjustSubtitleOffset() {
         val harness = DrawerHarness(
             initialSubtitleSettings = SubtitleSettings(timeOffsetSeconds = 0.5f),
         )
@@ -227,8 +229,68 @@ class PlayerSettingsDrawerTest {
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.runOnIdle {
-            assertEquals(0.6f, harness.subtitleSettings.timeOffsetSeconds)
+            assertEquals(0.5f, harness.subtitleSettings.timeOffsetSeconds)
+            assertEquals(0, harness.subtitleUpdateCount)
+        }
+    }
+
+    @Test
+    fun subtitleDisplayModeOpensDialogAndRestoresRowFocus() {
+        val harness = DrawerHarness()
+        setDrawer(harness)
+        scrollRowIntoView("player-subtitle-display-mode-row")
+
+        val row = composeRule.onNodeWithTag("player-subtitle-display-mode-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.DirectionLeft)
+                pressKey(Key.DirectionRight)
+            }
+            .assertIsFocused()
+        composeRule.runOnIdle { assertEquals(0, harness.subtitleUpdateCount) }
+
+        row.performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("player-subtitle-display-mode-option-stroke")
+            .assertIsFocused()
+            .performKeyInput {
+                pressKey(Key.DirectionDown)
+                pressKey(Key.Enter)
+            }
+
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertDoesNotExist()
+        row.assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(SubtitleDisplayMode.Background, harness.subtitleSettings.displayMode)
             assertEquals(1, harness.subtitleUpdateCount)
+        }
+    }
+
+    @Test
+    fun danmakuOpacityUsesCanonicalHorizontalStepAndIgnoresCenter() {
+        val harness = DrawerHarness().apply {
+            danmakuSettings = DanmakuSettings(opacityPercent = 50)
+        }
+        setDrawer(harness)
+        scrollRowIntoView("player-danmaku-opacity-row")
+
+        composeRule.onNodeWithTag(
+            testTag = "player-danmaku-opacity-decrease",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        composeRule.onNodeWithTag(
+            testTag = "player-danmaku-opacity-increase",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        composeRule.onNodeWithTag("player-danmaku-opacity-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.DirectionRight)
+                pressKey(Key.Enter)
+            }
+
+        composeRule.runOnIdle {
+            assertEquals(75, harness.danmakuSettings.opacityPercent)
+            assertEquals(1, harness.danmakuUpdateCount)
         }
     }
 
@@ -356,7 +418,10 @@ class PlayerSettingsDrawerTest {
                             harness.subtitleUpdateCount += 1
                             harness.subtitleSettings = it
                         },
-                        onChangeDanmakuSettings = { harness.danmakuSettings = it },
+                        onChangeDanmakuSettings = {
+                            harness.danmakuUpdateCount += 1
+                            harness.danmakuSettings = it
+                        },
                         onDismiss = { harness.dismissCount += 1 },
                     )
                 }
@@ -372,6 +437,7 @@ class PlayerSettingsDrawerTest {
         var subtitleSettings by mutableStateOf(initialSubtitleSettings)
         var danmakuSettings by mutableStateOf(DanmakuSettings())
         var subtitleUpdateCount = 0
+        var danmakuUpdateCount = 0
         var dismissCount = 0
     }
 }

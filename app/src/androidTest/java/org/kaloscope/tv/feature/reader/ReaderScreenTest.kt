@@ -601,7 +601,7 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun centerIncreasesTextFontSizeOneStep() {
+    fun centerDoesNotAdjustTextFontSize() {
         var state by mutableStateOf(textState(text = "正文"))
         var updates = 0
         composeRule.setContent {
@@ -634,8 +634,8 @@ class ReaderScreenTest {
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.runOnIdle {
-            assertEquals(initialSize + ReaderSettingsPolicy.FONT_SIZE_STEP_SP, state.settings.fontSizeSp)
-            assertEquals(1, updates)
+            assertEquals(initialSize, state.settings.fontSizeSp)
+            assertEquals(0, updates)
         }
     }
 
@@ -703,14 +703,21 @@ class ReaderScreenTest {
         themeRow
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionRight) }
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("reader-theme-option-white")
+            .assertIsFocused()
+            .performKeyInput {
+                pressKey(Key.DirectionDown)
+                pressKey(Key.Enter)
+            }
         composeRule.waitForIdle()
 
         assertEquals(Color(0xFFFDF6E3).toArgb(), currentSwatchColor())
+        themeRow.assertIsFocused()
     }
 
     @Test
-    fun imageSettingsEnumArrowsDisableAtBoundariesWithoutWrapping() {
+    fun imageSettingsEnumOpensDialogAndRestoresRowFocus() {
         var state by mutableStateOf(imageState())
         var updates = 0
         composeRule.setContent {
@@ -743,33 +750,62 @@ class ReaderScreenTest {
         composeRule.onNodeWithTag(
             testTag = "reader-chapter-order-decrease",
             useUnmergedTree = true,
-        ).assertIsNotEnabled()
+        ).assertDoesNotExist()
         composeRule.onNodeWithTag(
             testTag = "reader-chapter-order-increase",
             useUnmergedTree = true,
-        ).assertIsEnabled()
+        ).assertDoesNotExist()
 
-        row.performKeyInput { pressKey(Key.DirectionLeft) }
+        row.performKeyInput {
+            pressKey(Key.DirectionLeft)
+            pressKey(Key.DirectionRight)
+        }.assertIsFocused()
         composeRule.runOnIdle { assertEquals(0, updates) }
 
-        row.performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag(
-            testTag = "reader-chapter-order-decrease",
-            useUnmergedTree = true,
-        ).assertIsEnabled()
-        composeRule.onNodeWithTag(
-            testTag = "reader-chapter-order-increase",
-            useUnmergedTree = true,
-        ).assertIsNotEnabled()
-        composeRule.runOnIdle { assertEquals(1, updates) }
+        row.performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertExists()
+        composeRule.onNodeWithTag("reader-chapter-order-option-ascending")
+            .assertIsFocused()
+            .performKeyInput {
+                pressKey(Key.DirectionDown)
+                pressKey(Key.Enter)
+            }
 
-        row.performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.runOnIdle { assertEquals(1, updates) }
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertDoesNotExist()
+        row.assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(ReaderChapterOrder.Descending, state.chapterOrder)
+            assertEquals(1, updates)
+        }
         composeRule.onNodeWithTag(
             testTag = "reader-session-settings-hint-icon",
             useUnmergedTree = true,
         ).assertExists()
+    }
+
+    @Test
+    fun backClosesReaderChoiceDialogBeforeDrawerAndRestoresFocus() {
+        setReader(textState(text = "正文"))
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        val themeRow = composeRule.onNodeWithTag("reader-text-theme-setting")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertExists()
+        composeRule.onNodeWithTag("reader-theme-option-white").assertIsFocused()
+
+        InstrumentationRegistry.getInstrumentation().apply {
+            waitForIdleSync()
+            sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-settings-drawer").assertExists()
+        themeRow.assertIsFocused()
     }
 
     @Test

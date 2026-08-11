@@ -177,12 +177,112 @@ class KaloscopeSidePanelTest {
             .performKeyInput {
                 pressKey(Key.DirectionLeft)
                 pressKey(Key.DirectionRight)
-                pressKey(Key.Enter)
             }
 
         composeRule.runOnIdle {
             assertEquals(0, decreaseCount)
-            assertEquals(2, increaseCount)
+            assertEquals(1, increaseCount)
+        }
+    }
+
+    @Test
+    fun adjustmentRowIgnoresCenter() {
+        var decreaseCount = 0
+        var increaseCount = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeSidePanelAdjustmentRow(
+                    title = "Setting",
+                    value = "One",
+                    canDecrease = true,
+                    canIncrease = true,
+                    onDecrease = { decreaseCount += 1 },
+                    onIncrease = { increaseCount += 1 },
+                    modifier = Modifier.testTag("sample-row"),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("sample-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(0, decreaseCount)
+            assertEquals(0, increaseCount)
+        }
+    }
+
+    @Test
+    fun choiceRowDisplaysModalIndicatorWithoutAdjustmentArrows() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeSidePanelChoiceRow(
+                    title = "Setting",
+                    value = "One",
+                    onClick = {},
+                    modifier = Modifier.testTag("choice-row"),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            testTag = "choice-setting-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag("sample-decrease", useUnmergedTree = true)
+            .assertDoesNotExist()
+        composeRule.onNodeWithTag("sample-increase", useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun choiceRowConsumesHorizontalDirectionsWithoutOpening() {
+        var openCount = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeSidePanelChoiceRow(
+                    title = "Setting",
+                    value = "One",
+                    onClick = { openCount += 1 },
+                    modifier = Modifier.testTag("choice-row"),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("choice-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.DirectionLeft)
+                pressKey(Key.DirectionRight)
+            }
+            .assertIsFocused()
+
+        composeRule.runOnIdle {
+            assertEquals(0, openCount)
+        }
+    }
+
+    @Test
+    fun choiceRowOpensOnCenter() {
+        var openCount = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeSidePanelChoiceRow(
+                    title = "Setting",
+                    value = "One",
+                    onClick = { openCount += 1 },
+                    modifier = Modifier.testTag("choice-row"),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("choice-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(1, openCount)
         }
     }
 

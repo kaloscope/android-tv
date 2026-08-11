@@ -37,7 +37,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -46,12 +45,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.tv.material3.Icon
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeChoiceIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeConfirmDialog
@@ -504,13 +503,7 @@ internal fun ChoiceSettingValue(value: String) {
             text = value,
             fontSize = 15.sp,
         )
-        Icon(
-            painter = painterResource(R.drawable.ic_choice_expand),
-            contentDescription = null,
-            modifier = Modifier
-                .size(18.dp)
-                .testTag("choice-setting-indicator"),
-        )
+        KaloscopeChoiceIndicator()
     }
 }
 

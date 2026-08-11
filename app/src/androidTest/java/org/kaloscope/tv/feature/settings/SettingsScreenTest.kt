@@ -327,6 +327,60 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun danmakuOpacityUsesAdjustmentModeAndCanonicalStep() {
+        var updatedOpacity: Int? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(
+                            danmaku = DanmakuSettings(opacityPercent = 50),
+                        ),
+                        section = SettingsSection.Danmaku,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeQuality = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = { updatedOpacity = it.opacityPercent },
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val opacityRow = composeRule.onNode(
+            hasClickAction() and hasText("弹幕透明度"),
+        )
+        opacityRow.performScrollTo()
+        composeRule.onNodeWithTag(
+            testTag = "danmaku-opacity-decrease",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+        composeRule.onNodeWithTag(
+            testTag = "danmaku-opacity-increase",
+            useUnmergedTree = true,
+        ).assertIsEnabled()
+
+        opacityRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.runOnIdle { assertEquals(null, updatedOpacity) }
+
+        opacityRow
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.runOnIdle { assertEquals(75, updatedOpacity) }
+    }
+
+    @Test
     fun readingAdjustmentModeUsesAccentSurfaceWhileFocused() {
         composeRule.mainClock.autoAdvance = false
         setSettingsContent(TvSettings(), SettingsSection.Reading)
@@ -700,12 +754,12 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("默认播放模式")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithText("自动")
+        composeRule.onNodeWithTag("playback-mode-option-auto")
             .assertIsSelected()
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }
             .assertIsFocused()
-        composeRule.onNodeWithText("直连")
+        composeRule.onNodeWithTag("playback-mode-option-direct")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 

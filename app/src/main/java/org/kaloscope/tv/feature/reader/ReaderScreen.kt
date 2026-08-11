@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +42,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
@@ -48,16 +50,25 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialog
+import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanel
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelAdjustmentRow
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelChoiceRow
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelPalette
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSectionHeader
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSelectionRow
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSessionHint
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSide
 import org.kaloscope.tv.core.designsystem.appErrorText
+import org.kaloscope.tv.core.designsystem.imagePageDirectionLabel
+import org.kaloscope.tv.core.designsystem.imageReadModeLabel
+import org.kaloscope.tv.core.designsystem.imageZoomModeLabel
+import org.kaloscope.tv.core.designsystem.readerChapterOrderLabel
 import org.kaloscope.tv.core.designsystem.readerBackgroundColor
+import org.kaloscope.tv.core.designsystem.textReaderFontLabel
+import org.kaloscope.tv.core.designsystem.textReaderThemeLabel
 import org.kaloscope.tv.core.model.ImagePageDirection
 import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
@@ -769,43 +780,46 @@ private fun ImageReaderSettingsDrawer(
         textColor = Color.White,
         mutedColor = Color(0xFFAAAAAA),
         onDismiss = onDismiss,
-    ) {
-        ReaderEnumSettingRow(
+    ) { onOpenChoice ->
+        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_chapter_order),
-            value = chapterOrder.label(),
             values = ReaderChapterOrder.entries,
             selected = chapterOrder,
+            label = ::readerChapterOrderLabel,
             onSelect = onChapterOrder,
+            onOpenChoice = onOpenChoice,
+            optionTestTag = {
+                "reader-chapter-order-option-${it.name.lowercase()}"
+            },
             requestInitialFocus = true,
             testTag = "reader-chapter-order-setting",
-            adjustmentTestTagPrefix = "reader-chapter-order",
         )
-        ReaderEnumSettingRow(
+        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_image_read_mode),
-            value = settings.readMode.label(),
             values = ImageReadMode.entries,
             selected = settings.readMode,
+            label = ::imageReadModeLabel,
             onSelect = { onSettings(settings.copy(readMode = it)) },
+            onOpenChoice = onOpenChoice,
             testTag = "reader-image-read-mode-setting",
-            adjustmentTestTagPrefix = "reader-image-read-mode",
         )
-        ReaderEnumSettingRow(
+        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_image_zoom),
-            value = settings.zoomMode.label(),
             values = ImageZoomMode.entries,
             selected = settings.zoomMode,
+            label = ::imageZoomModeLabel,
             onSelect = { onSettings(settings.copy(zoomMode = it)) },
+            onOpenChoice = onOpenChoice,
             testTag = "reader-image-zoom-setting",
-            adjustmentTestTagPrefix = "reader-image-zoom",
         )
-        ReaderEnumSettingRow(
+        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_page_direction),
-            value = settings.pageDirection.label(),
             values = ImagePageDirection.entries,
             selected = settings.pageDirection,
+            label = ::imagePageDirectionLabel,
             onSelect = { onSettings(settings.copy(pageDirection = it)) },
+            onOpenChoice = onOpenChoice,
             testTag = "reader-page-direction-setting",
-            adjustmentTestTagPrefix = "reader-page-direction",
         )
     }
 }
@@ -826,36 +840,41 @@ private fun TextReaderSettingsDrawer(
         textColor = textColor,
         mutedColor = mutedColor,
         onDismiss = onDismiss,
-    ) {
-        ReaderEnumSettingRow(
+    ) { onOpenChoice ->
+        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_chapter_order),
-            value = chapterOrder.label(),
             values = ReaderChapterOrder.entries,
             selected = chapterOrder,
+            label = ::readerChapterOrderLabel,
             onSelect = onChapterOrder,
+            onOpenChoice = onOpenChoice,
+            optionTestTag = {
+                "reader-chapter-order-option-${it.name.lowercase()}"
+            },
             requestInitialFocus = true,
             testTag = "reader-chapter-order-setting",
-            adjustmentTestTagPrefix = "reader-chapter-order",
         )
-        ReaderEnumSettingRow(
+        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_text_theme),
-            value = settings.theme.label(),
             values = TextReaderTheme.entries,
             selected = settings.theme,
+            label = ::textReaderThemeLabel,
             onSelect = { onSettings(settings.copy(theme = it)) },
-            valueSwatchColor = settings.theme.readerBackgroundColor(),
+            onOpenChoice = onOpenChoice,
+            swatchColor = TextReaderTheme::readerBackgroundColor,
+            optionTestTag = { "reader-theme-option-${it.name.lowercase()}" },
+            optionSwatchTestTag = { "reader-theme-swatch-${it.name.lowercase()}" },
             testTag = "reader-text-theme-setting",
-            adjustmentTestTagPrefix = "reader-text-theme",
-            swatchTestTag = "reader-current-theme-swatch",
+            valueSwatchTestTag = "reader-current-theme-swatch",
         )
-        ReaderEnumSettingRow(
+        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_text_font),
-            value = settings.font.label(),
             values = TextReaderFont.entries,
             selected = settings.font,
+            label = ::textReaderFontLabel,
             onSelect = { onSettings(settings.copy(font = it)) },
+            onOpenChoice = onOpenChoice,
             testTag = "reader-text-font-setting",
-            adjustmentTestTagPrefix = "reader-text-font",
         )
         ReaderNumericSettingRow(
             title = stringResource(R.string.reader_font_size),
@@ -962,51 +981,85 @@ private fun ReaderSettingsDrawerFrame(
     textColor: Color,
     mutedColor: Color,
     onDismiss: () -> Unit,
-    content: @Composable () -> Unit,
+    content: @Composable (
+        onOpenChoice: (FocusRequester, ReaderSettingsChoice) -> Unit,
+    ) -> Unit,
 ) {
-    KaloscopeSidePanel(
-        title = stringResource(R.string.reader_settings),
-        palette = KaloscopeSidePanelPalette(
-            panelColor = panelColor,
-            textColor = textColor,
-            mutedColor = mutedColor,
-        ),
-        onDismiss = onDismiss,
-        modifier = Modifier.testTag("reader-settings-drawer"),
-        footer = {
-            KaloscopeSidePanelSessionHint(
-                text = stringResource(R.string.reader_session_settings_description),
-                color = mutedColor,
-                iconTestTag = "reader-session-settings-hint-icon",
-                textTestTag = "reader-session-settings-hint-text",
-            )
-        },
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    var activeChoice by remember { mutableStateOf<ReaderSettingsChoice?>(null) }
+    var choiceTrigger by remember { mutableStateOf<FocusRequester?>(null) }
+    var focusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
+    LaunchedEffect(focusToRestore) {
+        val requester = focusToRestore ?: return@LaunchedEffect
+        withFrameNanos { }
+        requester.requestFocus()
+        focusToRestore = null
+    }
+    fun dismissChoice() {
+        activeChoice = null
+        focusToRestore = choiceTrigger
+        choiceTrigger = null
+    }
+
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        KaloscopeSidePanel(
+            title = stringResource(R.string.reader_settings),
+            palette = KaloscopeSidePanelPalette(
+                panelColor = panelColor,
+                textColor = textColor,
+                mutedColor = mutedColor,
+            ),
+            onDismiss = onDismiss,
+            dismissEnabled = activeChoice == null,
+            modifier = Modifier.testTag("reader-settings-drawer"),
+            footer = {
+                KaloscopeSidePanelSessionHint(
+                    text = stringResource(R.string.reader_session_settings_description),
+                    color = mutedColor,
+                    iconTestTag = "reader-session-settings-hint-icon",
+                    textTestTag = "reader-session-settings-hint-text",
+                )
+            },
         ) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    content()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        content { trigger, choice ->
+                            choiceTrigger = trigger
+                            activeChoice = choice
+                        }
+                    }
                 }
             }
+        }
+
+        activeChoice?.let { choice ->
+            KaloscopeChoiceDialog(
+                title = choice.title,
+                options = choice.options,
+                viewportSize = DpSize(maxWidth, maxHeight),
+                onDismiss = ::dismissChoice,
+            )
         }
     }
 }
 
 @Composable
-private fun <T> ReaderEnumSettingRow(
+private fun <T> ReaderChoiceSettingRow(
     title: String,
-    value: String,
     values: List<T>,
     selected: T,
+    label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
+    onOpenChoice: (FocusRequester, ReaderSettingsChoice) -> Unit,
     requestInitialFocus: Boolean = false,
-    valueSwatchColor: Color? = null,
-    testTag: String? = null,
-    adjustmentTestTagPrefix: String? = null,
-    swatchTestTag: String? = null,
+    swatchColor: ((T) -> Color)? = null,
+    optionTestTag: ((T) -> String)? = null,
+    optionSwatchTestTag: ((T) -> String)? = null,
+    testTag: String,
+    valueSwatchTestTag: String? = null,
 ) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(requestInitialFocus) {
@@ -1015,31 +1068,28 @@ private fun <T> ReaderEnumSettingRow(
             focus.requestFocus()
         }
     }
-    val currentIndex = values.indexOf(selected).coerceAtLeast(0)
-    val canDecrease = currentIndex > 0
-    val canIncrease = currentIndex < values.lastIndex
-    fun move(offset: Int) {
-        values.getOrNull(currentIndex + offset)?.let(onSelect)
-    }
-    KaloscopeSidePanelAdjustmentRow(
+    val choice = ReaderSettingsChoice(
         title = title,
-        value = value,
-        canDecrease = canDecrease,
-        canIncrease = canIncrease,
-        onDecrease = { move(-1) },
-        onIncrease = { move(1) },
-        modifier = Modifier
-            .then(
-                if (requestInitialFocus) {
-                    Modifier.focusRequester(focus)
-                } else {
-                    Modifier
-                },
+        options = values.map { option ->
+            KaloscopeChoiceDialogOption(
+                label = label(option),
+                selected = { option == selected },
+                swatchColor = swatchColor?.invoke(option),
+                testTag = optionTestTag?.invoke(option),
+                swatchTestTag = optionSwatchTestTag?.invoke(option),
+                onSelect = { onSelect(option) },
             )
-            .then(testTag?.let(Modifier::testTag) ?: Modifier),
-        valueSwatchColor = valueSwatchColor,
-        adjustmentTestTagPrefix = adjustmentTestTagPrefix,
-        swatchTestTag = swatchTestTag,
+        },
+    )
+    KaloscopeSidePanelChoiceRow(
+        title = title,
+        value = label(selected),
+        onClick = { onOpenChoice(focus, choice) },
+        modifier = Modifier
+            .focusRequester(focus)
+            .testTag(testTag),
+        valueSwatchColor = swatchColor?.invoke(selected),
+        swatchTestTag = valueSwatchTestTag,
     )
 }
 
@@ -1136,64 +1186,6 @@ private fun ReaderUnavailable(
     }
 }
 
-@Composable
-private fun ReaderChapterOrder.label(): String =
-    stringResource(
-        if (this == ReaderChapterOrder.Ascending) {
-            R.string.reader_order_ascending
-        } else {
-            R.string.reader_order_descending
-        },
-    )
-
-@Composable
-private fun ImageReadMode.label(): String = stringResource(
-    if (this == ImageReadMode.Scroll) R.string.reader_mode_scroll else R.string.reader_mode_paged,
-)
-
-@Composable
-private fun ImageZoomMode.label(): String = stringResource(
-    when (this) {
-        ImageZoomMode.Auto -> R.string.reader_zoom_auto
-        ImageZoomMode.FitWidth -> R.string.reader_zoom_fit_width
-        ImageZoomMode.FitHeight -> R.string.reader_zoom_fit_height
-    },
-)
-
-@Composable
-private fun ImagePageDirection.label(): String = stringResource(
-    when (this) {
-        ImagePageDirection.Right -> R.string.reader_direction_right
-        ImagePageDirection.Left -> R.string.reader_direction_left
-        ImagePageDirection.Down -> R.string.reader_direction_down
-    },
-)
-
-@Composable
-private fun TextReaderTheme.label(): String = stringResource(
-    when (this) {
-        TextReaderTheme.White -> R.string.reader_theme_white
-        TextReaderTheme.Cream -> R.string.reader_theme_cream
-        TextReaderTheme.Sepia -> R.string.reader_theme_sepia
-        TextReaderTheme.LightGray -> R.string.reader_theme_light_gray
-        TextReaderTheme.Green -> R.string.reader_theme_green
-        TextReaderTheme.Dark -> R.string.reader_theme_dark
-        TextReaderTheme.Slate -> R.string.reader_theme_slate
-        TextReaderTheme.Black -> R.string.reader_theme_black
-    },
-)
-
-@Composable
-private fun TextReaderFont.label(): String = stringResource(
-    when (this) {
-        TextReaderFont.System -> R.string.reader_font_system
-        TextReaderFont.Sans -> R.string.reader_font_sans
-        TextReaderFont.Serif -> R.string.reader_font_serif
-        TextReaderFont.Kai -> R.string.reader_font_kai
-        TextReaderFont.Monospace -> R.string.reader_font_monospace
-    },
-)
-
 private fun defaultControlTarget(chapters: List<ReaderChapter>): ReaderControlTarget =
     if (chapters.size > 1) ReaderControlTarget.Chapters else ReaderControlTarget.Settings
 
@@ -1201,5 +1193,10 @@ private enum class ReaderDrawer {
     Chapters,
     Settings,
 }
+
+private data class ReaderSettingsChoice(
+    val title: String,
+    val options: List<KaloscopeChoiceDialogOption>,
+)
 
 private const val TITLE_HIDE_DELAY_MILLIS = 3_000L
