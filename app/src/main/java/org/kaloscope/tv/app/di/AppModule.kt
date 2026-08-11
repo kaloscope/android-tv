@@ -14,6 +14,8 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
+import org.kaloscope.tv.BuildConfig
+import org.kaloscope.tv.app.AppFormDefaults
 import org.kaloscope.tv.core.player.AndroidNetworkVideoCodecSupport
 import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
 import org.kaloscope.tv.core.storage.AndroidKeystoreTokenCipher
@@ -97,6 +99,15 @@ abstract class AppBindings {
 @Module
 @InstallIn(SingletonComponent::class)
 object AppProvides {
+    @Provides
+    @Singleton
+    fun provideAppFormDefaults(): AppFormDefaults = AppFormDefaults(
+        serverName = BuildConfig.DEBUG_SERVER_NAME,
+        serverUrl = BuildConfig.DEBUG_SERVER_URL,
+        username = BuildConfig.DEBUG_USERNAME,
+        password = BuildConfig.DEBUG_PASSWORD,
+    )
+
     @Provides
     @Singleton
     fun provideDataStore(

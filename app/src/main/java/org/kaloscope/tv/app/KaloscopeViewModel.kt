@@ -29,11 +29,14 @@ class KaloscopeViewModel @Inject constructor(
     private val serverStore: ServerStore,
     private val serverRepository: ServerRepository,
     private val sessionRepository: SessionRepository,
+    private val formDefaults: AppFormDefaults,
 ) : ViewModel() {
     private val bootstrapCoordinator = BootstrapCoordinator(serverStore, sessionRepository)
     private val serverCoordinator = ServerSetupCoordinator(
         repository = serverRepository,
         createServerId = { UUID.randomUUID().toString() },
+        initialName = formDefaults.serverName,
+        initialUrl = formDefaults.serverUrl,
     )
     private val serverDeletionCoordinator = SavedServerDeletionCoordinator(
         serverRepository = serverRepository,
@@ -161,7 +164,12 @@ class KaloscopeViewModel @Inject constructor(
     private fun showLogin(server: SavedServer) {
         // A coordinator is bound to one server, so switching servers must replace it.
         stopLoginCollection()
-        val coordinator = LoginCoordinator(server, sessionRepository)
+        val coordinator = LoginCoordinator(
+            server = server,
+            repository = sessionRepository,
+            initialUsername = formDefaults.username,
+            initialPassword = formDefaults.password,
+        )
         loginCoordinator = coordinator
         mutableLoginState.value = coordinator.state.value
         loginStateJob = viewModelScope.launch {

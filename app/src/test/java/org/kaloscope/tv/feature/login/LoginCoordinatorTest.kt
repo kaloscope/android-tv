@@ -14,6 +14,19 @@ import org.kaloscope.tv.data.auth.SessionRepository
 
 class LoginCoordinatorTest {
     @Test
+    fun `configured credentials initialize login form`() {
+        val coordinator = LoginCoordinator(
+            server = server(),
+            repository = FakeSessionRepository(),
+            initialUsername = "debug_user",
+            initialPassword = "debug_password",
+        )
+
+        assertEquals("debug_user", coordinator.state.value.username)
+        assertEquals("debug_password", coordinator.state.value.password)
+    }
+
+    @Test
     fun `missing credentials do not call login`() = runBlocking {
         val repository = FakeSessionRepository()
         val coordinator = LoginCoordinator(server(), repository)

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.legacy.kapt)
@@ -9,6 +11,25 @@ plugins {
 kotlin {
     jvmToolchain(17)
 }
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.isFile) {
+    localPropertiesFile.reader().use { reader ->
+        localProperties.load(reader)
+    }
+}
+
+fun localDebugValue(key: String): String = localProperties.getProperty(key).orEmpty()
+
+fun String.asBuildConfigString(): String =
+    "\"" +
+        replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t") +
+        "\""
 
 // Keep local release builds unsigned; CI opts into signing only with a complete set.
 val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH")
@@ -44,6 +65,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+
+        buildConfigField("String", "DEBUG_SERVER_NAME", "".asBuildConfigString())
+        buildConfigField("String", "DEBUG_SERVER_URL", "".asBuildConfigString())
+        buildConfigField("String", "DEBUG_USERNAME", "".asBuildConfigString())
+        buildConfigField("String", "DEBUG_PASSWORD", "".asBuildConfigString())
     }
 
     signingConfigs {
@@ -58,6 +84,29 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField(
+                "String",
+                "DEBUG_SERVER_NAME",
+                localDebugValue("kaloscope.debug.serverName").asBuildConfigString(),
+            )
+            buildConfigField(
+                "String",
+                "DEBUG_SERVER_URL",
+                localDebugValue("kaloscope.debug.serverUrl").asBuildConfigString(),
+            )
+            buildConfigField(
+                "String",
+                "DEBUG_USERNAME",
+                localDebugValue("kaloscope.debug.username").asBuildConfigString(),
+            )
+            buildConfigField(
+                "String",
+                "DEBUG_PASSWORD",
+                localDebugValue("kaloscope.debug.password").asBuildConfigString(),
+            )
+        }
+
         release {
             isMinifyEnabled = true
             isShrinkResources = true

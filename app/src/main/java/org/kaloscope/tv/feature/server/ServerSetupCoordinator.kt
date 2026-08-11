@@ -37,12 +37,18 @@ data class ServerSetupState(
 class ServerSetupCoordinator(
     private val repository: ServerRepository,
     private val createServerId: () -> String,
+    initialName: String = "",
+    initialUrl: String = "",
 ) {
-    private val mutableState = MutableStateFlow(ServerSetupState())
+    private val initialState = ServerSetupState(
+        name = initialName,
+        url = initialUrl,
+    )
+    private val mutableState = MutableStateFlow(initialState)
     val state: StateFlow<ServerSetupState> = mutableState.asStateFlow()
 
     fun reset() {
-        mutableState.value = ServerSetupState()
+        mutableState.value = initialState
     }
 
     fun updateName(value: String) {

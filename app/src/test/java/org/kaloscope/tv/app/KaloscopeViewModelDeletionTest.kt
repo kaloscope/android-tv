@@ -29,6 +29,7 @@ class KaloscopeViewModelDeletionTest {
                 serverStore = EmptyServerStore(),
                 serverRepository = DeletionServerRepository(mutableListOf(), emptyList()),
                 sessionRepository = DeletionSessionRepository(mutableListOf()),
+                formDefaults = AppFormDefaults(),
             )
             advanceUntilIdle()
             viewModel.updateServerName("旧服务器")
@@ -55,6 +56,7 @@ class KaloscopeViewModelDeletionTest {
                 serverStore = EmptyServerStore(),
                 serverRepository = DeletionServerRepository(events, remaining),
                 sessionRepository = DeletionSessionRepository(events),
+                formDefaults = AppFormDefaults(),
             )
             advanceUntilIdle()
 

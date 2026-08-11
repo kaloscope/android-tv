@@ -26,8 +26,15 @@ data class LoginState(
 class LoginCoordinator(
     private val server: SavedServer,
     private val repository: SessionRepository,
+    initialUsername: String = "",
+    initialPassword: String = "",
 ) {
-    private val mutableState = MutableStateFlow(LoginState())
+    private val mutableState = MutableStateFlow(
+        LoginState(
+            username = initialUsername,
+            password = initialPassword,
+        ),
+    )
     val state: StateFlow<LoginState> = mutableState.asStateFlow()
 
     fun updateUsername(value: String) {

@@ -16,6 +16,25 @@ import org.kaloscope.tv.data.server.ServerRepository
 
 class ServerSetupCoordinatorTest {
     @Test
+    fun `configured defaults initialize and reset server draft`() {
+        val coordinator = coordinator(
+            repository = FakeServerRepository(),
+            initialName = "Debug",
+            initialUrl = "https://debug.example",
+        )
+
+        assertEquals("Debug", coordinator.state.value.name)
+        assertEquals("https://debug.example", coordinator.state.value.url)
+
+        coordinator.updateName("Edited")
+        coordinator.updateUrl("https://edited.example")
+        coordinator.reset()
+
+        assertEquals("Debug", coordinator.state.value.name)
+        assertEquals("https://debug.example", coordinator.state.value.url)
+    }
+
+    @Test
     fun `invalid url does not call the server`() = runBlocking {
         val repository = FakeServerRepository()
         val coordinator = coordinator(repository)
@@ -177,7 +196,13 @@ private class SuspendingServerRepository : ServerRepository {
     override suspend fun setActiveServer(serverId: String) = Unit
 }
 
-private fun coordinator(repository: ServerRepository) = ServerSetupCoordinator(
+private fun coordinator(
+    repository: ServerRepository,
+    initialName: String = "",
+    initialUrl: String = "",
+) = ServerSetupCoordinator(
     repository = repository,
     createServerId = { "generated-id" },
+    initialName = initialName,
+    initialUrl = initialUrl,
 )
