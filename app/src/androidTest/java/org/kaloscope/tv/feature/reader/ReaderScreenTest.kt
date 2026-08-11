@@ -36,6 +36,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ReaderChapter
@@ -555,7 +556,7 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textSettingsKeepThemePanelAndRestingTextColors() {
+    fun textSettingsUseReadableRestingTextOnLightTheme() {
         setReader(
             textState(
                 text = "正文",
@@ -575,9 +576,64 @@ class ReaderScreenTest {
             .captureToImage().asAndroidBitmap()
         assertEquals(Color(0xFFFDFDFD).toArgb(), panel.getPixel(2, panel.height / 2))
         assertEquals(
-            Color(0xFF333333),
+            OnBackground,
             textLayoutForText("章节显示顺序").layoutInput.style.color,
         )
+    }
+
+    @Test
+    fun textChapterDrawerUsesReadableRestingTextOnLightTheme() {
+        setReader(
+            textState(
+                text = "正文",
+                settings = TextReaderSettings(theme = TextReaderTheme.White),
+            ),
+        )
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.Enter) }
+        composeRule.mainClock.advanceTimeBy(500)
+
+        assertEquals(
+            OnBackground,
+            textLayoutForText("第一章").layoutInput.style.color,
+        )
+    }
+
+    @Test
+    fun textSettingsKeepWebUiTextColorOnDarkTheme() {
+        setReader(
+            textState(
+                text = "正文",
+                settings = TextReaderSettings(theme = TextReaderTheme.Dark),
+            ),
+        )
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("reader-text-theme-setting")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(500)
+
+        assertEquals(
+            Color(0xFFCCCCCC),
+            textLayoutForText("章节显示顺序").layoutInput.style.color,
+        )
+    }
+
+    @Test
+    fun textSettingsUseWebUiThemeFieldName() {
+        setReader(textState(text = "正文"))
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNode(hasClickAction() and hasText("背景")).assertExists()
     }
 
     @Test

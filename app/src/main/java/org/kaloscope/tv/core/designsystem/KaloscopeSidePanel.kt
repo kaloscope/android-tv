@@ -39,6 +39,7 @@ data class KaloscopeSidePanelPalette(
     val panelColor: Color,
     val textColor: Color,
     val mutedColor: Color,
+    val controlContentColor: Color = textColor,
 )
 
 @Composable
@@ -99,7 +100,7 @@ fun KaloscopeSidePanel(
             }
             Spacer(Modifier.height(if (description == null) 20.dp else 18.dp))
             CompositionLocalProvider(
-                LocalKaloscopeControlRestingContentColor provides palette.textColor,
+                LocalKaloscopeControlRestingContentColor provides palette.controlContentColor,
             ) {
                 Box(
                     modifier = Modifier

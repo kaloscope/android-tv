@@ -37,6 +37,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -61,6 +62,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSectionHeader
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSelectionRow
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSessionHint
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSide
+import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.designsystem.imagePageDirectionLabel
 import org.kaloscope.tv.core.designsystem.imageReadModeLabel
@@ -178,6 +180,10 @@ private fun ActiveReader(
     val overlayPanel = textPalette?.panel ?: Color(0xFF121212)
     val overlayText = textPalette?.text ?: Color.White
     val overlayMuted = textPalette?.muted ?: Color(0xFFAAAAAA)
+    val overlayControlText = textPalette?.let { palette ->
+        // Reader rows keep the shared dark control surface, even on light themes.
+        if (palette.panel.luminance() > 0.5f) OnBackground else palette.text
+    } ?: overlayText
 
     fun requestControl(target: ReaderControlTarget) {
         controlsVisible = true
@@ -407,6 +413,7 @@ private fun ActiveReader(
                 panelColor = overlayPanel,
                 textColor = overlayText,
                 mutedColor = overlayMuted,
+                controlContentColor = overlayControlText,
                 onDismiss = ::dismissDrawer,
                 onSelect = { chapterIndex ->
                     dismissDrawer()
@@ -430,6 +437,7 @@ private fun ActiveReader(
                     panelColor = overlayPanel,
                     textColor = overlayText,
                     mutedColor = overlayMuted,
+                    controlContentColor = overlayControlText,
                     onSettings = onTextSettings,
                     onChapterOrder = onChapterOrder,
                     onDismiss = ::dismissDrawer,
@@ -693,6 +701,7 @@ private fun ReaderChapterDrawer(
     panelColor: Color,
     textColor: Color,
     mutedColor: Color,
+    controlContentColor: Color,
     onDismiss: () -> Unit,
     onSelect: (Int) -> Unit,
 ) {
@@ -736,6 +745,7 @@ private fun ReaderChapterDrawer(
             panelColor = panelColor,
             textColor = textColor,
             mutedColor = mutedColor,
+            controlContentColor = controlContentColor,
         ),
         onDismiss = onDismiss,
         side = KaloscopeSidePanelSide.Start,
@@ -839,6 +849,7 @@ private fun TextReaderSettingsDrawer(
     panelColor: Color,
     textColor: Color,
     mutedColor: Color,
+    controlContentColor: Color,
     onSettings: (TextReaderSettings) -> Unit,
     onChapterOrder: (ReaderChapterOrder) -> Unit,
     onDismiss: () -> Unit,
@@ -847,6 +858,7 @@ private fun TextReaderSettingsDrawer(
         panelColor = panelColor,
         textColor = textColor,
         mutedColor = mutedColor,
+        controlContentColor = controlContentColor,
         onDismiss = onDismiss,
     ) { onOpenChoice ->
         ReaderChoiceSettingRow(
@@ -988,6 +1000,7 @@ private fun ReaderSettingsDrawerFrame(
     panelColor: Color,
     textColor: Color,
     mutedColor: Color,
+    controlContentColor: Color = textColor,
     onDismiss: () -> Unit,
     content: @Composable (
         onOpenChoice: (FocusRequester, ReaderSettingsChoice) -> Unit,
@@ -1015,6 +1028,7 @@ private fun ReaderSettingsDrawerFrame(
                 panelColor = panelColor,
                 textColor = textColor,
                 mutedColor = mutedColor,
+                controlContentColor = controlContentColor,
             ),
             onDismiss = onDismiss,
             dismissEnabled = activeChoice == null,

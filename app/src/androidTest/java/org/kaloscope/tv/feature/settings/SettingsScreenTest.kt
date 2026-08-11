@@ -204,7 +204,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("图片阅读").assertDoesNotExist()
         composeRule.onNodeWithText("文本阅读").assertDoesNotExist()
         composeRule.onNode(hasClickAction() and hasText("阅读模式")).assertExists()
-        composeRule.onNode(hasClickAction() and hasText("阅读主题")).assertExists()
+        composeRule.onNode(hasClickAction() and hasText("背景")).assertExists()
     }
 
     @Test
@@ -232,7 +232,7 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNode(hasClickAction() and hasText("阅读主题"))
+        composeRule.onNode(hasClickAction() and hasText("背景"))
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 
@@ -254,6 +254,34 @@ class SettingsScreenTest {
                 useUnmergedTree = true,
             ).assertExists()
             if (index != themeTags.lastIndex) {
+                option.performKeyInput { pressKey(Key.DirectionDown) }
+            }
+        }
+    }
+
+    @Test
+    fun readingThemeDialogUsesWebUiLabels() {
+        setSettingsContent(TvSettings(), SettingsSection.Reading)
+
+        composeRule.onNode(hasClickAction() and hasText("背景"))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        val themes = listOf(
+            "white" to "纯白",
+            "cream" to "奶油",
+            "sepia" to "护眼",
+            "lightgray" to "浅灰",
+            "green" to "豆绿",
+            "dark" to "深色",
+            "slate" to "蓝灰",
+            "black" to "夜间",
+        )
+        themes.forEachIndexed { index, (themeTag, label) ->
+            val option = composeRule.onNodeWithTag("reader-theme-option-$themeTag")
+                .assertIsFocused()
+                .assertTextEquals(label)
+            if (index != themes.lastIndex) {
                 option.performKeyInput { pressKey(Key.DirectionDown) }
             }
         }
