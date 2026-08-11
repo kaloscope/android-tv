@@ -135,6 +135,33 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun chapterNavigationIconsPreserveSourceSvgCutouts() {
+        setReader(textState(text = "正文"))
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+
+        listOf(
+            "reader-previous-chapter-icon",
+            "reader-next-chapter-icon",
+        ).forEach { tag ->
+            val bitmap = composeRule.onNodeWithTag(
+                testTag = tag,
+                useUnmergedTree = true,
+            ).captureToImage().asAndroidBitmap()
+            val center = bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)
+            val brightestRed = (0 until bitmap.height).maxOf { y ->
+                (0 until bitmap.width).maxOf { x ->
+                    AndroidColor.red(bitmap.getPixel(x, y))
+                }
+            }
+
+            assertTrue("$tag center should remain transparent", AndroidColor.red(center) < 80)
+            assertTrue("$tag outline should remain visible", brightestRed > 200)
+        }
+    }
+
+    @Test
     fun imageBottomControlsUseTheSharedActionIcons() {
         setReader(imageState())
 

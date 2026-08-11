@@ -23,6 +23,19 @@ class PlayerIconResourceTest {
     }
 
     @Test
+    fun chapterNavigationIconsPreserveSourceSvgCutouts() {
+        listOf("ic_action_previous", "ic_action_next").forEach { resourceName ->
+            val path = parse(resourceName).singlePath()
+
+            assertEquals(
+                "$resourceName fill type",
+                "evenOdd",
+                path.androidAttribute("fillType"),
+            )
+        }
+    }
+
+    @Test
     fun playbackSpeedIconUsesConsistentRoundedStrokeStyle() {
         val resourceName = "ic_action_playback_speed"
         val document = parse(resourceName)
@@ -115,7 +128,7 @@ class PlayerIconResourceTest {
         val convertedTransportPaths = mapOf(
             "ic_action_previous" to
                 "M21 4.753c0-1.408-1.578-2.24-2.74-1.444L7.763 10.503a1.75 1.75 0 0 0-.01 2.88l10.499 7.302" +
-                "c1.16.807 2.749-.024 2.749-1.437zm-1.891-.206a.25.25 0 0 1 .39.206v14.495a.25.25 0 0 1-.392.205" +
+                "c1.16.807 2.749-.024 2.749-1.437zM19.109 4.547a.25.25 0 0 1 .39.206v14.495a.25.25 0 0 1-.392.205" +
                 "L8.61 12.152a.25.25 0 0 1 .001-.412zM3 3.75a.75.75 0 0 1 1.5 0v16.5a.75.75 0 0 1-1.5 0z",
             "ic_action_counterclockwise" to
                 "M12 4.5a7.5 7.5 0 1 1-7.419 6.392c.067-.454-.265-.892-.724-.892a.75.75 0 0 0-.752.623A9 9 0 1 0 6 5.292" +
@@ -125,7 +138,7 @@ class PlayerIconResourceTest {
                 "a9 9 0 1 1-3-6.708V4.25a.75.75 0 0 1 1.5 0v3a.75.75 0 0 1-.75.75h-3a.75.75 0 0 1 0-1.5h1.35a7.47 7.47 0 0 0-5.1-2",
             "ic_action_next" to
                 "M3 4.753c0-1.408 1.578-2.24 2.74-1.444l10.498 7.194a1.75 1.75 0 0 1 .01 2.88L5.749 20.685" +
-                "C4.59 21.492 3 20.66 3 19.248zm1.891-.206a.25.25 0 0 0-.39.206v14.495c0 .202.226.32.392.205l10.498-7.301" +
+                "C4.59 21.492 3 20.66 3 19.248zM4.891 4.547a.25.25 0 0 0-.39.206v14.495c0 .202.226.32.392.205l10.498-7.301" +
                 "a.25.25 0 0 0-.001-.412zM21 3.75a.75.75 0 0 0-1.5 0v16.5a.75.75 0 0 0 1.5 0z",
         )
 
