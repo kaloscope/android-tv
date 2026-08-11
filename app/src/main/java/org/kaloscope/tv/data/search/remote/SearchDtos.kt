@@ -149,7 +149,7 @@ data class IndexerResourcePageData(
 
 @Serializable
 data class IndexerResourceData(
-    @Serializable(with = WorkflowIdSerializer::class)
+    @Serializable(with = StringOrNumberSerializer::class)
     val id: String? = null,
     val title: String? = null,
     val cover: String? = null,
@@ -160,6 +160,7 @@ data class IndexerResourceData(
     val uploader: String? = null,
     @SerialName("uploaded_at")
     val uploadedAt: String? = null,
+    @Serializable(with = StringOrNumberSerializer::class)
     val size: String? = null,
     @SerialName("media_type")
     val mediaType: String? = null,
@@ -183,7 +184,7 @@ data class IndexerDefinitionData(
 
 @Serializable
 data class IndexerChapterData(
-    @Serializable(with = WorkflowIdSerializer::class)
+    @Serializable(with = StringOrNumberSerializer::class)
     val id: String? = null,
     val url: String? = null,
     val title: String? = null,
@@ -192,7 +193,7 @@ data class IndexerChapterData(
 
 @Serializable
 data class IndexerDanmakuData(
-    @Serializable(with = WorkflowIdSerializer::class)
+    @Serializable(with = StringOrNumberSerializer::class)
     val id: String? = null,
     val text: String? = null,
     val mode: String? = null,

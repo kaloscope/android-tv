@@ -155,6 +155,42 @@ class DefaultSearchRepositoryTest {
     }
 
     @Test
+    fun `search accepts numeric resource size`() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "status": 200,
+                  "message": "",
+                  "data": {
+                    "totalPages": 1,
+                    "items": [
+                      {
+                        "id": "novel/source-id",
+                        "title": "示例小说",
+                        "size": 123,
+                        "media_type": "text"
+                      }
+                    ]
+                  }
+                }
+                """.trimIndent(),
+            ),
+        )
+        val profile = org.kaloscope.tv.core.model.IndexerSourceProfile(
+            indexer = indexer(),
+            pageSize = 20,
+            keywordRequired = false,
+            mediaTypeHint = NetworkMediaType.Text,
+        )
+
+        val page = repository.search(session(), profile, "", emptyMap(), 1)
+
+        assertTrue("numeric size should decode successfully", page is AppResult.Success)
+        assertEquals("123", (page as AppResult.Success).value.items.single().size)
+    }
+
+    @Test
     fun `search and details map real resources into network playback`() = runTest {
         server.enqueue(jsonResponse(fixture("indexer-search-success.json")))
         server.enqueue(jsonResponse(fixture("indexer-details-video-success.json")))

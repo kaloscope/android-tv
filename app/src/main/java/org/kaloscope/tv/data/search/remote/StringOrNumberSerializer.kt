@@ -12,18 +12,18 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 
-internal object WorkflowIdSerializer : KSerializer<String> {
+internal object StringOrNumberSerializer : KSerializer<String> {
     override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("WorkflowId", PrimitiveKind.STRING)
+        PrimitiveSerialDescriptor("StringOrNumber", PrimitiveKind.STRING)
 
     override fun deserialize(decoder: Decoder): String {
         val jsonDecoder = decoder as? JsonDecoder ?: return decoder.decodeString()
         val element = jsonDecoder.decodeJsonElement()
         val primitive = element as? JsonPrimitive
-            ?: throw SerializationException("Workflow ID must be a string or number")
-        // Workflow output is dynamic, but booleans do not provide stable ID semantics.
+            ?: throw SerializationException("Expected a string or number")
+        // Dynamic workflow output may represent scalar metadata as either JSON type.
         if (primitive === JsonNull || (!primitive.isString && primitive.booleanOrNull != null)) {
-            throw SerializationException("Workflow ID must be a string or number")
+            throw SerializationException("Expected a string or number")
         }
         return primitive.content
     }
