@@ -514,6 +514,85 @@ class MediaDetailScreenTest {
     }
 
     @Test
+    fun seriesWithoutCreditsDownMovesToAbsoluteBottom() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = MediaDetailUiState.Content(parent = series()),
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val child = composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+        val detailScroll = composeRule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
+        )
+
+        child.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        child.assertIsFocused()
+        val bottomRange = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        assertTrue(
+            "Expected a series without credits to remain vertically scrollable",
+            bottomRange.maxValue() > 0f,
+        )
+        assertEquals(bottomRange.maxValue(), bottomRange.value(), 0f)
+    }
+
+    @Test
+    fun initialEpisodeFocusKeepsSeriesAtTop() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = MediaDetailUiState.Content(parent = series()),
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val detailScroll = composeRule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
+        )
+
+        composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+        composeRule.onNodeWithText("群星档案").assertIsDisplayed()
+        val topRange = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        assertTrue(
+            "Expected the detail content to extend below the first viewport",
+            topRange.maxValue() > 0f,
+        )
+        assertEquals(0f, topRange.value(), 0f)
+    }
+
+    @Test
     fun remoteBackInvokesOnBack() {
         var backs = 0
         composeRule.setContent {

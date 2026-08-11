@@ -3,6 +3,7 @@ package org.kaloscope.tv.feature.detail
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -119,9 +120,14 @@ internal fun MediaDetailCinematicLayout(
 
     fun scrollToBottom() {
         scrollScope.launch {
-            val lastItemIndex = detailScrollState.layoutInfo.totalItemsCount - 1
-            if (lastItemIndex >= 0) {
-                detailScrollState.scrollToItem(lastItemIndex)
+            while (detailScrollState.canScrollForward) {
+                val viewportHeight = detailScrollState.layoutInfo.viewportSize.height
+                if (
+                    viewportHeight <= 0 ||
+                    detailScrollState.scrollBy(viewportHeight.toFloat()) <= 0f
+                ) {
+                    break
+                }
             }
         }
     }
@@ -213,6 +219,9 @@ internal fun MediaDetailCinematicLayout(
                             childFocusRequester = childFocusRequester,
                             onNavigateUp = { scrollToTop(requestPrimaryActionFocus = true) },
                             onNavigateDown = ::scrollToBottom,
+                            onInitialFocusSettled = {
+                                detailScrollState.scrollToItem(0)
+                            },
                             onChildFocused = onChildFocused,
                             onChildViewportChanged = onChildViewportChanged,
                             onPlayChild = onPlayChild,
@@ -415,6 +424,7 @@ private fun DetailChildRibbon(
     childFocusRequester: FocusRequester,
     onNavigateUp: () -> Unit,
     onNavigateDown: () -> Unit,
+    onInitialFocusSettled: suspend () -> Unit,
     onChildFocused: (Long) -> Unit,
     onChildViewportChanged: (GridViewportSnapshot) -> Unit,
     onPlayChild: (MediaSummary, Long?) -> Unit,
@@ -479,6 +489,7 @@ private fun DetailChildRibbon(
                 )
                 withFrameNanos { }
             }
+            onInitialFocusSettled()
             animateFocusedItem = true
         }
         LaunchedEffect(pendingFocusedItemIndex) {
