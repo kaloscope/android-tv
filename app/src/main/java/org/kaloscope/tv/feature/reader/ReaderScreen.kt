@@ -314,22 +314,28 @@ private fun ActiveReader(
                 onFailedImagesChanged = { failedImagesAvailable = it },
             )
 
-            is ReaderUiState.Text -> TextReaderSurface(
-                content = state.content,
-                settings = state.settings,
-                contentRevision = state.contentRevision,
-                controlsVisible = controlsVisible,
-                focusRequester = contentFocus,
-                onToggleControls = ::toggleControls,
-                onEnterControls = {
-                    requestControl(entryControlTarget())
-                },
-                onBoundary = ::openBoundary,
-            )
+            is ReaderUiState.Text -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = READER_EDGE_HEIGHT),
+            ) {
+                TextReaderSurface(
+                    content = state.content,
+                    settings = state.settings,
+                    contentRevision = state.contentRevision,
+                    controlsVisible = controlsVisible,
+                    focusRequester = contentFocus,
+                    onToggleControls = ::toggleControls,
+                    onEnterControls = {
+                        requestControl(entryControlTarget())
+                    },
+                    onBoundary = ::openBoundary,
+                )
+            }
         }
 
         AnimatedVisibility(
-            visible = initialTitleVisible || controlsVisible,
+            visible = state is ReaderUiState.Text || initialTitleVisible || controlsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter),
@@ -486,7 +492,7 @@ internal fun ReaderTitleOverlay(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
+            .height(READER_EDGE_HEIGHT)
             .testTag("reader-title-overlay"),
     ) {
         ReaderEdgeGradient(
@@ -553,10 +559,12 @@ internal fun ReaderEdgeGradient(
     }
     Box(
         modifier = modifier
-            .height(80.dp)
+            .height(READER_EDGE_HEIGHT)
             .background(Brush.verticalGradient(colors)),
     )
 }
+
+private val READER_EDGE_HEIGHT = 80.dp
 
 @Composable
 private fun ReaderBottomControls(

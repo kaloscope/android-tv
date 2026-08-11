@@ -117,7 +117,7 @@ internal fun TextReaderSurface(
                         .padding(
                             start = settings.horizontalPaddingDp.dp,
                             end = settings.horizontalPaddingDp.dp,
-                            top = 92.dp,
+                            top = 12.dp,
                             bottom = 150.dp,
                         ),
                     verticalArrangement = Arrangement.spacedBy(

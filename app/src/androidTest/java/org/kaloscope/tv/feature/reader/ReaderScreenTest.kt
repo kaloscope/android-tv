@@ -198,16 +198,16 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun titleInitiallyAutoHidesAndThenFollowsControlsVisibility() {
+    fun imageTitleInitiallyAutoHidesAndThenFollowsControlsVisibility() {
         composeRule.mainClock.autoAdvance = false
-        setReader(textState(text = "正文"))
+        setReader(imageState())
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag("reader-title-overlay").assertExists()
 
         composeRule.mainClock.advanceTimeBy(3_400)
 
         composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
-        composeRule.onNodeWithTag("text-reader-content")
+        composeRule.onNodeWithTag("image-reader-scroll")
             .performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag("reader-title-overlay").assertExists()
@@ -239,35 +239,15 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun showingTextTitleDoesNotMoveContent() {
-        composeRule.mainClock.autoAdvance = false
-        val paragraphs = List(80) { index -> "第 $index 段正文" }
-        setReader(textState(text = paragraphs.joinToString("\n\n")))
-        composeRule.mainClock.advanceTimeBy(500)
+    fun textContentViewportStartsBelowFixedTitle() {
+        setReader(textState(text = "正文"))
 
-        composeRule.mainClock.advanceTimeBy(3_400)
-        composeRule.onNodeWithTag("text-reader-content")
-            .performKeyInput { pressKey(Key.DirectionDown) }
-        composeRule.mainClock.advanceTimeBy(1_000)
-        val screen = composeRule.onNodeWithTag("reader-screen")
+        val title = composeRule.onNodeWithTag("reader-title-overlay")
             .fetchSemanticsNode().boundsInRoot
-        val visibleParagraphIndex = paragraphs.indices.first { index ->
-            val bounds = composeRule.onNodeWithTag("text-reader-paragraph-$index")
-                .fetchSemanticsNode().boundsInRoot
-            bounds.height > 0f && bounds.top >= screen.top && bounds.bottom <= screen.bottom
-        }
-        val hiddenParagraphTop = composeRule.onNodeWithTag(
-            "text-reader-paragraph-$visibleParagraphIndex",
-        ).fetchSemanticsNode().boundsInRoot.top
-        composeRule.onNodeWithTag("text-reader-content")
-            .performKeyInput { pressKey(Key.DirectionCenter) }
-        composeRule.mainClock.advanceTimeBy(500)
-        val revealedParagraphTop = composeRule.onNodeWithTag(
-            "text-reader-paragraph-$visibleParagraphIndex",
-        )
-            .fetchSemanticsNode().boundsInRoot.top
+        val content = composeRule.onNodeWithTag("text-reader-content")
+            .fetchSemanticsNode().boundsInRoot
 
-        assertEquals(hiddenParagraphTop, revealedParagraphTop, 0.5f)
+        assertEquals(title.bottom, content.top, 1f)
     }
 
     @Test
@@ -377,21 +357,21 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textScrollingDoesNotRevealHiddenTitle() {
+    fun textTitleStaysVisibleWhileContentScrolls() {
         composeRule.mainClock.autoAdvance = false
         val text = List(80) { index -> "第 $index 段测试正文，用于确认遥控器滚动不会显示标题栏。" }
             .joinToString("\n\n")
         setReader(textState(text = text))
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.mainClock.advanceTimeBy(3_400)
-        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-title-overlay").assertExists()
 
         composeRule.onNodeWithTag("text-reader-content")
             .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.mainClock.advanceTimeByFrame()
 
         composeRule.onNodeWithTag("reader-bottom-controls").assertDoesNotExist()
-        composeRule.onNodeWithTag("reader-title-overlay").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-title-overlay").assertExists()
     }
 
     @Test
@@ -442,9 +422,9 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun contentRevisionDoesNotRevealHiddenTitle() {
+    fun imageContentRevisionDoesNotRevealHiddenTitle() {
         composeRule.mainClock.autoAdvance = false
-        var state by mutableStateOf(textState(text = "正文"))
+        var state by mutableStateOf(imageState())
         composeRule.setContent {
             KaloscopeTheme {
                 ReaderScreen(
