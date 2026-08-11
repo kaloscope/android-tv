@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -39,12 +40,14 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -318,7 +321,7 @@ private fun DetailPlaybackActions(
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
             ) {
-                Text(stringResource(R.string.resume_playback))
+                DetailPrimaryPlayActionLabel(stringResource(R.string.resume_playback))
             }
             KaloscopeButton(
                 onClick = onStartOverPlayback,
@@ -334,10 +337,23 @@ private fun DetailPlaybackActions(
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
             ) {
-                Text(stringResource(R.string.play))
+                DetailPrimaryPlayActionLabel(stringResource(R.string.play))
             }
         }
     }
+}
+
+@Composable
+private fun DetailPrimaryPlayActionLabel(text: String) {
+    Icon(
+        painter = painterResource(R.drawable.ic_action_play),
+        contentDescription = null,
+        modifier = Modifier
+            .size(24.dp)
+            .testTag("detail-primary-play-icon"),
+    )
+    Spacer(Modifier.width(7.dp))
+    Text(text)
 }
 
 @Composable

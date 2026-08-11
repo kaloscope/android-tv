@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.captureToImage
@@ -216,6 +217,40 @@ class MediaDetailScreenTest {
         composeRule.runOnIdle {
             assertEquals(501L, playedId)
         }
+    }
+
+    @Test
+    fun moviePlayButtonShowsReadablePlayIcon() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(movie()),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+
+        assertReadablePrimaryPlayIcon("播放")
+    }
+
+    @Test
+    fun resumeButtonShowsReadablePlayIcon() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(
+                parent = series(),
+                focusedChildId = 301,
+            ),
+            resumePositions = mapOf(301L to 42L),
+        )
+
+        assertReadablePrimaryPlayIcon("继续播放")
     }
 
     @Test
@@ -570,6 +605,31 @@ class MediaDetailScreenTest {
                 )
             }
         }
+    }
+
+    private fun assertReadablePrimaryPlayIcon(actionLabel: String) {
+        val iconBounds = composeRule.onNodeWithTag(
+            "detail-primary-play-icon",
+            useUnmergedTree = true,
+        )
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val actionBounds = composeRule.onNodeWithText(actionLabel)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val minimumIconSize = with(composeRule.density) { 24.dp.toPx() }
+
+        assertTrue(
+            "Primary play icon width must be at least 24 dp: " +
+                "icon=$iconBounds, action=$actionBounds",
+            iconBounds.width >= minimumIconSize,
+        )
+        assertTrue(
+            "Primary play icon height must be at least 24 dp: " +
+                "icon=$iconBounds, action=$actionBounds",
+            iconBounds.height >= minimumIconSize,
+        )
     }
 }
 

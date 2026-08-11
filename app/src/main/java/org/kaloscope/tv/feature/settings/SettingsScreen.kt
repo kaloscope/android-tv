@@ -37,6 +37,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.tv.material3.Icon
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
@@ -486,7 +488,29 @@ internal fun ChoiceSettingRow(
             .fillMaxWidth()
             .focusRequester(focus),
     ) {
-        SettingRowContent(title, description, "$value  ›")
+        SettingRowContent(title, description) {
+            ChoiceSettingValue(value)
+        }
+    }
+}
+
+@Composable
+internal fun ChoiceSettingValue(value: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = value,
+            fontSize = 15.sp,
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_choice_expand),
+            contentDescription = null,
+            modifier = Modifier
+                .size(18.dp)
+                .testTag("choice-setting-indicator"),
+        )
     }
 }
 

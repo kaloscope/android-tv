@@ -20,9 +20,12 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -537,7 +540,13 @@ class SettingsScreenTest {
             accentRow.fetchSemanticsNode().boundsInRoot.top <
                 startPageRow.fetchSemanticsNode().boundsInRoot.top,
         )
-        composeRule.onNode(hasClickAction() and hasText("蓝色  ›")).assertExists()
+        composeRule.onNode(
+            hasClickAction() and
+                hasAnyDescendant(hasText("蓝色")) and
+                hasAnyDescendant(hasTestTag("choice-setting-indicator")),
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNode(hasClickAction() and hasText("蓝色  ›")).assertDoesNotExist()
         accentRow
             .assertExists()
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -553,8 +562,16 @@ class SettingsScreenTest {
             )
                 .assertExists()
         }
-        for (label in listOf("蓝色", "紫色", "橙色", "黄色", "绿色")) {
-            composeRule.onNodeWithText(label).assertExists()
+        val accentLabels = mapOf(
+            AccentColor.Blue to "蓝色",
+            AccentColor.Purple to "紫色",
+            AccentColor.Orange to "橙色",
+            AccentColor.Yellow to "黄色",
+            AccentColor.Green to "绿色",
+        )
+        for ((accent, label) in accentLabels) {
+            composeRule.onNodeWithTag("accent-option-${accent.name.lowercase()}")
+                .assertTextEquals(label)
         }
         composeRule.onNodeWithTag("accent-option-purple")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -1329,6 +1346,12 @@ class SettingsScreenTest {
 
         composeRule.onNodeWithText("默认开启字幕").assertExists()
         composeRule.onNodeWithText("首选语言").assertExists()
+        composeRule.onNode(
+            hasClickAction() and
+                hasAnyDescendant(hasText("首选语言")) and
+                hasAnyDescendant(hasTestTag("choice-setting-indicator")),
+            useUnmergedTree = true,
+        ).assertExists()
         composeRule.onNodeWithText("显示样式").assertExists()
         composeRule.onNodeWithText("字幕字号").assertExists()
         composeRule.onNodeWithText("垂直位置").assertExists()

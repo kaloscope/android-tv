@@ -102,7 +102,7 @@ internal fun ServerImagePlaceholder(
             ServerImageVisualState.Failed -> Image(
                 painter = painterResource(R.drawable.ic_image_broken),
                 contentDescription = null,
-                colorFilter = ColorFilter.tint(Color(0xFFBAC6E8)),
+                colorFilter = ColorFilter.tint(Color(0xFFBAC6E8).copy(alpha = 0.55f)),
             )
             ServerImageVisualState.Success -> Unit
         }

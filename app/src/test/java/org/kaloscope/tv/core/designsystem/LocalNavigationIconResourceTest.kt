@@ -49,6 +49,18 @@ class LocalNavigationIconResourceTest {
         )
     }
 
+    @Test
+    fun readingIconPreservesSourceSvgGeometry() {
+        val path = parse("ic_settings_reading").singlePath()
+
+        assertEquals("reading icon path", readingIconPath, path.androidAttribute("pathData"))
+        assertEquals("reading icon fill", "#00000000", path.androidAttribute("fillColor"))
+        assertEquals("reading icon stroke", "#FFFFFF", path.androidAttribute("strokeColor"))
+        assertEquals("reading icon stroke width", "1.5", path.androidAttribute("strokeWidth"))
+        assertEquals("reading icon line cap", "round", path.androidAttribute("strokeLineCap"))
+        assertEquals("reading icon line join", "round", path.androidAttribute("strokeLineJoin"))
+    }
+
     private fun parse(resourceName: String): Document {
         val resourceFile = File(drawableDirectory, "$resourceName.xml")
         assertTrue("Missing ${resourceFile.path}", resourceFile.isFile)
@@ -61,6 +73,12 @@ class LocalNavigationIconResourceTest {
     private fun Document.paths(): List<Element> {
         val nodes = getElementsByTagName("path")
         return (0 until nodes.length).map { nodes.item(it) as Element }
+    }
+
+    private fun Document.singlePath(): Element {
+        val paths = getElementsByTagName("path")
+        assertEquals("path count", 1, paths.length)
+        return paths.item(0) as Element
     }
 
     private fun Element.androidAttribute(name: String): String =
@@ -87,11 +105,19 @@ class LocalNavigationIconResourceTest {
             "ic_settings_playback",
             "ic_settings_danmaku",
             "ic_settings_subtitle",
+            "ic_settings_reading",
             "ic_settings_behavior",
             "ic_settings_server_account",
             "ic_library_movie",
             "ic_library_tv_show",
             "ic_library_unknown",
         )
+
+        val readingIconPath =
+            "M2.756 16.358a1.09 1.09 0 0 0 1.154 1.198a16.6 16.6 0 0 1 3.54.338c1.635.2 3.197.794 4.552 1.731" +
+                "V6.448A10.16 10.16 0 0 0 7.45 4.694a16.6 16.6 0 0 0-3.605-.316a1.09 1.09 0 0 0-1.09 1.09z" +
+                "m18.492 0a1.09 1.09 0 0 1-1.154 1.154a16.6 16.6 0 0 0-3.54.338a10.16 10.16 0 0 0-4.552 1.775V6.448" +
+                "a10.16 10.16 0 0 1 4.552-1.754a16.6 16.6 0 0 1 3.605-.316a1.09 1.09 0 0 1 1.089 1.155z" +
+                "M5.621 8.234h1.252m-1.252 6.011h1.834M5.78 11.24h3.35"
     }
 }

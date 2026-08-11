@@ -591,10 +591,13 @@ private fun SubtitleLanguageSettingRow(
         SettingRowContent(
             title = stringResource(R.string.subtitle_language_preference),
             description = stringResource(R.string.subtitle_language_preference_description),
-            value = value.ifBlank {
-                stringResource(R.string.subtitle_language_preference_any)
-            } + "  ›",
-        )
+        ) {
+            ChoiceSettingValue(
+                value.ifBlank {
+                    stringResource(R.string.subtitle_language_preference_any)
+                },
+            )
+        }
     }
 }
 
