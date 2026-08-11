@@ -3,14 +3,12 @@ package org.kaloscope.tv.feature.detail
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -18,10 +16,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
@@ -69,7 +65,27 @@ class MediaDetailScreenTest {
 
         composeRule.onNodeWithTag("detail-loading-indicator").assertExists()
         composeRule.onNodeWithTag("detail-loading-skeleton").assertDoesNotExist()
-        composeRule.onNodeWithContentDescription("返回").assertExists()
+    }
+
+    @Test
+    fun detailDoesNotExposeOnScreenBackControl() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(movie()),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("detail-back").assertDoesNotExist()
     }
 
     @Test
@@ -175,59 +191,6 @@ class MediaDetailScreenTest {
     }
 
     @Test
-    fun focusingCreditsAnchorDoesNotChangeItsAppearance() {
-        lateinit var clearFocus: () -> Unit
-        val state = MediaDetailUiState.Content(
-            parent = movie(
-                actors = listOf(MediaActor("沈川", "队长", null)),
-            ).copy(
-                directors = listOf("林舟"),
-            ),
-        )
-        composeRule.setContent {
-            val focusManager = LocalFocusManager.current
-            SideEffect {
-                clearFocus = { focusManager.clearFocus(force = true) }
-            }
-            KaloscopeTheme {
-                Box(
-                    modifier = Modifier
-                        .width(872.dp)
-                        .height(416.dp),
-                ) {
-                    MediaDetailScreen(
-                        session = session(),
-                        state = state,
-                        resumePositionsByMediaId = emptyMap(),
-                        onBack = {},
-                        onRetry = {},
-                        onChildFocused = {},
-                        onChildViewportChanged = {},
-                        onPlayParent = { _, _ -> },
-                        onPlayChild = { _, _ -> },
-                    )
-                }
-            }
-        }
-        val credits = composeRule.onNodeWithTag("detail-credits-anchor")
-
-        credits.performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
-        composeRule.runOnIdle(clearFocus)
-        composeRule.waitForIdle()
-        val unfocusedBounds = credits.getUnclippedBoundsInRoot()
-        val unfocusedImage = credits.captureToImage().asAndroidBitmap()
-
-        credits.performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
-        composeRule.waitForIdle()
-
-        assertEquals(unfocusedBounds, credits.getUnclippedBoundsInRoot())
-        assertTrue(
-            "Expected credits focus to leave the section appearance unchanged",
-            unfocusedImage.sameAs(credits.captureToImage().asAndroidBitmap()),
-        )
-    }
-
-    @Test
     fun moviePlayButtonStartsTheDisplayedMedia() {
         var playedId: Long? = null
         composeRule.setContent {
@@ -256,37 +219,7 @@ class MediaDetailScreenTest {
     }
 
     @Test
-    fun backButtonRightAndDownReachPrimaryPlaybackAction() {
-        composeRule.setContent {
-            KaloscopeTheme {
-                MediaDetailScreen(
-                    session = session(),
-                    state = MediaDetailUiState.Content(movie()),
-                    resumePositionsByMediaId = emptyMap(),
-                    onBack = {},
-                    onRetry = {},
-                    onChildFocused = {},
-                    onChildViewportChanged = {},
-                    onPlayParent = { _, _ -> },
-                    onPlayChild = { _, _ -> },
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag("detail-back")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithText("播放").assertIsFocused()
-
-        composeRule.onNodeWithTag("detail-back")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.DirectionDown) }
-        composeRule.onNodeWithText("播放").assertIsFocused()
-    }
-
-    @Test
-    fun focusingBackAfterLowerContentScrollReturnsDetailToTop() {
+    fun movieVerticalBoundaryKeysScrollWithoutLeavingPlaybackAction() {
         val state = MediaDetailUiState.Content(
             parent = movie(
                 actors = listOf(MediaActor("沈川", "队长", null)),
@@ -315,42 +248,30 @@ class MediaDetailScreenTest {
                 }
             }
         }
-        val poster = composeRule.onNodeWithTag("detail-parent-poster-501")
         val detailScroll = composeRule.onNode(
             SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
         )
 
-        composeRule.onNodeWithText("播放").assertIsFocused()
-        composeRule.onNodeWithTag("detail-credits-anchor")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .assertIsFocused()
-        val scrolledOffset = detailScroll.fetchSemanticsNode()
-            .config[SemanticsProperties.VerticalScrollAxisRange]
-            .value()
-        assertTrue(
-            "Expected lower-content focus to scroll the detail content",
-            scrolledOffset > 0f,
-        )
-
-        val back = composeRule.onNodeWithTag("detail-back")
-        back.performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
-
+        val play = composeRule.onNodeWithText("播放").assertIsFocused()
+        play.performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.waitForIdle()
-        val restoredOffset = detailScroll.fetchSemanticsNode()
+
+        play.assertIsFocused()
+        val bottomRange = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        assertTrue(
+            "Expected detail content to extend below the first viewport",
+            bottomRange.maxValue() > 0f,
+        )
+        assertEquals(bottomRange.maxValue(), bottomRange.value(), 0f)
+
+        play.performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+        play.assertIsFocused()
+        val topOffset = detailScroll.fetchSemanticsNode()
             .config[SemanticsProperties.VerticalScrollAxisRange]
             .value()
-        assertEquals(
-            "Expected back focus to reset detail scroll from $scrolledOffset",
-            0f,
-            restoredOffset,
-            0f,
-        )
-        val restoredPosterTop = poster.getUnclippedBoundsInRoot().top
-        val backBottom = back.getUnclippedBoundsInRoot().bottom
-        assertTrue(
-            "Expected the restored poster to remain below the back button",
-            backBottom <= restoredPosterTop,
-        )
+        assertEquals(0f, topOffset, 0f)
     }
 
     @Test
@@ -400,7 +321,6 @@ class MediaDetailScreenTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("返回").assertExists()
         composeRule.onNodeWithText("重试")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
@@ -537,27 +457,60 @@ class MediaDetailScreenTest {
     }
 
     @Test
-    fun downReachesCreditsAnchorAndUpReturnsToCurrentChild() {
-        setStatefulDetailContent(
-            initialState = MediaDetailUiState.Content(
-                parent = twoEpisodeSeries().copy(
-                    directors = listOf("林舟"),
-                    actors = listOf(MediaActor("沈川", "队长", null)),
-                ),
-                focusedChildId = 302,
+    fun seriesVerticalBoundaryKeysMoveFromCurrentChildToPageEdges() {
+        val state = MediaDetailUiState.Content(
+            parent = twoEpisodeSeries().copy(
+                directors = listOf("林舟"),
+                actors = listOf(MediaActor("沈川", "队长", null)),
             ),
+            focusedChildId = 302,
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = state,
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val child = composeRule.onNodeWithTag("media-child-card-302").assertIsFocused()
+        val detailScroll = composeRule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
         )
 
-        composeRule.onNodeWithTag("media-child-card-302")
-            .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionDown) }
+        child.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag("detail-credits-anchor").assertIsFocused()
-        composeRule.onNodeWithContentDescription("演职人员").assertIsFocused()
+        child.assertIsFocused()
+        val bottomRange = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        assertTrue(
+            "Expected detail content to extend below the first viewport",
+            bottomRange.maxValue() > 0f,
+        )
+        assertEquals(bottomRange.maxValue(), bottomRange.value(), 0f)
 
-        composeRule.onNodeWithTag("detail-credits-anchor")
-            .performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithTag("media-child-card-302").assertIsFocused()
+        child.performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("播放").assertIsFocused()
+        val topOffset = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+            .value()
+        assertEquals(0f, topOffset, 0f)
     }
 
     @Test

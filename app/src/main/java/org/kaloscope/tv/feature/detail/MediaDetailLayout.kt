@@ -2,7 +2,6 @@ package org.kaloscope.tv.feature.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,19 +24,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
@@ -71,7 +73,6 @@ internal fun MediaDetailCinematicLayout(
     childViewport: GridViewportSnapshot,
     resumePositionSeconds: Long?,
     resumePositionsByMediaId: Map<Long, Long>,
-    detailScrollState: LazyListState,
     childFocusRequester: FocusRequester,
     primaryActionFocusRequester: FocusRequester,
     onBack: () -> Unit,
@@ -82,6 +83,30 @@ internal fun MediaDetailCinematicLayout(
     onPlayChild: (MediaSummary, Long?) -> Unit,
 ) {
     BackHandler(onBack = onBack)
+    val detailScrollState = rememberLazyListState()
+    val scrollScope = rememberCoroutineScope()
+
+    fun scrollToTop(requestPrimaryActionFocus: Boolean) {
+        if (requestPrimaryActionFocus) {
+            primaryActionFocusRequester.requestFocus()
+        }
+        scrollScope.launch {
+            if (requestPrimaryActionFocus) {
+                withFrameNanos { }
+            }
+            detailScrollState.scrollToItem(0)
+        }
+    }
+
+    fun scrollToBottom() {
+        scrollScope.launch {
+            val lastItemIndex = detailScrollState.layoutInfo.totalItemsCount - 1
+            if (lastItemIndex >= 0) {
+                detailScrollState.scrollToItem(lastItemIndex)
+            }
+        }
+    }
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -145,6 +170,12 @@ internal fun MediaDetailCinematicLayout(
                         horizontalSafePadding = horizontalSafePadding,
                         resumePositionSeconds = resumePositionSeconds,
                         primaryActionFocusRequester = primaryActionFocusRequester,
+                        onNavigateUp = { scrollToTop(requestPrimaryActionFocus = false) },
+                        onNavigateDown = if (parent.children.isEmpty()) {
+                            ::scrollToBottom
+                        } else {
+                            null
+                        },
                         onResumePlayback = onResumePlayback,
                         onStartOverPlayback = onStartOverPlayback,
                     )
@@ -161,6 +192,8 @@ internal fun MediaDetailCinematicLayout(
                             horizontalSafePadding = horizontalSafePadding,
                             resumePositionsByMediaId = resumePositionsByMediaId,
                             childFocusRequester = childFocusRequester,
+                            onNavigateUp = { scrollToTop(requestPrimaryActionFocus = true) },
+                            onNavigateDown = ::scrollToBottom,
                             onChildFocused = onChildFocused,
                             onChildViewportChanged = onChildViewportChanged,
                             onPlayChild = onPlayChild,
@@ -174,7 +207,6 @@ internal fun MediaDetailCinematicLayout(
                         session = session,
                         parent = parent,
                         horizontalSafePadding = horizontalSafePadding,
-                        childFocusRequester = childFocusRequester,
                     )
                 }
             }
@@ -192,6 +224,8 @@ private fun DetailHero(
     horizontalSafePadding: Dp,
     resumePositionSeconds: Long?,
     primaryActionFocusRequester: FocusRequester,
+    onNavigateUp: () -> Unit,
+    onNavigateDown: (() -> Unit)?,
     onResumePlayback: () -> Unit,
     onStartOverPlayback: () -> Unit,
 ) {
@@ -240,6 +274,8 @@ private fun DetailHero(
                 DetailPlaybackActions(
                     resumePositionSeconds = resumePositionSeconds,
                     primaryActionFocusRequester = primaryActionFocusRequester,
+                    onNavigateUp = onNavigateUp,
+                    onNavigateDown = onNavigateDown,
                     onResumePlayback = onResumePlayback,
                     onStartOverPlayback = onStartOverPlayback,
                 )
@@ -263,10 +299,18 @@ private fun DetailHero(
 private fun DetailPlaybackActions(
     resumePositionSeconds: Long?,
     primaryActionFocusRequester: FocusRequester,
+    onNavigateUp: () -> Unit,
+    onNavigateDown: (() -> Unit)?,
     onResumePlayback: () -> Unit,
     onStartOverPlayback: () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.detailVerticalBoundaryKeys(
+            onUp = onNavigateUp,
+            onDown = onNavigateDown,
+        ),
+    ) {
         if (resumePositionSeconds != null) {
             KaloscopeButton(
                 onClick = onResumePlayback,
@@ -308,6 +352,8 @@ private fun DetailChildRibbon(
     horizontalSafePadding: Dp,
     resumePositionsByMediaId: Map<Long, Long>,
     childFocusRequester: FocusRequester,
+    onNavigateUp: () -> Unit,
+    onNavigateDown: () -> Unit,
     onChildFocused: (Long) -> Unit,
     onChildViewportChanged: (GridViewportSnapshot) -> Unit,
     onPlayChild: (MediaSummary, Long?) -> Unit,
@@ -366,6 +412,10 @@ private fun DetailChildRibbon(
         }
         LazyRow(
             state = childListState,
+            modifier = Modifier.detailVerticalBoundaryKeys(
+                onUp = onNavigateUp,
+                onDown = onNavigateDown,
+            ),
             contentPadding = PaddingValues(
                 start = horizontalSafePadding + 10.dp,
                 end = horizontalSafePadding + 10.dp,
@@ -453,9 +503,7 @@ private fun DetailCreditsAndCast(
     session: Session,
     parent: MediaDetail,
     horizontalSafePadding: Dp,
-    childFocusRequester: FocusRequester,
 ) {
-    val sectionLabel = stringResource(R.string.cast_title)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -464,10 +512,6 @@ private fun DetailCreditsAndCast(
                 top = 34.dp,
                 end = horizontalSafePadding,
             )
-            .focusProperties { up = childFocusRequester }
-            .focusable()
-            .semantics { contentDescription = sectionLabel }
-            .testTag("detail-credits-anchor")
             .padding(16.dp),
     ) {
         parent.directors.takeIf(List<String>::isNotEmpty)?.let { directors ->
@@ -487,4 +531,20 @@ private fun DetailCreditsAndCast(
             actors = parent.actors,
         )
     }
+}
+
+private fun Modifier.detailVerticalBoundaryKeys(
+    onUp: (() -> Unit)? = null,
+    onDown: (() -> Unit)? = null,
+): Modifier = onPreviewKeyEvent { event ->
+    val action = when (event.key) {
+        Key.DirectionUp -> onUp
+        Key.DirectionDown -> onDown
+        else -> null
+    } ?: return@onPreviewKeyEvent false
+
+    if (event.type == KeyEventType.KeyDown) {
+        action()
+    }
+    true
 }

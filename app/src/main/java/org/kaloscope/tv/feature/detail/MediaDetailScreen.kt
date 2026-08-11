@@ -10,10 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,22 +21,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
@@ -48,7 +39,6 @@ import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
-import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -72,18 +62,6 @@ fun MediaDetailScreen(
 ) {
     val initialFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
-    val detailScrollState = rememberLazyListState()
-    var backButtonFocused by remember { mutableStateOf(false) }
-    val backExitFocusRequester = when (state) {
-        MediaDetailUiState.Loading -> null
-        is MediaDetailUiState.Error -> initialFocusRequester
-        is MediaDetailUiState.Content -> primaryActionFocusRequester
-    }
-    LaunchedEffect(backButtonFocused, state is MediaDetailUiState.Content) {
-        if (backButtonFocused && state is MediaDetailUiState.Content) {
-            detailScrollState.scrollToItem(0)
-        }
-    }
 
     KaloscopeBackground {
         BoxWithConstraints(
@@ -153,7 +131,6 @@ fun MediaDetailScreen(
                         childViewport = state.childViewport,
                         resumePositionSeconds = resumePositionSeconds,
                         resumePositionsByMediaId = resumePositionsByMediaId,
-                        detailScrollState = detailScrollState,
                         childFocusRequester = childFocusRequester,
                         primaryActionFocusRequester = primaryActionFocusRequester,
                         onBack = onBack,
@@ -190,48 +167,7 @@ fun MediaDetailScreen(
                     )
                 }
             }
-
-            DetailBackButton(
-                onBack = onBack,
-                onFocusChanged = { backButtonFocused = it },
-                exitFocusRequester = backExitFocusRequester,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = horizontalSafePadding, top = 28.dp),
-            )
         }
-    }
-}
-
-@Composable
-private fun DetailBackButton(
-    onBack: () -> Unit,
-    onFocusChanged: (Boolean) -> Unit,
-    exitFocusRequester: FocusRequester?,
-    modifier: Modifier = Modifier,
-) {
-    KaloscopeIconButton(
-        onClick = onBack,
-        variant = KaloscopeControlVariant.Ghost,
-        size = KaloscopeControlSize.Compact,
-        shape = CircleShape,
-        modifier = modifier
-            .size(48.dp)
-            .background(Color(0x73060912), CircleShape)
-            .onFocusChanged { onFocusChanged(it.isFocused) }
-            .focusProperties {
-                exitFocusRequester?.let { target ->
-                    right = target
-                    down = target
-                }
-            }
-            .testTag("detail-back"),
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_arrow_back),
-            contentDescription = stringResource(R.string.back),
-            modifier = Modifier.size(24.dp),
-        )
     }
 }
 
