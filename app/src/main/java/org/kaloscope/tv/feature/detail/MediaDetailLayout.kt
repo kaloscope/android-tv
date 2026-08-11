@@ -57,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
@@ -89,6 +90,7 @@ internal fun MediaDetailCinematicLayout(
     session: Session,
     parent: MediaDetail,
     focusedChild: MediaSummary?,
+    focusedChildDetail: MediaDetail?,
     initialChildId: Long?,
     childViewport: GridViewportSnapshot,
     resumePositionSeconds: Long?,
@@ -105,6 +107,22 @@ internal fun MediaDetailCinematicLayout(
     BackHandler(onBack = onBack)
     val detailScrollState = rememberLazyListState()
     val scrollScope = rememberCoroutineScope()
+    val castFocusRequester = remember(parent.id) { FocusRequester() }
+    val moreInfoFocusRequester = remember(parent.id) { FocusRequester() }
+    val moreInfoCloseFocusRequester = remember(parent.id) { FocusRequester() }
+    var moreInfoOpen by remember(parent.id) { mutableStateOf(false) }
+    val displayedPlot = focusedChildDetail
+        ?.plot
+        ?.takeIf(String::isNotBlank)
+        ?: parent.plot
+
+    fun dismissMoreInfo() {
+        moreInfoOpen = false
+        scrollScope.launch {
+            withFrameNanos { }
+            moreInfoFocusRequester.requestFocus()
+        }
+    }
 
     fun scrollToTop(requestPrimaryActionFocus: Boolean) {
         if (requestPrimaryActionFocus) {
@@ -119,6 +137,10 @@ internal fun MediaDetailCinematicLayout(
     }
 
     fun scrollToBottom() {
+        if (!detailScrollState.canScrollForward && parent.actors.isNotEmpty()) {
+            castFocusRequester.requestFocus()
+            return
+        }
         scrollScope.launch {
             while (detailScrollState.canScrollForward) {
                 val viewportHeight = detailScrollState.layoutInfo.viewportSize.height
@@ -190,11 +212,13 @@ internal fun MediaDetailCinematicLayout(
                         session = session,
                         parent = parent,
                         focusedChild = focusedChild,
+                        plot = displayedPlot,
                         sectionKind = sectionKind,
                         posterWidth = posterWidth,
                         horizontalSafePadding = horizontalSafePadding,
                         resumePositionSeconds = resumePositionSeconds,
                         primaryActionFocusRequester = primaryActionFocusRequester,
+                        moreInfoFocusRequester = moreInfoFocusRequester,
                         onNavigateUp = { scrollToTop(requestPrimaryActionFocus = false) },
                         onNavigateDown = if (parent.children.isEmpty()) {
                             ::scrollToBottom
@@ -203,6 +227,7 @@ internal fun MediaDetailCinematicLayout(
                         },
                         onResumePlayback = onResumePlayback,
                         onStartOverPlayback = onStartOverPlayback,
+                        onShowMoreInfo = { moreInfoOpen = true },
                     )
                     if (parent.children.isNotEmpty()) {
                         Spacer(Modifier.height(30.dp))
@@ -240,9 +265,21 @@ internal fun MediaDetailCinematicLayout(
                         session = session,
                         parent = parent,
                         horizontalSafePadding = horizontalSafePadding,
+                        castFocusRequester = castFocusRequester,
+                        onNavigateUp = { scrollToTop(requestPrimaryActionFocus = true) },
                     )
                 }
             }
+        }
+        if (moreInfoOpen) {
+            DetailMoreInfoPanel(
+                viewportSize = DpSize(maxWidth, maxHeight),
+                title = focusedChild?.let(::mediaChildDisplayTitle) ?: parent.title,
+                plot = displayedPlot,
+                genres = parent.genres,
+                closeFocusRequester = moreInfoCloseFocusRequester,
+                onDismiss = ::dismissMoreInfo,
+            )
         }
     }
 }
@@ -252,15 +289,18 @@ private fun DetailHero(
     session: Session,
     parent: MediaDetail,
     focusedChild: MediaSummary?,
+    plot: String?,
     sectionKind: MediaChildSectionKind,
     posterWidth: Dp,
     horizontalSafePadding: Dp,
     resumePositionSeconds: Long?,
     primaryActionFocusRequester: FocusRequester,
+    moreInfoFocusRequester: FocusRequester,
     onNavigateUp: () -> Unit,
     onNavigateDown: (() -> Unit)?,
     onResumePlayback: () -> Unit,
     onStartOverPlayback: () -> Unit,
+    onShowMoreInfo: () -> Unit,
 ) {
     val accentPalette = LocalAccentPalette.current
     Row(
@@ -311,16 +351,19 @@ private fun DetailHero(
                 DetailPlaybackActions(
                     resumePositionSeconds = resumePositionSeconds,
                     primaryActionFocusRequester = primaryActionFocusRequester,
+                    moreInfoAvailable = !plot.isNullOrBlank() || parent.genres.isNotEmpty(),
+                    moreInfoFocusRequester = moreInfoFocusRequester,
                     onNavigateUp = onNavigateUp,
                     onNavigateDown = onNavigateDown,
                     onResumePlayback = onResumePlayback,
                     onStartOverPlayback = onStartOverPlayback,
+                    onShowMoreInfo = onShowMoreInfo,
                 )
             }
-            parent.plot?.takeIf(String::isNotBlank)?.let { plot ->
+            plot?.takeIf(String::isNotBlank)?.let { synopsis ->
                 Spacer(Modifier.height(18.dp))
                 Text(
-                    text = plot,
+                    text = synopsis,
                     color = OnBackground,
                     fontSize = 17.sp,
                     lineHeight = 25.sp,
@@ -336,10 +379,13 @@ private fun DetailHero(
 private fun DetailPlaybackActions(
     resumePositionSeconds: Long?,
     primaryActionFocusRequester: FocusRequester,
+    moreInfoAvailable: Boolean,
+    moreInfoFocusRequester: FocusRequester,
     onNavigateUp: () -> Unit,
     onNavigateDown: (() -> Unit)?,
     onResumePlayback: () -> Unit,
     onStartOverPlayback: () -> Unit,
+    onShowMoreInfo: () -> Unit,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -379,6 +425,18 @@ private fun DetailPlaybackActions(
                 size = KaloscopeControlSize.Compact,
             ) {
                 DetailPrimaryPlayActionLabel(stringResource(R.string.play))
+            }
+        }
+        if (moreInfoAvailable) {
+            KaloscopeButton(
+                onClick = onShowMoreInfo,
+                modifier = Modifier
+                    .focusRequester(moreInfoFocusRequester)
+                    .testTag("detail-more-info-action"),
+                variant = KaloscopeControlVariant.Ghost,
+                size = KaloscopeControlSize.Compact,
+            ) {
+                Text(stringResource(R.string.detail_more_info))
             }
         }
     }
@@ -723,6 +781,8 @@ private fun DetailCreditsAndCast(
     session: Session,
     parent: MediaDetail,
     horizontalSafePadding: Dp,
+    castFocusRequester: FocusRequester,
+    onNavigateUp: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -771,6 +831,8 @@ private fun DetailCreditsAndCast(
         CastStrip(
             session = session,
             actors = parent.actors,
+            focusRequester = castFocusRequester,
+            onNavigateUp = onNavigateUp,
         )
     }
 }

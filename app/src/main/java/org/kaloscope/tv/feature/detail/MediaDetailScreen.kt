@@ -114,6 +114,8 @@ fun MediaDetailScreen(
                     val focusedChild = state.parent.children
                         .firstOrNull { it.id == focusedChildId }
                         ?: state.parent.children.firstOrNull()
+                    val focusedChildDetail = state.focusedChildDetail
+                        ?.takeIf { it.id == focusedChild?.id }
                     val playbackTargetId = focusedChild?.id ?: state.parent.id
                     val resumePositionSeconds = resumePositionsByMediaId[playbackTargetId]
                         ?.takeIf { it > 0 }
@@ -127,6 +129,7 @@ fun MediaDetailScreen(
                         session = session,
                         parent = state.parent,
                         focusedChild = focusedChild,
+                        focusedChildDetail = focusedChildDetail,
                         initialChildId = initialChildId,
                         childViewport = state.childViewport,
                         resumePositionSeconds = resumePositionSeconds,

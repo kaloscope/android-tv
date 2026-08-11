@@ -98,6 +98,28 @@ class MediaDetailCoordinatorTest {
         assertEquals(301L, content.focusedChildId)
         assertEquals(listOf(201L), repository.detailCalls)
     }
+
+    @Test
+    fun `child detail failure retains parent content`() = runBlocking {
+        val parent = detail(201, children = listOf(summary(301)))
+        val repository = DetailFakeRepository(
+            mutableListOf(
+                AppResult.Success(parent),
+                AppResult.Failure(AppError.Offline),
+            ),
+        )
+        val coordinator = MediaDetailCoordinator(repository)
+        coordinator.load(session(), 201)
+
+        coordinator.rememberFocusedChild(301)
+        coordinator.loadFocusedChild(session(), 301)
+
+        val content = coordinator.state.value as MediaDetailUiState.Content
+        assertEquals(parent, content.parent)
+        assertEquals(301L, content.focusedChildId)
+        assertEquals(null, content.focusedChildDetail)
+        assertEquals(AppError.Offline, content.childDetailError)
+    }
 }
 
 private class DetailFakeRepository(

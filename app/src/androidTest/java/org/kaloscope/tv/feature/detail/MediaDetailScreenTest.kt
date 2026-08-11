@@ -2,6 +2,7 @@ package org.kaloscope.tv.feature.detail
 
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -14,20 +15,19 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -369,17 +369,79 @@ class MediaDetailScreenTest {
     }
 
     @Test
-    fun castStripShowsOnlyEightNonInteractiveActors() {
+    fun castStripExposesEveryActorThroughRemotePaging() {
         val actors = (1..10).map { index ->
             MediaActor("演员$index", "角色$index", null)
         }
         composeRule.setContent {
             KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = MediaDetailUiState.Content(movie(actors)),
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+
+        val play = composeRule.onNodeWithText("播放").assertIsFocused()
+        play.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        play.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        val castCarousel = composeRule.onNodeWithTag("cast-carousel").assertIsFocused()
+        repeat(9) {
+            castCarousel.performKeyInput { pressKey(Key.DirectionRight) }
+            composeRule.waitForIdle()
+        }
+
+        composeRule.onNodeWithTag("cast-item-9")
+            .assertExists()
+            .assertIsSelected()
+        composeRule.onNodeWithText("演员10").assertIsDisplayed()
+
+        castCarousel.performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("cast-item-8").assertIsSelected()
+
+        castCarousel.performKeyInput { pressKey(Key.DirectionDown) }
+        castCarousel.assertIsFocused()
+
+        castCarousel.performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+        play.assertIsFocused()
+    }
+
+    @Test
+    fun moreInfoShowsFullPlotAndGenresAndRestoresFocus() {
+        val fullPlot = (1..18).joinToString("\n") { paragraph ->
+            "第${paragraph}段：探索队在漫长航行中发现未知信号，并沿着信号追踪到群星之外。"
+        }
+        var backs = 0
+        composeRule.setContent {
+            KaloscopeTheme {
                 MediaDetailScreen(
                     session = session(),
-                    state = MediaDetailUiState.Content(movie(actors)),
+                    state = MediaDetailUiState.Content(
+                        movie().copy(
+                            plot = fullPlot,
+                            genres = listOf("剧情", "科幻", "冒险", "悬疑", "太空", "未来"),
+                        ),
+                    ),
                     resumePositionsByMediaId = emptyMap(),
-                    onBack = {},
+                    onBack = { backs += 1 },
                     onRetry = {},
                     onChildFocused = {},
                     onChildViewportChanged = {},
@@ -389,10 +451,37 @@ class MediaDetailScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("cast-strip").assertExists()
-        composeRule.onAllNodesWithTag("cast-item-0").assertCountEquals(1)
-        composeRule.onNodeWithText("演员8").assertExists()
-        composeRule.onNodeWithText("演员9").assertDoesNotExist()
+        composeRule.onNodeWithTag("detail-more-info-action")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("detail-more-info-panel").assertExists()
+        composeRule.onNodeWithTag("detail-more-info-plot").assertTextContains(fullPlot)
+        val close = composeRule.onNodeWithTag("detail-more-info-close").assertIsFocused()
+        val infoScroll = composeRule.onNodeWithTag("detail-more-info-content")
+        val initialRange = infoScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        assertTrue(initialRange.maxValue() > 0f)
+
+        repeat(8) {
+            close.performKeyInput { pressKey(Key.DirectionDown) }
+            composeRule.waitForIdle()
+        }
+        close.assertIsFocused()
+        val scrolledRange = infoScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        assertTrue(scrolledRange.value() > 0f)
+        composeRule.onNodeWithTag("detail-more-info-genre-5").assertTextContains("未来")
+
+        InstrumentationRegistry.getInstrumentation().apply {
+            waitForIdleSync()
+            sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("detail-more-info-panel").assertDoesNotExist()
+        composeRule.onNodeWithTag("detail-more-info-action").assertIsFocused()
+        composeRule.runOnIdle { assertEquals(0, backs) }
     }
 
     @Test
@@ -742,6 +831,42 @@ class MediaDetailScreenTest {
         composeRule.onNodeWithText("S1E2 · 返程").assertExists()
         composeRule.onNodeWithText("S1E1 · 启程").assertDoesNotExist()
         composeRule.onNodeWithTag("detail-parent-poster-201").assertExists()
+    }
+
+    @Test
+    fun focusedChildDetailReplacesParentPlot() {
+        val parent = series().copy(plot = "整部剧的父级简介")
+        val childDetail = parent.copy(
+            id = 301,
+            title = "启程",
+            path = "/media/episode-1.mkv",
+            plot = "第一集独有的分集简介",
+            season = 1,
+            episode = 1,
+            children = emptyList(),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(
+                        parent = parent,
+                        focusedChildId = 301,
+                        focusedChildDetail = childDetail,
+                    ),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("第一集独有的分集简介").assertExists()
+        composeRule.onNodeWithText("整部剧的父级简介").assertDoesNotExist()
     }
 
     @Test

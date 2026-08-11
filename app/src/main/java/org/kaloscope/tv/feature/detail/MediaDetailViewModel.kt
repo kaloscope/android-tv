@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.core.model.GridViewportSnapshot
@@ -17,7 +18,9 @@ class MediaDetailViewModel @Inject constructor(
 ) : ViewModel() {
     private val coordinator = MediaDetailCoordinator(repository)
     private var currentMediaId: Long? = null
+    private var currentSession: Session? = null
     private var requestJob: Job? = null
+    private var childDetailJob: Job? = null
 
     val uiState: StateFlow<MediaDetailUiState> = coordinator.state
 
@@ -30,28 +33,64 @@ class MediaDetailViewModel @Inject constructor(
             return
         }
         currentMediaId = mediaId
-        startRequest { coordinator.load(session, mediaId) }
+        currentSession = session
+        startParentRequest(session, mediaId)
     }
 
-    fun rememberFocusedChild(childId: Long) = coordinator.rememberFocusedChild(childId)
+    fun rememberFocusedChild(childId: Long) {
+        val detailLoadRequired = coordinator.rememberFocusedChild(childId)
+        childDetailJob?.cancel()
+        childDetailJob = null
+        if (detailLoadRequired) {
+            currentSession?.let { session -> scheduleChildDetailLoad(session, childId) }
+        }
+    }
 
     fun rememberChildViewport(snapshot: GridViewportSnapshot) =
         coordinator.rememberChildViewport(snapshot)
 
     fun retry(session: Session) {
         val mediaId = currentMediaId ?: return
-        startRequest { coordinator.load(session, mediaId) }
+        currentSession = session
+        startParentRequest(session, mediaId)
     }
 
     fun reset() {
         requestJob?.cancel()
+        childDetailJob?.cancel()
         requestJob = null
+        childDetailJob = null
         currentMediaId = null
+        currentSession = null
         coordinator.reset()
     }
 
-    private fun startRequest(block: suspend () -> Unit) {
+    private fun startParentRequest(
+        session: Session,
+        mediaId: Long,
+    ) {
         requestJob?.cancel()
-        requestJob = viewModelScope.launch { block() }
+        childDetailJob?.cancel()
+        childDetailJob = null
+        requestJob = viewModelScope.launch {
+            coordinator.load(session, mediaId)
+            val childId = (coordinator.state.value as? MediaDetailUiState.Content)
+                ?.focusedChildId
+                ?: return@launch
+            scheduleChildDetailLoad(session, childId)
+        }
+    }
+
+    private fun scheduleChildDetailLoad(
+        session: Session,
+        childId: Long,
+    ) {
+        childDetailJob?.cancel()
+        childDetailJob = viewModelScope.launch {
+            delay(ChildDetailFocusDebounceMillis)
+            coordinator.loadFocusedChild(session, childId)
+        }
     }
 }
+
+internal const val ChildDetailFocusDebounceMillis = 180L
