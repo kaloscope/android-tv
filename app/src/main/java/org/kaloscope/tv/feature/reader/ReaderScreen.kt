@@ -165,7 +165,6 @@ private fun ActiveReader(
         ?.let { TextReaderPalettes.forTheme(it.settings.theme) }
     val background = textPalette?.background ?: Color.Black
     val overlayPanel = textPalette?.panel ?: Color(0xFF121212)
-    val overlayBar = textPalette?.overlay ?: Color.Black.copy(alpha = 0.82f)
     val overlayText = textPalette?.text ?: Color.White
     val overlayMuted = textPalette?.muted ?: Color(0xFFAAAAAA)
 
@@ -353,7 +352,7 @@ private fun ActiveReader(
                 nextEnabled = nextChapter != null,
                 chaptersEnabled = content.chapters.size > 1,
                 retryImagesEnabled = failedImagesAvailable,
-                panelColor = overlayBar,
+                scrimColor = background,
                 focusRequesters = controlFocus,
                 onFocused = { lastControlTarget = it },
                 onPrevious = {
@@ -465,7 +464,7 @@ private fun ActiveReader(
 }
 
 @Composable
-private fun ReaderTitleOverlay(
+internal fun ReaderTitleOverlay(
     title: String,
     chapter: ReaderChapter?,
     textColor: Color,
@@ -473,21 +472,24 @@ private fun ReaderTitleOverlay(
     scrimColor: Color,
     status: String?,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(80.dp)
             .testTag("reader-title-overlay"),
     ) {
+        ReaderEdgeGradient(
+            color = scrimColor,
+            edge = ReaderEdge.Top,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("reader-title-solid-scrim")
-                .background(scrimColor)
                 .padding(
                     start = 38.dp,
                     top = 24.dp,
                     end = 38.dp,
-                    bottom = 12.dp,
                 ),
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -518,18 +520,31 @@ private fun ReaderTitleOverlay(
                 )
             }
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(28.dp)
-                .testTag("reader-title-gradient-tail")
-                .background(
-                    Brush.verticalGradient(
-                        listOf(scrimColor, scrimColor.copy(alpha = 0f)),
-                    ),
-                ),
-        )
     }
+}
+
+internal enum class ReaderEdge {
+    Top,
+    Bottom,
+}
+
+@Composable
+internal fun ReaderEdgeGradient(
+    color: Color,
+    edge: ReaderEdge,
+    modifier: Modifier = Modifier,
+) {
+    val opaqueColor = color.copy(alpha = 0.8f)
+    val transparentColor = color.copy(alpha = 0f)
+    val colors = when (edge) {
+        ReaderEdge.Top -> listOf(opaqueColor, transparentColor)
+        ReaderEdge.Bottom -> listOf(transparentColor, opaqueColor)
+    }
+    Box(
+        modifier = modifier
+            .height(80.dp)
+            .background(Brush.verticalGradient(colors)),
+    )
 }
 
 @Composable
@@ -538,7 +553,7 @@ private fun ReaderBottomControls(
     nextEnabled: Boolean,
     chaptersEnabled: Boolean,
     retryImagesEnabled: Boolean,
-    panelColor: Color,
+    scrimColor: Color,
     focusRequesters: Map<ReaderControlTarget, FocusRequester>,
     onFocused: (ReaderControlTarget) -> Unit,
     onPrevious: () -> Unit,
@@ -547,67 +562,76 @@ private fun ReaderBottomControls(
     onRetryImages: () -> Unit,
     onNext: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(listOf(Color.Transparent, panelColor)),
-            )
-            .padding(start = 40.dp, end = 40.dp, top = 54.dp, bottom = 30.dp)
-            .testTag("reader-bottom-controls"),
-        horizontalArrangement = Arrangement.Center,
+    Box(
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        ReaderControlButton(
-            text = stringResource(R.string.reader_previous_chapter),
-            iconRes = R.drawable.ic_action_previous,
-            iconTag = "reader-previous-chapter-icon",
-            enabled = previousEnabled,
-            focusRequester = focusRequesters.getValue(ReaderControlTarget.PreviousChapter),
-            onFocused = { onFocused(ReaderControlTarget.PreviousChapter) },
-            onClick = onPrevious,
+        ReaderEdgeGradient(
+            color = scrimColor,
+            edge = ReaderEdge.Bottom,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .testTag("reader-bottom-gradient"),
         )
-        Spacer(Modifier.width(14.dp))
-        ReaderControlButton(
-            text = stringResource(R.string.reader_chapters),
-            iconRes = R.drawable.ic_settings_reading,
-            iconTag = "reader-chapters-icon",
-            enabled = chaptersEnabled,
-            focusRequester = focusRequesters.getValue(ReaderControlTarget.Chapters),
-            onFocused = { onFocused(ReaderControlTarget.Chapters) },
-            onClick = onChapters,
-        )
-        Spacer(Modifier.width(14.dp))
-        ReaderControlButton(
-            text = stringResource(R.string.reader_settings),
-            iconRes = R.drawable.ic_nav_settings,
-            iconTag = "reader-settings-icon",
-            enabled = true,
-            focusRequester = focusRequesters.getValue(ReaderControlTarget.Settings),
-            onFocused = { onFocused(ReaderControlTarget.Settings) },
-            onClick = onSettings,
-        )
-        if (retryImagesEnabled) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 40.dp, end = 40.dp, top = 54.dp, bottom = 30.dp)
+                .testTag("reader-bottom-controls"),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            ReaderControlButton(
+                text = stringResource(R.string.reader_previous_chapter),
+                iconRes = R.drawable.ic_action_previous,
+                iconTag = "reader-previous-chapter-icon",
+                enabled = previousEnabled,
+                focusRequester = focusRequesters.getValue(ReaderControlTarget.PreviousChapter),
+                onFocused = { onFocused(ReaderControlTarget.PreviousChapter) },
+                onClick = onPrevious,
+            )
             Spacer(Modifier.width(14.dp))
             ReaderControlButton(
-                text = stringResource(R.string.reader_image_retry),
-                iconRes = R.drawable.ic_refresh,
-                iconTag = "reader-retry-images-icon",
+                text = stringResource(R.string.reader_chapters),
+                iconRes = R.drawable.ic_settings_reading,
+                iconTag = "reader-chapters-icon",
+                enabled = chaptersEnabled,
+                focusRequester = focusRequesters.getValue(ReaderControlTarget.Chapters),
+                onFocused = { onFocused(ReaderControlTarget.Chapters) },
+                onClick = onChapters,
+            )
+            Spacer(Modifier.width(14.dp))
+            ReaderControlButton(
+                text = stringResource(R.string.reader_settings),
+                iconRes = R.drawable.ic_nav_settings,
+                iconTag = "reader-settings-icon",
                 enabled = true,
-                focusRequester = focusRequesters.getValue(ReaderControlTarget.RetryImages),
-                onFocused = { onFocused(ReaderControlTarget.RetryImages) },
-                onClick = onRetryImages,
+                focusRequester = focusRequesters.getValue(ReaderControlTarget.Settings),
+                onFocused = { onFocused(ReaderControlTarget.Settings) },
+                onClick = onSettings,
+            )
+            if (retryImagesEnabled) {
+                Spacer(Modifier.width(14.dp))
+                ReaderControlButton(
+                    text = stringResource(R.string.reader_image_retry),
+                    iconRes = R.drawable.ic_refresh,
+                    iconTag = "reader-retry-images-icon",
+                    enabled = true,
+                    focusRequester = focusRequesters.getValue(ReaderControlTarget.RetryImages),
+                    onFocused = { onFocused(ReaderControlTarget.RetryImages) },
+                    onClick = onRetryImages,
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            ReaderControlButton(
+                text = stringResource(R.string.reader_next_chapter),
+                iconRes = R.drawable.ic_action_next,
+                iconTag = "reader-next-chapter-icon",
+                enabled = nextEnabled,
+                focusRequester = focusRequesters.getValue(ReaderControlTarget.NextChapter),
+                onFocused = { onFocused(ReaderControlTarget.NextChapter) },
+                onClick = onNext,
             )
         }
-        Spacer(Modifier.width(14.dp))
-        ReaderControlButton(
-            text = stringResource(R.string.reader_next_chapter),
-            iconRes = R.drawable.ic_action_next,
-            iconTag = "reader-next-chapter-icon",
-            enabled = nextEnabled,
-            focusRequester = focusRequesters.getValue(ReaderControlTarget.NextChapter),
-            onFocused = { onFocused(ReaderControlTarget.NextChapter) },
-            onClick = onNext,
-        )
     }
 }
 

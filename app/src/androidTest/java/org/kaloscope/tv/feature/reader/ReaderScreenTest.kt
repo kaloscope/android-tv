@@ -1,14 +1,21 @@
 package org.kaloscope.tv.feature.reader
 
+import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.captureToImage
@@ -214,23 +221,30 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textTitleUsesOpaqueActiveThemeBackgroundWithoutMovingContent() {
+    fun textTitleUsesActiveThemeBackground() {
         composeRule.mainClock.autoAdvance = false
-        val paragraphs = List(80) { index -> "第 $index 段正文" }
         setReader(
             textState(
-                text = paragraphs.joinToString("\n\n"),
+                text = "正文",
                 settings = TextReaderSettings(theme = TextReaderTheme.Cream),
             ),
         )
         composeRule.mainClock.advanceTimeBy(500)
 
         val bitmap = composeRule.onNodeWithTag(
-            testTag = "reader-title-solid-scrim",
+            testTag = "reader-title-overlay",
             useUnmergedTree = true,
         ).captureToImage().asAndroidBitmap()
 
         assertEquals(Color(0xFFFDF6E3).toArgb(), bitmap.getPixel(bitmap.width / 2, 1))
+    }
+
+    @Test
+    fun showingTextTitleDoesNotMoveContent() {
+        composeRule.mainClock.autoAdvance = false
+        val paragraphs = List(80) { index -> "第 $index 段正文" }
+        setReader(textState(text = paragraphs.joinToString("\n\n")))
+        composeRule.mainClock.advanceTimeBy(500)
 
         composeRule.mainClock.advanceTimeBy(3_400)
         composeRule.onNodeWithTag("text-reader-content")
@@ -258,13 +272,13 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun imageTitleUsesOpaqueBlackBackground() {
+    fun imageTitleUsesBlackBackground() {
         composeRule.mainClock.autoAdvance = false
         setReader(imageState())
         composeRule.mainClock.advanceTimeBy(500)
 
         val bitmap = composeRule.onNodeWithTag(
-            testTag = "reader-title-solid-scrim",
+            testTag = "reader-title-overlay",
             useUnmergedTree = true,
         ).captureToImage().asAndroidBitmap()
 
@@ -272,17 +286,36 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun titleGradientStartsBelowAllTitleText() {
+    fun titleUsesSingle80DpLinearGradient() {
+        setTitleOverlayOn(Color.Red)
+
+        val overlay = composeRule.onNodeWithTag(
+            testTag = "reader-title-overlay",
+            useUnmergedTree = true,
+        )
+        val bounds = overlay.fetchSemanticsNode().boundsInRoot
+        val bitmap = overlay.captureToImage().asAndroidBitmap()
+        val x = bitmap.width / 2
+        val topRed = AndroidColor.red(bitmap.getPixel(x, 1))
+        val midpointRed = AndroidColor.red(bitmap.getPixel(x, bitmap.height / 2))
+        val bottomRed = AndroidColor.red(bitmap.getPixel(x, bitmap.height - 2))
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+
+        assertEquals(80f * density, bounds.height, 1f)
+        assertTrue(topRed in 48..56)
+        assertTrue(midpointRed in 148..158)
+        assertTrue(bottomRed in 247..255)
+    }
+
+    @Test
+    fun titleContentFitsWithinGradient() {
         composeRule.mainClock.autoAdvance = false
         setReader(textState(text = "正文"))
         composeRule.mainClock.advanceTimeBy(500)
 
-        val solid = composeRule.onNodeWithTag(
-            testTag = "reader-title-solid-scrim",
-            useUnmergedTree = true,
-        ).fetchSemanticsNode().boundsInRoot
         val gradient = composeRule.onNodeWithTag(
-            testTag = "reader-title-gradient-tail",
+            testTag = "reader-title-overlay",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
         val title = composeRule.onNodeWithText("测试文本")
@@ -292,10 +325,56 @@ class ReaderScreenTest {
         val density = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
 
-        assertTrue(title.bottom <= solid.bottom)
-        assertTrue(chapter.bottom <= solid.bottom)
-        assertEquals(solid.bottom, gradient.top, 1f)
-        assertEquals(28f * density, gradient.height, 1f)
+        assertTrue(title.bottom <= gradient.bottom)
+        assertTrue(chapter.bottom <= gradient.bottom)
+        assertEquals(80f * density, gradient.height, 1f)
+    }
+
+    @Test
+    fun bottomEdgeGradientFadesTowardBottom() {
+        setEdgeGradientOn(
+            backgroundColor = Color.Red,
+            gradientColor = Color.Black,
+            edge = ReaderEdge.Bottom,
+        )
+
+        val gradient = composeRule.onNodeWithTag(
+            testTag = "reader-edge-gradient-test",
+            useUnmergedTree = true,
+        )
+        val bounds = gradient.fetchSemanticsNode().boundsInRoot
+        val bitmap = gradient.captureToImage().asAndroidBitmap()
+        val x = bitmap.width / 2
+        val topRed = AndroidColor.red(bitmap.getPixel(x, 1))
+        val midpointRed = AndroidColor.red(bitmap.getPixel(x, bitmap.height / 2))
+        val bottomRed = AndroidColor.red(bitmap.getPixel(x, bitmap.height - 2))
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+
+        assertEquals(80f * density, bounds.height, 1f)
+        assertTrue(topRed in 247..255)
+        assertTrue(midpointRed in 148..158)
+        assertTrue(bottomRed in 48..56)
+    }
+
+    @Test
+    fun bottomControlsUse80DpGradientAtScreenEdge() {
+        setReader(textState(text = "正文"))
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+
+        val screen = composeRule.onNodeWithTag("reader-screen")
+            .fetchSemanticsNode().boundsInRoot
+        val gradient = composeRule.onNodeWithTag(
+            testTag = "reader-bottom-gradient",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+
+        assertEquals(80f * density, gradient.height, 1f)
+        assertEquals(screen.bottom, gradient.bottom, 1f)
     }
 
     @Test
@@ -902,6 +981,47 @@ class ReaderScreenTest {
                     onChapterOrder = {},
                     onDismissChapterError = {},
                     onDismissPageError = {},
+                )
+            }
+        }
+    }
+
+    private fun setTitleOverlayOn(backgroundColor: Color) {
+        composeRule.setContent {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backgroundColor),
+            ) {
+                ReaderTitleOverlay(
+                    title = "测试标题",
+                    chapter = null,
+                    textColor = Color.White,
+                    mutedColor = Color.LightGray,
+                    scrimColor = Color.Black,
+                    status = null,
+                )
+            }
+        }
+    }
+
+    private fun setEdgeGradientOn(
+        backgroundColor: Color,
+        gradientColor: Color,
+        edge: ReaderEdge,
+    ) {
+        composeRule.setContent {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backgroundColor),
+            ) {
+                ReaderEdgeGradient(
+                    color = gradientColor,
+                    edge = edge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("reader-edge-gradient-test"),
                 )
             }
         }

@@ -26,15 +26,5 @@ class TextReaderPaletteTest {
             assertEquals(Color(colors[2]), palette.muted)
             assertEquals(Color(colors[3]), palette.panel)
         }
-        assertEquals(
-            0.06f,
-            TextReaderPalettes.forTheme(TextReaderTheme.White).overlay.alpha,
-            0.005f,
-        )
-        assertEquals(
-            0.5f,
-            TextReaderPalettes.forTheme(TextReaderTheme.Black).overlay.alpha,
-            0.005f,
-        )
     }
 }
