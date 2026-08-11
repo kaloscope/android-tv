@@ -1,6 +1,5 @@
 package org.kaloscope.tv.core.designsystem
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,20 +13,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
+import org.kaloscope.tv.R
 
 @Composable
 fun KaloscopeSidePanelSelectionRow(
@@ -207,30 +206,14 @@ fun KaloscopeSidePanelSessionHint(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Canvas(
+        Icon(
+            painter = painterResource(R.drawable.ic_info),
+            contentDescription = null,
+            tint = color,
             modifier = Modifier
                 .size(14.dp)
                 .then(iconTestTag?.let(Modifier::testTag) ?: Modifier),
-        ) {
-            val strokeWidth = 1.dp.toPx()
-            drawCircle(
-                color = color,
-                radius = (size.minDimension - strokeWidth) / 2f,
-                style = Stroke(width = strokeWidth),
-            )
-            drawLine(
-                color = color,
-                start = Offset(center.x, size.height * 0.27f),
-                end = Offset(center.x, size.height * 0.57f),
-                strokeWidth = strokeWidth,
-                cap = StrokeCap.Round,
-            )
-            drawCircle(
-                color = color,
-                radius = strokeWidth * 0.7f,
-                center = Offset(center.x, size.height * 0.73f),
-            )
-        }
+        )
         Spacer(Modifier.width(8.dp))
         Text(
             text = text,

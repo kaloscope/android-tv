@@ -6,15 +6,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -46,15 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -80,6 +71,7 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.model.MediaChapter
 import org.kaloscope.tv.core.player.ChapterTimelinePolicy
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeBusyIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
@@ -1058,16 +1050,6 @@ internal fun PlayerBufferingIndicator(isRebuffering: Boolean) {
         return
     }
 
-    val transition = rememberInfiniteTransition(label = "player-buffering")
-    val rotation by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "player-buffering-rotation",
-    )
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1080,19 +1062,10 @@ internal fun PlayerBufferingIndicator(isRebuffering: Boolean) {
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Canvas(
-                modifier = Modifier
-                    .size(18.dp)
-                    .rotate(rotation),
-            ) {
-                drawArc(
-                    color = Color.White,
-                    startAngle = -90f,
-                    sweepAngle = 270f,
-                    useCenter = false,
-                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
-                )
-            }
+            KaloscopeBusyIndicator(
+                modifier = Modifier.testTag("player-buffering-spinner"),
+                color = Color.White,
+            )
             Spacer(Modifier.width(9.dp))
             Text(
                 text = stringResource(R.string.player_buffering),

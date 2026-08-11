@@ -36,6 +36,30 @@ class LocalActionIconResourceTest {
         assertEquals("round", path.androidAttribute("strokeLineJoin"))
     }
 
+    @Test
+    fun infoIconPreservesWebUiGeometry() {
+        val document = parse("ic_info")
+        val root = document.documentElement
+        val path = document.singlePath()
+
+        assertResourceFrame("ic_info", root, document)
+        assertEquals(infoPath, path.androidAttribute("pathData"))
+        assertEquals("#FFFFFF", path.androidAttribute("fillColor"))
+        assertEquals("", path.androidAttribute("strokeColor"))
+    }
+
+    @Test
+    fun deleteIconPreservesWebUiGeometry() {
+        val document = parse("ic_delete")
+        val root = document.documentElement
+        val path = document.singlePath()
+
+        assertResourceFrame("ic_delete", root, document)
+        assertEquals(deletePath, path.androidAttribute("pathData"))
+        assertEquals("#FFFFFF", path.androidAttribute("fillColor"))
+        assertEquals("", path.androidAttribute("strokeColor"))
+    }
+
     private fun assertResourceFrame(
         resourceName: String,
         root: Element,
@@ -81,5 +105,22 @@ class LocalActionIconResourceTest {
             "M12 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0M4 6h8m4 0h4" +
                 "M6 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0m-2 0h2m4 0h10" +
                 "m-5 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0M4 18h11m4 0h1"
+
+        const val infoPath =
+            "M12.002 1.999c5.523 0 10.001 4.478 10.001 10.002" +
+                "c0 5.523-4.478 10.001-10.001 10.001C6.478 22.002 2 17.524 2 12.001" +
+                "C2 6.477 6.478 1.999 12.002 1.999m0 1.5a8.502 8.502 0 1 0 0 17.003" +
+                "a8.502 8.502 0 0 0 0-17.003M12 10.5a.75.75 0 0 1 .75.75v5" +
+                "a.75.75 0 0 1-1.5 0v-5a.75.75 0 0 1 .75-.75M12 9a1 1 0 1 0 0-2" +
+                "a1 1 0 0 0 0 2"
+
+        const val deletePath =
+            "M10 5h4a2 2 0 1 0-4 0M8.5 5a3.5 3.5 0 1 1 7 0h5.75" +
+                "a.75.75 0 0 1 0 1.5h-1.32l-1.17 12.111A3.75 3.75 0 0 1 15.026 22" +
+                "H8.974a3.75 3.75 0 0 1-3.733-3.389L4.07 6.5H2.75a.75.75 0 0 1 0-1.5z" +
+                "m2 4.75a.75.75 0 0 0-1.5 0v7.5a.75.75 0 0 0 1.5 0z" +
+                "M14.25 9a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-1.5 0v-7.5" +
+                "a.75.75 0 0 1 .75-.75m-7.516 9.467a2.25 2.25 0 0 0 2.24 2.033h6.052" +
+                "a2.25 2.25 0 0 0 2.24-2.033L18.424 6.5H5.576z"
     }
 }

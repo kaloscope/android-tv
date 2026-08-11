@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -123,6 +124,8 @@ class KaloscopeConfirmDialogTest {
             testTag = "confirm-dialog-busy-indicator",
             useUnmergedTree = true,
         ).assertExists().getUnclippedBoundsInRoot()
+        assertEquals(18.dp, indicatorBounds.right - indicatorBounds.left)
+        assertEquals(18.dp, indicatorBounds.bottom - indicatorBounds.top)
         assertEquals(labelBounds, label.getUnclippedBoundsInRoot())
         assertEquals(confirmBounds, confirm.getUnclippedBoundsInRoot())
         assertTrue(

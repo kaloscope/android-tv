@@ -22,6 +22,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -1611,6 +1612,12 @@ class PlayerControlsTest {
         composeRule.onNodeWithText("正在缓冲…").assertDoesNotExist()
         composeRule.mainClock.advanceTimeBy(1)
         composeRule.onNodeWithText("正在缓冲…").assertIsDisplayed()
+        val spinnerBounds = composeRule.onNodeWithTag(
+            testTag = "player-buffering-spinner",
+            useUnmergedTree = true,
+        ).assertIsDisplayed().getUnclippedBoundsInRoot()
+        assertEquals(18.dp, spinnerBounds.right - spinnerBounds.left)
+        assertEquals(18.dp, spinnerBounds.bottom - spinnerBounds.top)
 
         composeRule.runOnIdle {
             rebuffering = false

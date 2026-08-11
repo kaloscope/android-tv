@@ -1,12 +1,5 @@
 package org.kaloscope.tv.core.designsystem
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -28,20 +20,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 
@@ -163,10 +151,11 @@ fun KaloscopeConfirmDialog(
                         Box(contentAlignment = Alignment.Center) {
                             Text(confirmLabel)
                             if (showBusyIndicator) {
-                                ConfirmDialogBusyIndicator(
+                                KaloscopeBusyIndicator(
                                     modifier = Modifier
                                         .align(Alignment.CenterEnd)
-                                        .offset(x = 16.dp),
+                                        .offset(x = 16.dp)
+                                        .testTag("confirm-dialog-busy-indicator"),
                                 )
                             }
                         }
@@ -174,43 +163,5 @@ fun KaloscopeConfirmDialog(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ConfirmDialogBusyIndicator(
-    modifier: Modifier = Modifier,
-) {
-    val rotation by rememberInfiniteTransition(label = "confirm-dialog-busy")
-        .animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(
-                    durationMillis = 900,
-                    easing = LinearEasing,
-                ),
-                repeatMode = RepeatMode.Restart,
-            ),
-            label = "confirm-dialog-busy-rotation",
-        )
-    val color = LocalContentColor.current
-
-    Canvas(
-        modifier = modifier
-            .size(16.dp)
-            .rotate(rotation)
-            .testTag("confirm-dialog-busy-indicator"),
-    ) {
-        drawArc(
-            color = color,
-            startAngle = -90f,
-            sweepAngle = 270f,
-            useCenter = false,
-            style = Stroke(
-                width = 2.dp.toPx(),
-                cap = StrokeCap.Round,
-            ),
-        )
     }
 }
