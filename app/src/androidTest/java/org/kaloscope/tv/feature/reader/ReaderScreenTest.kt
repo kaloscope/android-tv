@@ -385,6 +385,43 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun disabledBottomControlUsesDistinctOpaqueSurfaceOverLightTextContent() {
+        setReader(
+            textState(
+                text = "正文",
+                settings = TextReaderSettings(theme = TextReaderTheme.White),
+                selectedChapterIndex = 0,
+            ),
+        )
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+
+        val disabledButton = control("上一章")
+            .assertIsNotEnabled()
+            .captureToImage()
+            .asAndroidBitmap()
+        val enabledButton = control("下一章")
+            .assertIsEnabled()
+            .captureToImage()
+            .asAndroidBitmap()
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val sampleX = (12 * density).toInt()
+        val enabledSurface = enabledButton.getPixel(
+            sampleX.coerceIn(0, enabledButton.width - 1),
+            enabledButton.height / 2,
+        )
+        val disabledSurface = disabledButton.getPixel(
+            sampleX.coerceIn(0, disabledButton.width - 1),
+            disabledButton.height / 2,
+        )
+
+        assertEquals(Color(0xFF626D7D).toArgb(), disabledSurface)
+        assertTrue("Disabled and enabled surfaces should differ", disabledSurface != enabledSurface)
+    }
+
+    @Test
     fun textTitleStaysVisibleWhileContentScrolls() {
         composeRule.mainClock.autoAdvance = false
         val text = List(80) { index -> "第 $index 段测试正文，用于确认遥控器滚动不会显示标题栏。" }

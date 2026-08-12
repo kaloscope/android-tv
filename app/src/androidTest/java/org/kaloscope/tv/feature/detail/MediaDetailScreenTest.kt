@@ -318,7 +318,7 @@ class MediaDetailScreenTest {
     }
 
     @Test
-    fun movingRightKeepsSeriesAtTop() {
+    fun movingBetweenEpisodesKeepsSeriesAtTopThroughoutAnimation() {
         var state by mutableStateOf(
             MediaDetailUiState.Content(
                 parent = longSeries().copy(
@@ -366,19 +366,37 @@ class MediaDetailScreenTest {
             0f,
         )
 
-        composeRule.onNodeWithTag("media-child-card-301")
-            .performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.waitForIdle()
+        fun verticalOffsetsWhileMoving(fromChildId: Long, direction: Key): List<Float> {
+            composeRule.mainClock.autoAdvance = false
+            composeRule.onNodeWithTag("media-child-card-$fromChildId")
+                .performKeyInput { pressKey(direction) }
+            val offsets = buildList {
+                repeat(30) {
+                    composeRule.mainClock.advanceTimeByFrame()
+                    add(
+                        detailScroll.fetchSemanticsNode()
+                            .config[SemanticsProperties.VerticalScrollAxisRange]
+                            .value(),
+                    )
+                }
+            }
+            composeRule.mainClock.autoAdvance = true
+            composeRule.waitForIdle()
+            return offsets
+        }
 
+        val rightOffsets = verticalOffsetsWhileMoving(301, Key.DirectionRight)
         composeRule.onNodeWithTag("media-child-card-302").assertIsFocused()
-        val verticalOffset = detailScroll.fetchSemanticsNode()
-            .config[SemanticsProperties.VerticalScrollAxisRange]
-            .value()
-        assertEquals(
-            "Horizontal episode navigation must not move the detail page vertically",
-            0f,
-            verticalOffset,
-            0f,
+        val leftOffsets = verticalOffsetsWhileMoving(302, Key.DirectionLeft)
+        composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+
+        assertTrue(
+            "Moving right moved the detail page: $rightOffsets",
+            rightOffsets.all { it == 0f },
+        )
+        assertTrue(
+            "Moving left moved the detail page: $leftOffsets",
+            leftOffsets.all { it == 0f },
         )
     }
 
@@ -482,6 +500,10 @@ class MediaDetailScreenTest {
         composeRule.onNodeWithTag("cast-item-8").assertIsSelected()
 
         castCarousel.performKeyInput { pressKey(Key.DirectionDown) }
+        castCarousel.assertIsFocused()
+
+        castCarousel.performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
         castCarousel.assertIsFocused()
 
         castCarousel.performKeyInput { pressKey(Key.DirectionUp) }
@@ -609,6 +631,85 @@ class MediaDetailScreenTest {
         )
 
         assertReadablePrimaryPlayIcon("继续播放")
+    }
+
+    @Test
+    fun resumeActionDownFocusesCurrentlySelectedEpisode() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(
+                parent = twoEpisodeSeries(),
+                focusedChildId = 301,
+            ),
+            resumePositions = mapOf(301L to 42L),
+        )
+        composeRule.onNodeWithTag("detail-primary-action")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        composeRule.onNodeWithText("继续播放")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+    }
+
+    @Test
+    fun episodeUpFocusesResumeWithoutMovingSeriesViewport() {
+        val state = MediaDetailUiState.Content(
+            parent = twoEpisodeSeries(),
+            focusedChildId = 302,
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = state,
+                        resumePositionsByMediaId = mapOf(302L to 42L),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val child = composeRule.onNodeWithTag("media-child-card-302").assertIsFocused()
+        val detailScroll = composeRule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
+        )
+
+        composeRule.mainClock.autoAdvance = false
+        child.performKeyInput { pressKey(Key.DirectionUp) }
+        val offsets = buildList {
+            add(
+                detailScroll.fetchSemanticsNode()
+                    .config[SemanticsProperties.VerticalScrollAxisRange]
+                    .value(),
+            )
+            repeat(30) {
+                composeRule.mainClock.advanceTimeByFrame()
+                add(
+                    detailScroll.fetchSemanticsNode()
+                        .config[SemanticsProperties.VerticalScrollAxisRange]
+                        .value(),
+                )
+            }
+        }
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("继续播放").assertIsFocused()
+        assertTrue(
+            "Episode Up moved the detail viewport: $offsets",
+            offsets.all { it == 0f },
+        )
     }
 
     @Test
@@ -1115,7 +1216,7 @@ class MediaDetailScreenTest {
     }
 
     @Test
-    fun seriesVerticalBoundaryKeysMoveFromCurrentChildToPageEdges() {
+    fun seriesVerticalBoundaryKeysScrollBeforeChangingFocus() {
         val state = MediaDetailUiState.Content(
             parent = twoEpisodeSeries().copy(
                 directors = listOf("林舟"),
@@ -1164,11 +1265,16 @@ class MediaDetailScreenTest {
         child.performKeyInput { pressKey(Key.DirectionUp) }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("播放").assertIsFocused()
+        child.assertIsFocused()
         val topOffset = detailScroll.fetchSemanticsNode()
             .config[SemanticsProperties.VerticalScrollAxisRange]
             .value()
         assertEquals(0f, topOffset, 0f)
+
+        child.performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("播放").assertIsFocused()
     }
 
     @Test

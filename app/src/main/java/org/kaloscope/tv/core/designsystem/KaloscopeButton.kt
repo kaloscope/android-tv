@@ -142,12 +142,20 @@ internal fun Modifier.kaloscopeControlVisuals(
     visuals: KaloscopeControlVisuals,
     selected: Boolean,
     shape: Shape,
+    enabled: Boolean = true,
+    disabledContainerColor: Color? = null,
 ): Modifier {
+    val usesDisabledContainer = !enabled && disabledContainerColor != null
+    val containerColor = if (enabled) {
+        visuals.animatedBaseColor
+    } else {
+        disabledContainerColor ?: visuals.animatedBaseColor
+    }
     return this
         .graphicsLayer {
             scaleX = visuals.animatedScale
             scaleY = visuals.animatedScale
-            alpha = visuals.state.alpha
+            alpha = if (usesDisabledContainer) 1f else visuals.state.alpha
             this.shape = shape
             clip = false
             shadowElevation = visuals.animatedElevation.toPx()
@@ -155,7 +163,7 @@ internal fun Modifier.kaloscopeControlVisuals(
             spotShadowColor = KaloscopeControlTokens.FocusShadow
         }
         .background(
-            color = visuals.animatedBaseColor,
+            color = containerColor,
             shape = shape,
         )
         .background(
@@ -183,6 +191,7 @@ fun KaloscopeButton(
     shape: Shape = CircleShape,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     preserveSelectionOnFocus: Boolean = false,
+    disabledContainerColor: Color? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     val visuals = rememberKaloscopeControlVisuals(
@@ -201,13 +210,23 @@ fun KaloscopeButton(
         pressedContainerColor = Color.Transparent,
         pressedContentColor = visuals.animatedContentColor,
         disabledContainerColor = Color.Transparent,
-        disabledContentColor = visuals.animatedContentColor,
+        disabledContentColor = if (disabledContainerColor != null) {
+            visuals.animatedContentColor.copy(alpha = visuals.state.alpha)
+        } else {
+            visuals.animatedContentColor
+        },
     )
     Button(
         onClick = onClick,
         modifier = modifier
             .focusProperties { canFocus = enabled }
-            .kaloscopeControlVisuals(visuals, selected, shape),
+            .kaloscopeControlVisuals(
+                visuals = visuals,
+                selected = selected,
+                shape = shape,
+                enabled = enabled,
+                disabledContainerColor = disabledContainerColor,
+            ),
         enabled = enabled,
         scale = ButtonDefaults.scale(
             scale = 1f,

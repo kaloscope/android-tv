@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -50,8 +51,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.relocation.BringIntoViewModifierNode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -124,14 +128,12 @@ internal fun MediaDetailCinematicLayout(
         }
     }
 
-    fun scrollToTop(requestPrimaryActionFocus: Boolean) {
-        if (requestPrimaryActionFocus) {
-            primaryActionFocusRequester.requestFocus()
+    fun navigateUp(onAlreadyAtTop: (() -> Unit)? = null) {
+        if (!detailScrollState.canScrollBackward) {
+            onAlreadyAtTop?.invoke()
+            return
         }
         scrollScope.launch {
-            if (requestPrimaryActionFocus) {
-                withFrameNanos { }
-            }
             detailScrollState.scrollToItem(0)
         }
     }
@@ -223,17 +225,21 @@ internal fun MediaDetailCinematicLayout(
                         focusedChild = focusedChild,
                         plot = displayedPlot,
                         compactSeriesLayout = compactSeriesLayout,
+                        blockParentBringIntoView = parent.children.isNotEmpty(),
                         sectionKind = sectionKind,
                         posterWidth = posterWidth,
                         horizontalSafePadding = horizontalSafePadding,
                         resumePositionSeconds = resumePositionSeconds,
                         primaryActionFocusRequester = primaryActionFocusRequester,
                         moreInfoFocusRequester = moreInfoFocusRequester,
-                        onNavigateUp = { scrollToTop(requestPrimaryActionFocus = false) },
+                        onNavigateUp = { navigateUp() },
                         onNavigateDown = if (parent.children.isEmpty()) {
                             ::scrollToBottom
                         } else {
-                            null
+                            {
+                                childFocusRequester.requestFocus()
+                                Unit
+                            }
                         },
                         onResumePlayback = onResumePlayback,
                         onStartOverPlayback = onStartOverPlayback,
@@ -253,9 +259,13 @@ internal fun MediaDetailCinematicLayout(
                             horizontalSafePadding = horizontalSafePadding,
                             resumePositionsByMediaId = resumePositionsByMediaId,
                             childFocusRequester = childFocusRequester,
-                            onNavigateUp = { scrollToTop(requestPrimaryActionFocus = true) },
+                            onNavigateUp = {
+                                navigateUp {
+                                    primaryActionFocusRequester.requestFocus()
+                                }
+                            },
                             onNavigateDown = ::scrollToBottom,
-                            onFocusSettled = {
+                            onInitialFocusSettled = {
                                 detailScrollState.scrollToItem(0)
                             },
                             onChildFocused = onChildFocused,
@@ -277,7 +287,11 @@ internal fun MediaDetailCinematicLayout(
                         parent = parent,
                         horizontalSafePadding = horizontalSafePadding,
                         castFocusRequester = castFocusRequester,
-                        onNavigateUp = { scrollToTop(requestPrimaryActionFocus = true) },
+                        onNavigateUp = {
+                            navigateUp {
+                                primaryActionFocusRequester.requestFocus()
+                            }
+                        },
                     )
                 }
             }
@@ -302,6 +316,7 @@ private fun DetailHero(
     focusedChild: MediaSummary?,
     plot: String?,
     compactSeriesLayout: Boolean,
+    blockParentBringIntoView: Boolean,
     sectionKind: MediaChildSectionKind,
     posterWidth: Dp,
     horizontalSafePadding: Dp,
@@ -320,9 +335,15 @@ private fun DetailHero(
     val synopsisHeight = with(LocalDensity.current) {
         if (compactSeriesLayout) 66.sp.toDp() else 100.sp.toDp()
     }
+    val bringIntoViewBoundaryModifier = if (blockParentBringIntoView) {
+        Modifier.blockParentBringIntoView()
+    } else {
+        Modifier
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(bringIntoViewBoundaryModifier)
             .padding(horizontal = horizontalSafePadding),
     ) {
         ServerImage(
@@ -505,7 +526,7 @@ private fun DetailChildRibbon(
     childFocusRequester: FocusRequester,
     onNavigateUp: () -> Unit,
     onNavigateDown: () -> Unit,
-    onFocusSettled: suspend () -> Unit,
+    onInitialFocusSettled: suspend () -> Unit,
     onChildFocused: (Long) -> Unit,
     onChildViewportChanged: (GridViewportSnapshot) -> Unit,
     onPlayChild: (MediaSummary, Long?) -> Unit,
@@ -571,7 +592,7 @@ private fun DetailChildRibbon(
                 )
                 withFrameNanos { }
             }
-            onFocusSettled()
+            onInitialFocusSettled()
             animateFocusedItem = true
         }
         LaunchedEffect(pendingFocusedItemIndex) {
@@ -580,8 +601,6 @@ private fun DetailChildRibbon(
                     index = targetIndex,
                     scrollOffset = -carouselEdgeOffset,
                 )
-                withFrameNanos { }
-                onFocusSettled()
                 if (pendingFocusedItemIndex == targetIndex) {
                     pendingFocusedItemIndex = null
                 }
@@ -601,6 +620,7 @@ private fun DetailChildRibbon(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(childCardHeight + if (compactLayout) 12.dp else 16.dp)
+                .blockParentBringIntoView()
                 .testTag("detail-child-carousel"),
         ) {
             LazyRow(
@@ -902,4 +922,21 @@ private fun Modifier.detailVerticalBoundaryKeys(
         action()
     }
     true
+}
+
+private fun Modifier.blockParentBringIntoView(): Modifier =
+    this then BlockParentBringIntoViewElement
+
+private data object BlockParentBringIntoViewElement :
+    ModifierNodeElement<BlockParentBringIntoViewNode>() {
+    override fun create() = BlockParentBringIntoViewNode()
+
+    override fun update(node: BlockParentBringIntoViewNode) = Unit
+}
+
+private class BlockParentBringIntoViewNode : Modifier.Node(), BringIntoViewModifierNode {
+    override suspend fun bringIntoView(
+        childCoordinates: LayoutCoordinates,
+        boundsProvider: () -> Rect?,
+    ) = Unit
 }

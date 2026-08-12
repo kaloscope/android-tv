@@ -573,6 +573,7 @@ internal fun ReaderEdgeGradient(
 }
 
 private val READER_EDGE_HEIGHT = 80.dp
+private val READER_DISABLED_CONTROL_SURFACE = Color(0xFF626D7D)
 
 @Composable
 private fun ReaderBottomControls(
@@ -676,6 +677,7 @@ private fun ReaderControlButton(
         onClick = onClick,
         enabled = enabled,
         size = KaloscopeControlSize.Row,
+        disabledContainerColor = READER_DISABLED_CONTROL_SURFACE,
         modifier = Modifier
             .width(160.dp)
             .focusRequester(focusRequester)
