@@ -704,6 +704,28 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun textSettingsSeparateUnitsFromAdjustmentValues() {
+        setReader(textState(text = "正文"))
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+
+        listOf("sp", "em", "dp", "28", "1.8", "1.0", "48").forEach { text ->
+            composeRule.onNodeWithText(text, useUnmergedTree = true).assertExists()
+        }
+        listOf("28 sp", "1.0 em", "48 dp").forEach { text ->
+            composeRule.onNodeWithText(text, useUnmergedTree = true).assertDoesNotExist()
+        }
+
+        val titleStyle = textLayoutForText("字号").layoutInput.style
+        val unitStyle = textLayoutForText("sp").layoutInput.style
+        assertTrue(unitStyle.fontSize.value < titleStyle.fontSize.value)
+        assertTrue(unitStyle.color.alpha < titleStyle.color.alpha)
+    }
+
+    @Test
     fun centerDoesNotAdjustTextFontSize() {
         var state by mutableStateOf(textState(text = "正文"))
         var updates = 0

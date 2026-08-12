@@ -233,6 +233,10 @@
     <string name="reader_dp_value">%1$d dp</string>
     <string name="reader_multiplier_value">%1$.1f</string>
     <string name="reader_em_value">%1$.1f em</string>
+    <string name="reader_integer_value">%1$d</string>
+    <string name="reader_unit_sp">sp</string>
+    <string name="reader_unit_em">em</string>
+    <string name="reader_unit_dp">dp</string>
     <string name="reader_previous_chapter">上一章</string>
     <string name="reader_next_chapter">下一章</string>
     <string name="reader_chapters">章节</string>

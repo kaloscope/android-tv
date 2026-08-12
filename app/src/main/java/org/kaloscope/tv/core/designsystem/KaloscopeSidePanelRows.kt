@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 
@@ -123,6 +124,7 @@ fun KaloscopeSidePanelAdjustmentRow(
     valueSwatchColor: Color? = null,
     adjustmentTestTagPrefix: String? = null,
     swatchTestTag: String? = null,
+    unit: String? = null,
 ) {
     KaloscopeButton(
         onClick = {},
@@ -156,13 +158,26 @@ fun KaloscopeSidePanelAdjustmentRow(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = title,
+            Row(
                 modifier = Modifier.weight(1f),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+                unit?.let {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = it,
+                        color = LocalContentColor.current.copy(alpha = 0.55f),
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
             valueSwatchColor?.let { color ->
                 KaloscopeColorSwatch(
                     color = color,

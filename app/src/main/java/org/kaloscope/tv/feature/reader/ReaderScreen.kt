@@ -899,7 +899,8 @@ private fun TextReaderSettingsDrawer(
         )
         ReaderNumericSettingRow(
             title = stringResource(R.string.reader_font_size),
-            value = stringResource(R.string.reader_sp_value, settings.fontSizeSp),
+            unit = stringResource(R.string.reader_unit_sp),
+            value = stringResource(R.string.reader_integer_value, settings.fontSizeSp),
             canDecrease = settings.fontSizeSp > ReaderSettingsPolicy.MIN_FONT_SIZE_SP,
             canIncrease = settings.fontSizeSp < ReaderSettingsPolicy.MAX_FONT_SIZE_SP,
             testTag = "reader-font-size-setting",
@@ -943,7 +944,8 @@ private fun TextReaderSettingsDrawer(
         )
         ReaderNumericSettingRow(
             title = stringResource(R.string.reader_paragraph_spacing),
-            value = stringResource(R.string.reader_em_value, settings.paragraphSpacingEm),
+            unit = stringResource(R.string.reader_unit_em),
+            value = stringResource(R.string.reader_multiplier_value, settings.paragraphSpacingEm),
             canDecrease = settings.paragraphSpacingEm >
                 ReaderSettingsPolicy.MIN_PARAGRAPH_SPACING_EM,
             canIncrease = settings.paragraphSpacingEm <
@@ -969,7 +971,8 @@ private fun TextReaderSettingsDrawer(
         )
         ReaderNumericSettingRow(
             title = stringResource(R.string.reader_horizontal_padding),
-            value = stringResource(R.string.reader_dp_value, settings.horizontalPaddingDp),
+            unit = stringResource(R.string.reader_unit_dp),
+            value = stringResource(R.string.reader_integer_value, settings.horizontalPaddingDp),
             canDecrease = settings.horizontalPaddingDp >
                 ReaderSettingsPolicy.MIN_HORIZONTAL_PADDING_DP,
             canIncrease = settings.horizontalPaddingDp <
@@ -1117,6 +1120,7 @@ private fun <T> ReaderChoiceSettingRow(
 private fun ReaderNumericSettingRow(
     title: String,
     value: String,
+    unit: String? = null,
     canDecrease: Boolean,
     canIncrease: Boolean,
     testTag: String,
@@ -1127,6 +1131,7 @@ private fun ReaderNumericSettingRow(
     KaloscopeSidePanelAdjustmentRow(
         title = title,
         value = value,
+        unit = unit,
         canDecrease = canDecrease,
         canIncrease = canIncrease,
         onDecrease = onDecrease,
