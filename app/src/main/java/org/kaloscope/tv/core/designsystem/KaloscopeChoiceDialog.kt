@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -143,15 +142,11 @@ fun KaloscopeChoiceDialog(
                                 },
                         ) {
                             option.swatchColor?.let { swatchColor ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(14.dp)
-                                        .background(swatchColor, CircleShape)
-                                        .then(
-                                            option.swatchTestTag
-                                                ?.let(Modifier::testTag)
-                                                ?: Modifier,
-                                        ),
+                                KaloscopeColorSwatch(
+                                    color = swatchColor,
+                                    modifier = option.swatchTestTag
+                                        ?.let(Modifier::testTag)
+                                        ?: Modifier,
                                 )
                                 Spacer(Modifier.width(10.dp))
                             }
