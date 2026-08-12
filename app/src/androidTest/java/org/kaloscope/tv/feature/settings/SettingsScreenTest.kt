@@ -27,6 +27,7 @@ import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasTextExactly
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -282,6 +283,25 @@ class SettingsScreenTest {
                 .assertIsFocused()
                 .assertTextEquals(label)
             if (index != themes.lastIndex) {
+                option.performKeyInput { pressKey(Key.DirectionDown) }
+            }
+        }
+    }
+
+    @Test
+    fun readingFontDialogUsesBuiltInFontFamilyLabels() {
+        setSettingsContent(TvSettings(), SettingsSection.Reading)
+
+        composeRule.onNode(hasClickAction() and hasText("字体"))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        val labels = listOf("默认", "SansSerif", "Serif", "Cursive", "Monospace")
+        labels.forEachIndexed { index, label ->
+            val option = composeRule.onNode(
+                hasClickAction() and hasTextExactly(label) and isFocused(),
+            ).assertExists()
+            if (index != labels.lastIndex) {
                 option.performKeyInput { pressKey(Key.DirectionDown) }
             }
         }

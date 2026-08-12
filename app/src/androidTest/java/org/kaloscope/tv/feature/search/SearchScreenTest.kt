@@ -605,6 +605,113 @@ class SearchScreenTest {
     }
 
     @Test
+    fun rightFromLowerIndexerFocusesFirstVisibleResult() {
+        val firstProfile = state().profiles.single()
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = (1..12).map { result("v$it") },
+                    ).copy(
+                        profiles = (11L..17L).map { indexerId ->
+                            firstProfile.copy(
+                                indexer = NetworkIndexer(
+                                    indexerId,
+                                    "站点$indexerId",
+                                    null,
+                                ),
+                            )
+                        },
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("indexer-17")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithTag("network-result-v1").assertIsFocused()
+    }
+
+    @Test
+    fun rightFromIndexerAtDeepViewportFocusesFirstVisibleResult() {
+        val firstProfile = state().profiles.single()
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = (1..30).map { result("v$it") },
+                    ).copy(
+                        profiles = (11L..17L).map { indexerId ->
+                            firstProfile.copy(
+                                indexer = NetworkIndexer(
+                                    indexerId,
+                                    "站点$indexerId",
+                                    null,
+                                ),
+                            )
+                        },
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onGridViewportChanged = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(12)
+        val gridBounds = composeRule.onNodeWithTag("search-results-grid")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val visibleResultIds = (1..30).filter { resultId ->
+            composeRule.onAllNodes(hasTestTag("network-result-v$resultId"))
+                .fetchSemanticsNodes()
+                .any { node ->
+                    node.boundsInRoot.bottom > gridBounds.top &&
+                        node.boundsInRoot.top < gridBounds.bottom
+                }
+        }
+        assertTrue("Scrolled grid must contain visible results", visibleResultIds.isNotEmpty())
+        val firstVisibleResultId = visibleResultIds.first()
+        assertTrue("Scrolled grid must leave the first result behind", firstVisibleResultId > 1)
+        composeRule.onNodeWithTag("indexer-17")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithTag("network-result-v$firstVisibleResultId").assertIsFocused()
+        composeRule.onNodeWithTag("network-result-v1").assertDoesNotExist()
+    }
+
+    @Test
     fun graphIconReplacesIndexerInitial() {
         composeRule.setContent {
             KaloscopeTheme {

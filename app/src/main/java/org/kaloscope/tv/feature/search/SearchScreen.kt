@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -184,6 +185,10 @@ private fun SearchContent(
         indexerEntryFocus
     }
     val filterButtonFocus = remember { FocusRequester() }
+    val resultEntryFocus = remember { FocusRequester() }
+    val hasFocusableResults = (state.results as? SearchResultsState.Content)
+        ?.items
+        ?.isNotEmpty() == true
     var restoreFilterFocus by remember { mutableStateOf(false) }
     // Source changes refresh content in-place and must not replay root-entry focus.
     LaunchedEffect(Unit) {
@@ -215,6 +220,7 @@ private fun SearchContent(
             firstIndexerFocus = firstIndexerFocus,
             selectedIndexerFocus = selectedIndexerFocus,
             menuItemsAreFocusable = hasMultipleIndexers,
+            resultEntryFocusRequester = resultEntryFocus.takeIf { hasFocusableResults },
             topNavigationFocusRequester = topNavigationFocusRequester,
             onSelectIndexer = onSelectIndexer,
         )
@@ -243,6 +249,7 @@ private fun SearchContent(
                 state = state,
                 coverRatio = state.selectedProfile.coverRatio,
                 requestInitialFocus = requestInitialFocus,
+                resultEntryFocusRequester = resultEntryFocus,
                 onRetry = {
                     if (hasMultipleIndexers) {
                         selectedIndexerFocus.requestFocus()
@@ -323,6 +330,7 @@ private fun IndexerSidebar(
     firstIndexerFocus: FocusRequester,
     selectedIndexerFocus: FocusRequester,
     menuItemsAreFocusable: Boolean,
+    resultEntryFocusRequester: FocusRequester?,
     topNavigationFocusRequester: FocusRequester?,
     onSelectIndexer: (Long) -> Unit,
 ) {
@@ -382,7 +390,10 @@ private fun IndexerSidebar(
                     .fillMaxWidth()
                     .height(BrowseLayoutTokens.SidebarItemHeight)
                     .testTag("indexer-${indexer.id}")
-                    .focusProperties { canFocus = menuItemsAreFocusable }
+                    .focusProperties {
+                        canFocus = menuItemsAreFocusable
+                        resultEntryFocusRequester?.let { right = it }
+                    }
                     .then(
                         when {
                             isFirstIndexer -> Modifier.focusRequester(firstIndexerFocus)
@@ -526,6 +537,7 @@ private fun SearchResults(
     state: SearchUiState.Content,
     coverRatio: Float,
     requestInitialFocus: Boolean,
+    resultEntryFocusRequester: FocusRequester,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
@@ -558,6 +570,30 @@ private fun SearchResults(
                 initialFirstVisibleItemScrollOffset =
                     state.gridViewport.firstVisibleItemScrollOffset,
             )
+            val firstVisibleResultIndex by remember(gridState, results.items.size) {
+                derivedStateOf {
+                    if (results.items.isEmpty()) {
+                        -1
+                    } else {
+                        val layoutInfo = gridState.layoutInfo
+                        layoutInfo.visibleItemsInfo
+                            .asSequence()
+                            .filter { item ->
+                                val itemTop = item.offset.y
+                                val itemBottom = itemTop + item.size.height
+                                itemBottom > layoutInfo.viewportStartOffset &&
+                                    itemTop < layoutInfo.viewportEndOffset
+                            }
+                            .map { item -> item.index }
+                            .filter { it in results.items.indices }
+                            .minOrNull()
+                            ?: gridState.firstVisibleItemIndex.coerceIn(
+                                0,
+                                results.items.lastIndex,
+                            )
+                    }
+                }
+            }
             var lastPrefetchedPage by remember(
                 state.selectedIndexerId,
                 state.submittedKeyword,
@@ -618,6 +654,9 @@ private fun SearchResults(
                             coverRatio = coverRatio,
                             restoreFocus =
                                 requestInitialFocus && result.id == restoreResultId,
+                            entryFocusRequester = resultEntryFocusRequester.takeIf {
+                                resultIndex == firstVisibleResultIndex
+                            },
                             enabled = state.resolvingResultId == null,
                             resolving = result.id == state.resolvingResultId,
                             onFocused = {
@@ -694,16 +733,18 @@ private fun NetworkResultCard(
     result: NetworkSearchResult,
     coverRatio: Float,
     restoreFocus: Boolean,
+    entryFocusRequester: FocusRequester?,
     enabled: Boolean,
     resolving: Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val requester = remember(result.id) { FocusRequester() }
-    LaunchedEffect(restoreFocus) {
+    val restoreFocusRequester = remember(result.id) { FocusRequester() }
+    val focusRequester = entryFocusRequester ?: restoreFocusRequester
+    LaunchedEffect(restoreFocus, focusRequester) {
         if (restoreFocus) {
             withFrameNanos { }
-            requester.requestFocus()
+            focusRequester.requestFocus()
         }
     }
     KaloscopeFocusSurface(
@@ -716,7 +757,7 @@ private fun NetworkResultCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("network-result-${result.id}")
-            .focusRequester(requester)
+            .focusRequester(focusRequester)
             .onFocusChanged {
                 if (it.isFocused) {
                     onFocused()

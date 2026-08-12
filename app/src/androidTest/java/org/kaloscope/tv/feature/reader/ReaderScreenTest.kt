@@ -23,6 +23,8 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasTextExactly
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -701,6 +703,29 @@ class ReaderScreenTest {
         control("阅读设置").performKeyInput { pressKey(Key.Enter) }
 
         composeRule.onNode(hasClickAction() and hasText("背景")).assertExists()
+    }
+
+    @Test
+    fun textFontDialogUsesBuiltInFontFamilyLabels() {
+        setReader(textState(text = "正文"))
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("reader-text-font-setting")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        val labels = listOf("默认", "SansSerif", "Serif", "Cursive", "Monospace")
+        labels.forEachIndexed { index, label ->
+            val option = composeRule.onNode(
+                hasClickAction() and hasTextExactly(label) and isFocused(),
+            ).assertExists()
+            if (index != labels.lastIndex) {
+                option.performKeyInput { pressKey(Key.DirectionDown) }
+            }
+        }
     }
 
     @Test
