@@ -3,6 +3,7 @@ package org.kaloscope.tv.core.designsystem
 import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -364,12 +365,13 @@ class KaloscopeSidePanelTest {
     }
 
     @Test
-    fun sessionHintUsesSharedSizeAndVerticalAlignment() {
+    fun sessionHintAlignsVisibleIconAndTextCenters() {
         composeRule.setContent {
             KaloscopeTheme {
                 KaloscopeSidePanelSessionHint(
-                    text = "Session only",
-                    color = Color.Gray,
+                    text = "此处调整仅对本次阅读生效，不会修改全局默认值。",
+                    color = Color.White,
+                    modifier = Modifier.background(Color.Black),
                     iconTestTag = "hint-icon",
                     textTestTag = "hint-text",
                 )
@@ -377,12 +379,18 @@ class KaloscopeSidePanelTest {
         }
 
         val icon = composeRule.onNodeWithTag("hint-icon", useUnmergedTree = true)
-            .fetchSemanticsNode().boundsInRoot
         val hintText = composeRule.onNodeWithTag("hint-text", useUnmergedTree = true)
-            .fetchSemanticsNode().boundsInRoot
+        val iconBounds = icon.fetchSemanticsNode().boundsInRoot
+        val hintTextBounds = hintText.fetchSemanticsNode().boundsInRoot
+        val iconVisibleCenter = iconBounds.top + visibleForegroundCenterY(
+            icon.captureToImage().asAndroidBitmap(),
+        )
+        val hintTextVisibleCenter = hintTextBounds.top + visibleForegroundCenterY(
+            hintText.captureToImage().asAndroidBitmap(),
+        )
 
-        assertEquals(dpToPx(14f), icon.width, 0.5f)
-        assertEquals(hintText.center.y, icon.center.y, dpToPx(1f))
+        assertEquals(dpToPx(14f), iconBounds.width, 0.5f)
+        assertEquals(hintTextVisibleCenter, iconVisibleCenter, 0.25f)
     }
 
     private fun setPanel(
@@ -468,6 +476,27 @@ class KaloscopeSidePanelTest {
         AndroidColor.red(color) * 0.2126f +
             AndroidColor.green(color) * 0.7152f +
             AndroidColor.blue(color) * 0.0722f
+
+    private fun visibleForegroundCenterY(bitmap: android.graphics.Bitmap): Float {
+        val background = listOf(
+            bitmap.getPixel(0, 0),
+            bitmap.getPixel(bitmap.width - 1, 0),
+            bitmap.getPixel(0, bitmap.height - 1),
+            bitmap.getPixel(bitmap.width - 1, bitmap.height - 1),
+        ).map(::luminance).average().toFloat()
+        var top = bitmap.height
+        var bottom = -1
+        for (y in 0 until bitmap.height) {
+            for (x in 0 until bitmap.width) {
+                if (kotlin.math.abs(luminance(bitmap.getPixel(x, y)) - background) >= 32f) {
+                    top = minOf(top, y)
+                    bottom = maxOf(bottom, y)
+                }
+            }
+        }
+        check(bottom >= top) { "Expected visible foreground pixels" }
+        return (top + bottom) / 2f
+    }
 
     private fun pressBack() {
         InstrumentationRegistry.getInstrumentation().apply {
