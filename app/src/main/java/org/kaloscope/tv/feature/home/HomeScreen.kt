@@ -457,7 +457,6 @@ private fun HistoryCarouselCard(
             ServerImage(
                 session = session,
                 rawValue = item.posterPath,
-                fallbackText = item.parentTitle ?: item.title,
                 contentDescription = item.parentTitle ?: item.title,
                 policy = ServerImagePolicy.Store,
                 modifier = Modifier

@@ -404,23 +404,15 @@ private fun IndexerSidebar(
                     modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (indexer.iconPath.isNullOrBlank()) {
-                        Text(
-                            text = indexer.name.take(1),
-                            fontWeight = FontWeight.Bold,
-                        )
-                    } else {
-                        ServerImage(
-                            session = session,
-                            rawValue = indexer.iconPath,
-                            fallbackText = indexer.name,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            policy = ServerImagePolicy.Auto,
-                        )
-                    }
+                    ServerImage(
+                        session = session,
+                        rawValue = indexer.iconPath,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        policy = ServerImagePolicy.Auto,
+                    )
                     Spacer(Modifier.width(BrowseLayoutTokens.SidebarIconTextSpacing))
                     Text(
                         text = indexer.name,
@@ -737,7 +729,6 @@ private fun NetworkResultCard(
                 ServerImage(
                     session = session,
                     rawValue = result.coverPath,
-                    fallbackText = result.title,
                     contentDescription = null,
                     policy = ServerImagePolicy.Auto,
                     modifier = Modifier

@@ -609,7 +609,6 @@ private fun MediaCard(
                 ServerImage(
                     session = session,
                     rawValue = media.posterPath,
-                    fallbackText = media.title,
                     contentDescription = null,
                     policy = ServerImagePolicy.Store,
                     modifier = Modifier

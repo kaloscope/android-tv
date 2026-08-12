@@ -178,7 +178,6 @@ internal fun MediaDetailCinematicLayout(
         ServerBackdrop(
             session = session,
             backdropPath = resolveDetailBackdrop(parent, focusedChild),
-            title = parent.title,
             policy = ServerImagePolicy.Store,
             modifier = Modifier.fillMaxSize(),
         )
@@ -349,7 +348,6 @@ private fun DetailHero(
         ServerImage(
             session = session,
             rawValue = parent.posterPath,
-            fallbackText = parent.title,
             contentDescription = null,
             policy = ServerImagePolicy.Store,
             modifier = Modifier

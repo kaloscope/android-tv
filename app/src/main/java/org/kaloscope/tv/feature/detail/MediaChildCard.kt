@@ -101,7 +101,6 @@ internal fun MediaChildCard(
             ServerImage(
                 session = session,
                 rawValue = child.posterPath,
-                fallbackText = child.title,
                 contentDescription = null,
                 policy = ServerImagePolicy.Store,
                 modifier = Modifier

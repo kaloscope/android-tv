@@ -24,9 +24,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Text
 import coil3.compose.AsyncImagePainter
 import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
@@ -75,7 +72,6 @@ private fun ServerImageSkeleton(
 @Composable
 internal fun ServerImagePlaceholder(
     state: ServerImageVisualState,
-    fallbackText: String,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -93,27 +89,27 @@ internal fun ServerImagePlaceholder(
     ) {
         when (state) {
             ServerImageVisualState.Loading -> ServerImageSkeleton(Modifier.fillMaxSize())
-            ServerImageVisualState.Missing -> Text(
-                text = fallbackText.take(1).ifBlank { "K" },
-                color = Color(0xFFBAC6E8),
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Light,
-            )
-            ServerImageVisualState.Failed -> Image(
-                painter = painterResource(R.drawable.ic_image_broken),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(Color(0xFFBAC6E8).copy(alpha = 0.55f)),
-            )
+            ServerImageVisualState.Missing,
+            ServerImageVisualState.Failed -> ServerImageBrokenIcon()
             ServerImageVisualState.Success -> Unit
         }
     }
 }
 
 @Composable
+private fun ServerImageBrokenIcon() {
+    Image(
+        painter = painterResource(R.drawable.ic_image_broken),
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(Color(0xFFBAC6E8).copy(alpha = 0.55f)),
+        modifier = Modifier.testTag("server-image-broken-icon"),
+    )
+}
+
+@Composable
 fun ServerImage(
     session: Session,
     rawValue: String?,
-    fallbackText: String,
     contentDescription: String?,
     modifier: Modifier = Modifier,
     policy: ServerImagePolicy = ServerImagePolicy.Auto,
@@ -125,7 +121,6 @@ fun ServerImage(
     if (request == null) {
         ServerImagePlaceholder(
             state = ServerImageVisualState.Missing,
-            fallbackText = fallbackText,
             modifier = modifier,
         )
     } else {
@@ -141,7 +136,6 @@ fun ServerImage(
             if (visualState != ServerImageVisualState.Success) {
                 ServerImagePlaceholder(
                     state = visualState,
-                    fallbackText = fallbackText,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

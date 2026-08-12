@@ -19,6 +19,8 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -157,6 +159,34 @@ class SearchScreenTest {
         val layout = layoutResults.single()
         assertEquals(1, layout.lineCount)
         assertTrue("Long indexer name should end with an ellipsis", layout.isLineEllipsized(0))
+    }
+
+    @Test
+    fun missingIndexerIconUsesSharedBrokenImagePlaceholder() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(indexerIconPath = null),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("indexer-11", useUnmergedTree = true)
+            .assert(hasAnyDescendant(hasTestTag("server-image-broken-icon")))
     }
 
     @Test

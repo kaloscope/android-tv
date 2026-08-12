@@ -318,9 +318,9 @@ class P2GoldenScreenshotTest {
         composeRule.setContent {
             KaloscopeTheme {
                 Column(Modifier.fillMaxSize()) {
-                    ServerImagePlaceholder(ServerImageVisualState.Loading, "L")
-                    ServerImagePlaceholder(ServerImageVisualState.Missing, "无")
-                    ServerImagePlaceholder(ServerImageVisualState.Failed, "F")
+                    ServerImagePlaceholder(ServerImageVisualState.Loading)
+                    ServerImagePlaceholder(ServerImageVisualState.Missing)
+                    ServerImagePlaceholder(ServerImageVisualState.Failed)
                 }
             }
         }

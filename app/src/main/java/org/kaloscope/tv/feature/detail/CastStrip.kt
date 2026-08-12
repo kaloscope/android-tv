@@ -183,7 +183,6 @@ internal fun CastStrip(
                         ServerImage(
                             session = session,
                             rawValue = actor.thumbPath,
-                            fallbackText = actor.name,
                             contentDescription = null,
                             policy = ServerImagePolicy.Store,
                             modifier = Modifier.size(64.dp).clip(CircleShape),

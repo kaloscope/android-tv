@@ -20,9 +20,9 @@ class ServerImageTest {
     fun placeholdersExposeDistinctStableStates() {
         composeRule.setContent {
             androidx.compose.foundation.layout.Row {
-                ServerImagePlaceholder(ServerImageVisualState.Loading, "L", Modifier.size(80.dp))
-                ServerImagePlaceholder(ServerImageVisualState.Missing, "M", Modifier.size(80.dp))
-                ServerImagePlaceholder(ServerImageVisualState.Failed, "F", Modifier.size(80.dp))
+                ServerImagePlaceholder(ServerImageVisualState.Loading, Modifier.size(80.dp))
+                ServerImagePlaceholder(ServerImageVisualState.Missing, Modifier.size(80.dp))
+                ServerImagePlaceholder(ServerImageVisualState.Failed, Modifier.size(80.dp))
             }
         }
 
@@ -32,11 +32,23 @@ class ServerImageTest {
     }
 
     @Test
+    fun missingPlaceholderUsesExistingBrokenImageIcon() {
+        composeRule.setContent {
+            ServerImagePlaceholder(
+                state = ServerImageVisualState.Missing,
+                modifier = Modifier.size(80.dp),
+            )
+        }
+
+        composeRule.onNodeWithTag("server-image-broken-icon", useUnmergedTree = true)
+            .assertExists()
+    }
+
+    @Test
     fun failedPlaceholderUsesSoftenedIconTint() {
         composeRule.setContent {
             ServerImagePlaceholder(
                 state = ServerImageVisualState.Failed,
-                fallbackText = "F",
                 modifier = Modifier.size(80.dp),
             )
         }

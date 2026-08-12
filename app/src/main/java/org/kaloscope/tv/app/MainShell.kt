@@ -242,7 +242,6 @@ internal fun MainShell(
                                     RootFullscreenBackdrop(
                                         session = session,
                                         path = backdrop.path,
-                                        title = backdrop.title,
                                         testTag = "home-fullscreen-backdrop",
                                     )
                                 }
@@ -340,7 +339,6 @@ internal fun MainShell(
                                     RootFullscreenBackdrop(
                                         session = session,
                                         path = backdrop.path,
-                                        title = backdrop.title,
                                         testTag = "library-fullscreen-backdrop",
                                     )
                                 }
@@ -528,14 +526,12 @@ private fun RootDestinationFrame(
 private fun RootFullscreenBackdrop(
     session: Session,
     path: String,
-    title: String,
     testTag: String,
 ) {
     RootFullscreenBackdropFrame(testTag = testTag) { imageModifier ->
         ServerBackdrop(
             session = session,
             backdropPath = path,
-            title = title,
             policy = ServerImagePolicy.Store,
             modifier = imageModifier,
         )

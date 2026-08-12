@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.LocalContentColor
 
 @Composable
 internal fun KaloscopeColorSwatch(
@@ -21,7 +22,7 @@ internal fun KaloscopeColorSwatch(
             .background(color, CircleShape)
             .border(
                 width = 1.dp,
-                color = OnBackground.copy(alpha = 0.7f),
+                color = LocalContentColor.current.copy(alpha = 0.45f),
                 shape = CircleShape,
             ),
     )

@@ -14,7 +14,6 @@ import org.kaloscope.tv.core.network.ServerImagePolicy
 fun ServerBackdrop(
     session: Session,
     backdropPath: String?,
-    title: String,
     modifier: Modifier = Modifier,
     policy: ServerImagePolicy = ServerImagePolicy.Auto,
 ) {
@@ -28,7 +27,6 @@ fun ServerBackdrop(
             ServerImage(
                 session = session,
                 rawValue = path,
-                fallbackText = title,
                 contentDescription = null,
                 policy = policy,
                 modifier = Modifier.fillMaxSize().testTag("detail-backdrop-$path"),
