@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -1549,13 +1550,82 @@ class SearchScreenTest {
             }
         }
 
-        val density = InstrumentationRegistry.getInstrumentation()
-            .targetContext.resources.displayMetrics.density
-        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val displayMetrics = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics
         val drawer = composeRule.onNodeWithTag("search-filter-drawer")
             .fetchSemanticsNode().boundsInRoot
-        assertEquals(500f * density, drawer.width, density)
-        assertEquals(root.right, drawer.right, 1f)
+        assertEquals(500f * displayMetrics.density, drawer.width, displayMetrics.density)
+        assertEquals(displayMetrics.widthPixels.toFloat(), drawer.right, 1f)
+    }
+
+    @Test
+    fun filterDrawerCoversFullViewportOutsidePaddedSearchContent() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("filter-test-app-root"),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                start = 44.dp,
+                                top = 100.dp,
+                                end = 44.dp,
+                                bottom = 24.dp,
+                            )
+                            .testTag("filter-test-padded-content"),
+                    ) {
+                        SearchScreen(
+                            session = session(),
+                            state = state(
+                                filters = listOf(regionFilter()),
+                                filterDrawerOpen = true,
+                            ),
+                            onRefreshIndexers = {},
+                            onSelectIndexer = {},
+                            onQueryChange = {},
+                            onSearch = {},
+                            onRetry = {},
+                            onLoadMore = {},
+                            onResultFocused = {},
+                            onPlay = {},
+                            onOpenFilters = {},
+                            onDismissFilters = {},
+                            onApplyFilters = {},
+                            onClearFilters = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        val appRoot = composeRule.onNodeWithTag("filter-test-app-root")
+            .fetchSemanticsNode()
+        val paddedContent = composeRule.onNodeWithTag("filter-test-padded-content")
+            .fetchSemanticsNode()
+        val drawer = composeRule.onNodeWithTag("search-filter-drawer")
+            .fetchSemanticsNode()
+        val appRootPosition = appRoot.positionOnScreen
+        val drawerPosition = drawer.positionOnScreen
+
+        assertTrue(
+            "Test content must retain the destination top inset",
+            paddedContent.boundsInRoot.top > appRoot.boundsInRoot.top,
+        )
+        assertEquals(appRootPosition.y, drawerPosition.y, 1f)
+        assertEquals(
+            appRootPosition.y + appRoot.boundsInRoot.height,
+            drawerPosition.y + drawer.boundsInRoot.height,
+            1f,
+        )
+        assertEquals(
+            appRootPosition.x + appRoot.boundsInRoot.width,
+            drawerPosition.x + drawer.boundsInRoot.width,
+            1f,
+        )
     }
 
     @Test

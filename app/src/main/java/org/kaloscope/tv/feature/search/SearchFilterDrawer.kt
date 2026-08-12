@@ -29,8 +29,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
@@ -71,74 +78,94 @@ internal fun SearchFilterDrawer(
             initialFocus.requestFocus()
         }
     }
-    KaloscopeSidePanel(
-        title = stringResource(R.string.search_filters),
-        description = stringResource(R.string.search_filters_description),
-        palette = KaloscopeSidePanelPalette(
-            panelColor = Panel,
-            textColor = OnBackground,
-            mutedColor = Muted,
+    Popup(
+        popupPositionProvider = windowOriginPopupPositionProvider,
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(
+            focusable = true,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false,
+            clippingEnabled = false,
         ),
-        onDismiss = onDismiss,
-        trapFocus = false,
-        modifier = Modifier.testTag("search-filter-drawer"),
-        footer = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                DrawerActionButton(
-                    text = stringResource(R.string.filter_clear),
-                    iconRes = R.drawable.ic_action_clockwise,
-                    iconTag = "filter-clear-icon",
-                    tag = "filter-clear",
-                    onClick = onClear,
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusProperties {
-                            left = FocusRequester.Cancel
-                            down = FocusRequester.Cancel
-                        },
-                )
-                DrawerActionButton(
-                    text = stringResource(R.string.filter_apply),
-                    iconRes = R.drawable.ic_action_search,
-                    iconTag = "filter-apply-icon",
-                    tag = "filter-apply",
-                    onClick = { onApply(draft.toMap()) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusProperties {
-                            right = FocusRequester.Cancel
-                            down = FocusRequester.Cancel
-                        },
-                )
-            }
-        },
     ) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+        KaloscopeSidePanel(
+            title = stringResource(R.string.search_filters),
+            description = stringResource(R.string.search_filters_description),
+            palette = KaloscopeSidePanelPalette(
+                panelColor = Panel,
+                textColor = OnBackground,
+                mutedColor = Muted,
+            ),
+            onDismiss = onDismiss,
+            trapFocus = false,
+            modifier = Modifier.testTag("search-filter-drawer"),
+            footer = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    DrawerActionButton(
+                        text = stringResource(R.string.filter_clear),
+                        iconRes = R.drawable.ic_action_clockwise,
+                        iconTag = "filter-clear-icon",
+                        tag = "filter-clear",
+                        onClick = onClear,
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusProperties {
+                                left = FocusRequester.Cancel
+                                down = FocusRequester.Cancel
+                            },
+                    )
+                    DrawerActionButton(
+                        text = stringResource(R.string.filter_apply),
+                        iconRes = R.drawable.ic_action_search,
+                        iconTag = "filter-apply-icon",
+                        tag = "filter-apply",
+                        onClick = { onApply(draft.toMap()) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusProperties {
+                                right = FocusRequester.Cancel
+                                down = FocusRequester.Cancel
+                            },
+                    )
+                }
+            },
         ) {
-            itemsIndexed(definitions, key = { _, definition -> definition.key }) {
-                    index, definition,
-                ->
-                SearchFilterField(
-                    definition = definition,
-                    value = draft[definition.key],
-                    onValueChange = { value ->
-                        draft = if (value == null) {
-                            draft - definition.key
-                        } else {
-                            draft + (definition.key to value)
-                        }
-                    },
-                    initialFocus = initialFocus.takeIf { index == initialFocusableIndex },
-                )
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                itemsIndexed(definitions, key = { _, definition -> definition.key }) {
+                        index, definition,
+                    ->
+                    SearchFilterField(
+                        definition = definition,
+                        value = draft[definition.key],
+                        onValueChange = { value ->
+                            draft = if (value == null) {
+                                draft - definition.key
+                            } else {
+                                draft + (definition.key to value)
+                            }
+                        },
+                        initialFocus = initialFocus.takeIf { index == initialFocusableIndex },
+                    )
+                }
             }
         }
     }
+}
+
+private val windowOriginPopupPositionProvider = object : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset = IntOffset.Zero
 }
 
 @Composable
