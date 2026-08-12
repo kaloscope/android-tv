@@ -16,6 +16,8 @@ data class ReaderChapter(
 
 sealed interface ReaderContent {
     val source: ReaderSource
+
+    /** Stable resource title; the active chapter title comes from [chapters]. */
     val title: String
     val chapters: List<ReaderChapter>
     val selectedChapterIndex: Int?

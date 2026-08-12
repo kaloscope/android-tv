@@ -76,6 +76,73 @@ class DefaultNetworkResourceRepositoryTest {
     }
 
     @Test
+    fun `text reader keeps search result title after first chapter fallback`() = runTest {
+        server.enqueue(
+            response(
+                """
+                {"status":200,"message":"","data":{
+                  "id":"book-1","title":"Book","media_type":"text",
+                  "chapters":[{"id":"c1","title":"Chapter One"}]
+                }}
+                """.trimIndent(),
+            ),
+        )
+        server.enqueue(
+            response(
+                """
+                {"status":200,"message":"","data":{
+                  "id":"book-1","title":"Chapter One","media_type":"text","text":"Body"
+                }}
+                """.trimIndent(),
+            ),
+        )
+
+        val resolved = repository.resolveResource(
+            session = session(),
+            indexerId = 11,
+            result = result("book-1", NetworkMediaType.Text),
+            preferredDefinition = TranscodeResolution.P1080,
+        )
+
+        val text = (resolved as AppResult.Success).value as ResolvedNetworkResource.Text
+        assertEquals("Result", text.content.title)
+    }
+
+    @Test
+    fun `image reader keeps search result title after first chapter fallback`() = runTest {
+        server.enqueue(
+            response(
+                """
+                {"status":200,"message":"","data":{
+                  "id":"comic-1","title":"Comic","media_type":"image",
+                  "chapters":[{"id":"c1","title":"Chapter One"}]
+                }}
+                """.trimIndent(),
+            ),
+        )
+        server.enqueue(
+            response(
+                """
+                {"status":200,"message":"","data":{
+                  "id":"comic-1","title":"Chapter One","media_type":"image",
+                  "images":["one.jpg"]
+                }}
+                """.trimIndent(),
+            ),
+        )
+
+        val resolved = repository.resolveResource(
+            session = session(),
+            indexerId = 11,
+            result = result("comic-1", NetworkMediaType.Image),
+            preferredDefinition = TranscodeResolution.P1080,
+        )
+
+        val image = (resolved as AppResult.Success).value as ResolvedNetworkResource.Image
+        assertEquals("Result", image.content.title)
+    }
+
+    @Test
     fun `video details use catalog video type when response omits it`() = runTest {
         server.enqueue(
             response(
@@ -307,6 +374,67 @@ class DefaultNetworkResourceRepositoryTest {
         assertEquals(current.chapters, next.chapters)
         assertEquals(1, next.selectedChapterIndex)
         assertTrue(server.takeRequest().body.readUtf8().contains("\"chapter_id\":\"c2\""))
+    }
+
+    @Test
+    fun `text chapter change keeps the reader title`() = runTest {
+        server.enqueue(
+            response(
+                """
+                {"status":200,"message":"","data":{
+                  "id":"book-1","title":"Chapter Two","media_type":"text","text":"Body"
+                }}
+                """.trimIndent(),
+            ),
+        )
+        val current = ReaderTextContent.network(
+            indexerId = 11,
+            resourceId = "book-1",
+            title = "Book",
+            text = "Old",
+            chapters = listOf(
+                ReaderChapter("c1", "Chapter One"),
+                ReaderChapter("c2", "Chapter Two"),
+            ),
+            selectedChapterIndex = 0,
+        )
+
+        val result = repository.resolveReaderChapter(session(), current, 1)
+
+        val next = (result as AppResult.Success).value as ReaderTextContent
+        assertEquals("Book", next.title)
+    }
+
+    @Test
+    fun `image chapter change keeps the reader title`() = runTest {
+        server.enqueue(
+            response(
+                """
+                {"status":200,"message":"","data":{
+                  "id":"comic-1","title":"Chapter Two","media_type":"image",
+                  "images":["two.jpg"]
+                }}
+                """.trimIndent(),
+            ),
+        )
+        val current = ReaderImageContent.network(
+            indexerId = 11,
+            resourceId = "comic-1",
+            chapterId = "c1",
+            title = "Comic",
+            images = listOf("one.jpg"),
+            imageCount = 1,
+            chapters = listOf(
+                ReaderChapter("c1", "Chapter One"),
+                ReaderChapter("c2", "Chapter Two"),
+            ),
+            selectedChapterIndex = 0,
+        )
+
+        val result = repository.resolveReaderChapter(session(), current, 1)
+
+        val next = (result as AppResult.Success).value as ReaderImageContent
+        assertEquals("Comic", next.title)
     }
 
     @Test

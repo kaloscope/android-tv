@@ -69,7 +69,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
                         session = session,
                         indexerId = indexerId,
                         resourceId = result.id,
-                        fallbackTitle = result.title,
+                        readerTitle = result.title,
                         resource = resource,
                     ),
                 )
@@ -79,7 +79,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
                         session = session,
                         indexerId = indexerId,
                         resourceId = result.id,
-                        fallbackTitle = result.title,
+                        readerTitle = result.title,
                         resource = resource,
                     ),
                 )
@@ -144,14 +144,14 @@ class DefaultNetworkResourceRepository @Inject constructor(
             when (content) {
                 is ReaderImageContent -> resource.toImageContent(
                     source = source.copy(chapterId = chapter.id),
-                    fallbackTitle = chapter.title,
+                    readerTitle = content.title,
                     chapters = content.chapters,
                     selectedChapterIndex = chapterIndex,
                 )
 
                 is ReaderTextContent -> resource.toTextContent(
                     source = source.copy(chapterId = chapter.id),
-                    fallbackTitle = chapter.title,
+                    readerTitle = content.title,
                     chapters = content.chapters,
                     selectedChapterIndex = chapterIndex,
                 )
@@ -231,7 +231,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
         session: Session,
         indexerId: Long,
         resourceId: String,
-        fallbackTitle: String,
+        readerTitle: String,
         resource: IndexerResourceData,
     ): ReaderImageContent {
         val chapters = resource.toReaderChapters()
@@ -241,7 +241,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
         if (resource.images != null) {
             return resource.toImageContent(
                 source = source,
-                fallbackTitle = fallbackTitle,
+                readerTitle = readerTitle,
                 chapters = chapters,
                 selectedChapterIndex = selectedChapterIndex,
             )
@@ -255,7 +255,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
             chapterId = chapter.id,
         ).toImageContent(
             source = source,
-            fallbackTitle = chapter.title,
+            readerTitle = readerTitle,
             chapters = chapters,
             selectedChapterIndex = selectedChapterIndex,
         )
@@ -265,7 +265,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
         session: Session,
         indexerId: Long,
         resourceId: String,
-        fallbackTitle: String,
+        readerTitle: String,
         resource: IndexerResourceData,
     ): ReaderTextContent {
         val chapters = resource.toReaderChapters()
@@ -275,7 +275,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
         if (resource.text != null) {
             return resource.toTextContent(
                 source = source,
-                fallbackTitle = fallbackTitle,
+                readerTitle = readerTitle,
                 chapters = chapters,
                 selectedChapterIndex = selectedChapterIndex,
             )
@@ -289,7 +289,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
             chapterId = chapter.id,
         ).toTextContent(
             source = source,
-            fallbackTitle = chapter.title,
+            readerTitle = readerTitle,
             chapters = chapters,
             selectedChapterIndex = selectedChapterIndex,
         )
@@ -337,7 +337,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
 
     private fun IndexerResourceData.toImageContent(
         source: ReaderSource.Network,
-        fallbackTitle: String,
+        readerTitle: String,
         chapters: List<ReaderChapter>,
         selectedChapterIndex: Int?,
     ): ReaderImageContent {
@@ -347,7 +347,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
             ?: throw SerializationException("Missing image reader content")
         return ReaderImageContent(
             source = source,
-            title = title.trimmedOrNull() ?: fallbackTitle,
+            title = readerTitle,
             images = mappedImages,
             imageCount = imageCount?.takeIf { it > 0 } ?: mappedImages.size,
             chapters = chapters,
@@ -357,12 +357,12 @@ class DefaultNetworkResourceRepository @Inject constructor(
 
     private fun IndexerResourceData.toTextContent(
         source: ReaderSource.Network,
-        fallbackTitle: String,
+        readerTitle: String,
         chapters: List<ReaderChapter>,
         selectedChapterIndex: Int?,
     ): ReaderTextContent = ReaderTextContent(
         source = source,
-        title = title.trimmedOrNull() ?: fallbackTitle,
+        title = readerTitle,
         text = toTextBody()
             ?: throw SerializationException("Missing text reader content"),
         chapters = chapters,
