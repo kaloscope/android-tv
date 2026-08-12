@@ -164,6 +164,7 @@ fun KaloscopeSidePanelAdjustmentRow(
             ) {
                 Text(
                     text = title,
+                    modifier = Modifier.alignByBaseline(),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -172,8 +173,10 @@ fun KaloscopeSidePanelAdjustmentRow(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = it,
+                        modifier = Modifier.alignByBaseline(),
                         color = LocalContentColor.current.copy(alpha = 0.55f),
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Light,
                         maxLines = 1,
                     )
                 }

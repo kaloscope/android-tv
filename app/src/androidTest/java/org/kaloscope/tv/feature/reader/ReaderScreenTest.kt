@@ -32,6 +32,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontWeight
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -744,8 +745,18 @@ class ReaderScreenTest {
             composeRule.onNodeWithText(text, useUnmergedTree = true).assertDoesNotExist()
         }
 
-        val titleStyle = textLayoutForText("字号").layoutInput.style
-        val unitStyle = textLayoutForText("sp").layoutInput.style
+        val title = composeRule.onNodeWithText("字号", useUnmergedTree = true)
+        val unit = composeRule.onNodeWithText("sp", useUnmergedTree = true)
+        val titleLayout = textLayoutForText("字号")
+        val unitLayout = textLayoutForText("sp")
+        val titleStyle = titleLayout.layoutInput.style
+        val unitStyle = unitLayout.layoutInput.style
+        val titleBaseline = title.fetchSemanticsNode().boundsInRoot.top + titleLayout.firstBaseline
+        val unitBaseline = unit.fetchSemanticsNode().boundsInRoot.top + unitLayout.firstBaseline
+
+        assertEquals(12f, unitStyle.fontSize.value, 0f)
+        assertEquals(FontWeight.Light, unitStyle.fontWeight)
+        assertEquals(titleBaseline, unitBaseline, 1f)
         assertTrue(unitStyle.fontSize.value < titleStyle.fontSize.value)
         assertTrue(unitStyle.color.alpha < titleStyle.color.alpha)
     }

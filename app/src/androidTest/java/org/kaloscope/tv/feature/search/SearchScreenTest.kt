@@ -712,6 +712,99 @@ class SearchScreenTest {
     }
 
     @Test
+    fun leftFromLeftmostResultFocusesSelectedIndexer() {
+        val firstProfile = state().profiles.single()
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = (1..6).map { result("v$it") },
+                    ).copy(
+                        profiles = (11L..30L).map { indexerId ->
+                            firstProfile.copy(
+                                indexer = NetworkIndexer(
+                                    indexerId,
+                                    "站点$indexerId",
+                                    null,
+                                ),
+                            )
+                        },
+                        selectedIndexerId = 30L,
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("network-result-v4")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithTag("indexer-30").assertIsFocused()
+    }
+
+    @Test
+    fun leftFromSecondResultMovesToAdjacentResult() {
+        val firstProfile = state().profiles.single()
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = (1..6).map { result("v$it") },
+                    ).copy(
+                        profiles = (11L..13L).map { indexerId ->
+                            firstProfile.copy(
+                                indexer = NetworkIndexer(
+                                    indexerId,
+                                    "站点$indexerId",
+                                    null,
+                                ),
+                            )
+                        },
+                        selectedIndexerId = 13L,
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("network-result-v2")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithTag("network-result-v1").assertIsFocused()
+        composeRule.onNodeWithTag("indexer-13").assertIsNotFocused()
+    }
+
+    @Test
     fun graphIconReplacesIndexerInitial() {
         composeRule.setContent {
             KaloscopeTheme {

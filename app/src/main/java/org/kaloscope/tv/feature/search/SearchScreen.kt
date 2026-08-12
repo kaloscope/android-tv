@@ -250,6 +250,9 @@ private fun SearchContent(
                 coverRatio = state.selectedProfile.coverRatio,
                 requestInitialFocus = requestInitialFocus,
                 resultEntryFocusRequester = resultEntryFocus,
+                resultExitFocusRequester = indexerEntryFocus.takeIf {
+                    hasMultipleIndexers
+                },
                 onRetry = {
                     if (hasMultipleIndexers) {
                         selectedIndexerFocus.requestFocus()
@@ -347,7 +350,10 @@ private fun IndexerSidebar(
             .focusProperties {
                 onEnter = {
                     if (
-                        requestedFocusDirection == FocusDirection.Down &&
+                        (
+                            requestedFocusDirection == FocusDirection.Down ||
+                                requestedFocusDirection == FocusDirection.Left
+                        ) &&
                         selectedIndexerIndex >= 0 &&
                         menuItemsAreFocusable
                     ) {
@@ -538,6 +544,7 @@ private fun SearchResults(
     coverRatio: Float,
     requestInitialFocus: Boolean,
     resultEntryFocusRequester: FocusRequester,
+    resultExitFocusRequester: FocusRequester?,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
@@ -592,6 +599,17 @@ private fun SearchResults(
                                 results.items.lastIndex,
                             )
                     }
+                }
+            }
+            val leftmostResultIndices by remember(gridState, results.items.size) {
+                derivedStateOf {
+                    gridState.layoutInfo.visibleItemsInfo
+                        .asSequence()
+                        .filter { item ->
+                            item.index in results.items.indices && item.column == 0
+                        }
+                        .map { item -> item.index }
+                        .toSet()
                 }
             }
             var lastPrefetchedPage by remember(
@@ -656,6 +674,9 @@ private fun SearchResults(
                                 requestInitialFocus && result.id == restoreResultId,
                             entryFocusRequester = resultEntryFocusRequester.takeIf {
                                 resultIndex == firstVisibleResultIndex
+                            },
+                            leftFocusRequester = resultExitFocusRequester.takeIf {
+                                resultIndex in leftmostResultIndices
                             },
                             enabled = state.resolvingResultId == null,
                             resolving = result.id == state.resolvingResultId,
@@ -734,6 +755,7 @@ private fun NetworkResultCard(
     coverRatio: Float,
     restoreFocus: Boolean,
     entryFocusRequester: FocusRequester?,
+    leftFocusRequester: FocusRequester?,
     enabled: Boolean,
     resolving: Boolean,
     onFocused: () -> Unit,
@@ -758,6 +780,9 @@ private fun NetworkResultCard(
             .fillMaxWidth()
             .testTag("network-result-${result.id}")
             .focusRequester(focusRequester)
+            .focusProperties {
+                leftFocusRequester?.let { left = it }
+            }
             .onFocusChanged {
                 if (it.isFocused) {
                     onFocused()
