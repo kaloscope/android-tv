@@ -418,7 +418,10 @@ class ReaderScreenTest {
         )
 
         assertEquals(Color(0xFF626D7D).toArgb(), disabledSurface)
-        assertTrue("Disabled and enabled surfaces should differ", disabledSurface != enabledSurface)
+        assertTrue(
+            "Disabled and enabled surfaces should differ",
+            disabledSurface != enabledSurface,
+        )
     }
 
     @Test
@@ -764,56 +767,26 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textSettingsThemeSwatchTracksTheSessionTheme() {
-        var state by mutableStateOf(textState(text = "正文"))
-        composeRule.setContent {
-            KaloscopeTheme {
-                ReaderScreen(
-                    session = session(),
-                    state = state,
-                    onBack = {},
-                    onSelectChapter = {},
-                    onLoadMoreImages = {},
-                    onImageSettings = {},
-                    onTextSettings = { settings ->
-                        state = state.copy(settings = settings)
-                    },
-                    onChapterOrder = {},
-                    onDismissChapterError = {},
-                    onDismissPageError = {},
-                )
-            }
-        }
+    fun textSettingsThemeSwatchesAppearOnlyInChoiceDialog() {
+        setReader(textState(text = "正文"))
 
-        val content = composeRule.onNodeWithTag("text-reader-content")
-        content.performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
         control("章节").performKeyInput { pressKey(Key.DirectionRight) }
         control("阅读设置").performKeyInput { pressKey(Key.Enter) }
 
-        val themeRow = composeRule.onNodeWithTag("reader-text-theme-setting")
-        fun currentSwatchColor(): Int {
-            val bitmap = composeRule.onNodeWithTag(
-                testTag = "reader-current-theme-swatch",
-                useUnmergedTree = true,
-            ).captureToImage().asAndroidBitmap()
-            return bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)
-        }
-
-        assertEquals(Color(0xFFFAFAF5).toArgb(), currentSwatchColor())
-        themeRow
+        composeRule.onNodeWithTag(
+            testTag = "reader-current-theme-swatch",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag("reader-text-theme-setting")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithTag("reader-theme-option-white")
-            .assertIsFocused()
-            .performKeyInput {
-                pressKey(Key.DirectionDown)
-                pressKey(Key.Enter)
-            }
-        composeRule.waitForIdle()
-
-        assertEquals(Color(0xFFFDF6E3).toArgb(), currentSwatchColor())
-        themeRow.assertIsFocused()
+        composeRule.onNodeWithTag(
+            testTag = "reader-theme-swatch-white",
+            useUnmergedTree = true,
+        ).assertExists()
     }
 
     @Test

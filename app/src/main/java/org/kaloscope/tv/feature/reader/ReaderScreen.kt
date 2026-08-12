@@ -887,7 +887,6 @@ private fun TextReaderSettingsDrawer(
             optionTestTag = { "reader-theme-option-${it.name.lowercase()}" },
             optionSwatchTestTag = { "reader-theme-swatch-${it.name.lowercase()}" },
             testTag = "reader-text-theme-setting",
-            valueSwatchTestTag = "reader-current-theme-swatch",
         )
         ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_text_font),
@@ -1083,7 +1082,6 @@ private fun <T> ReaderChoiceSettingRow(
     optionTestTag: ((T) -> String)? = null,
     optionSwatchTestTag: ((T) -> String)? = null,
     testTag: String,
-    valueSwatchTestTag: String? = null,
 ) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(requestInitialFocus) {
@@ -1112,8 +1110,6 @@ private fun <T> ReaderChoiceSettingRow(
         modifier = Modifier
             .focusRequester(focus)
             .testTag(testTag),
-        valueSwatchColor = swatchColor?.invoke(selected),
-        swatchTestTag = valueSwatchTestTag,
     )
 }
 
