@@ -56,14 +56,12 @@ internal fun AkDanmakuOverlay(
             playbackBinding?.dispose()
         }
     }
+    // The binding follows the player lifetime; listener attachment waits for AndroidView setup.
     DisposableEffect(playbackBinding, runtimeBound) {
-        if (!runtimeBound || playbackBinding == null) {
-            onDispose {}
-        } else {
-            playbackBinding.attach()
-            onDispose {
-                playbackBinding.detach()
-            }
+        val attachedBinding = playbackBinding?.takeIf { runtimeBound }
+        attachedBinding?.attach()
+        onDispose {
+            attachedBinding?.detach()
         }
     }
 

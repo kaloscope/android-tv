@@ -66,30 +66,27 @@ class LoginCoordinator(
                 )
             ) {
                 is AppResult.Success -> {
-                    // Passwords are never retained after an authentication attempt.
-                    mutableState.value = mutableState.value.copy(
-                        password = "",
-                        isSubmitting = false,
-                    )
+                    finishSubmission()
                     result.value
                 }
 
                 is AppResult.Failure -> {
-                    // Keep the username for recovery, but always clear the password.
-                    mutableState.value = mutableState.value.copy(
-                        password = "",
-                        isSubmitting = false,
-                        error = LoginError.Request(result.error),
-                    )
+                    finishSubmission(LoginError.Request(result.error))
                     null
                 }
             }
         } catch (error: CancellationException) {
-            mutableState.value = mutableState.value.copy(
-                password = "",
-                isSubmitting = false,
-            )
+            finishSubmission()
             throw error
         }
+    }
+
+    private fun finishSubmission(error: LoginError? = null) {
+        // Every terminal path drops the password while retaining any username edits.
+        mutableState.value = mutableState.value.copy(
+            password = "",
+            isSubmitting = false,
+            error = error,
+        )
     }
 }

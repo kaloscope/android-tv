@@ -12,6 +12,7 @@ import org.kaloscope.tv.core.network.ApiClientFactory
 import org.kaloscope.tv.core.network.HistoryItemData
 import org.kaloscope.tv.core.network.HistoryMediaData
 import org.kaloscope.tv.core.network.HistoryRecordData
+import org.kaloscope.tv.core.network.authorizationHeader
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
 
@@ -25,7 +26,7 @@ class DefaultHistoryRepository @Inject constructor(
     ): AppResult<List<WatchHistoryItem>> =
         networkCall(json) {
             apiClientFactory.create(session.server.origin)
-                .getVideoHistory("Token ${session.token}")
+                .getVideoHistory(session.authorizationHeader())
                 .dataOrThrow()
                 .also { result ->
                     if (result.total < 0) {
@@ -45,7 +46,7 @@ class DefaultHistoryRepository @Inject constructor(
         networkCall(json) {
             val response = apiClientFactory.create(session.server.origin)
                 .recordVideoProgress(
-                    authorization = "Token ${session.token}",
+                    authorization = session.authorizationHeader(),
                     body = HistoryRecordData(
                         relationType = "video",
                         relationId = mediaId,

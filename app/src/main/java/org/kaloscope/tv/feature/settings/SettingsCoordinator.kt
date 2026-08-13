@@ -70,8 +70,7 @@ class SettingsCoordinator(
     }
 
     fun selectSection(section: SettingsSection) {
-        val content = mutableState.value as? SettingsUiState.Content ?: return
-        mutableState.value = content.copy(section = section)
+        updateContent { copy(section = section) }
     }
 
     suspend fun setPlaybackMode(value: PlaybackMode) =

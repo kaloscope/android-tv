@@ -5,6 +5,7 @@ import javax.inject.Singleton
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.common.trimmedOrNull
 import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
@@ -14,6 +15,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.core.network.ApiClientFactory
 import org.kaloscope.tv.core.network.MediaResourceData
+import org.kaloscope.tv.core.network.authorizationHeader
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
 
@@ -27,7 +29,7 @@ class DefaultMediaRepository @Inject constructor(
     ): AppResult<List<MediaLibrary>> =
         networkCall(json) {
             api(session)
-                .getMediaLibraries(session.authorization())
+                .getMediaLibraries(session.authorizationHeader())
                 .dataOrThrow()
                 .filter { it.id > 0 && it.name.isNotBlank() }
                 .map { it.toModel() }
@@ -43,11 +45,11 @@ class DefaultMediaRepository @Inject constructor(
         networkCall(json) {
             api(session)
                 .getMediaPage(
-                    authorization = session.authorization(),
+                    authorization = session.authorizationHeader(),
                     pageNumber = pageNumber,
                     pageSize = pageSize,
                     libraryId = libraryId,
-                    keyword = keyword?.trim()?.takeIf(String::isNotEmpty),
+                    keyword = keyword.trimmedOrNull(),
                 )
                 .dataOrThrow()
                 .toModel(pageNumber, pageSize)
@@ -59,7 +61,7 @@ class DefaultMediaRepository @Inject constructor(
     ): AppResult<MediaDetail> =
         networkCall(json) {
             api(session)
-                .getMediaDetail(session.authorization(), mediaId)
+                .getMediaDetail(session.authorizationHeader(), mediaId)
                 .dataOrThrow()
                 .toDetail()
                 ?: throw SerializationException("Invalid media detail")
@@ -72,7 +74,7 @@ class DefaultMediaRepository @Inject constructor(
         networkCall(json) {
             api(session)
                 .getMediaProbe(
-                    authorization = session.authorization(),
+                    authorization = session.authorizationHeader(),
                     path = path,
                 )
                 .dataOrThrow()
@@ -86,7 +88,7 @@ class DefaultMediaRepository @Inject constructor(
         networkCall(json) {
             api(session)
                 .getSubtitleTracks(
-                    authorization = session.authorization(),
+                    authorization = session.authorizationHeader(),
                     body = MediaResourceData(path),
                 )
                 .dataOrThrow()
@@ -113,7 +115,7 @@ class DefaultMediaRepository @Inject constructor(
         networkCall(json) {
             api(session)
                 .getDanmakus(
-                    authorization = session.authorization(),
+                    authorization = session.authorizationHeader(),
                     body = MediaResourceData(path),
                 )
                 .dataOrThrow()
@@ -136,6 +138,4 @@ class DefaultMediaRepository @Inject constructor(
         }
 
     private fun api(session: Session) = apiClientFactory.create(session.server.origin)
-
-    private fun Session.authorization(): String = "Token $token"
 }

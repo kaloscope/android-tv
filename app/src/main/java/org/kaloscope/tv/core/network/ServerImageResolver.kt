@@ -1,6 +1,7 @@
 package org.kaloscope.tv.core.network
 
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.kaloscope.tv.core.common.trimmedOrNull
 import org.kaloscope.tv.core.model.Session
 
 data class ServerImageRequest(
@@ -21,7 +22,7 @@ object ServerImageResolver {
         rawValue: String?,
         policy: ServerImagePolicy = ServerImagePolicy.Auto,
     ): ServerImageRequest? {
-        val raw = rawValue?.trim()?.takeIf(String::isNotEmpty) ?: return null
+        val raw = rawValue.trimmedOrNull() ?: return null
         val serverOrigin = session.server.origin.removeSuffix("/")
         val absolute = raw.toHttpUrlOrNull()
         val resolvedUrl = when {
@@ -50,7 +51,7 @@ object ServerImageResolver {
         val authorization = if (
             OriginAuthPolicy.shouldAttachToken(serverOrigin, resolvedUrl)
         ) {
-            "Token ${session.token}"
+            session.authorizationHeader()
         } else {
             null
         }

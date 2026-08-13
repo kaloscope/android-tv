@@ -125,8 +125,7 @@ class SearchCoordinator(
     }
 
     fun updateQuery(value: String) {
-        val content = mutableState.value as? SearchUiState.Content ?: return
-        mutableState.value = content.copy(query = value)
+        updateContent { copy(query = value) }
     }
 
     suspend fun selectIndexer(

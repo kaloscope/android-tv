@@ -1,6 +1,12 @@
 package org.kaloscope.tv.core.network
 
 import java.net.URI
+import org.kaloscope.tv.core.model.Session
+
+/**
+ * Formats Kaloscope's token scheme after a caller has bound or validated the request origin.
+ */
+internal fun Session.authorizationHeader(): String = "Token $token"
 
 /**
  * Prevents a Kaloscope token from being attached to third-party resource URLs.

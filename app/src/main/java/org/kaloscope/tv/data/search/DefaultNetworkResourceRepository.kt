@@ -21,6 +21,7 @@ import org.kaloscope.tv.core.model.ReaderTextContent
 import org.kaloscope.tv.core.model.ResolvedNetworkResource
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.network.ApiClientFactory
+import org.kaloscope.tv.core.network.authorizationHeader
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
 import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
@@ -303,7 +304,7 @@ class DefaultNetworkResourceRepository @Inject constructor(
         page: Int? = null,
     ): IndexerResourceData =
         apiClientFactory.create(session.server.origin).executeIndexerDetails(
-            authorization = "Token ${session.token}",
+            authorization = session.authorizationHeader(),
             indexerId = indexerId,
             body = IndexerDetailsRequestData(
                 resourceId = resourceId,

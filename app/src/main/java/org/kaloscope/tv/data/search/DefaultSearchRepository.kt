@@ -17,6 +17,7 @@ import org.kaloscope.tv.core.model.NetworkSearchPage
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.network.ApiClientFactory
+import org.kaloscope.tv.core.network.authorizationHeader
 import org.kaloscope.tv.core.network.dataOrThrow
 import org.kaloscope.tv.core.network.networkCall
 
@@ -40,7 +41,14 @@ class DefaultSearchRepository @Inject constructor(
             indexers.map { indexer ->
                 async {
                     semaphore.withPermit {
-                        loadCatalogProfile(session, indexer)
+                        when (val result = getProfile(session, indexer)) {
+                            is AppResult.Failure -> ProfileLoad.Failed(result.error)
+                            is AppResult.Success -> if (result.value == null) {
+                                ProfileLoad.Hidden
+                            } else {
+                                ProfileLoad.Available(result.value)
+                            }
+                        }
                     }
                 }
             }.awaitAll()
@@ -60,7 +68,7 @@ class DefaultSearchRepository @Inject constructor(
         session: Session,
     ): AppResult<List<NetworkIndexer>> =
         networkCall(json) {
-            api(session).getIndexers(session.authorization())
+            api(session).getIndexers(session.authorizationHeader())
                 .dataOrThrow()
                 .toModels()
         }
@@ -71,12 +79,13 @@ class DefaultSearchRepository @Inject constructor(
     ): AppResult<IndexerSourceProfile?> =
         networkCall(json) {
             val client = api(session)
-            val config = client.getIndexerConfig(session.authorization(), indexer.id)
+            val authorization = session.authorizationHeader()
+            val config = client.getIndexerConfig(authorization, indexer.id)
                 .dataOrThrow()
             val loginRequired = config.auth?.login?.required == true
             if (
                 loginRequired &&
-                client.getIndexerAuth(session.authorization(), indexer.id).dataOrThrow() == null
+                client.getIndexerAuth(authorization, indexer.id).dataOrThrow() == null
             ) {
                 return@networkCall null
             }
@@ -102,7 +111,7 @@ class DefaultSearchRepository @Inject constructor(
     ): AppResult<NetworkSearchPage> =
         networkCall(json) {
             api(session).executeIndexerSearch(
-                authorization = session.authorization(),
+                authorization = session.authorizationHeader(),
                 indexerId = profile.indexer.id,
                 body = buildIndexerSearchRequest(
                     profile = profile,
@@ -119,21 +128,6 @@ class DefaultSearchRepository @Inject constructor(
         }
 
     private fun api(session: Session) = apiClientFactory.create(session.server.origin)
-
-    private fun Session.authorization(): String = "Token $token"
-
-    private suspend fun loadCatalogProfile(
-        session: Session,
-        indexer: NetworkIndexer,
-    ): ProfileLoad =
-        when (val result = getProfile(session, indexer)) {
-            is AppResult.Failure -> ProfileLoad.Failed(result.error)
-            is AppResult.Success -> if (result.value == null) {
-                ProfileLoad.Hidden
-            } else {
-                ProfileLoad.Available(result.value)
-            }
-        }
 
     private companion object {
         const val DEFAULT_PAGE_SIZE = 20

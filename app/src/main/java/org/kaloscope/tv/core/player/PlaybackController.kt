@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import okhttp3.OkHttpClient
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SubtitleTrack
+import org.kaloscope.tv.core.network.authorizationHeader
 
 data class PlaybackStatus(
     val isPlaying: Boolean = false,
@@ -166,18 +167,13 @@ class PlaybackController internal constructor(
     }
 
     fun togglePlayPause(): Boolean {
-        val playWhenReady = PlaybackIntentPolicy.afterToggle(player.playWhenReady)
+        val playWhenReady = !player.playWhenReady
         if (playWhenReady) {
             player.play()
         } else {
             player.pause()
         }
         return playWhenReady
-    }
-
-    fun seekBy(offsetMillis: Long) {
-        val duration = player.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
-        seekTo((player.currentPosition + offsetMillis).coerceIn(0, duration))
     }
 
     fun seekTo(positionMillis: Long) {
@@ -346,7 +342,7 @@ class PlaybackController internal constructor(
                     )
                 ) {
                     request.newBuilder()
-                        .header("Authorization", "Token ${session.token}")
+                        .header("Authorization", session.authorizationHeader())
                         .build()
                 } else {
                     request
@@ -355,11 +351,11 @@ class PlaybackController internal constructor(
             }
             .build()
 
-    private fun Long?.orZero(): Long = this?.coerceAtLeast(0) ?: 0
-
     private fun PlaybackRequest.resumePositionMillis(): Long =
         when (this) {
-            is PlaybackRequest.LocalMedia -> resumePositionSeconds.orZero() * 1_000
+            is PlaybackRequest.LocalMedia ->
+                (resumePositionSeconds?.coerceAtLeast(0) ?: 0) * 1_000
+
             is PlaybackRequest.NetworkVideo -> resumePositionMillis.coerceAtLeast(0)
         }
 

@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.library
 
+import org.kaloscope.tv.core.common.trimmedOrNull
 import org.kaloscope.tv.core.model.MediaSummary
 
 internal data class LibraryBackdropPresentation(
@@ -24,8 +25,8 @@ internal fun resolveLibraryBackdropPresentation(
         }
     }
     return candidates.firstNotNullOfOrNull { item ->
-        val path = item.backdropPath.nonBlankOrNull()
-            ?: item.posterPath.nonBlankOrNull()
+        val path = item.backdropPath.trimmedOrNull()
+            ?: item.posterPath.trimmedOrNull()
         path?.let {
             LibraryBackdropPresentation(
                 path = it,
@@ -34,6 +35,3 @@ internal fun resolveLibraryBackdropPresentation(
         }
     }
 }
-
-private fun String?.nonBlankOrNull(): String? =
-    this?.trim()?.takeIf(String::isNotEmpty)
