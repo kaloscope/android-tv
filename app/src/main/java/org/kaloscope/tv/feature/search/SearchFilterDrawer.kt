@@ -43,6 +43,8 @@ import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeSelectionIndicator
+import org.kaloscope.tv.core.designsystem.KaloscopeSelectionIndicatorType
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanel
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelPalette
 import org.kaloscope.tv.core.designsystem.Muted
@@ -214,9 +216,27 @@ private fun SearchFilterField(
                 )
             }
 
-            SearchFilterType.Radio,
-            SearchFilterType.Select,
-            -> definition.options.forEachIndexed { index, option ->
+            SearchFilterType.Radio -> definition.options.forEachIndexed { index, option ->
+                val selected = (value as? SearchFilterValue.Scalar)?.value == option.value
+                FilterOptionButton(
+                    text = option.label,
+                    selected = selected,
+                    tag = "filter-option-${definition.key}-${option.value}",
+                    onClick = {
+                        onValueChange(
+                            if (selected) {
+                                null
+                            } else {
+                                SearchFilterValue.Scalar(option.value)
+                            },
+                        )
+                    },
+                    selectionIndicator = KaloscopeSelectionIndicatorType.Radio,
+                    modifier = Modifier.focusBoundary(initialFocus.takeIf { index == 0 }),
+                )
+            }
+
+            SearchFilterType.Select -> definition.options.forEachIndexed { index, option ->
                 val selected = (value as? SearchFilterValue.Scalar)?.value == option.value
                 FilterOptionButton(
                     text = option.label,
@@ -248,6 +268,7 @@ private fun SearchFilterField(
                                 ?.let(SearchFilterValue::Multiple),
                         )
                     },
+                    selectionIndicator = KaloscopeSelectionIndicatorType.Checkbox,
                     modifier = Modifier.focusBoundary(initialFocus.takeIf { index == 0 }),
                 )
             }
@@ -262,6 +283,7 @@ private fun FilterOptionButton(
     tag: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    selectionIndicator: KaloscopeSelectionIndicatorType? = null,
 ) {
     KaloscopeButton(
         onClick = onClick,
@@ -271,6 +293,14 @@ private fun FilterOptionButton(
             .fillMaxWidth()
             .testTag(tag),
     ) {
+        selectionIndicator?.let { indicatorType ->
+            KaloscopeSelectionIndicator(
+                type = indicatorType,
+                selected = selected,
+                testTagPrefix = tag,
+            )
+            Spacer(Modifier.width(10.dp))
+        }
         Text(text = text)
     }
 }

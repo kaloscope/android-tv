@@ -1528,12 +1528,22 @@ class SettingsScreenTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 
+        composeRule.onNodeWithTag(
+            testTag = "settings-danmaku-block-scroll-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "settings-danmaku-block-top-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
         composeRule.onNodeWithTag("settings-danmaku-block-scroll")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
         composeRule.onNodeWithTag("settings-danmaku-block-top")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
 
         composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertExists()
         composeRule.runOnIdle {

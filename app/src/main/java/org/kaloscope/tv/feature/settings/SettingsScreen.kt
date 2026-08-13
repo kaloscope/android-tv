@@ -57,6 +57,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
+import org.kaloscope.tv.core.designsystem.KaloscopeSelectionIndicatorType
 import org.kaloscope.tv.core.designsystem.KaloscopeConfirmDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
@@ -251,6 +252,7 @@ private fun SettingsContent(
                 options = current.options,
                 viewportSize = viewportSize,
                 dismissOnSelect = current.dismissOnSelect,
+                selectionIndicator = current.selectionIndicator,
                 onDismiss = {
                     current.onDismiss()
                     choice = null
@@ -837,5 +839,6 @@ internal data class SettingsChoice(
     val title: String,
     val options: List<KaloscopeChoiceDialogOption>,
     val dismissOnSelect: Boolean = true,
+    val selectionIndicator: KaloscopeSelectionIndicatorType? = null,
     val onDismiss: () -> Unit = {},
 )

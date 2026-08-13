@@ -62,15 +62,25 @@ class PlayerSettingsDrawerTest {
         composeRule.onNodeWithTag("player-settings-block-types")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag(
+            testTag = "player-settings-block-scroll-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "player-settings-block-top-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
         composeRule.onNodeWithText("滚动")
             .assertIsFocused()
             .performKeyInput {
                 pressKey(Key.Enter)
                 pressKey(Key.DirectionDown)
             }
+        composeRule.onNodeWithTag("player-settings-block-scroll").assertIsSelected()
         composeRule.onNodeWithText("顶部")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("player-settings-block-top").assertIsSelected()
 
         composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertExists()
         composeRule.runOnIdle {

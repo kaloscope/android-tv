@@ -897,6 +897,14 @@ class ReaderScreenTest {
 
         row.performKeyInput { pressKey(Key.Enter) }
         composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "reader-chapter-order-option-ascending-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag(
+            testTag = "reader-chapter-order-option-ascending-radio-indicator",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
         composeRule.onNodeWithTag("reader-chapter-order-option-ascending")
             .assertIsFocused()
             .performKeyInput {

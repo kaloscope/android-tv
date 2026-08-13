@@ -113,7 +113,7 @@ class KaloscopeSwitchIndicatorTest {
     }
 
     @Test
-    fun checkedSwitchUsesContrastingThumb() {
+    fun checkedSwitchUsesLightThumb() {
         setSwitchContent(checked = true, accentColor = AccentColor.Green)
 
         val thumb = composeRule.onNodeWithTag("setting-switch-thumb")
@@ -121,7 +121,7 @@ class KaloscopeSwitchIndicatorTest {
             .asAndroidBitmap()
 
         assertColorNear(
-            expected = AndroidColor.rgb(0x06, 0x09, 0x12),
+            expected = AndroidColor.rgb(0xF7, 0xF8, 0xFC),
             actual = thumb.getPixel(thumb.width / 2, thumb.height / 2),
         )
     }

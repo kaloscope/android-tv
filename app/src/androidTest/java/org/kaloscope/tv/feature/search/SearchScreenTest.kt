@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
@@ -1636,6 +1637,133 @@ class SearchScreenTest {
     }
 
     @Test
+    fun filterIndicatorsMatchTheServerSelectionTypes() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(sortFilter(), genreFilter(), regionFilter()),
+                        appliedFilters = mapOf(
+                            "sort" to SearchFilterValue.Scalar("clicks"),
+                            "genre" to SearchFilterValue.Multiple(listOf("fantasy")),
+                            "region" to SearchFilterValue.Scalar("cn"),
+                        ),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("filter-option-sort-clicks")
+            .assertIsSelected()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-sort-clicks-radio-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-sort-clicks-radio-indicator-mark",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-sort-updated-radio-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-sort-updated-radio-indicator-mark",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+
+        composeRule.onNodeWithTag("filter-option-genre-fantasy")
+            .assertIsSelected()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-genre-fantasy-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-genre-fantasy-checkbox-indicator-mark",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-genre-scifi-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-genre-scifi-checkbox-indicator-mark",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+
+        composeRule.onNodeWithTag("filter-option-region-cn")
+            .assertIsSelected()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-region-cn-radio-indicator",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-region-cn-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+    }
+
+    @Test
+    fun clickingTheSelectedRadioClearsItBeforeApply() {
+        var applied: Map<String, SearchFilterValue>? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(sortFilter()),
+                        appliedFilters = mapOf(
+                            "sort" to SearchFilterValue.Scalar("clicks"),
+                        ),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = { applied = it },
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("filter-option-sort-clicks")
+            .assertIsSelected()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsNotSelected()
+        composeRule.onNodeWithTag(
+            testTag = "filter-option-sort-clicks-radio-indicator-mark",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag("filter-apply")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle { assertEquals(emptyMap<String, SearchFilterValue>(), applied) }
+    }
+
+    @Test
     fun filterActionsShowIconsAtStandardSize() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -2132,6 +2260,26 @@ private fun regionFilter() = SearchFilterDefinition(
     options = listOf(
         SearchFilterOption("cn", "中国"),
         SearchFilterOption("jp", "日本"),
+    ),
+)
+
+private fun sortFilter() = SearchFilterDefinition(
+    key = "sort",
+    label = "排序",
+    type = SearchFilterType.Radio,
+    options = listOf(
+        SearchFilterOption("updated", "更新"),
+        SearchFilterOption("clicks", "点击"),
+    ),
+)
+
+private fun genreFilter() = SearchFilterDefinition(
+    key = "genre",
+    label = "类型",
+    type = SearchFilterType.Checkbox,
+    options = listOf(
+        SearchFilterOption("fantasy", "奇幻"),
+        SearchFilterOption("scifi", "科幻"),
     ),
 )
 

@@ -52,6 +52,7 @@ fun KaloscopeChoiceDialog(
     viewportSize: DpSize,
     onDismiss: () -> Unit,
     dismissOnSelect: Boolean = true,
+    selectionIndicator: KaloscopeSelectionIndicatorType? = null,
 ) {
     val initialFocus = remember { FocusRequester() }
     val initialFocusIndex = remember {
@@ -104,6 +105,7 @@ fun KaloscopeChoiceDialog(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     itemsIndexed(options) { index, option ->
+                        val selected = option.selected()
                         KaloscopeButton(
                             onClick = {
                                 option.onSelect()
@@ -111,7 +113,7 @@ fun KaloscopeChoiceDialog(
                                     onDismiss()
                                 }
                             },
-                            selected = option.selected(),
+                            selected = selected,
                             size = KaloscopeControlSize.Row,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -141,6 +143,14 @@ fun KaloscopeChoiceDialog(
                                     }
                                 },
                         ) {
+                            selectionIndicator?.let { indicatorType ->
+                                KaloscopeSelectionIndicator(
+                                    type = indicatorType,
+                                    selected = selected,
+                                    testTagPrefix = option.testTag,
+                                )
+                                Spacer(Modifier.width(10.dp))
+                            }
                             option.swatchColor?.let { swatchColor ->
                                 KaloscopeColorSwatch(
                                     color = swatchColor,

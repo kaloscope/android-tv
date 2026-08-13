@@ -12,6 +12,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -153,6 +154,7 @@ class KaloscopeChoiceDialogTest {
                             title = "屏蔽类型",
                             viewportSize = DpSize(maxWidth, maxHeight),
                             dismissOnSelect = false,
+                            selectionIndicator = KaloscopeSelectionIndicatorType.Checkbox,
                             options = listOf("滚动", "顶部").map { label ->
                                 KaloscopeChoiceDialogOption(
                                     label = label,
@@ -171,12 +173,34 @@ class KaloscopeChoiceDialogTest {
             }
         }
 
+        composeRule.onNodeWithTag(
+            testTag = "choice-滚动-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "choice-顶部-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onNodeWithTag(
+            testTag = "choice-滚动-checkbox-indicator-mark",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
         composeRule.onNodeWithTag("choice-滚动")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
+        composeRule.onNodeWithTag(
+            testTag = "choice-滚动-checkbox-indicator-mark",
+            useUnmergedTree = true,
+        ).assertExists()
         composeRule.onNodeWithTag("choice-顶部")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
+        composeRule.onNodeWithTag(
+            testTag = "choice-顶部-checkbox-indicator-mark",
+            useUnmergedTree = true,
+        ).assertExists()
 
         composeRule.onNodeWithTag("kaloscope-choice-dialog-panel").assertExists()
         composeRule.runOnIdle {
@@ -220,6 +244,14 @@ class KaloscopeChoiceDialogTest {
             }
         }
 
+        composeRule.onNodeWithTag(
+            testTag = "single-option-checkbox-indicator",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag(
+            testTag = "single-option-radio-indicator",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
         composeRule.onNodeWithTag("single-option")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }

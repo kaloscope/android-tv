@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.DpSize
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
+import org.kaloscope.tv.core.designsystem.KaloscopeSelectionIndicatorType
 import org.kaloscope.tv.core.designsystem.danmakuBlockTypeLabel
 import org.kaloscope.tv.core.model.DanmakuBlockPolicy
 import org.kaloscope.tv.core.model.DanmakuBlockType
@@ -36,6 +37,7 @@ internal fun PlayerDanmakuBlockMenu(
             viewportSize = DpSize(maxWidth, maxHeight),
             onDismiss = onDismiss,
             dismissOnSelect = false,
+            selectionIndicator = KaloscopeSelectionIndicatorType.Checkbox,
         )
     }
 }

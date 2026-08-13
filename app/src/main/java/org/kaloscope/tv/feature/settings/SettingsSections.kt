@@ -34,6 +34,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeAdjustmentArrow
 import org.kaloscope.tv.core.designsystem.KaloscopeAdjustmentDirection
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
+import org.kaloscope.tv.core.designsystem.KaloscopeSelectionIndicatorType
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.accentPalette
@@ -750,6 +751,7 @@ internal fun DanmakuDefaultSettings(
                 SettingsChoice(
                     title = stringResource(R.string.danmaku_block_types),
                     dismissOnSelect = false,
+                    selectionIndicator = KaloscopeSelectionIndicatorType.Checkbox,
                     onDismiss = {
                         if (blockDraft != settings) {
                             onChange(blockDraft)

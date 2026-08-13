@@ -46,7 +46,7 @@ fun KaloscopeSwitchIndicator(
     )
     val thumbColor by animateColorAsState(
         targetValue = if (checked) {
-            MaterialTheme.colorScheme.onPrimary
+            MaterialTheme.colorScheme.onBackground
         } else {
             uncheckedColor
         },
