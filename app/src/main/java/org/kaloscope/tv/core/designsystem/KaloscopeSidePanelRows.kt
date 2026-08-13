@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -173,7 +174,9 @@ fun KaloscopeSidePanelAdjustmentRow(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = it,
-                        modifier = Modifier.alignByBaseline(),
+                        modifier = Modifier
+                            .alignByBaseline()
+                            .graphicsLayer { translationY = -1.dp.toPx() },
                         color = LocalContentColor.current.copy(alpha = 0.55f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Light,

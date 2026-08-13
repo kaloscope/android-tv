@@ -753,10 +753,12 @@ class ReaderScreenTest {
         val unitStyle = unitLayout.layoutInput.style
         val titleBaseline = title.fetchSemanticsNode().boundsInRoot.top + titleLayout.firstBaseline
         val unitBaseline = unit.fetchSemanticsNode().boundsInRoot.top + unitLayout.firstBaseline
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
 
         assertEquals(12f, unitStyle.fontSize.value, 0f)
         assertEquals(FontWeight.Light, unitStyle.fontWeight)
-        assertEquals(titleBaseline, unitBaseline, 1f)
+        assertEquals(1f * density, titleBaseline - unitBaseline, 0.5f)
         assertTrue(unitStyle.fontSize.value < titleStyle.fontSize.value)
         assertTrue(unitStyle.color.alpha < titleStyle.color.alpha)
     }

@@ -36,8 +36,12 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.DpSize
@@ -58,6 +62,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
+import org.kaloscope.tv.core.designsystem.KaloscopeSwitchIndicator
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -521,19 +526,23 @@ internal fun ToggleSettingRow(
                 onToggle()
             }
         },
-        selected = checked,
         size = KaloscopeControlSize.Row,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics {
+                toggleableState = if (checked) {
+                    ToggleableState.On
+                } else {
+                    ToggleableState.Off
+                }
+            },
     ) {
         SettingRowContent(
             title = title,
             description = description,
-            value = if (checked) {
-                stringResource(R.string.enabled)
-            } else {
-                stringResource(R.string.disabled)
-            },
-        )
+        ) {
+            KaloscopeSwitchIndicator(checked = checked)
+        }
     }
 }
 
@@ -609,7 +618,9 @@ internal fun SettingRowContent(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = unit,
-                        modifier = Modifier.alignByBaseline(),
+                        modifier = Modifier
+                            .alignByBaseline()
+                            .graphicsLayer { translationY = -1.dp.toPx() },
                         color = LocalContentColor.current.copy(alpha = 0.55f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Light,

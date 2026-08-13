@@ -140,8 +140,6 @@
     <string name="playback_mode_auto">自动</string>
     <string name="playback_mode_direct">直连</string>
     <string name="playback_mode_transcode">转码</string>
-    <string name="enabled">开启</string>
-    <string name="disabled">关闭</string>
     <string name="manage_servers">切换或添加服务器</string>
     <string name="manage_servers_description">切换已保存服务器或添加新服务器。</string>
     <string name="logout_description">清除当前服务器的登录状态。</string>

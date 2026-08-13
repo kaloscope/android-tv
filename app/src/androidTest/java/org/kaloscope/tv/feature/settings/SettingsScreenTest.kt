@@ -13,6 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -1266,7 +1269,6 @@ class SettingsScreenTest {
         listOf(
             "自动播放下一集",
             "当前内容结束且存在下一集时自动继续。",
-            "开启",
         ).forEach { text ->
             val layoutResults = mutableListOf<TextLayoutResult>()
             composeRule.onNodeWithText(text, useUnmergedTree = true)
@@ -1340,6 +1342,114 @@ class SettingsScreenTest {
             "Expected the section header to scroll with its options",
             scrolledHeaderTop < initialHeaderTop,
         )
+    }
+
+    @Test
+    fun standaloneBooleanSettingsUseSwitchStateWithoutSelectedRowsOrLabels() {
+        var state by mutableStateOf(SettingsUiState.Content(TvSettings()))
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = state,
+                    requestInitialFocus = false,
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeQuality = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        listOf(
+            SettingsSection.Playback to "自动播放下一集",
+            SettingsSection.Danmaku to "默认开启弹幕",
+            SettingsSection.Subtitle to "默认开启字幕",
+        ).forEach { (section, title) ->
+            composeRule.runOnIdle { state = state.copy(section = section) }
+
+            composeRule.onNode(hasClickAction() and hasText(title))
+                .assertIsNotSelected()
+                .assert(
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.ToggleableState,
+                        ToggleableState.On,
+                    ),
+                )
+            composeRule.onNodeWithTag(
+                testTag = "setting-switch-indicator",
+                useUnmergedTree = true,
+            ).assertExists()
+            composeRule.onNodeWithText("开启", useUnmergedTree = true).assertDoesNotExist()
+            composeRule.onNodeWithText("关闭", useUnmergedTree = true).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun centerMovesBooleanSwitchThumbWhileKeepingRowFocus() {
+        var settings by mutableStateOf(TvSettings(autoplayNext = false))
+        var updates = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(settings),
+                    requestInitialFocus = false,
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeQuality = {},
+                    onAutoplayNext = {
+                        updates += 1
+                        settings = settings.copy(autoplayNext = it)
+                    },
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val row = composeRule.onNode(hasClickAction() and hasText("自动播放下一集"))
+        val thumb = composeRule.onNodeWithTag(
+            testTag = "setting-switch-thumb",
+            useUnmergedTree = true,
+        )
+        row.assert(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.ToggleableState,
+                ToggleableState.Off,
+            ),
+        )
+        composeRule.onNodeWithTag(
+            testTag = "setting-switch-indicator",
+            useUnmergedTree = true,
+        ).assert(!hasClickAction())
+        val uncheckedThumbLeft = thumb.getUnclippedBoundsInRoot().left
+
+        row.performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsFocused()
+
+        composeRule.runOnIdle { assertEquals(1, updates) }
+        row.assert(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.ToggleableState,
+                ToggleableState.On,
+            ),
+        )
+        val checkedThumbLeft = thumb.getUnclippedBoundsInRoot().left
+        assertTrue(checkedThumbLeft > uncheckedThumbLeft)
     }
 
     @Test
