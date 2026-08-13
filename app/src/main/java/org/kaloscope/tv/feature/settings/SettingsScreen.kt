@@ -588,6 +588,7 @@ internal fun SettingRowContent(
 internal fun SettingRowContent(
     title: String,
     description: String,
+    unit: String? = null,
     trailingContent: @Composable RowScope.() -> Unit,
 ) {
     Row(
@@ -595,7 +596,26 @@ internal fun SettingRowContent(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            if (unit == null) {
+                Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        modifier = Modifier.alignByBaseline(),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = unit,
+                        modifier = Modifier.alignByBaseline(),
+                        color = LocalContentColor.current.copy(alpha = 0.55f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Light,
+                    )
+                }
+            }
             Text(
                 description,
                 color = LocalContentColor.current.copy(alpha = 0.72f),

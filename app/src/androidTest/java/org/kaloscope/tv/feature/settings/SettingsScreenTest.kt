@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -38,6 +39,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -335,6 +337,34 @@ class SettingsScreenTest {
         listOf("通用", "图片", "文本").forEach { label ->
             assertEquals(OnBackground, textLayoutFor(label).layoutInput.style.color)
         }
+    }
+
+    @Test
+    fun readingSettingsSeparateParenthesizedUnitsFromValues() {
+        setSettingsContent(TvSettings(), SettingsSection.Reading)
+
+        listOf(
+            listOf("字号", "(sp)", "28", "28 sp"),
+            listOf("段间距", "(em)", "1.0", "1.0 em"),
+            listOf("左右留白", "(dp)", "48", "48 dp"),
+        ).forEach { (title, unit, value, combinedValue) ->
+            val row = composeRule.onNode(hasClickAction() and hasText(title))
+                .performScrollTo()
+
+            row.assert(hasText(unit, substring = false))
+                .assert(hasText(value, substring = false))
+            composeRule.onNodeWithText(combinedValue, useUnmergedTree = true)
+                .assertDoesNotExist()
+        }
+
+        composeRule.onNode(hasClickAction() and hasText("字号")).performScrollTo()
+        val title = textLayoutFor("字号")
+        val unit = textLayoutFor("(sp)")
+
+        assertEquals(12f, unit.layoutInput.style.fontSize.value, 0f)
+        assertEquals(FontWeight.Light, unit.layoutInput.style.fontWeight)
+        assertTrue(unit.layoutInput.style.fontSize.value < title.layoutInput.style.fontSize.value)
+        assertTrue(unit.layoutInput.style.color.alpha < title.layoutInput.style.color.alpha)
     }
 
     @Test

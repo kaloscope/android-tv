@@ -229,14 +229,11 @@
     <string name="reader_paragraph_spacing_description">相邻段落之间的额外距离。</string>
     <string name="reader_horizontal_padding">左右留白</string>
     <string name="reader_horizontal_padding_description">正文与屏幕左右边缘之间的距离。</string>
-    <string name="reader_sp_value">%1$d sp</string>
-    <string name="reader_dp_value">%1$d dp</string>
     <string name="reader_multiplier_value">%1$.1f</string>
-    <string name="reader_em_value">%1$.1f em</string>
     <string name="reader_integer_value">%1$d</string>
-    <string name="reader_unit_sp">sp</string>
-    <string name="reader_unit_em">em</string>
-    <string name="reader_unit_dp">dp</string>
+    <string name="reader_unit_sp">(sp)</string>
+    <string name="reader_unit_em">(em)</string>
+    <string name="reader_unit_dp">(dp)</string>
     <string name="reader_previous_chapter">上一章</string>
     <string name="reader_next_chapter">下一章</string>
     <string name="reader_chapters">章节</string>

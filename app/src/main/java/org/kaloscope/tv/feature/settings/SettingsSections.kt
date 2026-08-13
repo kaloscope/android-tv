@@ -244,7 +244,11 @@ internal fun ReadingSettings(
         AdjustableSettingRow(
             title = stringResource(R.string.reader_font_size),
             description = stringResource(R.string.reader_font_size_description),
-            value = stringResource(R.string.reader_sp_value, settings.textReader.fontSizeSp),
+            unit = stringResource(R.string.reader_unit_sp),
+            value = stringResource(
+                R.string.reader_integer_value,
+                settings.textReader.fontSizeSp,
+            ),
             interactionsEnabled = interactionsEnabled,
             canDecrease = settings.textReader.fontSizeSp >
                 ReaderSettingsPolicy.MIN_FONT_SIZE_SP,
@@ -301,8 +305,9 @@ internal fun ReadingSettings(
         AdjustableSettingRow(
             title = stringResource(R.string.reader_paragraph_spacing),
             description = stringResource(R.string.reader_paragraph_spacing_description),
+            unit = stringResource(R.string.reader_unit_em),
             value = stringResource(
-                R.string.reader_em_value,
+                R.string.reader_multiplier_value,
                 settings.textReader.paragraphSpacingEm,
             ),
             interactionsEnabled = interactionsEnabled,
@@ -331,8 +336,9 @@ internal fun ReadingSettings(
         AdjustableSettingRow(
             title = stringResource(R.string.reader_horizontal_padding),
             description = stringResource(R.string.reader_horizontal_padding_description),
+            unit = stringResource(R.string.reader_unit_dp),
             value = stringResource(
-                R.string.reader_dp_value,
+                R.string.reader_integer_value,
                 settings.textReader.horizontalPaddingDp,
             ),
             interactionsEnabled = interactionsEnabled,
@@ -548,6 +554,7 @@ private fun SubtitleLanguageSettingRow(
 private fun AdjustableSettingRow(
     title: String,
     description: String,
+    unit: String? = null,
     value: String,
     interactionsEnabled: Boolean,
     canDecrease: Boolean,
@@ -614,7 +621,7 @@ private fun AdjustableSettingRow(
                 }
             },
     ) {
-        SettingRowContent(title, description) {
+        SettingRowContent(title, description, unit) {
             AdjustableSettingValue(
                 value = value,
                 canDecrease = canDecrease,

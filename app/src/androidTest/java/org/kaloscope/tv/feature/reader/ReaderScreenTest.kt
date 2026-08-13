@@ -738,17 +738,17 @@ class ReaderScreenTest {
         control("章节").performKeyInput { pressKey(Key.DirectionRight) }
         control("阅读设置").performKeyInput { pressKey(Key.Enter) }
 
-        listOf("sp", "em", "dp", "28", "1.8", "1.0", "48").forEach { text ->
+        listOf("(sp)", "(em)", "(dp)", "28", "1.8", "1.0", "48").forEach { text ->
             composeRule.onNodeWithText(text, useUnmergedTree = true).assertExists()
         }
-        listOf("28 sp", "1.0 em", "48 dp").forEach { text ->
+        listOf("sp", "em", "dp", "28 sp", "1.0 em", "48 dp").forEach { text ->
             composeRule.onNodeWithText(text, useUnmergedTree = true).assertDoesNotExist()
         }
 
         val title = composeRule.onNodeWithText("字号", useUnmergedTree = true)
-        val unit = composeRule.onNodeWithText("sp", useUnmergedTree = true)
+        val unit = composeRule.onNodeWithText("(sp)", useUnmergedTree = true)
         val titleLayout = textLayoutForText("字号")
-        val unitLayout = textLayoutForText("sp")
+        val unitLayout = textLayoutForText("(sp)")
         val titleStyle = titleLayout.layoutInput.style
         val unitStyle = unitLayout.layoutInput.style
         val titleBaseline = title.fetchSemanticsNode().boundsInRoot.top + titleLayout.firstBaseline
