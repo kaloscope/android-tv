@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,6 +54,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.relocation.BringIntoViewModifierNode
@@ -565,7 +567,7 @@ private fun DetailChildRibbon(
         val childCardHeight = childCardWidth * 9f / 16f +
             if (compactLayout) 52.dp else 56.dp
         var animateFocusedItem by remember { mutableStateOf(false) }
-        var lastFocusedItemIndex by remember { mutableStateOf(initialTargetIndex) }
+        var lastFocusedItemIndex by remember { mutableIntStateOf(initialTargetIndex) }
         var pendingFocusedItemIndex by remember { mutableStateOf<Int?>(null) }
         LaunchedEffect(childListState, initialTargetId) {
             val initiallyVisibleIndices = snapshotFlow {
@@ -930,6 +932,10 @@ private data object BlockParentBringIntoViewElement :
     override fun create() = BlockParentBringIntoViewNode()
 
     override fun update(node: BlockParentBringIntoViewNode) = Unit
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "blockParentBringIntoView"
+    }
 }
 
 private class BlockParentBringIntoViewNode : Modifier.Node(), BringIntoViewModifierNode {

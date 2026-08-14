@@ -21,8 +21,8 @@ internal enum class KaloscopeAdjustmentDirection {
 internal fun KaloscopeAdjustmentArrow(
     direction: KaloscopeAdjustmentDirection,
     enabled: Boolean,
-    testTag: String? = null,
     modifier: Modifier = Modifier,
+    testTag: String? = null,
 ) {
     val iconRes = when (direction) {
         KaloscopeAdjustmentDirection.Decrease -> R.drawable.ic_adjustment_decrease

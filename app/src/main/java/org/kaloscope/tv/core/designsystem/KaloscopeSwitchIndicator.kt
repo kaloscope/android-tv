@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
@@ -77,7 +78,7 @@ fun KaloscopeSwitchIndicator(
     ) {
         Box(
             modifier = Modifier
-                .offset(x = thumbOffset)
+                .offset { IntOffset(x = thumbOffset.roundToPx(), y = 0) }
                 .size(ThumbSize)
                 .background(thumbColor, CircleShape)
                 .testTag("setting-switch-thumb"),
