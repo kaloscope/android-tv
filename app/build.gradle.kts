@@ -59,7 +59,7 @@ android {
     defaultConfig {
         applicationId = "org.kaloscope.tv"
         minSdk = 23
-        targetSdk = 34
+        targetSdk = 37
         versionCode = 5
         versionName = "0.3.1"
 
