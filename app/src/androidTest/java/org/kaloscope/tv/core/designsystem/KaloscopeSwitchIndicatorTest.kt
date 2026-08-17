@@ -1,6 +1,5 @@
 package org.kaloscope.tv.core.designsystem
 
-import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

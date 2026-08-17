@@ -19,11 +19,9 @@ import org.kaloscope.tv.core.model.ReaderChapterOrder
 import org.kaloscope.tv.core.model.ReaderContent
 import org.kaloscope.tv.core.model.ReaderImageContent
 import org.kaloscope.tv.core.model.ReaderImagePage
-import org.kaloscope.tv.core.model.ReaderTextContent
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
-import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.reader.ReaderRequest
 import org.kaloscope.tv.core.reader.ReaderRequestStore
 import org.kaloscope.tv.data.reader.ReaderContentLoader

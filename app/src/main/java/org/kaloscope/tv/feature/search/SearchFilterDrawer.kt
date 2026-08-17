@@ -37,12 +37,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
-import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeModalPopupProperties
 import org.kaloscope.tv.core.designsystem.KaloscopeSelectionIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeSelectionIndicatorType
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanel
@@ -83,12 +83,7 @@ internal fun SearchFilterDrawer(
     Popup(
         popupPositionProvider = windowOriginPopupPositionProvider,
         onDismissRequest = onDismiss,
-        properties = PopupProperties(
-            focusable = true,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false,
-            clippingEnabled = false,
-        ),
+        properties = KaloscopeModalPopupProperties,
     ) {
         KaloscopeSidePanel(
             title = stringResource(R.string.search_filters),

@@ -205,7 +205,8 @@ class DefaultNetworkResourceRepository @Inject constructor(
             preferHevcForDash = videoCodecSupport.shouldPreferHevcForDash(),
             fallbackVideoType = fallbackVideoType,
         ) ?: run {
-            val chapter = resource.toChapters().firstOrNull()
+            val chapters = resource.toChapters()
+            val chapter = chapters.firstOrNull()
                 ?: throw SerializationException("Missing playable network source")
             val chapterId = chapter.id
                 ?: throw SerializationException("Missing playable network source")
@@ -221,7 +222,6 @@ class DefaultNetworkResourceRepository @Inject constructor(
                 preferHevcForDash = videoCodecSupport.shouldPreferHevcForDash(),
                 fallbackVideoType = fallbackVideoType,
             ) ?: throw SerializationException("Missing playable network chapter")
-            val chapters = resource.toChapters()
             resolved.copy(
                 chapters = chapters,
                 selectedChapterIndex = chapters.indices.firstOrNull(),

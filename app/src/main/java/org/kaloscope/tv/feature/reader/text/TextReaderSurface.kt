@@ -35,6 +35,7 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.model.ReaderTextContent
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.reader.ReaderBoundary
+import org.kaloscope.tv.feature.reader.consumeReaderControlKey
 
 @Composable
 internal fun TextReaderSurface(
@@ -65,17 +66,16 @@ internal fun TextReaderSurface(
                 .focusable()
                 .testTag("text-reader-content")
                 .onPreviewKeyEvent { event ->
-                    if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-                        if (event.type == KeyEventType.KeyUp) {
-                            onToggleControls()
-                        }
+                    if (
+                        event.consumeReaderControlKey(
+                            controlsVisible = controlsVisible,
+                            onToggleControls = onToggleControls,
+                            onEnterControls = onEnterControls,
+                        )
+                    ) {
                         return@onPreviewKeyEvent true
                     }
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                    if (controlsVisible && event.key == Key.DirectionDown) {
-                        onEnterControls()
-                        return@onPreviewKeyEvent true
-                    }
                     when (event.key) {
                         Key.DirectionUp -> if (scrollState.value == 0) {
                             onBoundary(ReaderBoundary.Start)

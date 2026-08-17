@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 val Background = Color(0xFF060912)
 val BackgroundRaised = Color(0xFF0A0F1B)
+val ModalScrim = Color(0xCC050812)
 val Panel = Color(0xFF101725)
 val PanelElevated = Color(0xFF182134)
 val ContentCardFocused = Color(0xFF25324A)

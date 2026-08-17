@@ -6,14 +6,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,8 +70,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
-import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeCarouselEdgeFade
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.LocalAccentPalette
@@ -672,44 +670,19 @@ private fun DetailChildRibbon(
                 }
             }
             if (canScrollBackward) {
-                DetailCarouselEdgeFade(start = true)
+                KaloscopeCarouselEdgeFade(
+                    start = true,
+                    tagPrefix = "detail-child-carousel",
+                )
             }
             if (canScrollForward) {
-                DetailCarouselEdgeFade(start = false)
+                KaloscopeCarouselEdgeFade(
+                    start = false,
+                    tagPrefix = "detail-child-carousel",
+                )
             }
         }
     }
-}
-
-@Composable
-private fun BoxScope.DetailCarouselEdgeFade(start: Boolean) {
-    val fadeWidth = if (start) 48.dp else 112.dp
-    val fadeBrush = if (start) {
-        Brush.horizontalGradient(
-            colors = listOf(Background, Color.Transparent),
-        )
-    } else {
-        Brush.horizontalGradient(
-            0f to Color.Transparent,
-            0.42f to Background.copy(alpha = 0.2f),
-            0.72f to Background.copy(alpha = 0.72f),
-            1f to Background,
-        )
-    }
-    Box(
-        modifier = Modifier
-            .align(if (start) Alignment.CenterStart else Alignment.CenterEnd)
-            .width(fadeWidth)
-            .fillMaxHeight()
-            .background(fadeBrush)
-            .testTag(
-                if (start) {
-                    "detail-child-carousel-start-fade"
-                } else {
-                    "detail-child-carousel-end-fade"
-                },
-            ),
-    )
 }
 
 @Composable

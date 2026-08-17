@@ -356,8 +356,7 @@ class SearchCoordinator(
                         settings = settings.imageReader,
                         chapterOrder = settings.readerChapterOrder,
                     )
-                    readerRequestStore.put(request)
-                    publishReaderRequest(request.requestId)
+                    publishReaderRequest(request)
                 }
 
                 is ResolvedNetworkResource.Text -> {
@@ -368,8 +367,7 @@ class SearchCoordinator(
                         settings = settings.textReader,
                         chapterOrder = settings.readerChapterOrder,
                     )
-                    readerRequestStore.put(request)
-                    publishReaderRequest(request.requestId)
+                    publishReaderRequest(request)
                 }
             }
         }
@@ -390,13 +388,14 @@ class SearchCoordinator(
         }
     }
 
-    private fun publishReaderRequest(requestId: String) {
+    private fun publishReaderRequest(request: ReaderRequest) {
+        readerRequestStore.put(request)
         updateContent {
             copy(
                 resolvingResultId = null,
                 playbackError = null,
                 pendingPlaybackRequestId = null,
-                pendingReaderRequestId = requestId,
+                pendingReaderRequestId = request.requestId,
             )
         }
     }

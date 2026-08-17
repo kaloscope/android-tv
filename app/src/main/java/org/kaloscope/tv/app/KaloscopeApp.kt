@@ -16,7 +16,6 @@ import org.kaloscope.tv.feature.detail.MediaDetailViewModel
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.library.LibraryViewModel
 import org.kaloscope.tv.feature.player.PlayerViewModel
-import org.kaloscope.tv.feature.reader.ReaderUiState
 import org.kaloscope.tv.feature.reader.ReaderViewModel
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.search.SearchViewModel

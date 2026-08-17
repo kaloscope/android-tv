@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -36,12 +35,12 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
+import org.kaloscope.tv.core.designsystem.KaloscopeModalPopupProperties
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanel
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelPalette
 import org.kaloscope.tv.core.designsystem.LocalAccentPalette
@@ -64,12 +63,7 @@ internal fun DetailMoreInfoPanel(
     Popup(
         alignment = Alignment.Center,
         onDismissRequest = onDismiss,
-        properties = PopupProperties(
-            focusable = true,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false,
-            clippingEnabled = false,
-        ),
+        properties = KaloscopeModalPopupProperties,
     ) {
         LaunchedEffect(Unit) {
             withFrameNanos { }

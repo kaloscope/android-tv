@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.Text
 
 data class KaloscopeChoiceDialogOption(
@@ -65,17 +64,12 @@ fun KaloscopeChoiceDialog(
     Popup(
         alignment = Alignment.Center,
         onDismissRequest = onDismiss,
-        properties = PopupProperties(
-            focusable = true,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false,
-            clippingEnabled = false,
-        ),
+        properties = KaloscopeModalPopupProperties,
     ) {
         Box(
             modifier = Modifier
                 .size(viewportSize)
-                .background(Color(0xCC050812))
+                .background(ModalScrim)
                 .testTag("kaloscope-choice-dialog-overlay"),
             contentAlignment = Alignment.Center,
         ) {

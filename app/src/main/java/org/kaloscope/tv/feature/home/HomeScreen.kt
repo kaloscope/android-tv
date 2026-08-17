@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -38,7 +37,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -58,9 +56,9 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
-import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
+import org.kaloscope.tv.core.designsystem.KaloscopeCarouselEdgeFade
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
@@ -297,10 +295,16 @@ private fun HistoryContent(
                         }
                     }
                     if (canScrollBackward) {
-                        CarouselEdgeFade(start = true)
+                        KaloscopeCarouselEdgeFade(
+                            start = true,
+                            tagPrefix = "history-carousel",
+                        )
                     }
                     if (canScrollForward) {
-                        CarouselEdgeFade(start = false)
+                        KaloscopeCarouselEdgeFade(
+                            start = false,
+                            tagPrefix = "history-carousel",
+                        )
                     }
                 }
                 Spacer(Modifier.width(10.dp))
@@ -512,37 +516,6 @@ private fun HistoryCarouselCard(
             }
         }
     }
-}
-
-@Composable
-private fun BoxScope.CarouselEdgeFade(start: Boolean) {
-    val fadeWidth = if (start) 48.dp else 112.dp
-    val fadeBrush = if (start) {
-        Brush.horizontalGradient(
-            colors = listOf(Background, Color.Transparent),
-        )
-    } else {
-        Brush.horizontalGradient(
-            0f to Color.Transparent,
-            0.42f to Background.copy(alpha = 0.2f),
-            0.72f to Background.copy(alpha = 0.72f),
-            1f to Background,
-        )
-    }
-    Box(
-        modifier = Modifier
-            .align(if (start) Alignment.CenterStart else Alignment.CenterEnd)
-            .width(fadeWidth)
-            .fillMaxHeight()
-            .background(fadeBrush)
-            .testTag(
-                if (start) {
-                    "history-carousel-start-fade"
-                } else {
-                    "history-carousel-end-fade"
-                },
-            ),
-    )
 }
 
 @Composable

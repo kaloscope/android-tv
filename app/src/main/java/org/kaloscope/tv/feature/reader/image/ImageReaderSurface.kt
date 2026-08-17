@@ -63,6 +63,7 @@ import org.kaloscope.tv.core.reader.ReaderBoundary
 import org.kaloscope.tv.core.reader.ReaderDirection
 import org.kaloscope.tv.core.reader.ReaderNavigationStep
 import org.kaloscope.tv.core.reader.ReaderRemoteKeyPolicy
+import org.kaloscope.tv.feature.reader.consumeReaderControlKey
 
 @Composable
 internal fun ImageReaderSurface(
@@ -215,17 +216,16 @@ private fun ScrollingImages(
             .focusable()
             .testTag("image-reader-scroll")
             .onPreviewKeyEvent { event ->
-                if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-                    if (event.type == KeyEventType.KeyUp) {
-                        onToggleControls()
-                    }
+                if (
+                    event.consumeReaderControlKey(
+                        controlsVisible = controlsVisible,
+                        onToggleControls = onToggleControls,
+                        onEnterControls = onEnterControls,
+                    )
+                ) {
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                if (controlsVisible && event.key == Key.DirectionDown) {
-                    onEnterControls()
-                    return@onPreviewKeyEvent true
-                }
                 if (settings.zoomMode == ImageZoomMode.FitHeight) {
                     when (event.key) {
                         Key.DirectionLeft -> {
@@ -344,17 +344,16 @@ private fun PagedImages(
             .focusable()
             .testTag("image-reader-paged")
             .onPreviewKeyEvent { event ->
-                if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-                    if (event.type == KeyEventType.KeyUp) {
-                        onToggleControls()
-                    }
+                if (
+                    event.consumeReaderControlKey(
+                        controlsVisible = controlsVisible,
+                        onToggleControls = onToggleControls,
+                        onEnterControls = onEnterControls,
+                    )
+                ) {
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                if (controlsVisible && event.key == Key.DirectionDown) {
-                    onEnterControls()
-                    return@onPreviewKeyEvent true
-                }
                 if (pageTransitioning || isLoadingMore) return@onPreviewKeyEvent true
                 val direction = event.key.toReaderDirection()
                     ?: return@onPreviewKeyEvent false
@@ -466,10 +465,13 @@ private fun EmptyImageContent(
             .focusable()
             .testTag("image-reader-scroll")
             .onPreviewKeyEvent { event ->
-                if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-                    if (event.type == KeyEventType.KeyUp) {
-                        onToggleControls()
-                    }
+                if (
+                    event.consumeReaderControlKey(
+                        controlsVisible = controlsVisible,
+                        onToggleControls = onToggleControls,
+                        onEnterControls = onEnterControls,
+                    )
+                ) {
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
