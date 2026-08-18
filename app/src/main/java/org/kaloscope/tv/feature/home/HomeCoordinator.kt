@@ -14,6 +14,7 @@ sealed interface HomeUiState {
 
     data class Content(
         val items: List<WatchHistoryItem>,
+        val refreshError: AppError? = null,
     ) : HomeUiState
 
     data object Empty : HomeUiState
@@ -35,7 +36,12 @@ class HomeCoordinator(
     }
 
     suspend fun load(session: Session) {
-        mutableState.value = HomeUiState.Loading
+        val retainedContent = mutableState.value as? HomeUiState.Content
+        if (retainedContent == null) {
+            mutableState.value = HomeUiState.Loading
+        } else {
+            mutableState.value = retainedContent.copy(refreshError = null)
+        }
         mutableState.value = when (val result = repository.getRecentVideos(session)) {
             is AppResult.Success -> {
                 if (result.value.isEmpty()) {
@@ -45,7 +51,8 @@ class HomeCoordinator(
                 }
             }
 
-            is AppResult.Failure -> HomeUiState.Error(result.error)
+            is AppResult.Failure -> retainedContent?.copy(refreshError = result.error)
+                ?: HomeUiState.Error(result.error)
         }
     }
 }

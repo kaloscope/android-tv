@@ -6,6 +6,7 @@ import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
+import org.kaloscope.tv.feature.home.HomeUiState
 
 class RootStateInspectionTest {
     @Test
@@ -17,6 +18,17 @@ class RootStateInspectionTest {
 
         assertTrue(content.hasUnauthorized())
         assertFalse(content.copy(childDetailError = AppError.Offline).hasUnauthorized())
+    }
+
+    @Test
+    fun `home refresh authorization failure invalidates the ready session`() {
+        val content = HomeUiState.Content(
+            items = emptyList(),
+            refreshError = AppError.Unauthorized,
+        )
+
+        assertTrue(content.hasUnauthorized())
+        assertFalse(content.copy(refreshError = AppError.Offline).hasUnauthorized())
     }
 }
 

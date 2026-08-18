@@ -46,6 +46,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.model.SavedServer
@@ -106,6 +107,14 @@ class HomeScreenTest {
         composeRule.runOnIdle {
             assertTrue(refreshed)
         }
+    }
+
+    @Test
+    fun refreshFailureKeepsHistoryWithoutStatusMessage() {
+        showContentHome(refreshError = AppError.Offline)
+
+        composeRule.onNodeWithTag("history-card-301").assertExists()
+        composeRule.onNodeWithTag("home-refresh").assertHasClickAction()
     }
 
     @Test
@@ -715,6 +724,7 @@ class HomeScreenTest {
     private fun showContentHome(
         restoreMediaId: Long? = null,
         items: List<WatchHistoryItem> = historyItems(),
+        refreshError: AppError? = null,
         onOpenMedia: (Long) -> Unit = {},
         onPlayHistory: (WatchHistoryItem) -> Unit = {},
         onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
@@ -731,7 +741,7 @@ class HomeScreenTest {
                 ) {
                     HomeScreen(
                         session = testSession(),
-                        state = HomeUiState.Content(items),
+                        state = HomeUiState.Content(items, refreshError),
                         onRefresh = {},
                         restoreMediaId = restoreMediaId,
                         onOpenLibrary = {},

@@ -11,7 +11,11 @@ import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchUiState
 
 internal fun HomeUiState.hasUnauthorized(): Boolean =
-    this is HomeUiState.Error && error == AppError.Unauthorized
+    when (this) {
+        is HomeUiState.Error -> error == AppError.Unauthorized
+        is HomeUiState.Content -> refreshError == AppError.Unauthorized
+        else -> false
+    }
 
 internal fun LibraryUiState.hasUnauthorized(): Boolean =
     when (this) {

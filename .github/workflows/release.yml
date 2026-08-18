@@ -1,9 +1,9 @@
 name: Release APK
 
-"on":
+on:
   push:
     tags:
-      - "v*"
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 permissions:
   contents: write
@@ -28,7 +28,7 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@a34a8009a9588bb86b02a873cf592440e96a5da8 # v6.1.1
         with:
           mode: COMMIT
-          failOnError: "true"
+          failOnError: true
           configurationJson: |
             {
               "template": "#{{CHANGELOG}}\n\n<details>\n<summary>:gear: Maintenance changes</summary>\n\n#{{UNCATEGORIZED}}\n</details>\n\n#{{RELEASE_DIFF}}",
@@ -43,7 +43,7 @@ jobs:
                   "labels": ["fix"]
                 },
                 {
-                  "title": "### :zap: Performance",
+                  "title": "### :rocket: Performance",
                   "labels": ["perf"]
                 },
                 {
@@ -71,7 +71,7 @@ jobs:
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@4733eaac7c1b0da527e4206b7671e0061de1ce37 # v6

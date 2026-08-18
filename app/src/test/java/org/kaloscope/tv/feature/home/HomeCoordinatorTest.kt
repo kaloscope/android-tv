@@ -45,10 +45,25 @@ class HomeCoordinatorTest {
 
         assertEquals(HomeUiState.Error(AppError.Offline), coordinator.state.value)
     }
+
+    @Test
+    fun `refresh failure retains existing history`() = runBlocking {
+        val item = historyItem()
+        val repository = FakeHistoryRepository(AppResult.Success(listOf(item)))
+        val coordinator = HomeCoordinator(repository)
+        coordinator.load(session())
+
+        repository.result = AppResult.Failure(AppError.Offline)
+        coordinator.load(session())
+
+        val state = coordinator.state.value as HomeUiState.Content
+        assertEquals(listOf(item), state.items)
+        assertEquals(AppError.Offline, state.refreshError)
+    }
 }
 
 private class FakeHistoryRepository(
-    private val result: AppResult<List<WatchHistoryItem>>,
+    var result: AppResult<List<WatchHistoryItem>>,
 ) : HistoryRepository {
     override suspend fun getRecentVideos(
         session: Session,
