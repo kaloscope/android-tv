@@ -164,6 +164,7 @@ fun KaloscopeApp(
                                 currentSettings,
                             )
                         },
+                        cancelResolution = searchViewModel::cancelResolution,
                         openFilters = searchViewModel::openFilters,
                         dismissFilters = searchViewModel::dismissFilters,
                         applyFilters = { values: Map<String, SearchFilterValue> ->

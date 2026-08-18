@@ -96,6 +96,7 @@ class SearchCoordinator(
     private val readerRequestStore: ReaderRequestStore = ReaderRequestStore(),
 ) {
     private val mutableState = MutableStateFlow<SearchUiState>(SearchUiState.Loading)
+    private var resolutionGeneration = 0L
 
     val state: StateFlow<SearchUiState> = mutableState.asStateFlow()
 
@@ -299,6 +300,7 @@ class SearchCoordinator(
         if (content.resolvingResultId != null) {
             return
         }
+        val generation = ++resolutionGeneration
         mutableState.value = content.copy(
             resolvingResultId = resultId,
             playbackError = null,
@@ -319,6 +321,10 @@ class SearchCoordinator(
                 }
             }
             throw error
+        }
+        // A cancelled repository call may still complete, but only the latest attempt may navigate.
+        if (generation != resolutionGeneration) {
+            return
         }
         when (resolved) {
             is AppResult.Failure -> updateContent {
@@ -371,6 +377,16 @@ class SearchCoordinator(
                 }
             }
         }
+    }
+
+    fun cancelResolution(): Boolean {
+        val content = mutableState.value as? SearchUiState.Content ?: return false
+        if (content.resolvingResultId == null) {
+            return false
+        }
+        resolutionGeneration += 1
+        mutableState.value = content.copy(resolvingResultId = null)
+        return true
     }
 
     fun consumeDestination(requestId: String) {

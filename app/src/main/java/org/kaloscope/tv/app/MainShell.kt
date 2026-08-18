@@ -210,7 +210,9 @@ internal fun MainShell(
             currentRoute !is PlayerRoute &&
             currentRoute !is ReaderRoute,
     ) {
-        goBack()
+        if (currentRoute != SearchRoute || !searchActions.cancelResolution()) {
+            goBack()
+        }
     }
 
     KaloscopeBackground {

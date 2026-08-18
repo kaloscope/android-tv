@@ -82,6 +82,16 @@ class SearchViewModel @Inject constructor(
         settings: TvSettings = TvSettings(),
     ) = startRequest { coordinator.play(session, resultId, settings) }
 
+    fun cancelResolution(): Boolean {
+        val cancelled = coordinator.cancelResolution()
+        if (cancelled) {
+            // Invalidate the attempt before cancelling in case the repository ignores cancellation.
+            requestJob?.cancel()
+            requestJob = null
+        }
+        return cancelled
+    }
+
     fun consumeDestination(requestId: String) =
         coordinator.consumeDestination(requestId)
 

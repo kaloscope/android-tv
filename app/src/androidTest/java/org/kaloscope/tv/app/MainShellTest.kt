@@ -1015,6 +1015,54 @@ class MainShellTest {
     }
 
     @Test
+    fun backCancelsSearchResolutionBeforeLeavingSearch() {
+        var searchState by mutableStateOf(
+            deepSearchState().copy(resolvingResultId = "v25"),
+        )
+        var cancellations = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SearchRoute,
+                    searchActions = SearchActions(
+                        cancelResolution = {
+                            if (searchState.resolvingResultId == null) {
+                                false
+                            } else {
+                                cancellations += 1
+                                searchState = searchState.copy(resolvingResultId = null)
+                                true
+                            }
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+            .assertIsFocused()
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle { assertEquals(1, cancellations) }
+        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
+
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle { assertEquals(1, cancellations) }
+        composeRule.onNodeWithText("首页").assertIsSelected()
+    }
+
+    @Test
     fun backClosesSearchFiltersWithoutLeavingSearchOrApplying() {
         val baseSearchState = deepSearchState()
         var searchState by mutableStateOf(
@@ -1064,7 +1112,8 @@ class MainShellTest {
         composeRule.onNodeWithTag("filter-clear")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
-            .performKeyInput { pressKey(Key.Back) }
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
         composeRule.waitForIdle()
 
         composeRule.runOnIdle {

@@ -509,6 +509,42 @@ class SearchCoordinatorTest {
 
         assertNull((coordinator.state.value as SearchUiState.Content).resolvingResultId)
     }
+
+    @Test
+    fun `explicit cancellation prevents a delayed playback destination`() = runTest {
+        val resolutionStarted = CompletableDeferred<Unit>()
+        val resolutionResult = CompletableDeferred<AppResult<ResolvedNetworkResource>>()
+        val requestStore = PlaybackRequestStore()
+        val coordinator = SearchCoordinator(
+            repository = FakeSearchRepository(
+                pages = mutableListOf(AppResult.Success(page("v1"))),
+            ),
+            requestStore = requestStore,
+            networkResourceRepository = FakeNetworkResourceRepository(
+                resolutionStarted = resolutionStarted,
+                deferredResolution = resolutionResult,
+            ),
+            requestIdFactory = { "cancelled-request" },
+        )
+        coordinator.load(session())
+        coordinator.updateQuery("video")
+        coordinator.search(session())
+
+        val job = launch { coordinator.play(session(), "v1") }
+        resolutionStarted.await()
+
+        assertTrue(coordinator.cancelResolution())
+        assertNull((coordinator.state.value as SearchUiState.Content).resolvingResultId)
+
+        resolutionResult.complete(
+            AppResult.Success(ResolvedNetworkResource.Video(playback())),
+        )
+        job.join()
+
+        val state = coordinator.state.value as SearchUiState.Content
+        assertNull(state.pendingDestination)
+        assertNull(requestStore.get("cancelled-request"))
+    }
 }
 
 private class FakeNetworkResourceRepository(
