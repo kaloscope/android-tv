@@ -765,8 +765,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun savingStateIgnoresRepeatedAccentActivationAndKeepsFocus() {
-        var selectedAccent: AccentColor? = null
+    fun savingStateKeepsAccentChoiceInteractive() {
         composeRule.setContent {
             KaloscopeTheme {
                 SettingsScreen(
@@ -782,7 +781,7 @@ class SettingsScreenTest {
                     onPlaybackMode = {},
                     onTranscodeQuality = {},
                     onAutoplayNext = {},
-                    onAccentColor = { selectedAccent = it },
+                    onAccentColor = {},
                     onDanmakuSettings = {},
                     onSubtitleSettings = {},
                     onStartPage = {},
@@ -796,16 +795,11 @@ class SettingsScreenTest {
         val accentRow = composeRule.onNode(hasClickAction() and hasText("强调色"))
         accentRow
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput {
-                pressKey(Key.Enter)
-                pressKey(Key.Enter)
-            }
+            .performKeyInput { pressKey(Key.Enter) }
 
-        accentRow.assertIsFocused()
-        composeRule.onNodeWithTag("accent-option-blue").assertDoesNotExist()
-        composeRule.runOnIdle {
-            assertEquals(null, selectedAccent)
-        }
+        composeRule.onNodeWithTag("accent-option-blue")
+            .assertExists()
+            .assertIsFocused()
     }
 
     @Test

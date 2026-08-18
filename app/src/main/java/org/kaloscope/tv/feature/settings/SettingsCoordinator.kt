@@ -3,6 +3,8 @@ package org.kaloscope.tv.feature.settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.AccentColor
@@ -59,12 +61,22 @@ class SettingsCoordinator(
     private val serverRepository: ServerRepository,
 ) {
     private val mutableState = MutableStateFlow<SettingsUiState>(SettingsUiState.Loading)
+    // Setters run on Main, so newer snapshots can replace the pending value while a save suspends.
+    private val saveMutex = Mutex()
+    private var lastSavedSettings: TvSettings? = null
+    private var pendingSettings: TvSettings? = null
+
     val state: StateFlow<SettingsUiState> = mutableState.asStateFlow()
 
     suspend fun load() {
         mutableState.value = SettingsUiState.Loading
         mutableState.value = when (val result = settingsRepository.getSettings()) {
-            is AppResult.Success -> SettingsUiState.Content(result.value)
+            is AppResult.Success -> {
+                lastSavedSettings = result.value
+                pendingSettings = null
+                SettingsUiState.Content(result.value)
+            }
+
             is AppResult.Failure -> SettingsUiState.Error(result.error)
         }
     }
@@ -122,18 +134,44 @@ class SettingsCoordinator(
 
     private suspend fun update(transform: TvSettings.() -> TvSettings) {
         val content = mutableState.value as? SettingsUiState.Content ?: return
-        if (content.isSaving) {
-            return
-        }
         val updated = content.settings.transform()
-        mutableState.value = content.copy(isSaving = true, saveError = null)
-        when (val result = settingsRepository.saveSettings(updated)) {
-            is AppResult.Success -> updateContent {
-                copy(settings = result.value, isSaving = false)
-            }
+        pendingSettings = updated
+        mutableState.value = content.copy(
+            settings = updated,
+            isSaving = true,
+            saveError = null,
+        )
+        saveMutex.withLock {
+            savePendingSettings()
+        }
+    }
 
-            is AppResult.Failure -> updateContent {
-                copy(isSaving = false, saveError = result.error)
+    private suspend fun savePendingSettings() {
+        while (true) {
+            val snapshot = pendingSettings ?: return
+            pendingSettings = null
+            when (val result = settingsRepository.saveSettings(snapshot)) {
+                is AppResult.Success -> {
+                    lastSavedSettings = result.value
+                    if (pendingSettings == null) {
+                        updateContent {
+                            copy(settings = result.value, isSaving = false)
+                        }
+                        return
+                    }
+                }
+
+                is AppResult.Failure -> {
+                    pendingSettings = null
+                    updateContent {
+                        copy(
+                            settings = lastSavedSettings ?: snapshot,
+                            isSaving = false,
+                            saveError = result.error,
+                        )
+                    }
+                    return
+                }
             }
         }
     }

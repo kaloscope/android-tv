@@ -877,11 +877,11 @@ class MainShellTest {
     }
 
     @Test
-    fun savingToggleKeepsSettingsFocusAndIgnoresRepeatCenter() {
+    fun rapidSettingToggleKeepsFocusAndAcceptsLatestValue() {
         var settingsState by mutableStateOf(
             SettingsUiState.Content(TvSettings()),
         )
-        var saves = 0
+        val requestedValues = mutableListOf<Boolean>()
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -892,9 +892,14 @@ class MainShellTest {
                     settingsState = settingsState,
                     initialRoute = SettingsRoute,
                     settingsActions = SettingsActions(
-                        setAutoplayNext = {
-                            saves += 1
-                            settingsState = settingsState.copy(isSaving = true)
+                        setAutoplayNext = { value ->
+                            requestedValues += value
+                            settingsState = settingsState.copy(
+                                settings = settingsState.settings.copy(
+                                    autoplayNext = value,
+                                ),
+                                isSaving = true,
+                            )
                         },
                     ),
                 )
@@ -912,7 +917,7 @@ class MainShellTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.runOnIdle {
-            assertEquals(1, saves)
+            assertEquals(listOf(false, true), requestedValues)
         }
     }
 

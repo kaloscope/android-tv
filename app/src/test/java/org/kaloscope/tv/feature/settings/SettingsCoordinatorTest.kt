@@ -1,5 +1,7 @@
 package org.kaloscope.tv.feature.settings
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -54,6 +56,36 @@ class SettingsCoordinatorTest {
         assertEquals(PlaybackMode.Auto, state.settings.playbackMode)
         assertEquals(AppError.InvalidData("settings_write"), state.saveError)
         assertFalse(state.isSaving)
+    }
+
+    @Test
+    fun `setting update is visible while its save is pending`() = runTest {
+        val saveStarted = CompletableDeferred<TvSettings>()
+        val saveResult = CompletableDeferred<AppResult<TvSettings>>()
+        val repository = FakeSettingsRepository(
+            settings = TvSettings(),
+            saveBlock = { settings ->
+                saveStarted.complete(settings)
+                saveResult.await()
+            },
+        )
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+
+        val saveJob = launch {
+            coordinator.setPlaybackMode(PlaybackMode.Direct)
+        }
+        saveStarted.await()
+
+        val saving = coordinator.state.value as SettingsUiState.Content
+        assertEquals(PlaybackMode.Direct, saving.settings.playbackMode)
+        assertTrue(saving.isSaving)
+
+        saveResult.complete(
+            AppResult.Success(TvSettings(playbackMode = PlaybackMode.Direct)),
+        )
+        saveJob.join()
+        assertFalse((coordinator.state.value as SettingsUiState.Content).isSaving)
     }
 
     @Test
@@ -205,6 +237,7 @@ class SettingsCoordinatorTest {
 private class FakeSettingsRepository(
     private val settings: TvSettings,
     private val saveResult: AppResult<TvSettings>? = null,
+    private val saveBlock: (suspend (TvSettings) -> AppResult<TvSettings>)? = null,
 ) : SettingsRepository {
     var saved: TvSettings? = null
 
@@ -212,7 +245,7 @@ private class FakeSettingsRepository(
 
     override suspend fun saveSettings(settings: TvSettings): AppResult<TvSettings> {
         saved = settings
-        return saveResult ?: AppResult.Success(settings)
+        return saveBlock?.invoke(settings) ?: saveResult ?: AppResult.Success(settings)
     }
 }
 

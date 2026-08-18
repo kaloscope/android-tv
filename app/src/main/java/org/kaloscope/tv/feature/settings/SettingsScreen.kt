@@ -170,8 +170,7 @@ private fun SettingsContent(
     // A transiently disabled TV control loses focus before its dialog can take over.
     val interactionsEnabled = choice == null &&
         !languageEditorOpen &&
-        !logoutConfirmationOpen &&
-        !state.isSaving
+        !logoutConfirmationOpen
 
     LaunchedEffect(requestInitialFocus) {
         if (requestInitialFocus) {

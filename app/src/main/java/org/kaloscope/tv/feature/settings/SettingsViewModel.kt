@@ -26,7 +26,7 @@ class SettingsViewModel @Inject constructor(
     serverRepository: ServerRepository,
 ) : ViewModel() {
     private val coordinator = SettingsCoordinator(settingsRepository, serverRepository)
-    private var settingsJob: Job? = null
+    private var loadJob: Job? = null
     private var connectionJob: Job? = null
 
     val uiState: StateFlow<SettingsUiState> = coordinator.state
@@ -35,39 +35,44 @@ class SettingsViewModel @Inject constructor(
         load()
     }
 
-    fun load() = launchSettingsOperation { coordinator.load() }
+    fun load() {
+        if (loadJob?.isActive == true) {
+            return
+        }
+        loadJob = viewModelScope.launch { coordinator.load() }
+    }
 
     fun selectSection(section: SettingsSection) = coordinator.selectSection(section)
 
     fun setPlaybackMode(value: PlaybackMode) =
-        launchSettingsOperation { coordinator.setPlaybackMode(value) }
+        enqueueSettingsUpdate { coordinator.setPlaybackMode(value) }
 
     fun setTranscodeQuality(value: TranscodeQuality) =
-        launchSettingsOperation { coordinator.setTranscodeQuality(value) }
+        enqueueSettingsUpdate { coordinator.setTranscodeQuality(value) }
 
     fun setAutoplayNext(value: Boolean) =
-        launchSettingsOperation { coordinator.setAutoplayNext(value) }
+        enqueueSettingsUpdate { coordinator.setAutoplayNext(value) }
 
     fun setAccentColor(value: AccentColor) =
-        launchSettingsOperation { coordinator.setAccentColor(value) }
+        enqueueSettingsUpdate { coordinator.setAccentColor(value) }
 
     fun setDanmakuSettings(value: DanmakuSettings) =
-        launchSettingsOperation { coordinator.setDanmakuSettings(value) }
+        enqueueSettingsUpdate { coordinator.setDanmakuSettings(value) }
 
     fun setSubtitleSettings(value: SubtitleSettings) =
-        launchSettingsOperation { coordinator.setSubtitleSettings(value) }
+        enqueueSettingsUpdate { coordinator.setSubtitleSettings(value) }
 
     fun setStartPage(value: StartPage) =
-        launchSettingsOperation { coordinator.setStartPage(value) }
+        enqueueSettingsUpdate { coordinator.setStartPage(value) }
 
     fun setReaderChapterOrder(value: ReaderChapterOrder) =
-        launchSettingsOperation { coordinator.setReaderChapterOrder(value) }
+        enqueueSettingsUpdate { coordinator.setReaderChapterOrder(value) }
 
     fun setImageReaderSettings(value: ImageReaderSettings) =
-        launchSettingsOperation { coordinator.setImageReaderSettings(value) }
+        enqueueSettingsUpdate { coordinator.setImageReaderSettings(value) }
 
     fun setTextReaderSettings(value: TextReaderSettings) =
-        launchSettingsOperation { coordinator.setTextReaderSettings(value) }
+        enqueueSettingsUpdate { coordinator.setTextReaderSettings(value) }
 
     fun testConnection(session: Session) {
         if (connectionJob?.isActive == true) {
@@ -78,11 +83,8 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun launchSettingsOperation(block: suspend () -> Unit) {
-        // Serialize writes so a repeated remote key cannot strand an interrupted saving state.
-        if (settingsJob?.isActive == true) {
-            return
-        }
-        settingsJob = viewModelScope.launch { block() }
+    private fun enqueueSettingsUpdate(block: suspend () -> Unit) {
+        // The coordinator serializes persistence; every input must still update its latest snapshot.
+        viewModelScope.launch { block() }
     }
 }
