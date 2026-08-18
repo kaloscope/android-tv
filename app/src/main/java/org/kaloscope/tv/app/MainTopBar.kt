@@ -115,6 +115,7 @@ internal fun MainTopBar(
                 onClick = onSearch,
                 onFocused = { onDestinationFocused(SearchRoute) },
                 modifier = Modifier
+                    .testTag("main-nav-search")
                     .focusRequester(searchFocus)
                     .focusProperties {
                         left = homeFocus

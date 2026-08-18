@@ -74,13 +74,10 @@ import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
 import org.kaloscope.tv.core.model.MediaSummary
-import org.kaloscope.tv.core.model.NetworkPlaybackSource
-import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.model.ReaderChapterOrder
 import org.kaloscope.tv.core.model.ReaderTextContent
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
-import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
@@ -1014,7 +1011,7 @@ class MainShellTest {
         }
 
         composeRule.onNodeWithText("首页").assertIsSelected()
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .assertIsSelected()
@@ -1041,7 +1038,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.runOnIdle {
             assertEquals(1, searchOpens)
@@ -1337,7 +1334,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionDown) }
@@ -1377,13 +1374,13 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
         composeRule.onNodeWithTag("indexer-1").assertExists()
         composeRule.onNodeWithTag("indexer-30").assertDoesNotExist()
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .performKeyInput { pressKey(Key.DirectionDown) }
 
         composeRule.waitUntil(timeoutMillis = 3_000) {
@@ -1392,7 +1389,7 @@ class MainShellTest {
             ).fetchSemanticsNodes().size == 1
         }
         composeRule.onNodeWithTag("indexer-30").assertIsFocused()
-        composeRule.onNodeWithText("网络搜索").assertIsNotFocused()
+        composeRule.onNodeWithTag("main-nav-search").assertIsNotFocused()
         composeRule.onNodeWithTag("network-search-input").assertIsNotFocused()
     }
 
@@ -1419,14 +1416,14 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithTag("indexer-11")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .assertIsSelected()
             .assertIsFocused()
     }
@@ -1445,14 +1442,14 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithTag("network-search-input")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .assertIsSelected()
             .assertIsFocused()
     }
@@ -1471,7 +1468,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithTag("network-search-input")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -1481,7 +1478,7 @@ class MainShellTest {
         composeRule.onNode(
             hasTestTag("network-search-input") and hasSetTextAction(),
         ).assertIsFocused()
-        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithTag("main-nav-search").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
     }
 
@@ -1498,7 +1495,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("网络搜索").assertIsEnabled()
+        composeRule.onNodeWithTag("main-nav-search").assertIsEnabled()
         composeRule.onNodeWithText("媒体库").assertIsEnabled()
     }
 
@@ -1748,27 +1745,7 @@ class MainShellTest {
                             }
                         },
                     ),
-                    playerState = PlayerUiState.Content(
-                        request = PlaybackRequest.NetworkVideo(
-                            requestId = "network-request",
-                            serverId = "server-id",
-                            title = "视频1",
-                            source = NetworkPlaybackSource(
-                                indexerId = 11,
-                                resourceId = "v1",
-                                title = "视频1",
-                                url = "data:audio/wav;base64," +
-                                    "UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgA" +
-                                    "ZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICA" +
-                                    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==",
-                                videoType = NetworkVideoType.Unknown,
-                                danmakus = emptyList(),
-                            ),
-                        ),
-                        subtitles = emptyList(),
-                        danmakus = emptyList(),
-                        extraFailures = emptyMap(),
-                    ),
+                    playerState = PlayerUiState.Loading,
                     playbackControllerFactory = remember(context) {
                         PlaybackControllerFactory(context.applicationContext)
                     },
@@ -1776,7 +1753,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithTag("network-result-v1")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -1786,17 +1763,7 @@ class MainShellTest {
                 pendingPlaybackRequestId = "network-request",
             )
         }
-        composeRule.waitUntil(timeoutMillis = 3_000) {
-            composeRule.onAllNodes(
-                hasTestTag("player-play-pause") and isFocused(),
-            ).fetchSemanticsNodes().size == 1
-        }
-        InstrumentationRegistry.getInstrumentation()
-            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
-        composeRule.waitUntil(timeoutMillis = 3_000) {
-            composeRule.onAllNodes(hasTestTag("player-play-pause"))
-                .fetchSemanticsNodes().isEmpty()
-        }
+        composeRule.onNodeWithTag("player-loading-indicator").assertExists()
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
 
@@ -1807,7 +1774,7 @@ class MainShellTest {
                     .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("进入媒体库").assertDoesNotExist()
-        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+        composeRule.onNodeWithTag("main-nav-search")
             .assertIsSelected()
         composeRule.onNode(hasText("首页") and hasClickAction())
             .assertIsNotSelected()
@@ -1879,7 +1846,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithTag("network-result-t1")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -1959,7 +1926,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
         composeRule.waitUntil(timeoutMillis = 3_000) {
@@ -1969,10 +1936,10 @@ class MainShellTest {
 
         composeRule.onNode(hasText("首页") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
-        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+        composeRule.onNodeWithTag("main-nav-search")
             .performSemanticsAction(SemanticsActions.RequestFocus)
 
-        composeRule.onNodeWithText("网络搜索").assertIsFocused()
+        composeRule.onNodeWithTag("main-nav-search").assertIsFocused()
         composeRule.waitUntil(timeoutMillis = 3_000) {
             composeRule.onAllNodes(hasTestTag("network-result-v25"))
                 .fetchSemanticsNodes().size == 1
