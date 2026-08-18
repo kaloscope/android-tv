@@ -113,11 +113,18 @@ fun SearchScreen(
     onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
     onClearFilters: () -> Unit,
     onGridViewportChanged: (GridViewportSnapshot) -> Unit = {},
+    onManageServers: () -> Unit = {},
 ) {
     when (state) {
         SearchUiState.Loading -> KaloscopeLoadingLayout("search-loading")
 
-        SearchUiState.EmptyIndexers -> SearchEmptyIndexers(onRefreshIndexers)
+        SearchUiState.EmptyIndexers -> SearchEmptyIndexers(
+            requestInitialFocus = requestInitialFocus,
+            entryFocusRequester = indexerEntryFocusRequester,
+            topNavigationFocusRequester = topNavigationFocusRequester,
+            onRefresh = onRefreshIndexers,
+            onManageServers = onManageServers,
+        )
 
         is SearchUiState.Error -> SearchError(state.error, onRetry)
         is SearchUiState.Content -> SearchContent(
@@ -292,7 +299,20 @@ private fun SearchContent(
 }
 
 @Composable
-private fun SearchEmptyIndexers(onRefresh: () -> Unit) {
+private fun SearchEmptyIndexers(
+    requestInitialFocus: Boolean,
+    entryFocusRequester: FocusRequester?,
+    topNavigationFocusRequester: FocusRequester?,
+    onRefresh: () -> Unit,
+    onManageServers: () -> Unit,
+) {
+    val internalEntryFocus = remember { FocusRequester() }
+    val refreshFocus = entryFocusRequester ?: internalEntryFocus
+    LaunchedEffect(Unit) {
+        if (requestInitialFocus) {
+            refreshFocus.requestFocus()
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -312,13 +332,32 @@ private fun SearchEmptyIndexers(onRefresh: () -> Unit) {
             fontSize = 16.sp,
         )
         Spacer(Modifier.height(18.dp))
-        KaloscopeButton(
-            onClick = onRefresh,
-            modifier = Modifier.testTag("refresh-indexers"),
-            variant = KaloscopeControlVariant.Filled,
-            size = KaloscopeControlSize.Compact,
-        ) {
-            Text(stringResource(R.string.refresh_indexers))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            KaloscopeButton(
+                onClick = onRefresh,
+                modifier = Modifier
+                    .focusRequester(refreshFocus)
+                    .focusProperties {
+                        topNavigationFocusRequester?.let { up = it }
+                    }
+                    .testTag("refresh-indexers"),
+                variant = KaloscopeControlVariant.Filled,
+                size = KaloscopeControlSize.Compact,
+            ) {
+                Text(stringResource(R.string.refresh_indexers))
+            }
+            KaloscopeButton(
+                onClick = onManageServers,
+                modifier = Modifier
+                    .focusProperties {
+                        topNavigationFocusRequester?.let { up = it }
+                    }
+                    .testTag("search-manage-servers"),
+                variant = KaloscopeControlVariant.Ghost,
+                size = KaloscopeControlSize.Compact,
+            ) {
+                Text(stringResource(R.string.switch_server))
+            }
         }
     }
 }

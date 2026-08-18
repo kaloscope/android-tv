@@ -1219,8 +1219,9 @@ class SearchScreenTest {
     }
 
     @Test
-    fun emptyIndexerStateOffersRefresh() {
+    fun emptyIndexerStateOffersRecoveryActions() {
         var refreshes = 0
+        var serverSwitches = 0
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -1238,16 +1239,22 @@ class SearchScreenTest {
                     onDismissFilters = {},
                     onApplyFilters = {},
                     onClearFilters = {},
+                    onManageServers = { serverSwitches += 1 },
                 )
             }
         }
 
         composeRule.onNodeWithTag("refresh-indexers")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("search-manage-servers")
+            .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.runOnIdle {
             assertEquals(1, refreshes)
+            assertEquals(1, serverSwitches)
         }
     }
 

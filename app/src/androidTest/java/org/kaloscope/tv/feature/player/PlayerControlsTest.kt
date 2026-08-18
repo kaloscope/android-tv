@@ -1598,6 +1598,23 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun completedInfoPreviewShowsUnsignedZeroRemainingTime() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerInfoPreview(
+                    state = controlsState().copy(
+                        positionMillis = 60_000,
+                        durationMillis = 60_000,
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("00:00").assertIsDisplayed()
+        composeRule.onNodeWithText("−00:00").assertDoesNotExist()
+    }
+
+    @Test
     fun rebufferingIndicatorWaitsForDelayAndHidesImmediately() {
         composeRule.mainClock.autoAdvance = false
         var rebuffering by mutableStateOf(true)

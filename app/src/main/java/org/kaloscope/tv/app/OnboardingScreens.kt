@@ -872,7 +872,6 @@ private fun ErrorText(text: String) {
 @Composable
 private fun serverErrorText(error: ServerSetupError): String =
     when (error) {
-        ServerSetupError.InvalidName -> stringResource(R.string.error_server_name)
         ServerSetupError.InvalidUrl -> stringResource(R.string.error_server_url)
         ServerSetupError.SaveFailed -> stringResource(R.string.error_server_save)
         is ServerSetupError.Connection -> appErrorText(error.error)

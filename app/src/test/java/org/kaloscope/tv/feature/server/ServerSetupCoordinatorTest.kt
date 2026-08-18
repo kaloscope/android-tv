@@ -81,6 +81,19 @@ class ServerSetupCoordinatorTest {
     }
 
     @Test
+    fun `successful test fills a blank name from the server host`() = runBlocking {
+        val repository = FakeServerRepository(testResult = AppResult.Success("0.5.3"))
+        val coordinator = coordinator(repository)
+        coordinator.updateUrl(" https://Media.Example:8443/ ")
+
+        coordinator.testConnection()
+
+        assertEquals("media.example", coordinator.state.value.name)
+        assertEquals("https://media.example:8443", coordinator.state.value.verifiedOrigin)
+        assertTrue(coordinator.state.value.canSave)
+    }
+
+    @Test
     fun `editing url after testing invalidates connection proof`() = runBlocking {
         val coordinator = coordinator(FakeServerRepository())
         coordinator.updateName("家庭服务器")

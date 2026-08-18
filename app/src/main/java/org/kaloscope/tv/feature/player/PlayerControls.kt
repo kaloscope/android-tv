@@ -248,8 +248,11 @@ private fun playerControlScrim(): Brush =
         ),
     )
 
-private fun formatRemainingDuration(positionMillis: Long, durationMillis: Long): String =
-    "−${formatPlayerDuration((durationMillis - positionMillis).coerceAtLeast(0))}"
+private fun formatRemainingDuration(positionMillis: Long, durationMillis: Long): String {
+    val remainingMillis = (durationMillis - positionMillis).coerceAtLeast(0)
+    val remainingDuration = formatPlayerDuration(remainingMillis)
+    return if (remainingMillis == 0L) remainingDuration else "−$remainingDuration"
+}
 
 @Composable
 internal fun PlayerControls(

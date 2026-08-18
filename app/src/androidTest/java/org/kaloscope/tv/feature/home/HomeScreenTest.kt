@@ -68,6 +68,7 @@ class HomeScreenTest {
                     onRefresh = {},
                     restoreMediaId = null,
                     onOpenLibrary = {},
+                    onOpenSearch = {},
                     onOpenMedia = {},
                     onPlayHistory = {},
                 )
@@ -713,6 +714,7 @@ class HomeScreenTest {
                         onRefresh = onRefresh,
                         restoreMediaId = null,
                         onOpenLibrary = {},
+                        onOpenSearch = {},
                         onOpenMedia = {},
                         onPlayHistory = {},
                     )
@@ -745,6 +747,7 @@ class HomeScreenTest {
                         onRefresh = {},
                         restoreMediaId = restoreMediaId,
                         onOpenLibrary = {},
+                        onOpenSearch = {},
                         onOpenMedia = onOpenMedia,
                         onPlayHistory = onPlayHistory,
                         onBackdropChanged = onBackdropChanged,

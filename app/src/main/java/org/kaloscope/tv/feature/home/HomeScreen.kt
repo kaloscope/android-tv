@@ -91,6 +91,7 @@ internal fun HomeScreen(
     restoreMediaId: Long?,
     topNavigationFocusRequester: FocusRequester? = null,
     onOpenLibrary: () -> Unit,
+    onOpenSearch: () -> Unit,
     onOpenMedia: (Long) -> Unit,
     onPlayHistory: (WatchHistoryItem) -> Unit,
     onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
@@ -148,6 +149,7 @@ internal fun HomeScreen(
                 HomeUiState.Empty -> HomeEmpty(
                     refreshFocusRequester = refreshFocusRequester,
                     onOpenLibrary = onOpenLibrary,
+                    onOpenSearch = onOpenSearch,
                 )
 
                 is HomeUiState.Error -> ErrorPanel(
@@ -522,6 +524,7 @@ private fun HistoryCarouselCard(
 private fun HomeEmpty(
     refreshFocusRequester: FocusRequester,
     onOpenLibrary: () -> Unit,
+    onOpenSearch: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -552,15 +555,27 @@ private fun HomeEmpty(
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(20.dp))
-            KaloscopeButton(
-                onClick = onOpenLibrary,
-                modifier = Modifier.focusProperties {
-                    up = refreshFocusRequester
-                },
-                variant = KaloscopeControlVariant.Filled,
-                size = KaloscopeControlSize.Compact,
-            ) {
-                Text(stringResource(R.string.open_library))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                KaloscopeButton(
+                    onClick = onOpenLibrary,
+                    modifier = Modifier.focusProperties {
+                        up = refreshFocusRequester
+                    },
+                    variant = KaloscopeControlVariant.Filled,
+                    size = KaloscopeControlSize.Compact,
+                ) {
+                    Text(stringResource(R.string.open_library))
+                }
+                KaloscopeButton(
+                    onClick = onOpenSearch,
+                    modifier = Modifier
+                        .focusProperties { up = refreshFocusRequester }
+                        .testTag("home-open-search"),
+                    variant = KaloscopeControlVariant.Ghost,
+                    size = KaloscopeControlSize.Compact,
+                ) {
+                    Text(stringResource(R.string.search))
+                }
             }
         }
     }

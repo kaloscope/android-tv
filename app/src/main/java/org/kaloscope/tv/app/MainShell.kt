@@ -261,6 +261,12 @@ internal fun MainShell(
                                         keepTopBarFocus = false,
                                     )
                                 },
+                                onOpenSearch = {
+                                    activateTopDestination(
+                                        SearchRoute,
+                                        keepTopBarFocus = false,
+                                    )
+                                },
                                 onOpenMedia = { mediaId ->
                                     destinationEntryKeepsTopFocus = false
                                     restoreMediaId = null
@@ -331,6 +337,7 @@ internal fun MainShell(
                                 onDismissFilters = searchActions.dismissFilters,
                                 onApplyFilters = searchActions.applyFilters,
                                 onClearFilters = searchActions.clearFilters,
+                                onManageServers = settingsActions.manageServers,
                             )
                         }
                     }

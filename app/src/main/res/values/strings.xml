@@ -307,7 +307,6 @@
     <string name="retry">重试</string>
     <string name="switch_server">切换服务器</string>
 
-    <string name="error_server_name">请输入服务器名称</string>
     <string name="error_server_url">请输入有效的 HTTP 或 HTTPS 服务器地址</string>
     <string name="error_server_save">无法保存服务器，请重试</string>
     <string name="error_credentials">请输入用户名和密码</string>

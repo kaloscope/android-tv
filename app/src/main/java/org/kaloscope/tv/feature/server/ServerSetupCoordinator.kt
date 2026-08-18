@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.server
 
+import java.net.URI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,8 +13,6 @@ import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.data.server.ServerUrlNormalizer
 
 sealed interface ServerSetupError {
-    data object InvalidName : ServerSetupError
-
     data object InvalidUrl : ServerSetupError
 
     data object SaveFailed : ServerSetupError
@@ -73,10 +72,6 @@ class ServerSetupCoordinator(
         if (current.isTesting || current.isSaving) {
             return
         }
-        if (current.name.isBlank()) {
-            mutableState.value = current.copy(error = ServerSetupError.InvalidName)
-            return
-        }
 
         val origin = try {
             ServerUrlNormalizer.normalize(current.url)
@@ -89,6 +84,9 @@ class ServerSetupCoordinator(
         try {
             mutableState.value = when (val result = repository.testConnection(origin)) {
                 is AppResult.Success -> mutableState.value.copy(
+                    name = mutableState.value.name.ifBlank {
+                        URI(origin).host.removeSurrounding("[", "]")
+                    },
                     isTesting = false,
                     verifiedOrigin = origin,
                     serverVersion = result.value,

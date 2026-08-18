@@ -169,6 +169,39 @@ class MainShellTest {
     }
 
     @Test
+    fun emptyHomeSearchShortcutOpensNetworkSearch() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = SearchUiState.EmptyIndexers,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("home-open-search")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("home-open-search"))
+                .fetchSemanticsNodes().isEmpty()
+        }
+
+        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+            .assertIsSelected()
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .assertIsNotSelected()
+        composeRule.onNodeWithText("当前服务器没有可用的网络搜索数据源。")
+            .assertExists()
+        composeRule.onNodeWithTag("refresh-indexers").assertIsFocused()
+    }
+
+    @Test
     fun directionUpFromHomeErrorMovesThroughRefreshToNavigation() {
         composeRule.setContent {
             KaloscopeTheme {
