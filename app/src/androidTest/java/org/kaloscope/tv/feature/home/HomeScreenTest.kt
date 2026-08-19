@@ -28,7 +28,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
@@ -456,7 +455,9 @@ class HomeScreenTest {
             onOpenMedia = { openedMediaId = it },
         )
 
-        composeRule.onNodeWithText("查看详情").performClick()
+        composeRule.onNodeWithText("查看详情")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.runOnIdle {
             assertEquals(201L, openedMediaId)

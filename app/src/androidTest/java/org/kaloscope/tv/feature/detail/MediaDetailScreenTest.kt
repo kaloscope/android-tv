@@ -198,6 +198,50 @@ class MediaDetailScreenTest {
     }
 
     @Test
+    fun movieTitleRemainsFullyVisibleIn720pViewport() {
+        val parent = movie().copy(
+            plot = "一支深空探索队穿越寂静星云，寻找失联已久的先遣舰队。",
+            genres = listOf("科幻", "冒险"),
+            directors = listOf("林舟"),
+            writers = listOf("顾远"),
+            studios = listOf("Kaloscope Pictures"),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(640.dp)
+                        .height(360.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = MediaDetailUiState.Content(parent),
+                        resumePositionsByMediaId = mapOf(parent.id to 42L),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+
+        val viewport = composeRule.onNodeWithTag("detail-cinematic-surface")
+            .fetchSemanticsNode().boundsInRoot
+        val titleNode = composeRule.onNodeWithText(parent.title).fetchSemanticsNode()
+        val title = titleNode.boundsInRoot
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertTrue("Movie title should start inside the 720p viewport: $title", title.top >= viewport.top)
+        assertTrue(
+            "Movie title should be fully visible in 640x360dp: $title",
+            title.height + tolerance >= titleNode.size.height,
+        )
+    }
+
+    @Test
     fun episodeCardShowsPosterMetadataAndKeepsInitialFocus() {
         composeRule.setContent {
             KaloscopeTheme {

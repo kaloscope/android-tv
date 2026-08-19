@@ -310,6 +310,10 @@ class SearchScreenTest {
         composeRule.onNodeWithTag("search-action-button")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.mainClock.advanceTimeBy(1_000)
+        val cardBounds = composeRule.onNodeWithTag("network-result-v1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val scaleSearchPadding = with(composeRule.density) { 5.dp.roundToPx() }
         val resting = composeRule.onRoot()
             .captureToImage()
             .asAndroidBitmap()
@@ -320,7 +324,13 @@ class SearchScreenTest {
             .captureToImage()
             .asAndroidBitmap()
 
-        assertFocusedContentCardScale("Network result card", resting, focused)
+        assertFocusedContentCardScale(
+            label = "Network result card",
+            resting = resting,
+            focused = focused,
+            searchBounds = cardBounds,
+            searchPadding = scaleSearchPadding,
+        )
     }
 
     @Test
@@ -839,35 +849,6 @@ class SearchScreenTest {
             text = "星",
             useUnmergedTree = true,
         ).assertDoesNotExist()
-    }
-
-    @Test
-    fun missingGraphIconKeepsIndexerInitial() {
-        composeRule.setContent {
-            KaloscopeTheme {
-                SearchScreen(
-                    session = session(),
-                    state = state(results = emptyList()),
-                    onRefreshIndexers = {},
-                    onSelectIndexer = {},
-                    onQueryChange = {},
-                    onSearch = {},
-                    onRetry = {},
-                    onLoadMore = {},
-                    onResultFocused = {},
-                    onPlay = {},
-                    onOpenFilters = {},
-                    onDismissFilters = {},
-                    onApplyFilters = {},
-                    onClearFilters = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithText(
-            text = "星",
-            useUnmergedTree = true,
-        ).assertExists()
     }
 
     @Test

@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
@@ -37,6 +38,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.core.model.AccentColor
 
 class KaloscopeControlsTest {
     @get:Rule
@@ -190,7 +192,7 @@ class KaloscopeControlsTest {
 
         assertColorNear(
             label = "selected surface",
-            expected = AndroidColor.rgb(0x30, 0x3D, 0x50),
+            expected = AccentColor.Blue.accentPalette().controlSelected.toArgb(),
             actual = selected.getPixel(sampleX, selected.height / 2),
         )
         assertColorNear(

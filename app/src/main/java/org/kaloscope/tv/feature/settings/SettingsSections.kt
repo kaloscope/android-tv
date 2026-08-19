@@ -122,6 +122,7 @@ internal fun PlaybackSettings(
                     KaloscopeChoiceDialogOption(
                         label = transcodeQualityLabel(quality),
                         selected = { quality == state.settings.transcodeQuality },
+                        testTag = "transcode-quality-option-${quality.name.lowercase()}",
                         onSelect = { onTranscodeQuality(quality) },
                     )
                 },

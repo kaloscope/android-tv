@@ -896,7 +896,7 @@ class MainShellTest {
 
         composeRule.onNodeWithContentDescription("设置").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
-        composeRule.onNodeWithText("自动")
+        composeRule.onNodeWithTag("playback-mode-option-auto")
             .assertIsSelected()
             .assertIsFocused()
         InstrumentationRegistry.getInstrumentation()

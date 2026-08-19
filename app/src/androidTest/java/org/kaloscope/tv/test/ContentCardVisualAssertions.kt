@@ -2,7 +2,10 @@ package org.kaloscope.tv.test
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.compose.ui.geometry.Rect
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import org.junit.Assert.assertTrue
 
 internal fun assertFocusedContentCardSurface(
@@ -29,10 +32,12 @@ internal fun assertFocusedContentCardScale(
     label: String,
     resting: Bitmap,
     focused: Bitmap,
+    searchBounds: Rect? = null,
+    searchPadding: Int = 0,
 ) {
     val target = Color.rgb(0x25, 0x33, 0x4D)
-    val restingBounds = resting.findColorBounds(target)
-    val focusedBounds = focused.findColorBounds(target)
+    val restingBounds = resting.findColorBounds(target, searchBounds, searchPadding)
+    val focusedBounds = focused.findColorBounds(target, searchBounds, searchPadding)
     val widthScale = focusedBounds.width.toFloat() / restingBounds.width
     val heightScale = focusedBounds.height.toFloat() / restingBounds.height
     // The short cover height rounds a 3% transform to only two pixels; width
@@ -73,13 +78,25 @@ private data class PixelBounds(
     val height: Int,
 )
 
-private fun Bitmap.findColorBounds(target: Int): PixelBounds {
+private fun Bitmap.findColorBounds(
+    target: Int,
+    searchBounds: Rect?,
+    searchPadding: Int,
+): PixelBounds {
+    val startX = searchBounds?.let { floor(it.left).toInt() - searchPadding }
+        ?.coerceIn(0, width - 1) ?: 0
+    val endX = searchBounds?.let { ceil(it.right).toInt() + searchPadding - 1 }
+        ?.coerceIn(startX, width - 1) ?: width - 1
+    val startY = searchBounds?.let { floor(it.top).toInt() - searchPadding }
+        ?.coerceIn(0, height - 1) ?: 0
+    val endY = searchBounds?.let { ceil(it.bottom).toInt() + searchPadding - 1 }
+        ?.coerceIn(startY, height - 1) ?: height - 1
     var minX = width
     var minY = height
     var maxX = -1
     var maxY = -1
-    for (y in 0 until height) {
-        for (x in 0 until width) {
+    for (y in startY..endY) {
+        for (x in startX..endX) {
             if (getPixel(x, y) == target) {
                 minX = minOf(minX, x)
                 minY = minOf(minY, y)
@@ -88,7 +105,7 @@ private fun Bitmap.findColorBounds(target: Int): PixelBounds {
             }
         }
     }
-    assertTrue("Expected color #25334D in captured screen", maxX >= minX && maxY >= minY)
+    assertTrue("Expected color #25334D in captured card", maxX >= minX && maxY >= minY)
     return PixelBounds(
         width = maxX - minX + 1,
         height = maxY - minY + 1,

@@ -166,10 +166,10 @@ class SettingsScreenTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNode(hasClickAction() and hasText("高")).assertExists()
-        composeRule.onNode(hasClickAction() and hasText("中") and isFocused()).assertExists()
-        composeRule.onNode(hasClickAction() and hasText("低")).assertExists()
-        composeRule.onNode(hasClickAction() and hasText("高"))
+        composeRule.onNodeWithTag("transcode-quality-option-high").assertExists()
+        composeRule.onNodeWithTag("transcode-quality-option-medium").assertIsFocused()
+        composeRule.onNodeWithTag("transcode-quality-option-low").assertExists()
+        composeRule.onNodeWithTag("transcode-quality-option-high")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 

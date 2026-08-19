@@ -162,13 +162,15 @@ internal fun MediaDetailCinematicLayout(
             .testTag("detail-cinematic-surface"),
     ) {
         val horizontalSafePadding = maxOf(28.dp, maxWidth * 0.045f)
-        val compactSeriesLayout = parent.children.isNotEmpty() && maxHeight <= 600.dp
-        val posterWidth = if (compactSeriesLayout) {
+        // Series need room for the episode ribbon at 1080p, while movies only
+        // need compact spacing on 720p screens to keep the focused hero visible.
+        val compactLayout = maxHeight <= if (parent.children.isNotEmpty()) 600.dp else 400.dp
+        val posterWidth = if (compactLayout) {
             (maxWidth * 0.13f).coerceIn(128.dp, 176.dp)
         } else {
             (maxWidth * 0.14f).coerceIn(136.dp, 196.dp)
         }
-        val childCardWidth = if (compactSeriesLayout) {
+        val childCardWidth = if (compactLayout) {
             (maxWidth * 0.16f).coerceIn(156.dp, 220.dp)
         } else {
             (maxWidth * 0.18f).coerceIn(176.dp, 260.dp)
@@ -217,14 +219,14 @@ internal fun MediaDetailCinematicLayout(
                         Modifier
                     },
                 ) {
-                    Spacer(Modifier.height(if (compactSeriesLayout) 24.dp else 60.dp))
+                    Spacer(Modifier.height(if (compactLayout) 24.dp else 60.dp))
                     DetailHero(
                         session = session,
                         parent = parent,
                         focusedChild = focusedChild,
                         plot = displayedPlot,
-                        compactSeriesLayout = compactSeriesLayout,
-                        blockParentBringIntoView = parent.children.isNotEmpty(),
+                        compactLayout = compactLayout,
+                        blockParentBringIntoView = parent.children.isNotEmpty() || compactLayout,
                         sectionKind = sectionKind,
                         posterWidth = posterWidth,
                         horizontalSafePadding = horizontalSafePadding,
@@ -245,7 +247,7 @@ internal fun MediaDetailCinematicLayout(
                         onShowMoreInfo = { moreInfoOpen = true },
                     )
                     if (parent.children.isNotEmpty()) {
-                        Spacer(Modifier.height(if (compactSeriesLayout) 16.dp else 30.dp))
+                        Spacer(Modifier.height(if (compactLayout) 16.dp else 30.dp))
                         DetailChildRibbon(
                             session = session,
                             parent = parent,
@@ -254,7 +256,7 @@ internal fun MediaDetailCinematicLayout(
                             sectionKind = sectionKind,
                             childViewport = childViewport,
                             childCardWidth = childCardWidth,
-                            compactLayout = compactSeriesLayout,
+                            compactLayout = compactLayout,
                             horizontalSafePadding = horizontalSafePadding,
                             resumePositionsByMediaId = resumePositionsByMediaId,
                             childFocusRequester = childFocusRequester,
@@ -314,7 +316,7 @@ private fun DetailHero(
     parent: MediaDetail,
     focusedChild: MediaSummary?,
     plot: String?,
-    compactSeriesLayout: Boolean,
+    compactLayout: Boolean,
     blockParentBringIntoView: Boolean,
     sectionKind: MediaChildSectionKind,
     posterWidth: Dp,
@@ -330,9 +332,9 @@ private fun DetailHero(
 ) {
     val accentPalette = LocalAccentPalette.current
     val synopsis = plot?.takeIf(String::isNotBlank)
-    val synopsisLines = if (compactSeriesLayout) 3 else 4
+    val synopsisLines = if (compactLayout) 3 else 4
     val synopsisHeight = with(LocalDensity.current) {
-        if (compactSeriesLayout) 66.sp.toDp() else 100.sp.toDp()
+        if (compactLayout) 66.sp.toDp() else 100.sp.toDp()
     }
     val bringIntoViewBoundaryModifier = if (blockParentBringIntoView) {
         Modifier.blockParentBringIntoView()
@@ -365,25 +367,25 @@ private fun DetailHero(
             Text(
                 text = parent.title,
                 color = OnBackground,
-                fontSize = if (compactSeriesLayout) 32.sp else 36.sp,
+                fontSize = if (compactLayout) 32.sp else 36.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             DetailMetadata(parent)
             focusedChild?.let { child ->
-                Spacer(Modifier.height(if (compactSeriesLayout) 6.dp else 10.dp))
+                Spacer(Modifier.height(if (compactLayout) 6.dp else 10.dp))
                 Text(
                     text = focusedChildPreview(sectionKind, child),
                     color = accentPalette.primary,
-                    fontSize = if (compactSeriesLayout) 15.sp else 16.sp,
+                    fontSize = if (compactLayout) 15.sp else 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             if (parent.children.isEmpty() || focusedChild != null) {
-                Spacer(Modifier.height(if (compactSeriesLayout) 12.dp else 18.dp))
+                Spacer(Modifier.height(if (compactLayout) 12.dp else 18.dp))
                 DetailPlaybackActions(
                     resumePositionSeconds = resumePositionSeconds,
                     primaryActionFocusRequester = primaryActionFocusRequester,
@@ -397,12 +399,12 @@ private fun DetailHero(
                 )
             }
             if (synopsis != null || parent.children.isNotEmpty()) {
-                Spacer(Modifier.height(if (compactSeriesLayout) 10.dp else 18.dp))
+                Spacer(Modifier.height(if (compactLayout) 10.dp else 18.dp))
                 Text(
                     text = synopsis.orEmpty(),
                     color = OnBackground,
-                    fontSize = if (compactSeriesLayout) 15.sp else 17.sp,
-                    lineHeight = if (compactSeriesLayout) 22.sp else 25.sp,
+                    fontSize = if (compactLayout) 15.sp else 17.sp,
+                    lineHeight = if (compactLayout) 22.sp else 25.sp,
                     maxLines = synopsisLines,
                     overflow = TextOverflow.Ellipsis,
                     modifier = if (parent.children.isNotEmpty()) {
