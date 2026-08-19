@@ -163,6 +163,7 @@
     <string name="search_filters">筛选</string>
     <string name="search_filters_active">筛选已启用</string>
     <string name="search_filters_description">调整当前站点的搜索条件，应用后会重新搜索。</string>
+    <string name="filter_all">全部</string>
     <string name="filter_clear">清除</string>
     <string name="filter_apply">应用</string>
     <!-- Hyphens are date separators, not punctuation for a numeric range. -->

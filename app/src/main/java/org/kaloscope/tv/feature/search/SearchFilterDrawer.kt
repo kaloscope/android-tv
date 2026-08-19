@@ -231,17 +231,26 @@ private fun SearchFilterField(
                 )
             }
 
-            SearchFilterType.Select -> definition.options.forEachIndexed { index, option ->
-                val selected = (value as? SearchFilterValue.Scalar)?.value == option.value
+            SearchFilterType.Select -> {
+                val selectedValue = (value as? SearchFilterValue.Scalar)?.value
                 FilterOptionButton(
-                    text = option.label,
-                    selected = selected,
-                    tag = "filter-option-${definition.key}-${option.value}",
-                    onClick = {
-                        onValueChange(SearchFilterValue.Scalar(option.value))
-                    },
-                    modifier = Modifier.focusBoundary(initialFocus.takeIf { index == 0 }),
+                    text = stringResource(R.string.filter_all),
+                    selected = selectedValue == null,
+                    tag = "filter-option-${definition.key}-all",
+                    onClick = { onValueChange(null) },
+                    modifier = Modifier.focusBoundary(initialFocus),
                 )
+                definition.options.forEach { option ->
+                    FilterOptionButton(
+                        text = option.label,
+                        selected = selectedValue == option.value,
+                        tag = "filter-option-${definition.key}-${option.value}",
+                        onClick = {
+                            onValueChange(SearchFilterValue.Scalar(option.value))
+                        },
+                        modifier = Modifier.focusBoundary(null),
+                    )
+                }
             }
 
             SearchFilterType.Checkbox -> definition.options.forEachIndexed { index, option ->

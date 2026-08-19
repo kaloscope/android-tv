@@ -1585,6 +1585,91 @@ class SearchScreenTest {
     }
 
     @Test
+    fun selectFilterDefaultsToAll() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(regionFilter()),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val all = composeRule.onNodeWithTag("filter-option-region-all")
+            .assertIsSelected()
+            .assertIsFocused()
+        composeRule.onNodeWithText("全部").assertExists()
+        val firstOption = composeRule.onNodeWithTag("filter-option-region-cn")
+            .assertIsNotSelected()
+
+        assertTrue(
+            all.fetchSemanticsNode().boundsInRoot.top <
+                firstOption.fetchSemanticsNode().boundsInRoot.top,
+        )
+    }
+
+    @Test
+    fun selectingAllClearsSelectValue() {
+        var applied: Map<String, SearchFilterValue>? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        filters = listOf(regionFilter()),
+                        appliedFilters = mapOf(
+                            "region" to SearchFilterValue.Scalar("cn"),
+                        ),
+                        filterDrawerOpen = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = { applied = it },
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("filter-option-region-cn").assertIsSelected()
+        composeRule.onNodeWithTag("filter-option-region-all")
+            .assertIsNotSelected()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
+        composeRule.onNodeWithTag("filter-option-region-cn").assertIsNotSelected()
+        composeRule.onNodeWithTag("filter-apply")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(emptyMap<String, SearchFilterValue>(), applied)
+        }
+    }
+
+    @Test
     fun filterChoiceAppliesSelectedValue() {
         var applied: Map<String, SearchFilterValue>? = null
         composeRule.setContent {
@@ -1864,7 +1949,7 @@ class SearchScreenTest {
         composeRule.onNodeWithTag("search-filter-button")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithTag("filter-option-region-cn").assertIsFocused()
+        composeRule.onNodeWithTag("filter-option-region-all").assertIsFocused()
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
