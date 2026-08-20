@@ -315,6 +315,175 @@ class MediaDetailScreenTest {
     }
 
     @Test
+    fun episodeCarouselAlignsWithSectionHeading() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(parent = series()),
+        )
+        composeRule.onNodeWithTag("detail-primary-action")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.waitForIdle()
+
+        val headingLeft = composeRule.onNodeWithText("分集")
+            .fetchSemanticsNode().boundsInRoot.left
+        val firstCardLeft = composeRule.onNodeWithTag("media-child-card-301")
+            .fetchSemanticsNode().boundsInRoot.left
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertTrue(
+            "Episode cards should share the section heading's leading edge: " +
+                "heading=$headingLeft, card=$firstCardLeft",
+            kotlin.math.abs(headingLeft - firstCardLeft) <= tolerance,
+        )
+    }
+
+    @Test
+    fun episodeTitleKeepsEnoughHeightForTvFontMetrics() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(parent = series()),
+        )
+        val card = composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+        composeRule.waitForIdle()
+        card.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        val title = composeRule.onNodeWithTag(
+            "media-child-title-301",
+            useUnmergedTree = true,
+        )
+        composeRule.waitUntil {
+            title.fetchSemanticsNode().boundsInRoot.height > 0f
+        }
+        val titleBounds = title.fetchSemanticsNode().boundsInRoot
+        val minimumUnclippedHeight = with(composeRule.density) { 22.dp.toPx() }
+
+        assertTrue(
+            "Episode title must leave enough vertical room for TV font metrics: $titleBounds",
+            titleBounds.height >= minimumUnclippedHeight,
+        )
+    }
+
+    @Test
+    fun episodeTitleLeavesRoomForSupportingMetadata() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(
+                parent = mixedTitleSeries(),
+                focusedChildId = 301,
+            ),
+        )
+        val card = composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
+        composeRule.waitForIdle()
+        card.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        val cardBounds = card.fetchSemanticsNode().boundsInRoot
+        val title = composeRule.onNodeWithTag(
+            "media-child-title-301",
+            useUnmergedTree = true,
+        )
+        composeRule.waitUntil {
+            title.fetchSemanticsNode().boundsInRoot.height > 0f
+        }
+        val titleBounds = title.fetchSemanticsNode().boundsInRoot
+        val minimumMetadataSpace = with(composeRule.density) { 26.dp.toPx() }
+        val renderingTolerance = with(composeRule.density) { 0.5.dp.toPx() }
+
+        assertTrue(
+            "Episode title should leave room for metadata and the bottom inset: " +
+                "card=$cardBounds, title=$titleBounds",
+            cardBounds.bottom - titleBounds.bottom + renderingTolerance >=
+                minimumMetadataSpace,
+        )
+    }
+
+    @Test
+    fun episodeTitlesWrapWithoutMovingMetadataRows() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(
+                parent = mixedTitleSeries(),
+                focusedChildId = 303,
+            ),
+        )
+        val focusedCard = composeRule.onNodeWithTag("media-child-card-303")
+            .assertIsFocused()
+        composeRule.waitForIdle()
+        focusedCard.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        val wrappedTitle = composeRule.onNodeWithTag(
+            "media-child-title-301",
+            useUnmergedTree = true,
+        )
+        composeRule.waitUntil {
+            wrappedTitle.fetchSemanticsNode().boundsInRoot.height > 0f
+        }
+        val wrappedTitleBounds = wrappedTitle.fetchSemanticsNode().boundsInRoot
+        val wrappedDateTop = composeRule.onNodeWithText(
+            "2026-07-31",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.top
+        val shortDateTop = composeRule.onNodeWithText(
+            "2026-08-07",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.top
+        val minimumWrappedHeight = with(composeRule.density) { 38.dp.toPx() }
+        val alignmentTolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertTrue(
+            "A typical long episode title should use a second line: $wrappedTitleBounds",
+            wrappedTitleBounds.height >= minimumWrappedHeight,
+        )
+        assertTrue(
+            "Episode metadata rows should stay aligned when title lengths differ: " +
+                "wrapped=$wrappedDateTop, short=$shortDateTop",
+            kotlin.math.abs(wrappedDateTop - shortDateTop) <= alignmentTolerance,
+        )
+    }
+
+    @Test
+    fun episodeTitlePrefixesKeepSameRenderedTopAcrossFontFallbacks() {
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(
+                parent = mixedTitleSeries(),
+                focusedChildId = 303,
+            ),
+        )
+        val focusedCard = composeRule.onNodeWithTag("media-child-card-303")
+            .assertIsFocused()
+        composeRule.waitForIdle()
+        focusedCard.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        val prefixWidth = with(composeRule.density) { 40.dp.roundToPx() }
+        val mixedTitle = composeRule.onNodeWithTag(
+            "media-child-title-301",
+            useUnmergedTree = true,
+        )
+        val latinTitle = composeRule.onNodeWithTag(
+            "media-child-title-302",
+            useUnmergedTree = true,
+        )
+        val mixedLocalTop = mixedTitle.captureToImage()
+            .asAndroidBitmap()
+            .firstBrightPixelRow(prefixWidth)
+        val latinLocalTop = latinTitle.captureToImage()
+            .asAndroidBitmap()
+            .firstBrightPixelRow(prefixWidth)
+
+        assertTrue(
+            "Episode title prefixes should render in captured title nodes: " +
+                "mixed=$mixedLocalTop, latin=$latinLocalTop",
+            mixedLocalTop >= 0 && latinLocalTop >= 0,
+        )
+        val mixedTop = mixedTitle.fetchSemanticsNode().boundsInRoot.top + mixedLocalTop
+        val latinTop = latinTitle.fetchSemanticsNode().boundsInRoot.top + latinLocalTop
+        assertTrue(
+            "Mixed-script and Latin-only episode title ink should share the same top row: " +
+                "mixed=$mixedTop, latin=$latinTop",
+            kotlin.math.abs(mixedTop - latinTop) <= 1f,
+        )
+    }
+
+    @Test
     fun episodeCarouselShowsDirectionalEdgeFades() {
         setStatefulDetailContent(
             initialState = MediaDetailUiState.Content(parent = longSeries()),
@@ -553,6 +722,54 @@ class MediaDetailScreenTest {
         castCarousel.performKeyInput { pressKey(Key.DirectionUp) }
         composeRule.waitForIdle()
         play.assertIsFocused()
+    }
+
+    @Test
+    fun castCardsAlignWithSectionHeading() {
+        val actors = listOf(
+            MediaActor("演员甲", "领航员", null),
+            MediaActor("演员乙", null, null),
+        )
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(parent = movie(actors)),
+        )
+        focusCastCarousel()
+
+        val headingLeft = composeRule.onNodeWithText("演职人员")
+            .fetchSemanticsNode().boundsInRoot.left
+        val firstCardLeft = composeRule.onNodeWithTag("cast-item-0")
+            .fetchSemanticsNode().boundsInRoot.left
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertTrue(
+            "Cast cards should share the section heading's leading edge: " +
+                "heading=$headingLeft, card=$firstCardLeft",
+            kotlin.math.abs(headingLeft - firstCardLeft) <= tolerance,
+        )
+    }
+
+    @Test
+    fun castCardsKeepEqualHeightWhenRoleIsMissing() {
+        val actors = listOf(
+            MediaActor("演员甲", "领航员", null),
+            MediaActor("演员乙", null, null),
+        )
+        setStatefulDetailContent(
+            initialState = MediaDetailUiState.Content(parent = movie(actors)),
+        )
+        focusCastCarousel()
+
+        val withRoleHeight = composeRule.onNodeWithTag("cast-item-0")
+            .fetchSemanticsNode().boundsInRoot.height
+        val withoutRoleHeight = composeRule.onNodeWithTag("cast-item-1")
+            .fetchSemanticsNode().boundsInRoot.height
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertTrue(
+            "Cast cards should keep equal height when a role is absent: " +
+                "withRole=$withRoleHeight, withoutRole=$withoutRoleHeight",
+            kotlin.math.abs(withRoleHeight - withoutRoleHeight) <= tolerance,
+        )
     }
 
     @Test
@@ -1380,6 +1597,15 @@ class MediaDetailScreenTest {
         }
     }
 
+    private fun focusCastCarousel() {
+        val play = composeRule.onNodeWithText("播放").assertIsFocused()
+        repeat(2) {
+            play.performKeyInput { pressKey(Key.DirectionDown) }
+            composeRule.waitForIdle()
+        }
+        composeRule.onNodeWithTag("cast-carousel").assertIsFocused()
+    }
+
     private fun assertReadablePrimaryPlayIcon(actionLabel: String) {
         val iconBounds = composeRule.onNodeWithTag(
             "detail-primary-play-icon",
@@ -1487,6 +1713,32 @@ private fun twoEpisodeSeries() = series().copy(
     ),
 )
 
+private fun mixedTitleSeries(): MediaDetail {
+    val episode = series().children.single()
+    return series().copy(
+        children = listOf(
+            episode.copy(
+                id = 301,
+                title = "喵喵们要去海边玩耍",
+                episode = 5,
+                aired = "2026-07-31",
+            ),
+            episode.copy(
+                id = 302,
+                title = "",
+                episode = 6,
+                aired = "2026-08-07",
+            ),
+            episode.copy(
+                id = 303,
+                title = "本喵也是人类",
+                episode = 7,
+                aired = "2026-08-14",
+            ),
+        ),
+    )
+}
+
 private fun longSeries() = series().copy(
     children = (1..12).map { episode ->
         MediaSummary(
@@ -1550,4 +1802,21 @@ private fun Bitmap.countPixelsNear(
         }
     }
     return matches
+}
+
+private fun Bitmap.firstBrightPixelRow(searchWidth: Int): Int {
+    val widthLimit = minOf(width, searchWidth)
+    for (y in 0 until height) {
+        for (x in 0 until widthLimit) {
+            val pixel = getPixel(x, y)
+            if (
+                AndroidColor.red(pixel) >= 128 &&
+                AndroidColor.green(pixel) >= 128 &&
+                AndroidColor.blue(pixel) >= 128
+            ) {
+                return y
+            }
+        }
+    }
+    return -1
 }

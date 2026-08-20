@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -147,7 +146,6 @@ internal fun CastStrip(
                     }
                     .focusable()
                     .testTag("cast-carousel"),
-                contentPadding = PaddingValues(horizontal = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 itemsIndexed(
@@ -175,9 +173,9 @@ internal fun CastStrip(
                                 },
                                 shape = RoundedCornerShape(12.dp),
                             )
-                            .padding(vertical = 6.dp)
                             .semantics { this.selected = selected }
-                            .testTag("cast-item-$index"),
+                            .testTag("cast-item-$index")
+                            .padding(horizontal = 6.dp, vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         ServerImage(
@@ -192,19 +190,30 @@ internal fun CastStrip(
                             text = actor.name,
                             color = OnBackground,
                             fontSize = 13.sp,
+                            lineHeight = 18.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
                         )
-                        actor.role?.takeIf(String::isNotBlank)?.let { role ->
-                            Text(
-                                text = role,
-                                color = Muted,
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                            )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            actor.role?.takeIf(String::isNotBlank)?.let { role ->
+                                Text(
+                                    text = role,
+                                    color = Muted,
+                                    fontSize = 11.sp,
+                                    lineHeight = 16.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
                     }
                 }

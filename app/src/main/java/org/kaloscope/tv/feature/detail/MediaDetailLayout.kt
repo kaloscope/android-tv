@@ -247,7 +247,7 @@ internal fun MediaDetailCinematicLayout(
                         onShowMoreInfo = { moreInfoOpen = true },
                     )
                     if (parent.children.isNotEmpty()) {
-                        Spacer(Modifier.height(if (compactLayout) 16.dp else 30.dp))
+                        Spacer(Modifier.height(if (compactLayout) 8.dp else 30.dp))
                         DetailChildRibbon(
                             session = session,
                             parent = parent,
@@ -564,8 +564,7 @@ private fun DetailChildRibbon(
             derivedStateOf { childListState.canScrollForward }
         }
         val carouselEdgeOffset = with(LocalDensity.current) { 48.dp.roundToPx() }
-        val childCardHeight = childCardWidth * 9f / 16f +
-            if (compactLayout) 52.dp else 56.dp
+        val childCardHeight = childCardWidth * 9f / 16f + 76.dp
         var animateFocusedItem by remember { mutableStateOf(false) }
         var lastFocusedItemIndex by remember { mutableIntStateOf(initialTargetIndex) }
         var pendingFocusedItemIndex by remember { mutableStateOf<Int?>(null) }
@@ -632,9 +631,9 @@ private fun DetailChildRibbon(
                         onDown = onNavigateDown,
                     ),
                 contentPadding = PaddingValues(
-                    start = horizontalSafePadding + 10.dp,
+                    start = horizontalSafePadding,
                     top = if (compactLayout) 6.dp else 8.dp,
-                    end = horizontalSafePadding + 10.dp,
+                    end = horizontalSafePadding,
                     bottom = if (compactLayout) 6.dp else 8.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -810,10 +809,10 @@ private fun DetailCreditsAndCast(
             .fillMaxWidth()
             .padding(
                 start = horizontalSafePadding,
-                top = 34.dp,
+                top = 50.dp,
                 end = horizontalSafePadding,
+                bottom = 16.dp,
             )
-            .padding(16.dp),
     ) {
         val hasCredits = parent.directors.isNotEmpty() ||
             parent.writers.isNotEmpty() ||

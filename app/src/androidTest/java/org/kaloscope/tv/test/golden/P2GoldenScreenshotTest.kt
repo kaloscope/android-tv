@@ -220,8 +220,10 @@ class P2GoldenScreenshotTest {
                 )
             }
         }
-        composeRule.onNodeWithTag("media-child-card-301")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+        val episodeCard = composeRule.onNodeWithTag("media-child-card-301")
+        episodeCard.performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        episodeCard.performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.mainClock.advanceTimeBy(1_000)
 
         assertGolden(
@@ -702,39 +704,39 @@ private fun goldenSeries() = MediaDetail(
     children = listOf(
         MediaSummary(
             id = 301,
-            title = "启程",
+            title = "喵喵们要去海边玩耍",
             path = "/fixtures/media/episode-301.mkv",
             posterPath = null,
             backdropPath = null,
             year = 2026,
             rating = 8.8,
             season = 1,
-            episode = 1,
-            aired = "2026-01-02",
+            episode = 5,
+            aired = "2026-07-31",
         ),
         MediaSummary(
             id = 302,
-            title = "穿越静默海",
+            title = "",
             path = "/fixtures/media/episode-302.mkv",
             posterPath = null,
             backdropPath = null,
             year = 2026,
             rating = 9.0,
             season = 1,
-            episode = 2,
-            aired = "2026-01-09",
+            episode = 6,
+            aired = "2026-08-07",
         ),
         MediaSummary(
             id = 303,
-            title = "归航坐标",
+            title = "本喵也是人类",
             path = "/fixtures/media/episode-303.mkv",
             posterPath = null,
             backdropPath = null,
             year = 2026,
             rating = 9.2,
             season = 1,
-            episode = 3,
-            aired = "2026-01-16",
+            episode = 7,
+            aired = "2026-08-14",
         ),
     ),
 )
