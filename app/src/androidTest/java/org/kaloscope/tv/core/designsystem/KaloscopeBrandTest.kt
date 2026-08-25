@@ -3,6 +3,8 @@ package org.kaloscope.tv.core.designsystem
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
+import android.graphics.drawable.AdaptiveIconDrawable
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -14,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -61,11 +64,45 @@ class KaloscopeBrandTest {
     }
 
     @Test
-    fun launcherIconUsesCanonicalLogoPalette() {
-        assertDrawableUsesCanonicalLogoPalette(
-            drawableRes = R.drawable.ic_launcher,
-            widthDp = 108,
-            heightDp = 108,
+    fun launcherIconUsesOemCompatibleArtwork() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val drawableRes = context.applicationInfo.icon
+        assertEquals(
+            "Launcher icons must use mipmap resources for OEM launcher compatibility",
+            "mipmap",
+            context.resources.getResourceTypeName(drawableRes),
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            assertTrue(
+                "API 26+ launchers must receive an adaptive icon",
+                context.getDrawable(drawableRes) is AdaptiveIconDrawable,
+            )
+        }
+
+        val bitmap = renderDrawable(drawableRes, widthDp = 108, heightDp = 108)
+        assertUsesCanonicalLogoPalette(bitmap)
+        val logoBounds = bitmap.canonicalLogoBounds()
+        val backgroundSamples =
+            listOf(
+                bitmap.getPixel(bitmap.width / 2, bitmap.height / 10),
+                bitmap.getPixel(bitmap.width / 2, bitmap.height * 9 / 10),
+                bitmap.getPixel(bitmap.width / 10, bitmap.height / 2),
+                bitmap.getPixel(bitmap.width * 9 / 10, bitmap.height / 2),
+            )
+        assertTrue(
+            "Launcher icon background must be white; sampled " +
+                backgroundSamples.joinToString { "#%08X".format(it) } +
+                ", logo bounds=$logoBounds",
+            backgroundSamples.all { it == AndroidColor.WHITE },
+        )
+
+        assertTrue(
+            "Launcher logo must be horizontally centered",
+            abs(logoBounds.left + logoBounds.right - (bitmap.width - 1)) <= 2,
+        )
+        assertTrue(
+            "Launcher logo must be vertically centered",
+            abs(logoBounds.top + logoBounds.bottom - (bitmap.height - 1)) <= 2,
         )
     }
 
@@ -109,6 +146,14 @@ class KaloscopeBrandTest {
         widthDp: Int,
         heightDp: Int,
     ) {
+        assertUsesCanonicalLogoPalette(renderDrawable(drawableRes, widthDp, heightDp))
+    }
+
+    private fun renderDrawable(
+        drawableRes: Int,
+        widthDp: Int,
+        heightDp: Int,
+    ): Bitmap {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val drawable = context.getDrawable(drawableRes)
             ?: error("Drawable $drawableRes was not found")
@@ -118,7 +163,10 @@ class KaloscopeBrandTest {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         drawable.setBounds(0, 0, width, height)
         drawable.draw(Canvas(bitmap))
+        return bitmap
+    }
 
+    private fun assertUsesCanonicalLogoPalette(bitmap: Bitmap) {
         canonicalLogoColors.forEach { color ->
             assertTrue(
                 "Canonical logo color ${color.toHexRgb()} was not rendered",
