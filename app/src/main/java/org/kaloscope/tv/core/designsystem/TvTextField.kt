@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -35,6 +34,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreInterceptKeyBeforeSoftKeyboard
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -48,6 +48,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.MaterialTheme
@@ -146,6 +147,13 @@ private fun TvTextFieldSurface(
         lineHeight = 20.sp,
     )
     val placeholderTextStyle = fieldTextStyle.copy(color = Subtle)
+    val verticalPadding = 12.dp
+    val fieldHeight = with(LocalDensity.current) {
+        maxOf(
+            48.dp,
+            fieldTextStyle.lineHeight.toDp() + verticalPadding * 2,
+        )
+    }
 
     val enterEditing = {
         fieldValue = fieldValue.copy(selection = TextRange(fieldValue.text.length))
@@ -230,7 +238,7 @@ private fun TvTextFieldSurface(
             onSend = { finishImeAction() },
         ),
         modifier = modifier
-            .heightIn(min = 48.dp)
+            .height(fieldHeight)
             .focusRequester(fieldFocus)
             .optionalTestTag(if (editing) editorTestTag else selectorTestTag)
             .onFocusChanged {
@@ -331,13 +339,15 @@ private fun TvTextFieldSurface(
                 },
                 shape = shape,
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = verticalPadding),
         decorationBox = { innerTextField ->
             Box(contentAlignment = Alignment.CenterStart) {
                 if (fieldValue.text.isEmpty()) {
                     Text(
                         text = placeholder,
                         style = placeholderTextStyle,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 innerTextField()
