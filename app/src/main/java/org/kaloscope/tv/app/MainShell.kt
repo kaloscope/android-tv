@@ -45,6 +45,7 @@ import org.kaloscope.tv.app.navigation.openPlayer
 import org.kaloscope.tv.app.navigation.openReader
 import org.kaloscope.tv.app.navigation.openSettings
 import org.kaloscope.tv.app.navigation.selectRoot
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.ServerBackdrop
@@ -520,10 +521,10 @@ private fun RootDestinationFrame(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    start = 44.dp,
-                    top = 100.dp,
-                    end = 44.dp,
-                    bottom = 24.dp,
+                    start = BrowseLayoutTokens.ScreenHorizontalPadding,
+                    top = BrowseLayoutTokens.ScreenContentTopPadding,
+                    end = BrowseLayoutTokens.ScreenHorizontalPadding,
+                    bottom = BrowseLayoutTokens.ScreenContentBottomPadding,
                 ),
         ) {
             content()

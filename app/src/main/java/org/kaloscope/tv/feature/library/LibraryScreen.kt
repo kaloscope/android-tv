@@ -296,7 +296,7 @@ private fun LibrarySidebar(
             .fillMaxHeight()
             .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
             .padding(BrowseLayoutTokens.SidebarContentPadding),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SidebarItemSpacing),
     ) {
         items(
             items = libraries,
@@ -399,14 +399,14 @@ private fun LibrarySearch(
             onMoveRight = searchActionFocus::requestFocus,
             modifier = Modifier
                 .weight(1f)
-                .height(52.dp)
+                .height(BrowseLayoutTokens.SearchControlHeight)
                 .focusProperties { right = searchActionFocus }
                 .testTag("library-search-input"),
         )
         KaloscopeIconButton(
             onClick = onSearch,
             modifier = Modifier
-                .size(52.dp)
+                .size(BrowseLayoutTokens.SearchControlHeight)
                 .focusRequester(searchActionFocus)
                 .focusProperties {
                     topNavigationFocusRequester?.let { up = it }
@@ -485,13 +485,17 @@ private fun LibraryItems(
                         .weight(1f)
                         .testTag("library-results-grid"),
                     contentPadding = PaddingValues(
-                        start = 8.dp,
-                        top = 8.dp,
-                        end = 8.dp,
-                        bottom = 24.dp,
+                        start = BrowseLayoutTokens.GridHorizontalContentPadding,
+                        top = BrowseLayoutTokens.GridTopContentPadding,
+                        end = BrowseLayoutTokens.GridHorizontalContentPadding,
+                        bottom = BrowseLayoutTokens.GridBottomContentPadding,
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        BrowseLayoutTokens.GridHorizontalSpacing,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(
+                        BrowseLayoutTokens.GridVerticalSpacing,
+                    ),
                 ) {
                     itemsIndexed(
                         items = state.items,

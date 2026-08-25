@@ -416,7 +416,7 @@ private fun IndexerSidebar(
             .fillMaxHeight()
             .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
             .padding(BrowseLayoutTokens.SidebarContentPadding),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SidebarItemSpacing),
     ) {
         items(indexers, key = NetworkIndexer::id) { indexer ->
             val isFirstIndexer = indexer.id == firstIndexerId
@@ -518,7 +518,7 @@ private fun SearchInput(
             onMoveRight = firstActionFocus::requestFocus,
             modifier = Modifier
                 .weight(1f)
-                .height(52.dp)
+                .height(BrowseLayoutTokens.SearchControlHeight)
                 .focusProperties { right = firstActionFocus }
                 .testTag("network-search-input"),
         )
@@ -527,7 +527,7 @@ private fun SearchInput(
                 onClick = onOpenFilters,
                 selected = filtersActive,
                 modifier = Modifier
-                    .size(52.dp)
+                    .size(BrowseLayoutTokens.SearchControlHeight)
                     .focusRequester(filterFocusRequester)
                     .focusProperties {
                         topNavigationFocusRequester?.let { up = it }
@@ -555,7 +555,7 @@ private fun SearchInput(
         KaloscopeIconButton(
             onClick = onSearch,
             modifier = Modifier
-                .size(52.dp)
+                .size(BrowseLayoutTokens.SearchControlHeight)
                 .focusRequester(searchActionFocus)
                 .focusProperties {
                     topNavigationFocusRequester?.let { up = it }
@@ -693,13 +693,17 @@ private fun SearchResults(
                         .weight(1f)
                         .testTag("search-results-grid"),
                     contentPadding = PaddingValues(
-                        start = 8.dp,
-                        top = 8.dp,
-                        end = 8.dp,
-                        bottom = 24.dp,
+                        start = BrowseLayoutTokens.GridHorizontalContentPadding,
+                        top = BrowseLayoutTokens.GridTopContentPadding,
+                        end = BrowseLayoutTokens.GridHorizontalContentPadding,
+                        bottom = BrowseLayoutTokens.GridBottomContentPadding,
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        BrowseLayoutTokens.GridHorizontalSpacing,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(
+                        BrowseLayoutTokens.GridVerticalSpacing,
+                    ),
                 ) {
                     itemsIndexed(
                         items = results.items,

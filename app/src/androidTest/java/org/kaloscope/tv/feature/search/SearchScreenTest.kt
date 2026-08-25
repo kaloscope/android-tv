@@ -1150,7 +1150,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun portraitGridFitsExactlyFourResultsPerRowInAuthenticatedFrameAt1080p() {
+    fun portraitGridFitsExactlyFourResultsPerRowWithSharedSpacingAt1080p() {
         val width = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.widthPixels
         if (width != 1920) return
@@ -1184,18 +1184,30 @@ class SearchScreenTest {
             }
         }
 
-        val resultTops = (1..5).map { id ->
+        val resultBounds = (1..5).map { id ->
             composeRule.onNodeWithTag("network-result-v$id")
                 .fetchSemanticsNode()
-                .boundsInRoot.top
+                .boundsInRoot
         }
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
 
-        resultTops.take(4).forEach { top ->
-            assertEquals(resultTops.first(), top, 0.5f)
+        resultBounds.take(4).forEach { bounds ->
+            assertEquals(resultBounds.first().top, bounds.top, 0.5f)
         }
         assertTrue(
             "The fifth portrait result should start the second row",
-            resultTops[4] > resultTops.first(),
+            resultBounds[4].top > resultBounds.first().top,
+        )
+        assertEquals(
+            10f * density,
+            resultBounds[1].left - resultBounds[0].right,
+            1f,
+        )
+        assertEquals(
+            14f * density,
+            resultBounds[4].top - resultBounds[0].bottom,
+            1f,
         )
     }
 
@@ -1308,7 +1320,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun searchActionsMatchSearchFieldHeightInWebUiOrder() {
+    fun searchActionsUseCompactSharedControlHeightInWebUiOrder() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -1348,8 +1360,8 @@ class SearchScreenTest {
         ).fetchSemanticsNode().boundsInRoot
 
         listOf(filterBounds, searchBounds).forEach { bounds ->
-            assertEquals(52f * density, bounds.width, 1f)
-            assertEquals(52f * density, bounds.height, 1f)
+            assertEquals(48f * density, bounds.width, 1f)
+            assertEquals(48f * density, bounds.height, 1f)
         }
         listOf(filterIconBounds, searchIconBounds).forEach { bounds ->
             assertEquals(24f * density, bounds.width, 1f)
@@ -1360,6 +1372,49 @@ class SearchScreenTest {
             .assertDoesNotExist()
         composeRule.onNodeWithText("搜索", useUnmergedTree = true)
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun resultsStartTwentySixDpBelowSearchField() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        coverRatio = 2f / 3f,
+                        results = (1..5).map { result("v$it") },
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val inputBounds = composeRule.onNodeWithTag("network-search-input")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val firstResultBounds = composeRule.onNodeWithTag("network-result-v1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertEquals(
+            26f * density,
+            firstResultBounds.top - inputBounds.bottom,
+            1f,
+        )
     }
 
     @Test

@@ -73,8 +73,8 @@ internal fun MainTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(76.dp)
-            .padding(horizontal = 44.dp),
+            .height(BrowseLayoutTokens.TopBarHeight)
+            .padding(horizontal = BrowseLayoutTokens.ScreenHorizontalPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         KaloscopeBrand(

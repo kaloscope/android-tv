@@ -449,7 +449,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun librarySearchActionMatchesSearchFieldHeight() {
+    fun librarySearchActionUsesCompactSharedControlHeight() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -477,12 +477,48 @@ class LibraryScreenTest {
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
 
-        assertEquals(52f * density, buttonBounds.width, 1f)
-        assertEquals(52f * density, buttonBounds.height, 1f)
+        assertEquals(48f * density, buttonBounds.width, 1f)
+        assertEquals(48f * density, buttonBounds.height, 1f)
         assertEquals(24f * density, iconBounds.width, 1f)
         assertEquals(24f * density, iconBounds.height, 1f)
         composeRule.onNodeWithText("搜索", useUnmergedTree = true)
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun resultsStartTwentySixDpBelowSearchField() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(media = mediaItems(5)),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val inputBounds = composeRule.onNodeWithTag("library-search-input")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val firstResultBounds = composeRule.onNodeWithTag("media-card-1")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertEquals(
+            26f * density,
+            firstResultBounds.top - inputBounds.bottom,
+            1f,
+        )
     }
 
     @Test

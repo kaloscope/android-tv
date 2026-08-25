@@ -51,6 +51,7 @@ import androidx.compose.ui.window.Popup
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceIndicator
@@ -190,7 +191,7 @@ private fun SettingsContent(
         val viewportSize = DpSize(maxWidth, maxHeight)
         Row(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.PaneSpacing),
         ) {
             SettingsMenu(
                 selected = state.section,
@@ -307,11 +308,11 @@ private fun SettingsMenu(
     val firstSection = SettingsSection.entries.first()
     Column(
         modifier = Modifier
-            .width(210.dp)
+            .width(BrowseLayoutTokens.SidebarWidth)
             .fillMaxHeight()
             .background(Panel.copy(alpha = 0.78f), RoundedCornerShape(18.dp))
-            .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(BrowseLayoutTokens.SidebarContentPadding),
+        verticalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SidebarItemSpacing),
     ) {
         for (section in SettingsSection.entries) {
             KaloscopeButton(

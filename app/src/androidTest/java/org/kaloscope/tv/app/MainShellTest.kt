@@ -1022,6 +1022,99 @@ class MainShellTest {
     }
 
     @Test
+    fun rootDestinationsShareCompactContentTop() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Content(listOf(history())),
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val expectedTop = 84f * density
+        val expectedHomeControlTop = 86f * density
+
+        assertEquals(
+            expectedHomeControlTop,
+            composeRule.onNodeWithTag("home-refresh")
+                .fetchSemanticsNode()
+                .boundsInRoot.top,
+            1f,
+        )
+
+        composeRule.onNodeWithTag("main-nav-search")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        assertEquals(
+            expectedTop,
+            composeRule.onNodeWithTag("search-content")
+                .fetchSemanticsNode()
+                .boundsInRoot.top,
+            1f,
+        )
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        assertEquals(
+            expectedTop,
+            composeRule.onNodeWithTag("library-content")
+                .fetchSemanticsNode()
+                .boundsInRoot.top,
+            1f,
+        )
+
+        composeRule.onNodeWithContentDescription("设置")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        assertEquals(
+            expectedTop,
+            composeRule.onNodeWithTag("settings-panel")
+                .fetchSemanticsNode()
+                .boundsInRoot.top,
+            1f,
+        )
+    }
+
+    @Test
+    fun browseAndSettingsPanesShareLeadingEdge() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(focusedResultId = null),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SearchRoute,
+                )
+            }
+        }
+
+        val searchLeft = composeRule.onNodeWithTag("search-content")
+            .fetchSemanticsNode()
+            .boundsInRoot.left
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        val libraryLeft = composeRule.onNodeWithTag("library-content")
+            .fetchSemanticsNode()
+            .boundsInRoot.left
+
+        composeRule.onNodeWithContentDescription("设置")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        val settingsLeft = composeRule.onNodeWithTag("settings-panel")
+            .fetchSemanticsNode()
+            .boundsInRoot.left
+
+        assertEquals(searchLeft, libraryLeft, 1f)
+        assertEquals(searchLeft, settingsLeft, 1f)
+    }
+
+    @Test
     fun recomposingFocusedSearchDoesNotOpenAgain() {
         var homeState by mutableStateOf<HomeUiState>(HomeUiState.Empty)
         var searchOpens = 0
