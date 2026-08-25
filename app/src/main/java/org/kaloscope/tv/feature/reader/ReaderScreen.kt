@@ -37,7 +37,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -62,6 +61,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSectionHeader
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSelectionRow
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSessionHint
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSide
+import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.designsystem.imagePageDirectionLabel
@@ -177,13 +177,8 @@ private fun ActiveReader(
     val textPalette = (state as? ReaderUiState.Text)
         ?.let { TextReaderPalettes.forTheme(it.settings.theme) }
     val background = textPalette?.background ?: Color.Black
-    val overlayPanel = textPalette?.panel ?: Color(0xFF121212)
     val overlayText = textPalette?.text ?: Color.White
     val overlayMuted = textPalette?.muted ?: Color(0xFFAAAAAA)
-    val overlayControlText = textPalette?.let { palette ->
-        // Reader rows keep the shared dark control surface, even on light themes.
-        if (palette.panel.luminance() > 0.5f) OnBackground else palette.text
-    } ?: overlayText
 
     fun requestControl(target: ReaderControlTarget) {
         controlsVisible = true
@@ -410,10 +405,10 @@ private fun ActiveReader(
                 chapters = content.chapters,
                 selectedIndex = content.selectedChapterIndex,
                 order = state.chapterOrder,
-                panelColor = overlayPanel,
-                textColor = overlayText,
-                mutedColor = overlayMuted,
-                controlContentColor = overlayControlText,
+                panelColor = ReaderDrawerPanelColor,
+                textColor = ReaderDrawerTextColor,
+                mutedColor = ReaderDrawerMutedColor,
+                controlContentColor = ReaderDrawerTextColor,
                 onDismiss = ::dismissDrawer,
                 onSelect = { chapterIndex ->
                     dismissDrawer()
@@ -434,10 +429,10 @@ private fun ActiveReader(
                 is ReaderUiState.Text -> TextReaderSettingsDrawer(
                     settings = state.settings,
                     chapterOrder = state.chapterOrder,
-                    panelColor = overlayPanel,
-                    textColor = overlayText,
-                    mutedColor = overlayMuted,
-                    controlContentColor = overlayControlText,
+                    panelColor = ReaderDrawerPanelColor,
+                    textColor = ReaderDrawerTextColor,
+                    mutedColor = ReaderDrawerMutedColor,
+                    controlContentColor = ReaderDrawerTextColor,
                     onSettings = onTextSettings,
                     onChapterOrder = onChapterOrder,
                     onDismiss = ::dismissDrawer,
@@ -745,6 +740,7 @@ private fun ReaderChapterDrawer(
         title = stringResource(R.string.reader_chapters),
         palette = KaloscopeSidePanelPalette(
             panelColor = panelColor,
+            panelAlpha = 1f,
             textColor = textColor,
             mutedColor = mutedColor,
             controlContentColor = controlContentColor,
@@ -796,9 +792,10 @@ private fun ImageReaderSettingsDrawer(
     onDismiss: () -> Unit,
 ) {
     ReaderSettingsDrawerFrame(
-        panelColor = Color(0xFF121212),
-        textColor = Color.White,
-        mutedColor = Color(0xFFAAAAAA),
+        panelColor = ReaderDrawerPanelColor,
+        textColor = ReaderDrawerTextColor,
+        mutedColor = ReaderDrawerMutedColor,
+        controlContentColor = ReaderDrawerTextColor,
         onDismiss = onDismiss,
     ) { onOpenChoice ->
         ReaderChoiceSettingRow(
@@ -1030,6 +1027,7 @@ private fun ReaderSettingsDrawerFrame(
             title = stringResource(R.string.reader_settings),
             palette = KaloscopeSidePanelPalette(
                 panelColor = panelColor,
+                panelAlpha = 1f,
                 textColor = textColor,
                 mutedColor = mutedColor,
                 controlContentColor = controlContentColor,
@@ -1223,5 +1221,9 @@ private data class ReaderSettingsChoice(
     val title: String,
     val options: List<KaloscopeChoiceDialogOption>,
 )
+
+private val ReaderDrawerPanelColor = Color.Black
+private val ReaderDrawerTextColor = OnBackground
+private val ReaderDrawerMutedColor = Muted
 
 private const val TITLE_HIDE_DELAY_MILLIS = 3_000L

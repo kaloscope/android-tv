@@ -648,7 +648,7 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textSettingsUseReadableRestingTextOnLightTheme() {
+    fun textSettingsStayDarkOnLightReadingTheme() {
         setReader(
             textState(
                 text = "正文",
@@ -666,7 +666,7 @@ class ReaderScreenTest {
 
         val panel = composeRule.onNodeWithTag("reader-settings-drawer")
             .captureToImage().asAndroidBitmap()
-        assertEquals(Color(0xFFFDFDFD).toArgb(), panel.getPixel(2, panel.height / 2))
+        assertEquals(Color.Black.toArgb(), panel.getPixel(2, panel.height / 2))
         assertEquals(
             OnBackground,
             textLayoutForText("章节显示顺序").layoutInput.style.color,
@@ -674,7 +674,7 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textChapterDrawerUsesReadableRestingTextOnLightTheme() {
+    fun textChapterDrawerStaysDarkOnLightReadingTheme() {
         setReader(
             textState(
                 text = "正文",
@@ -687,6 +687,9 @@ class ReaderScreenTest {
         control("章节").performKeyInput { pressKey(Key.Enter) }
         composeRule.mainClock.advanceTimeBy(500)
 
+        val panel = composeRule.onNodeWithTag("reader-chapter-drawer")
+            .captureToImage().asAndroidBitmap()
+        assertEquals(Color.Black.toArgb(), panel.getPixel(2, panel.height / 2))
         assertEquals(
             OnBackground,
             textLayoutForText("第一章").layoutInput.style.color,
@@ -694,7 +697,7 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textSettingsKeepWebUiTextColorOnDarkTheme() {
+    fun textSettingsUseSharedLightTextOnDarkReadingTheme() {
         setReader(
             textState(
                 text = "正文",
@@ -711,7 +714,7 @@ class ReaderScreenTest {
         composeRule.mainClock.advanceTimeBy(500)
 
         assertEquals(
-            Color(0xFFCCCCCC),
+            OnBackground,
             textLayoutForText("章节显示顺序").layoutInput.style.color,
         )
     }
@@ -869,6 +872,21 @@ class ReaderScreenTest {
             testTag = "reader-theme-swatch-white",
             useUnmergedTree = true,
         ).assertExists()
+    }
+
+    @Test
+    fun imageSettingsMatchBlackReaderBackground() {
+        setReader(imageState())
+
+        composeRule.onNodeWithTag("image-reader-scroll")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        composeRule.mainClock.advanceTimeBy(500)
+
+        val panel = composeRule.onNodeWithTag("reader-settings-drawer")
+            .captureToImage().asAndroidBitmap()
+        assertEquals(Color.Black.toArgb(), panel.getPixel(2, panel.height / 2))
     }
 
     @Test

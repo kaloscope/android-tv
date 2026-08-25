@@ -40,6 +40,7 @@ data class KaloscopeSidePanelPalette(
     val textColor: Color,
     val mutedColor: Color,
     val controlContentColor: Color = textColor,
+    val panelAlpha: Float = 0.99f,
 )
 
 @Composable
@@ -70,7 +71,7 @@ fun KaloscopeSidePanel(
             modifier = modifier
                 .fillMaxHeight()
                 .width(size.width)
-                .background(palette.panelColor.copy(alpha = 0.99f))
+                .background(palette.panelColor.copy(alpha = palette.panelAlpha))
                 .padding(horizontal = 28.dp, vertical = 32.dp)
                 .then(
                     if (trapFocus) {
