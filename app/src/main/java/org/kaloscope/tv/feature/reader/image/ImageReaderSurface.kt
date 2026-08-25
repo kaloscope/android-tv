@@ -2,9 +2,9 @@ package org.kaloscope.tv.feature.reader.image
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +38,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -165,8 +166,17 @@ private fun ScrollingImages(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    val viewportPixels = with(LocalDensity.current) { viewportHeight.toPx() }
+    val density = LocalDensity.current
+    val viewportPixels = with(density) { viewportHeight.roundToPx() }.coerceAtLeast(1)
+    val imageHeights = remember(contentRevision, settings.zoomMode, viewportPixels) {
+        mutableStateMapOf<Int, Int>()
+    }
     var horizontalBias by remember(contentRevision) { mutableFloatStateOf(0f) }
+    var scrollInProgress by remember(contentRevision) { mutableStateOf(false) }
+    var advanceAfterLoad by remember(contentRevision) { mutableStateOf(false) }
+    var loadStartImageCount by remember(contentRevision) {
+        mutableIntStateOf(content.images.size)
+    }
     LaunchedEffect(contentRevision) {
         listState.scrollToItem(0)
         horizontalBias = 0f
@@ -202,11 +212,29 @@ private fun ScrollingImages(
                 onPositionChanged(if (content.images.isEmpty()) 0 else index + 1)
             }
     }
-    LaunchedEffect(isLoadingMore, content.images.size) {
-        if (isLoadingMore) {
-            withFrameNanos { }
-            listState.animateScrollToItem(content.images.size)
+    LaunchedEffect(isLoadingMore, content.images.size, advanceAfterLoad) {
+        when {
+            advanceAfterLoad &&
+                !isLoadingMore &&
+                content.images.size > loadStartImageCount -> {
+                withFrameNanos { }
+                listState.animateScrollToItem(loadStartImageCount)
+                advanceAfterLoad = false
+            }
+
+            isLoadingMore -> {
+                withFrameNanos { }
+                listState.animateScrollToItem(content.images.size)
+            }
         }
+    }
+    val trailingAlignmentHeight = if (!isLoadingMore && content.images.isNotEmpty()) {
+        val lastImageHeight = imageHeights[content.images.lastIndex] ?: 0
+        with(density) {
+            (viewportPixels - lastImageHeight).coerceAtLeast(0).toDp()
+        }
+    } else {
+        0.dp
     }
     LazyColumn(
         state = listState,
@@ -226,6 +254,7 @@ private fun ScrollingImages(
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                if (scrollInProgress || isLoadingMore) return@onPreviewKeyEvent true
                 if (settings.zoomMode == ImageZoomMode.FitHeight) {
                     when (event.key) {
                         Key.DirectionLeft -> {
@@ -242,20 +271,78 @@ private fun ScrollingImages(
                 val direction = event.key.toReaderDirection()
                     ?: return@onPreviewKeyEvent false
                 val step = ReaderRemoteKeyPolicy.verticalStep(direction)
-                when (step) {
-                    ReaderNavigationStep.Backward -> if (!listState.canScrollBackward) {
+                val currentIndex = listState.firstVisibleItemIndex
+                if (currentIndex !in content.images.indices) {
+                    return@onPreviewKeyEvent true
+                }
+                val currentImageHeight = imageHeights[currentIndex]
+                    ?: listState.layoutInfo.visibleItemsInfo
+                        .firstOrNull { it.index == currentIndex }
+                        ?.size
+                    ?: return@onPreviewKeyEvent true
+                val decision = ContinuousImageScrollPolicy.decide(
+                    step = step,
+                    position = ContinuousImagePosition(
+                        imageIndex = currentIndex,
+                        offsetPx = listState.firstVisibleItemScrollOffset,
+                    ),
+                    currentImageHeightPx = currentImageHeight,
+                    previousImageHeightPx = imageHeights[currentIndex - 1],
+                    imageCount = content.images.size,
+                    viewportHeightPx = viewportPixels,
+                )
+                when (decision) {
+                    is ContinuousImageScrollDecision.ScrollTo -> {
+                        scrollInProgress = true
+                        scope.launch {
+                            try {
+                                listState.animateScrollToItem(
+                                    index = decision.position.imageIndex,
+                                    scrollOffset = decision.position.offsetPx,
+                                )
+                            } finally {
+                                scrollInProgress = false
+                            }
+                        }
+                    }
+
+                    is ContinuousImageScrollDecision.MeasurePreviousImage -> {
+                        scrollInProgress = true
+                        scope.launch {
+                            try {
+                                listState.scrollToItem(decision.imageIndex)
+                                withFrameNanos { }
+                                val imageHeight = imageHeights[decision.imageIndex]
+                                    ?: listState.layoutInfo.visibleItemsInfo
+                                        .firstOrNull { it.index == decision.imageIndex }
+                                        ?.size
+                                val offset = imageHeight?.let {
+                                    ContinuousImageScrollPolicy.bottomOffsetPx(
+                                        imageHeightPx = it,
+                                        viewportHeightPx = viewportPixels,
+                                    )
+                                } ?: 0
+                                listState.scrollToItem(decision.imageIndex, offset)
+                            } finally {
+                                scrollInProgress = false
+                            }
+                        }
+                    }
+
+                    ContinuousImageScrollDecision.StartBoundary -> {
                         onBoundary(ReaderBoundary.Start)
-                    } else {
-                        scope.launch { listState.animateScrollBy(-viewportPixels * 0.85f) }
                     }
 
-                    ReaderNavigationStep.Forward -> if (!listState.canScrollForward) {
-                        if (imagesExhausted) onBoundary(ReaderBoundary.End) else onLoadMore()
+                    ContinuousImageScrollDecision.EndBoundary -> if (imagesExhausted) {
+                        advanceAfterLoad = false
+                        onBoundary(ReaderBoundary.End)
                     } else {
-                        scope.launch { listState.animateScrollBy(viewportPixels * 0.85f) }
+                        loadStartImageCount = content.images.size
+                        advanceAfterLoad = true
+                        onLoadMore()
                     }
 
-                    ReaderNavigationStep.None -> Unit
+                    ContinuousImageScrollDecision.Ignore -> Unit
                 }
                 true
             },
@@ -277,7 +364,12 @@ private fun ScrollingImages(
                 loadingTestTag = "reader-image-$index-loading",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("reader-image-$index"),
+                    .testTag("reader-image-$index")
+                    .onSizeChanged { size ->
+                        if (size.height > 0 && imageHeights[index] != size.height) {
+                            imageHeights[index] = size.height
+                        }
+                    },
             )
         }
         if (isLoadingMore) {
@@ -287,6 +379,14 @@ private fun ScrollingImages(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(INLINE_LOADING_HEIGHT),
+                )
+            }
+        } else if (trailingAlignmentHeight > 0.dp) {
+            item(key = TRAILING_ALIGNMENT_ITEM_KEY) {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(trailingAlignmentHeight),
                 )
             }
         }
@@ -658,4 +758,5 @@ private const val MAX_AUTOMATIC_RETRIES = 3
 private const val IMAGE_PAN_STEP = 0.5f
 private const val PAGE_TRANSITION_MILLIS = 200L
 private const val LOADING_MORE_ITEM_KEY = "reader-loading-more"
+private const val TRAILING_ALIGNMENT_ITEM_KEY = "reader-trailing-alignment"
 private val INLINE_LOADING_HEIGHT = 120.dp

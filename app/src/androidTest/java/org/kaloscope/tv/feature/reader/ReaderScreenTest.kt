@@ -469,6 +469,28 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun scrollingDownAlignsNextViewportSizedImageTop() {
+        setReader(
+            imageState(
+                images = listOf(
+                    "https://cdn.example.test/page-1.jpg",
+                    "https://cdn.example.test/page-2.jpg",
+                ),
+            ),
+        )
+        val viewport = composeRule.onNodeWithTag("image-reader-scroll")
+            .fetchSemanticsNode().boundsInRoot
+
+        composeRule.onNodeWithTag("image-reader-scroll")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        val secondImage = composeRule.onNodeWithTag("reader-image-1")
+            .fetchSemanticsNode().boundsInRoot
+        assertEquals(viewport.top, secondImage.top, 1f)
+    }
+
+    @Test
     fun imagePagingDoesNotRevealHiddenTitle() {
         composeRule.mainClock.autoAdvance = false
         setReader(
