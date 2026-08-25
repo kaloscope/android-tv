@@ -1,9 +1,11 @@
 package org.kaloscope.tv.feature.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -115,6 +117,7 @@ internal fun MediaDetailCinematicLayout(
     val moreInfoFocusRequester = remember(parent.id) { FocusRequester() }
     val moreInfoCloseFocusRequester = remember(parent.id) { FocusRequester() }
     var moreInfoOpen by remember(parent.id) { mutableStateOf(false) }
+    var verticalScrollInProgress by remember(parent.id) { mutableStateOf(false) }
     val displayedPlot = focusedChildDetail
         ?.plot
         ?.takeIf(String::isNotBlank)
@@ -128,32 +131,55 @@ internal fun MediaDetailCinematicLayout(
         }
     }
 
+    fun animateToVerticalBoundary(forward: Boolean) {
+        if (verticalScrollInProgress) return
+        verticalScrollInProgress = true
+        scrollScope.launch {
+            try {
+                while (
+                    if (forward) {
+                        detailScrollState.canScrollForward
+                    } else {
+                        detailScrollState.canScrollBackward
+                    }
+                ) {
+                    val viewportHeight = detailScrollState.layoutInfo.viewportSize.height
+                    if (viewportHeight <= 0) break
+                    val consumed = detailScrollState.animateScrollBy(
+                        value = if (forward) {
+                            viewportHeight.toFloat()
+                        } else {
+                            -viewportHeight.toFloat()
+                        },
+                        animationSpec = tween(
+                            durationMillis = DETAIL_VERTICAL_SCROLL_DURATION_MILLIS,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                    if (consumed == 0f) break
+                }
+            } finally {
+                verticalScrollInProgress = false
+            }
+        }
+    }
+
     fun navigateUp(onAlreadyAtTop: (() -> Unit)? = null) {
+        if (verticalScrollInProgress) return
         if (!detailScrollState.canScrollBackward) {
             onAlreadyAtTop?.invoke()
             return
         }
-        scrollScope.launch {
-            detailScrollState.scrollToItem(0)
-        }
+        animateToVerticalBoundary(forward = false)
     }
 
     fun scrollToBottom() {
+        if (verticalScrollInProgress) return
         if (!detailScrollState.canScrollForward && parent.actors.isNotEmpty()) {
             castFocusRequester.requestFocus()
             return
         }
-        scrollScope.launch {
-            while (detailScrollState.canScrollForward) {
-                val viewportHeight = detailScrollState.layoutInfo.viewportSize.height
-                if (
-                    viewportHeight <= 0 ||
-                    detailScrollState.scrollBy(viewportHeight.toFloat()) <= 0f
-                ) {
-                    break
-                }
-            }
-        }
+        animateToVerticalBoundary(forward = true)
     }
 
     BoxWithConstraints(
@@ -881,6 +907,8 @@ private fun DetailCreditColumn(
         )
     }
 }
+
+private const val DETAIL_VERTICAL_SCROLL_DURATION_MILLIS = 300
 
 private fun Modifier.detailVerticalBoundaryKeys(
     onUp: (() -> Unit)? = null,

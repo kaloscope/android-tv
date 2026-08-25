@@ -1477,6 +1477,130 @@ class MediaDetailScreenTest {
     }
 
     @Test
+    fun episodeDownMovesThroughAnIntermediateScrollPosition() {
+        val state = MediaDetailUiState.Content(
+            parent = twoEpisodeSeries().copy(
+                directors = listOf("林舟"),
+                actors = listOf(MediaActor("沈川", "队长", null)),
+            ),
+            focusedChildId = 302,
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = state,
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val child = composeRule.onNodeWithTag("media-child-card-302").assertIsFocused()
+        val detailScroll = composeRule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
+        )
+
+        composeRule.mainClock.autoAdvance = false
+        child.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.mainClock.advanceTimeBy(96)
+
+        val intermediateRange = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        val intermediateOffset = intermediateRange.value()
+        val maximumOffset = intermediateRange.maxValue()
+        assertTrue(
+            "Down should animate through the detail viewport: $intermediateOffset/$maximumOffset",
+            intermediateOffset > 0f && intermediateOffset < maximumOffset,
+        )
+        child.assertIsFocused()
+
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+        val finalRange = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        assertEquals(finalRange.maxValue(), finalRange.value(), 0f)
+    }
+
+    @Test
+    fun castUpMovesThroughAnIntermediateScrollPosition() {
+        val state = MediaDetailUiState.Content(
+            parent = twoEpisodeSeries().copy(
+                directors = listOf("林舟"),
+                actors = listOf(MediaActor("沈川", "队长", null)),
+            ),
+            focusedChildId = 302,
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = state,
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val child = composeRule.onNodeWithTag("media-child-card-302").assertIsFocused()
+        val detailScroll = composeRule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
+        )
+
+        child.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        child.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        val cast = composeRule.onNodeWithTag("cast-carousel").assertIsFocused()
+        val bottomOffset = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+            .value()
+        assertTrue(bottomOffset > 0f)
+
+        composeRule.mainClock.autoAdvance = false
+        cast.performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.mainClock.advanceTimeBy(96)
+
+        val intermediateOffset = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+            .value()
+        assertTrue(
+            "Up should animate through the detail viewport: $intermediateOffset/$bottomOffset",
+            intermediateOffset > 0f && intermediateOffset < bottomOffset,
+        )
+        cast.assertIsFocused()
+
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+        val finalOffset = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+            .value()
+        assertEquals(0f, finalOffset, 0f)
+    }
+
+    @Test
     fun seriesVerticalBoundaryKeysScrollBeforeChangingFocus() {
         val state = MediaDetailUiState.Content(
             parent = twoEpisodeSeries().copy(
