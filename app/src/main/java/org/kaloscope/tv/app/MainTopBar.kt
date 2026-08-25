@@ -102,6 +102,7 @@ internal fun MainTopBar(
                 modifier = Modifier
                     .focusRequester(homeFocus)
                     .focusProperties {
+                        up = FocusRequester.Cancel
                         left = FocusRequester.Cancel
                         right = searchFocus
                     },
@@ -118,6 +119,7 @@ internal fun MainTopBar(
                     .testTag("main-nav-search")
                     .focusRequester(searchFocus)
                     .focusProperties {
+                        up = FocusRequester.Cancel
                         left = homeFocus
                         right = libraryFocus
                         down = searchMenuFocus
@@ -134,6 +136,7 @@ internal fun MainTopBar(
                 modifier = Modifier
                     .focusRequester(libraryFocus)
                     .focusProperties {
+                        up = FocusRequester.Cancel
                         left = searchFocus
                         right = settingsFocus
                         down = libraryMenuFocus
@@ -148,6 +151,7 @@ internal fun MainTopBar(
             modifier = Modifier
                 .focusRequester(settingsFocus)
                 .focusProperties {
+                    up = FocusRequester.Cancel
                     left = libraryFocus
                     right = FocusRequester.Cancel
                     down = settingsMenuFocus

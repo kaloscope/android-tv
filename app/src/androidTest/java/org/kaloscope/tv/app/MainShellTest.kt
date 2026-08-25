@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -292,6 +294,68 @@ class MainShellTest {
             .assertIsSelected()
             .assertIsFocused()
         composeRule.onNodeWithTag("right-boundary-decoy").assertIsNotFocused()
+    }
+
+    @Test
+    fun topNavigationRejectsRepeatedUpAtUpperBoundary() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                val homeFocus = remember { FocusRequester() }
+                val searchFocus = remember { FocusRequester() }
+                val libraryFocus = remember { FocusRequester() }
+                val settingsFocus = remember { FocusRequester() }
+                val searchMenuFocus = remember { FocusRequester() }
+                val libraryMenuFocus = remember { FocusRequester() }
+                val settingsMenuFocus = remember { FocusRequester() }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .focusable()
+                            .testTag("upper-boundary-decoy"),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = 80.dp),
+                    ) {
+                        MainTopBar(
+                            currentRoute = SearchRoute,
+                            onHome = {},
+                            onSearch = {},
+                            onLibrary = {},
+                            onSettings = {},
+                            onDestinationFocused = {},
+                            homeFocus = homeFocus,
+                            searchFocus = searchFocus,
+                            libraryFocus = libraryFocus,
+                            settingsFocus = settingsFocus,
+                            searchMenuFocus = searchMenuFocus,
+                            libraryMenuFocus = libraryMenuFocus,
+                            settingsMenuFocus = settingsMenuFocus,
+                        )
+                    }
+                }
+            }
+        }
+
+        listOf(
+            composeRule.onNodeWithText("首页"),
+            composeRule.onNodeWithTag("main-nav-search"),
+            composeRule.onNodeWithText("媒体库"),
+            composeRule.onNodeWithContentDescription("设置"),
+        ).forEach { navigation ->
+            navigation
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+                .performKeyInput {
+                    repeat(8) { pressKey(Key.DirectionUp) }
+                }
+                .assertIsFocused()
+            composeRule.onNodeWithTag("upper-boundary-decoy")
+                .assertIsNotFocused()
+        }
     }
 
     @Test
