@@ -15,6 +15,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.DanmakuSettings
+import java.util.concurrent.atomic.AtomicBoolean
 
 class DanmakuOverlayTest {
     @get:Rule
@@ -31,7 +32,9 @@ class DanmakuOverlayTest {
     }
 
     @Test
-    fun akDanmakuHostStartsAtPlayerTop() {
+    fun akDanmakuRuntimeInitializesAndHostStartsAtPlayerTop() {
+        val runtimeAvailable = AtomicBoolean(false)
+
         composeRule.setContent {
             Box(Modifier.fillMaxSize()) {
                 val context = LocalContext.current
@@ -52,8 +55,13 @@ class DanmakuOverlayTest {
                         ),
                     ),
                     settings = DanmakuSettings(),
+                    onRuntimeAvailable = runtimeAvailable::set,
                 )
             }
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runtimeAvailable.get()
         }
 
         val host = composeRule
