@@ -1240,6 +1240,43 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun controlsShowCurrentPositionOnceAndTotalDuration() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-progress")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        composeRule.onAllNodesWithText("00:10").assertCountEquals(1)
+        composeRule.onNodeWithText("01:00").assertIsDisplayed()
+        composeRule.onNodeWithText("−00:50").assertDoesNotExist()
+    }
+
+    @Test
     fun progressKeepsSubmittedTargetVisibleUntilPlayerReportsIt() {
         val seekTargets = mutableListOf<Long>()
         var displayedPositionMillis by mutableStateOf(10_000L)
@@ -1280,7 +1317,7 @@ class PlayerControlsTest {
             .performKeyInput {
                 keyDown(Key.DirectionRight)
             }
-        composeRule.onAllNodesWithText("00:20").assertCountEquals(2)
+        composeRule.onAllNodesWithText("00:20").assertCountEquals(1)
         composeRule.runOnIdle {
             assertTrue(seekTargets.isEmpty())
         }
@@ -1288,10 +1325,95 @@ class PlayerControlsTest {
         composeRule.onNodeWithTag("player-progress")
             .performKeyInput { keyUp(Key.DirectionRight) }
 
-        composeRule.onAllNodesWithText("00:20").assertCountEquals(2)
+        composeRule.onAllNodesWithText("00:20").assertCountEquals(1)
         composeRule.runOnIdle {
             assertEquals(listOf(20_000L), seekTargets)
         }
+    }
+
+    @Test
+    fun zeroProgressKeepsRoundedTrackStartUnderThumbCenter() {
+        lateinit var density: Density
+        var durationMillis by mutableStateOf(60_000L)
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState().copy(
+                        positionMillis = 0,
+                        durationMillis = durationMillis,
+                    ),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-progress")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        val trackStart = composeRule.onNodeWithTag("player-progress-track")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .left
+        val thumbCenter = composeRule.onNodeWithTag("player-progress-thumb")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .center
+            .x
+        composeRule.runOnIdle {
+            durationMillis = 0
+        }
+        val track = composeRule.onNodeWithTag("player-progress-track")
+            .captureToImage()
+            .asAndroidBitmap()
+        val cornerPixel = track.getPixel(0, 0)
+        val edgeCenterPixel = track.getPixel(0, track.height / 2)
+        val cornerDifference =
+            kotlin.math.abs(
+                android.graphics.Color.red(cornerPixel) -
+                    android.graphics.Color.red(edgeCenterPixel),
+            ) + kotlin.math.abs(
+                android.graphics.Color.green(cornerPixel) -
+                    android.graphics.Color.green(edgeCenterPixel),
+            ) + kotlin.math.abs(
+                android.graphics.Color.blue(cornerPixel) -
+                    android.graphics.Color.blue(edgeCenterPixel),
+            ) + kotlin.math.abs(
+                android.graphics.Color.alpha(cornerPixel) -
+                    android.graphics.Color.alpha(edgeCenterPixel),
+            )
+        val tolerance = with(density) { 1.dp.toPx() }
+
+        assertEquals(
+            "The rounded track start should stay centered under the thumb at zero progress",
+            trackStart,
+            thumbCenter,
+            tolerance,
+        )
+        assertTrue(
+            "The track corner should be visibly clipped into a capsule: " +
+                "corner=${Integer.toHexString(cornerPixel)} " +
+                "edge=${Integer.toHexString(edgeCenterPixel)}",
+            cornerDifference > 60,
+        )
     }
 
     @Test
@@ -1581,7 +1703,8 @@ class PlayerControlsTest {
         composeRule.onNodeWithText("Network").assertIsDisplayed()
         composeRule.onNodeWithText("1.0x").assertIsDisplayed()
         composeRule.onNodeWithText("00:10").assertIsDisplayed()
-        composeRule.onNodeWithText("−00:50").assertIsDisplayed()
+        composeRule.onNodeWithText("01:00").assertIsDisplayed()
+        composeRule.onNodeWithText("−00:50").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("播放").assertDoesNotExist()
 
         val layerBounds = composeRule.onNodeWithTag("player-info-preview")
@@ -1598,7 +1721,7 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun completedInfoPreviewShowsUnsignedZeroRemainingTime() {
+    fun completedInfoPreviewKeepsCurrentAndTotalDurationVisible() {
         composeRule.setContent {
             MaterialTheme {
                 PlayerInfoPreview(
@@ -1610,7 +1733,8 @@ class PlayerControlsTest {
             }
         }
 
-        composeRule.onNodeWithText("00:00").assertIsDisplayed()
+        composeRule.onAllNodesWithText("01:00").assertCountEquals(2)
+        composeRule.onNodeWithText("00:00").assertDoesNotExist()
         composeRule.onNodeWithText("−00:00").assertDoesNotExist()
     }
 

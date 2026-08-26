@@ -9,6 +9,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -44,6 +45,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -135,7 +137,7 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
             )
             Spacer(Modifier.weight(1f))
             Text(
-                text = formatRemainingDuration(state.positionMillis, state.durationMillis),
+                text = formatPlayerDuration(state.durationMillis),
                 color = Muted,
                 fontSize = 14.sp,
             )
@@ -247,12 +249,6 @@ private fun playerControlScrim(): Brush =
             Color(0xF2050810),
         ),
     )
-
-private fun formatRemainingDuration(positionMillis: Long, durationMillis: Long): String {
-    val remainingMillis = (durationMillis - positionMillis).coerceAtLeast(0)
-    val remainingDuration = formatPlayerDuration(remainingMillis)
-    return if (remainingMillis == 0L) remainingDuration else "−$remainingDuration"
-}
 
 @Composable
 internal fun PlayerControls(
@@ -382,7 +378,7 @@ internal fun PlayerControls(
             )
             Spacer(Modifier.weight(1f))
             Text(
-                text = formatRemainingDuration(state.positionMillis, state.durationMillis),
+                text = formatPlayerDuration(state.durationMillis),
                 color = Muted,
                 fontSize = 14.sp,
             )
@@ -914,7 +910,10 @@ private fun SeekablePlayerProgress(
             .testTag("player-progress"),
         contentAlignment = Alignment.BottomStart,
     ) {
-        val progressWidth = maxWidth
+        val timelineWidth = maxWidth
+        val trackHorizontalInset = 10.dp
+        val trackWidth = (timelineWidth - trackHorizontalInset * 2)
+            .coerceAtLeast(0.dp)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -924,18 +923,31 @@ private fun SeekablePlayerProgress(
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .align(Alignment.CenterStart)
+                    .offset(x = trackHorizontalInset)
+                    .width(trackWidth)
                     .height(if (focused) 9.dp else 6.dp)
-                    .background(Color(0xFF4A5060), RoundedCornerShape(9.dp))
                     .testTag("player-progress-track"),
             ) {
-                Box(
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val radius = size.height / 2
+                    drawRoundRect(
+                        color = Color(0xFF4A5060),
+                        cornerRadius = CornerRadius(radius, radius),
+                    )
+                }
+                Canvas(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
-                        .background(progressColor, RoundedCornerShape(9.dp))
                         .testTag("player-progress-played"),
-                )
+                ) {
+                    val radius = size.height / 2
+                    drawRoundRect(
+                        color = progressColor,
+                        cornerRadius = CornerRadius(radius, radius),
+                    )
+                }
                 if (chapterMarkers.isNotEmpty()) {
                     Box(
                         modifier = Modifier
@@ -947,8 +959,8 @@ private fun SeekablePlayerProgress(
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
                                     .offset(
-                                        x = (progressWidth * marker - 1.dp)
-                                            .coerceIn(0.dp, progressWidth - 2.dp),
+                                        x = (trackWidth * marker - 1.dp)
+                                            .coerceIn(0.dp, trackWidth - 2.dp),
                                     )
                                     .width(2.dp)
                                     .fillMaxHeight()
@@ -965,8 +977,11 @@ private fun SeekablePlayerProgress(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .offset(
-                            x = (progressWidth * progress - thumbRadius)
-                                .coerceIn(0.dp, progressWidth - thumbContainerSize),
+                            x = (
+                                trackHorizontalInset +
+                                    trackWidth * progress -
+                                    thumbRadius
+                                ).coerceIn(0.dp, timelineWidth - thumbContainerSize),
                         )
                         .size(thumbContainerSize)
                         .background(
@@ -1002,19 +1017,6 @@ private fun SeekablePlayerProgress(
                         .testTag("player-current-chapter"),
                 )
             }
-            val targetWidth = 54.dp
-            val targetOffset =
-                (maxWidth * progress - targetWidth / 2)
-                    .coerceIn(0.dp, maxWidth - targetWidth)
-            Text(
-                text = formatPlayerDuration(displayPosition),
-                color = OnBackground,
-                fontSize = 11.sp,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .width(targetWidth)
-                    .offset(x = targetOffset, y = 18.dp),
-            )
         }
     }
 }
