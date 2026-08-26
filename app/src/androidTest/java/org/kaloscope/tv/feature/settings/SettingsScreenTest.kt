@@ -408,7 +408,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun danmakuOpacityUsesAdjustmentModeAndCanonicalStep() {
+    fun danmakuOpacityUsesAdjustmentModeAndFivePercentStep() {
         var updatedOpacity: Int? = null
         composeRule.setContent {
             KaloscopeTheme {
@@ -458,7 +458,50 @@ class SettingsScreenTest {
             .assertIsSelected()
             .performKeyInput { pressKey(Key.DirectionRight) }
 
-        composeRule.runOnIdle { assertEquals(75, updatedOpacity) }
+        composeRule.runOnIdle { assertEquals(55, updatedOpacity) }
+    }
+
+    @Test
+    fun danmakuDisplayAreaUsesFivePercentAdjustmentStep() {
+        var updatedDisplayArea: Int? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(
+                            danmaku = DanmakuSettings(displayAreaPercent = 75),
+                        ),
+                        section = SettingsSection.Danmaku,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeQuality = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {
+                        updatedDisplayArea = it.displayAreaPercent
+                    },
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val displayAreaRow = composeRule.onNode(
+            hasClickAction() and hasText("显示区域"),
+        )
+        displayAreaRow.performScrollTo()
+        displayAreaRow
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.runOnIdle { assertEquals(70, updatedDisplayArea) }
     }
 
     @Test

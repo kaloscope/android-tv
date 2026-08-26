@@ -5,22 +5,21 @@ import org.junit.Test
 
 class DanmakuSettingsPolicyTest {
     @Test
-    fun `percentages use the canonical ordered values`() {
-        assertEquals(listOf(25, 50, 75, 100), DanmakuSettingsPolicy.PERCENTAGE_VALUES)
-    }
-
-    @Test
-    fun `opacity adjusts one value at a time and stops at boundaries`() {
-        val minimum = DanmakuSettings(opacityPercent = 25)
+    fun `opacity adjusts by five percent and stops at twenty and one hundred`() {
+        val minimum = DanmakuSettings(opacityPercent = 20)
         val middle = DanmakuSettings(opacityPercent = 50)
         val maximum = DanmakuSettings(opacityPercent = 100)
 
         assertEquals(
-            25,
+            20,
             DanmakuSettingsPolicy.adjustOpacity(minimum, offset = -1).opacityPercent,
         )
         assertEquals(
-            75,
+            45,
+            DanmakuSettingsPolicy.adjustOpacity(middle, offset = -1).opacityPercent,
+        )
+        assertEquals(
+            55,
             DanmakuSettingsPolicy.adjustOpacity(middle, offset = 1).opacityPercent,
         )
         assertEquals(
@@ -30,19 +29,24 @@ class DanmakuSettingsPolicyTest {
     }
 
     @Test
-    fun `display area adjusts one value at a time and stops at boundaries`() {
-        val minimum = DanmakuSettings(displayAreaPercent = 25)
+    fun `display area adjusts by five percent and stops at twenty and one hundred`() {
+        val minimum = DanmakuSettings(displayAreaPercent = 20)
         val middle = DanmakuSettings(displayAreaPercent = 75)
         val maximum = DanmakuSettings(displayAreaPercent = 100)
 
         assertEquals(
-            25,
+            20,
             DanmakuSettingsPolicy.adjustDisplayArea(minimum, offset = -1)
                 .displayAreaPercent,
         )
         assertEquals(
-            50,
+            70,
             DanmakuSettingsPolicy.adjustDisplayArea(middle, offset = -1)
+                .displayAreaPercent,
+        )
+        assertEquals(
+            80,
+            DanmakuSettingsPolicy.adjustDisplayArea(middle, offset = 1)
                 .displayAreaPercent,
         )
         assertEquals(
@@ -54,6 +58,8 @@ class DanmakuSettingsPolicyTest {
 
     @Test
     fun `invalid persisted percentage falls back to the supplied default`() {
+        assertEquals(20, DanmakuSettingsPolicy.validPercentage(20, fallback = 75))
+        assertEquals(55, DanmakuSettingsPolicy.validPercentage(55, fallback = 100))
         assertEquals(100, DanmakuSettingsPolicy.validPercentage(41, fallback = 100))
         assertEquals(75, DanmakuSettingsPolicy.validPercentage(null, fallback = 75))
     }

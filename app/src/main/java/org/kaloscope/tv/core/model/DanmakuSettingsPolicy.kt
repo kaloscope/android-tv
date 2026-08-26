@@ -1,7 +1,7 @@
 package org.kaloscope.tv.core.model
 
 object DanmakuSettingsPolicy {
-    val PERCENTAGE_VALUES: List<Int> = listOf(25, 50, 75, 100)
+    val PERCENTAGE_VALUES: List<Int> = (20..100 step 5).toList()
 
     fun adjustOpacity(
         settings: DanmakuSettings,

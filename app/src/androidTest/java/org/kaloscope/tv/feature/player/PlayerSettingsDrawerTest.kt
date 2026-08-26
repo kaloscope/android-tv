@@ -276,7 +276,7 @@ class PlayerSettingsDrawerTest {
     }
 
     @Test
-    fun danmakuOpacityUsesCanonicalHorizontalStepAndIgnoresCenter() {
+    fun danmakuOpacityUsesFivePercentHorizontalStepAndIgnoresCenter() {
         val harness = DrawerHarness().apply {
             danmakuSettings = DanmakuSettings(opacityPercent = 50)
         }
@@ -299,7 +299,28 @@ class PlayerSettingsDrawerTest {
             }
 
         composeRule.runOnIdle {
-            assertEquals(75, harness.danmakuSettings.opacityPercent)
+            assertEquals(55, harness.danmakuSettings.opacityPercent)
+            assertEquals(1, harness.danmakuUpdateCount)
+        }
+    }
+
+    @Test
+    fun danmakuDisplayAreaUsesFivePercentHorizontalStep() {
+        val harness = DrawerHarness().apply {
+            danmakuSettings = DanmakuSettings(displayAreaPercent = 75)
+        }
+        setDrawer(harness)
+        scrollRowIntoView("player-danmaku-display-area-row")
+
+        composeRule.onNodeWithTag("player-danmaku-display-area-row")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.DirectionLeft)
+                pressKey(Key.Enter)
+            }
+
+        composeRule.runOnIdle {
+            assertEquals(70, harness.danmakuSettings.displayAreaPercent)
             assertEquals(1, harness.danmakuUpdateCount)
         }
     }
