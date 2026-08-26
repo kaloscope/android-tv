@@ -399,15 +399,16 @@ internal fun PlayerControls(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        PlayerCircleButton(
-                            label = stringResource(R.string.previous_episode),
-                            iconRes = R.drawable.ic_action_previous,
-                            action = PlayerActionUiState(enabled = state.previousEnabled),
-                            onClick = onPrevious,
-                            modifier = Modifier.testTag("player-previous"),
-                            upFocus = resolvedProgressFocus,
-                            downFocus = supplementaryGroupStartFocus,
-                        )
+                        if (state.previousEnabled) {
+                            PlayerCircleButton(
+                                label = stringResource(R.string.previous_episode),
+                                iconRes = R.drawable.ic_action_previous,
+                                action = PlayerActionUiState(enabled = true),
+                                onClick = onPrevious,
+                                modifier = Modifier.testTag("player-previous"),
+                                upFocus = resolvedProgressFocus,
+                            )
+                        }
                         PlayerPillButton(
                             visibleLabel = stringResource(R.string.seek_seconds_short),
                             accessibilityLabel = stringResource(R.string.rewind_seconds),
@@ -416,7 +417,6 @@ internal fun PlayerControls(
                             onClick = onRewind,
                             modifier = Modifier.testTag("player-rewind"),
                             upFocus = resolvedProgressFocus,
-                            downFocus = supplementaryGroupStartFocus,
                         )
                         val playPauseLabel = if (state.playWhenReady) {
                             stringResource(R.string.pause)
@@ -440,7 +440,6 @@ internal fun PlayerControls(
                             minWidth = 96.dp,
                             primary = true,
                             upFocus = resolvedProgressFocus,
-                            downFocus = supplementaryGroupStartFocus,
                         )
                         PlayerPillButton(
                             visibleLabel = stringResource(R.string.seek_seconds_short),
@@ -452,25 +451,25 @@ internal fun PlayerControls(
                                 .focusRequester(forwardFocus)
                                 .testTag("player-forward"),
                             upFocus = resolvedProgressFocus,
-                            downFocus = supplementaryGroupStartFocus,
                             rightFocus = if (state.nextEnabled) {
                                 nextFocus
                             } else {
                                 supplementaryGroupStartFocus
                             },
                         )
-                        PlayerCircleButton(
-                            label = stringResource(R.string.next_episode),
-                            iconRes = R.drawable.ic_action_next,
-                            action = PlayerActionUiState(enabled = state.nextEnabled),
-                            onClick = onNext,
-                            modifier = Modifier
-                                .focusRequester(nextFocus)
-                                .testTag("player-next"),
-                            upFocus = resolvedProgressFocus,
-                            downFocus = supplementaryGroupStartFocus,
-                            rightFocus = supplementaryGroupStartFocus,
-                        )
+                        if (state.nextEnabled) {
+                            PlayerCircleButton(
+                                label = stringResource(R.string.next_episode),
+                                iconRes = R.drawable.ic_action_next,
+                                action = PlayerActionUiState(enabled = true),
+                                onClick = onNext,
+                                modifier = Modifier
+                                    .focusRequester(nextFocus)
+                                    .testTag("player-next"),
+                                upFocus = resolvedProgressFocus,
+                                rightFocus = supplementaryGroupStartFocus,
+                            )
+                        }
                     }
                     Spacer(Modifier.weight(1f))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -617,7 +616,7 @@ private fun PlayerAuxiliaryButton(
     modifier: Modifier = Modifier,
     expandedWidth: Dp = 92.dp,
     upFocus: FocusRequester,
-    downFocus: FocusRequester? = null,
+    downFocus: FocusRequester? = FocusRequester.Cancel,
     leftFocus: FocusRequester? = null,
     rightFocus: FocusRequester? = null,
 ) {
@@ -688,7 +687,7 @@ private fun PlayerCircleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     upFocus: FocusRequester,
-    downFocus: FocusRequester? = null,
+    downFocus: FocusRequester? = FocusRequester.Cancel,
     leftFocus: FocusRequester? = null,
     rightFocus: FocusRequester? = null,
 ) {
@@ -728,7 +727,7 @@ private fun PlayerPillButton(
     minWidth: Dp = 76.dp,
     primary: Boolean = false,
     upFocus: FocusRequester,
-    downFocus: FocusRequester? = null,
+    downFocus: FocusRequester? = FocusRequester.Cancel,
     leftFocus: FocusRequester? = null,
     rightFocus: FocusRequester? = null,
 ) {

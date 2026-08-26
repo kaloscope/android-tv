@@ -737,6 +737,42 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun unavailableEpisodeNavigationButtonsAreNotDisplayed() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(
+                        previousEnabled = false,
+                        nextEnabled = false,
+                    ),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-previous").assertDoesNotExist()
+        composeRule.onNodeWithTag("player-next").assertDoesNotExist()
+    }
+
+    @Test
     fun controlsHideUnavailableAuxiliaryActionsAndExposeActiveToggleState() {
         var nextClicks = 0
 
@@ -773,9 +809,7 @@ class PlayerControlsTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("上一集")
-            .assertIsDisplayed()
-            .assertIsNotEnabled()
+        composeRule.onNodeWithContentDescription("上一集").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("字幕开")
             .assertIsDisplayed()
             .assertIsSelected()
@@ -1133,6 +1167,55 @@ class PlayerControlsTest {
         composeRule.waitForIdle()
         composeRule.onAllNodesWithTag("player-control-row").assertCountEquals(1)
         composeRule.onNodeWithContentDescription("播放").assertIsFocused()
+    }
+
+    @Test
+    fun downFromEveryActionButtonKeepsCurrentFocus() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        listOf(
+            "player-previous",
+            "player-rewind",
+            "player-play-pause",
+            "player-forward",
+            "player-next",
+            "player-subtitles",
+            "player-danmaku",
+            "player-speed",
+            "player-quality",
+            "player-settings",
+        ).forEach { tag ->
+            composeRule.onNodeWithTag(tag)
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+                .performKeyInput { pressKey(Key.DirectionDown) }
+                .assertIsFocused()
+        }
     }
 
     @Test
@@ -1616,7 +1699,7 @@ class PlayerControlsTest {
     }
 
     @Test
-    fun downFromTransportOpensSettingsGroupAndUpReturnsToPlay() {
+    fun upFromAuxiliaryButtonReturnsToPlayPause() {
         composeRule.setContent {
             MaterialTheme {
                 PlayerControls(
@@ -1644,11 +1727,8 @@ class PlayerControlsTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("播放")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.DirectionDown) }
-        composeRule.onNodeWithContentDescription("字幕关").assertIsFocused()
         composeRule.onNodeWithContentDescription("字幕关")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionUp) }
         composeRule.onNodeWithContentDescription("播放").assertIsFocused()
     }
