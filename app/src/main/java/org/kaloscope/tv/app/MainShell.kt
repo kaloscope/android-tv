@@ -190,10 +190,16 @@ internal fun MainShell(
     fun goBack() {
         val leavingRoute = currentRoute
         val returnRoute = backStack.getOrNull(backStack.lastIndex - 1) ?: HomeRoute
-        // Releasing player focus can briefly focus Home before Search restores its result.
-        restoringSearchFocusAfterPlayer =
+        val returningToSearchFromFullscreen =
             (leavingRoute is PlayerRoute || leavingRoute is ReaderRoute) &&
-            returnRoute == SearchRoute
+                returnRoute == SearchRoute
+        // Releasing player focus can briefly focus Home before Search restores its result.
+        restoringSearchFocusAfterPlayer = returningToSearchFromFullscreen
+        if (returningToSearchFromFullscreen) {
+            // Keep Search covered until the fullscreen destination is ready,
+            // then reveal it on pop.
+            searchActions.cancelResolution()
+        }
         if (leavingRoute is MediaDetailRoute &&
             returnRoute in setOf(HomeRoute, LibraryRoute)
         ) {

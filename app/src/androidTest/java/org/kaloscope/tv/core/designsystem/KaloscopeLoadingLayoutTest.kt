@@ -5,13 +5,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -78,5 +82,25 @@ class KaloscopeLoadingLayoutTest {
             .boundsInRoot
 
         assertTrue(message.top > indicator.bottom)
+    }
+
+    @Test
+    fun optionalStatusMessageIsVisuallySubdued() {
+        composeRule.setContent {
+            KaloscopeLoadingLayout(
+                testTag = "loading",
+                message = "正在获取资源…",
+            )
+        }
+
+        val layoutResults = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText("正在获取资源…", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(layoutResults)
+            }
+        val style = layoutResults.single().layoutInput.style
+
+        assertTrue("Status text should be no larger than 14sp", style.fontSize <= 14.sp)
+        assertTrue("Status text should be muted", style.color.alpha <= 0.6f)
     }
 }

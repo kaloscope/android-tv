@@ -1942,6 +1942,7 @@ class MainShellTest {
 
     @Test
     fun playerOpenedFromSearchReturnsToFocusedSearchResult() {
+        var preparationEnds = 0
         var searchState by mutableStateOf(
             deepSearchState().copy(
                 results = SearchResultsState.Content(
@@ -1974,11 +1975,19 @@ class MainShellTest {
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
                     searchActions = SearchActions(
+                        cancelResolution = {
+                            if (searchState.resolvingResultId != null) {
+                                preparationEnds += 1
+                                searchState = searchState.copy(resolvingResultId = null)
+                                true
+                            } else {
+                                false
+                            }
+                        },
                         consumeDestination = { requestId ->
                             if (searchState.pendingPlaybackRequestId == requestId) {
                                 searchState = searchState.copy(
                                     pendingPlaybackRequestId = null,
-                                    resolvingResultId = null,
                                 )
                             }
                         },
@@ -2022,11 +2031,15 @@ class MainShellTest {
                 hasTestTag("network-result-v1") and isFocused(),
             ).fetchSemanticsNodes().size == 1
         }
+        composeRule.runOnIdle {
+            assertEquals(1, preparationEnds)
+        }
     }
 
     @Test
     fun readerOpenedFromSearchClosesRequestAndRestoresResultFocus() {
         var closedRequestId: String? = null
+        var preparationEnds = 0
         var searchState by mutableStateOf(
             deepSearchState().copy(
                 results = SearchResultsState.Content(
@@ -2058,11 +2071,19 @@ class MainShellTest {
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
                     searchActions = SearchActions(
+                        cancelResolution = {
+                            if (searchState.resolvingResultId != null) {
+                                preparationEnds += 1
+                                searchState = searchState.copy(resolvingResultId = null)
+                                true
+                            } else {
+                                false
+                            }
+                        },
                         consumeDestination = { requestId ->
                             if (searchState.pendingReaderRequestId == requestId) {
                                 searchState = searchState.copy(
                                     pendingReaderRequestId = null,
-                                    resolvingResultId = null,
                                 )
                             }
                         },
@@ -2117,6 +2138,7 @@ class MainShellTest {
         }
         composeRule.runOnIdle {
             assertEquals("reader-request", closedRequestId)
+            assertEquals(1, preparationEnds)
         }
     }
 

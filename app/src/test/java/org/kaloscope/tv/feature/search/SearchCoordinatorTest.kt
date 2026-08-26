@@ -295,7 +295,7 @@ class SearchCoordinatorTest {
     }
 
     @Test
-    fun `result click keeps preparation until playback destination is consumed`() = runTest {
+    fun `result click keeps preparation while playback destination is active`() = runTest {
         val store = PlaybackRequestStore()
         val repository = FakeSearchRepository(
             pages = mutableListOf(AppResult.Success(page("v1"))),
@@ -326,7 +326,12 @@ class SearchCoordinatorTest {
 
         val consumed = coordinator.state.value as SearchUiState.Content
         assertNull(consumed.pendingPlaybackRequestId)
-        assertNull(consumed.resolvingResultId)
+        assertEquals("v1", consumed.resolvingResultId)
+
+        assertTrue(coordinator.cancelResolution())
+        assertNull(
+            (coordinator.state.value as SearchUiState.Content).resolvingResultId,
+        )
     }
 
     @Test

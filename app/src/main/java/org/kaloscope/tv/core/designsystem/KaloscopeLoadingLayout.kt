@@ -109,8 +109,8 @@ fun KaloscopeLoadingLayout(
                 Spacer(Modifier.height(14.dp))
                 Text(
                     text = it,
-                    color = OnBackground,
-                    fontSize = 17.sp,
+                    color = OnBackground.copy(alpha = 0.55f),
+                    fontSize = 14.sp,
                 )
             }
         }

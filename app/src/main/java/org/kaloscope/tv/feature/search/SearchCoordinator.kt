@@ -399,7 +399,6 @@ class SearchCoordinator(
                     ?.takeUnless { it == requestId },
                 pendingReaderRequestId = content.pendingReaderRequestId
                     ?.takeUnless { it == requestId },
-                resolvingResultId = null,
             )
         }
     }
