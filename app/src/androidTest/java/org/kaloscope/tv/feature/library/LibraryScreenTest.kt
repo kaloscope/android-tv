@@ -42,6 +42,7 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.test.assertFocusedContentCardScale
+import org.kaloscope.tv.test.assertFocusedContentCardBottomInsideViewport
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
 import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
 
@@ -574,6 +575,65 @@ class LibraryScreenTest {
             14f * density,
             cardBounds[4].top - cardBounds[0].bottom,
             1f,
+        )
+    }
+
+    @Test
+    fun focusedSecondRowCardKeepsScaledBottomInsideGridAt1080p() {
+        val width = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.widthPixels
+        if (width != 1920) return
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background)
+                        .padding(
+                            start = 44.dp,
+                            top = 84.dp,
+                            end = 44.dp,
+                            bottom = 24.dp,
+                        ),
+                ) {
+                    LibraryScreen(
+                        session = session(),
+                        state = state(media = mediaItems(9)),
+                        restoreMediaId = null,
+                        requestInitialFocus = false,
+                        onSelectLibrary = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onMediaFocused = {},
+                        onOpenMedia = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("media-card-5")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val cardBounds = composeRule.onNodeWithTag("media-card-5")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val gridBounds = composeRule.onNodeWithTag("library-results-grid")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val screenshot = composeRule.onRoot()
+            .captureToImage()
+            .asAndroidBitmap()
+
+        assertFocusedContentCardBottomInsideViewport(
+            label = "Second-row library card",
+            bitmap = screenshot,
+            cardBounds = cardBounds,
+            viewportBounds = gridBounds,
+            density = composeRule.density.density,
         )
     }
 

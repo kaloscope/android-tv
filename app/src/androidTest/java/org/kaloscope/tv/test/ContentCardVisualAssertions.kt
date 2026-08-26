@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Rect
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.roundToInt
 import org.junit.Assert.assertTrue
 
 internal fun assertFocusedContentCardSurface(
@@ -73,6 +74,37 @@ internal fun assertFocusedContentCardCornerRadius(
     )
 }
 
+internal fun assertFocusedContentCardBottomInsideViewport(
+    label: String,
+    bitmap: Bitmap,
+    cardBounds: Rect,
+    viewportBounds: Rect,
+    density: Float,
+) {
+    val focusedSurface = Color.rgb(0x25, 0x32, 0x4A)
+    val centerX = cardBounds.center.x.roundToInt().coerceIn(0, bitmap.width - 1)
+    val searchPadding = (12f * density).roundToInt()
+    val startY = (floor(cardBounds.top).toInt() - searchPadding)
+        .coerceIn(0, bitmap.height - 1)
+    val viewportBottomExclusive = floor(viewportBounds.bottom).toInt()
+        .coerceIn(startY + 1, bitmap.height)
+    val lastSurfacePixel = (startY until viewportBottomExclusive).lastOrNull { y ->
+        bitmap.getPixel(centerX, y).isNear(focusedSurface)
+    }
+    assertTrue(
+        "$label expected the focused surface on its vertical center line",
+        lastSurfacePixel != null,
+    )
+
+    val minimumClearance = density.roundToInt().coerceAtLeast(1)
+    val actualClearance = viewportBottomExclusive - 1 - checkNotNull(lastSurfacePixel)
+    assertTrue(
+        "$label focused surface must stay at least 1dp above the grid clip boundary, " +
+            "but clearance was ${actualClearance}px",
+        actualClearance >= minimumClearance,
+    )
+}
+
 private data class PixelBounds(
     val width: Int,
     val height: Int,
@@ -118,4 +150,11 @@ private fun Int.isNearWhite(): Boolean {
     return Color.alpha(this) >= 220 &&
         channels.min() >= 100 &&
         channels.max() - channels.min() <= 24
+}
+
+private fun Int.isNear(target: Int): Boolean {
+    val distance = abs(Color.red(target) - Color.red(this)) +
+        abs(Color.green(target) - Color.green(this)) +
+        abs(Color.blue(target) - Color.blue(this))
+    return Color.alpha(this) >= 250 && distance <= 9
 }
