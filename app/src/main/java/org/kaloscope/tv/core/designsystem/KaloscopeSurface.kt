@@ -21,12 +21,13 @@ fun KaloscopeFocusSurface(
     enabled: Boolean = true,
     shape: Shape,
     containerColor: Color = Color.Transparent,
+    selectedContainerColor: Color? = null,
     focusedContainerColor: Color = PanelElevated,
     focusScale: Float = 1.03f,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val restingColor = if (selected) {
-        LocalAccentPalette.current.panelSelected
+        selectedContainerColor ?: LocalAccentPalette.current.panelSelected
     } else {
         containerColor
     }

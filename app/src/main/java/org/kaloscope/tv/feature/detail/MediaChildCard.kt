@@ -55,7 +55,7 @@ internal fun MediaChildCard(
     val accentPalette = LocalAccentPalette.current
     var isFocused by remember(child.id) { mutableStateOf(false) }
     val titleColor by animateColorAsState(
-        targetValue = if (focusedTarget) accentPalette.primary else OnBackground,
+        targetValue = if (isFocused) accentPalette.primary else OnBackground,
         animationSpec = tween(
             durationMillis = KaloscopeMotion.FocusMillis,
             easing = KaloscopeMotion.ControlEasing,
@@ -65,7 +65,7 @@ internal fun MediaChildCard(
     val borderColor by animateColorAsState(
         targetValue = when {
             isFocused -> Color.White
-            focusedTarget -> accentPalette.primary.copy(alpha = 0.7f)
+            focusedTarget -> accentPalette.primary.copy(alpha = 0.28f)
             else -> Outline
         },
         animationSpec = tween(
@@ -89,6 +89,7 @@ internal fun MediaChildCard(
         selected = focusedTarget,
         shape = shape,
         containerColor = Panel.copy(alpha = 0.74f),
+        selectedContainerColor = accentPalette.panelSelected.copy(alpha = 0.42f),
         focusedContainerColor = PanelElevated,
         focusScale = 1f,
         modifier = modifier

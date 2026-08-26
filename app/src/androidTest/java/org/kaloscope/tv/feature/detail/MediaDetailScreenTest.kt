@@ -3,8 +3,10 @@ package org.kaloscope.tv.feature.detail
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -282,6 +285,66 @@ class MediaDetailScreenTest {
         assertTrue(
             "Focused episode title should use the active accent color",
             title.countPixelsNear(AndroidColor.rgb(0x7F, 0x96, 0xFF), tolerance = 8) >= 12,
+        )
+    }
+
+    @Test
+    fun rememberedEpisodeHintIsSubtlerThanFocusedEpisode() {
+        val episode = twoEpisodeSeries().children.last()
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(180.dp)
+                        .height(180.dp),
+                ) {
+                    MediaChildCard(
+                        session = session(),
+                        child = episode,
+                        focusedTarget = true,
+                        onFocused = {},
+                        onClick = {},
+                        modifier = Modifier
+                            .width(156.dp)
+                            .height(164.dp),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(1.dp)
+                            .testTag("episode-history-focus-sink")
+                            .focusable(),
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("episode-history-focus-sink")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(500)
+        val remembered = composeRule.onNodeWithTag(
+            "media-child-title-302",
+            useUnmergedTree = true,
+        )
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val rememberedEpisode = composeRule.onNodeWithTag("media-child-card-302")
+        rememberedEpisode.performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(500)
+        rememberedEpisode.assertIsFocused()
+        val focused = composeRule.onNodeWithTag(
+            "media-child-title-302",
+            useUnmergedTree = true,
+        )
+            .captureToImage()
+            .asAndroidBitmap()
+        val accent = AndroidColor.rgb(0x7F, 0x96, 0xFF)
+        val rememberedAccentPixels = remembered.countPixelsNear(accent, tolerance = 8)
+        val focusedAccentPixels = focused.countPixelsNear(accent, tolerance = 8)
+        assertTrue(
+            "Remembered episode title should be much subtler than current focus: " +
+                "remembered=$rememberedAccentPixels focused=$focusedAccentPixels",
+            rememberedAccentPixels * 4 < focusedAccentPixels,
         )
     }
 
@@ -1594,6 +1657,58 @@ class MediaDetailScreenTest {
         composeRule.mainClock.advanceTimeBy(1_000)
         composeRule.mainClock.autoAdvance = true
         composeRule.waitForIdle()
+        val finalOffset = detailScroll.fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+            .value()
+        assertEquals(0f, finalOffset, 0f)
+    }
+
+    @Test
+    fun castUpRestoresPreviouslySelectedEpisodeAfterScroll() {
+        val state = MediaDetailUiState.Content(
+            parent = twoEpisodeSeries().copy(
+                directors = listOf("林舟"),
+                actors = listOf(MediaActor("沈川", "队长", null)),
+            ),
+            focusedChildId = 302,
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .width(872.dp)
+                        .height(416.dp),
+                ) {
+                    MediaDetailScreen(
+                        session = session(),
+                        state = state,
+                        resumePositionsByMediaId = emptyMap(),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+        }
+        val selectedEpisode = composeRule.onNodeWithTag("media-child-card-302")
+            .assertIsFocused()
+        val detailScroll = composeRule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
+        )
+
+        selectedEpisode.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        selectedEpisode.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("cast-carousel")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+
+        selectedEpisode.assertIsFocused()
         val finalOffset = detailScroll.fetchSemanticsNode()
             .config[SemanticsProperties.VerticalScrollAxisRange]
             .value()

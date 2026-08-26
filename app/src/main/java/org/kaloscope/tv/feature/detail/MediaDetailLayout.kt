@@ -131,7 +131,10 @@ internal fun MediaDetailCinematicLayout(
         }
     }
 
-    fun animateToVerticalBoundary(forward: Boolean) {
+    fun animateToVerticalBoundary(
+        forward: Boolean,
+        onBoundaryReached: (() -> Unit)? = null,
+    ) {
         if (verticalScrollInProgress) return
         verticalScrollInProgress = true
         scrollScope.launch {
@@ -158,19 +161,34 @@ internal fun MediaDetailCinematicLayout(
                     )
                     if (consumed == 0f) break
                 }
+                val reachedBoundary = if (forward) {
+                    !detailScrollState.canScrollForward
+                } else {
+                    !detailScrollState.canScrollBackward
+                }
+                if (reachedBoundary && onBoundaryReached != null) {
+                    withFrameNanos { }
+                    onBoundaryReached()
+                }
             } finally {
                 verticalScrollInProgress = false
             }
         }
     }
 
-    fun navigateUp(onAlreadyAtTop: (() -> Unit)? = null) {
+    fun navigateUp(
+        onAlreadyAtTop: (() -> Unit)? = null,
+        onScrolledToTop: (() -> Unit)? = null,
+    ) {
         if (verticalScrollInProgress) return
         if (!detailScrollState.canScrollBackward) {
             onAlreadyAtTop?.invoke()
             return
         }
-        animateToVerticalBoundary(forward = false)
+        animateToVerticalBoundary(
+            forward = false,
+            onBoundaryReached = onScrolledToTop,
+        )
     }
 
     fun scrollToBottom() {
@@ -287,9 +305,11 @@ internal fun MediaDetailCinematicLayout(
                             resumePositionsByMediaId = resumePositionsByMediaId,
                             childFocusRequester = childFocusRequester,
                             onNavigateUp = {
-                                navigateUp {
-                                    primaryActionFocusRequester.requestFocus()
-                                }
+                                navigateUp(
+                                    onAlreadyAtTop = {
+                                        primaryActionFocusRequester.requestFocus()
+                                    },
+                                )
                             },
                             onNavigateDown = ::scrollToBottom,
                             onInitialFocusSettled = {
@@ -315,8 +335,21 @@ internal fun MediaDetailCinematicLayout(
                         horizontalSafePadding = horizontalSafePadding,
                         castFocusRequester = castFocusRequester,
                         onNavigateUp = {
-                            navigateUp {
-                                primaryActionFocusRequester.requestFocus()
+                            if (parent.children.isNotEmpty()) {
+                                val restoreChildFocus = {
+                                    childFocusRequester.requestFocus()
+                                    Unit
+                                }
+                                navigateUp(
+                                    onAlreadyAtTop = restoreChildFocus,
+                                    onScrolledToTop = restoreChildFocus,
+                                )
+                            } else {
+                                navigateUp(
+                                    onAlreadyAtTop = {
+                                        primaryActionFocusRequester.requestFocus()
+                                    },
+                                )
                             }
                         },
                     )
