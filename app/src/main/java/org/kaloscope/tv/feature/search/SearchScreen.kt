@@ -79,7 +79,6 @@ import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.ContentCardFocused
-import org.kaloscope.tv.core.designsystem.LocalAccentPalette
 import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
@@ -714,16 +713,14 @@ private fun SearchResults(
                             session = session,
                             result = result,
                             coverRatio = coverRatio,
-                            restoreFocus =
-                                requestInitialFocus && result.id == restoreResultId,
+                            restoreFocus = result.id == restoreResultId &&
+                                (requestInitialFocus || state.playbackError != null),
                             entryFocusRequester = resultEntryFocusRequester.takeIf {
                                 resultIndex == firstVisibleResultIndex
                             },
                             leftFocusRequester = resultExitFocusRequester.takeIf {
                                 resultIndex in leftmostResultIndices
                             },
-                            enabled = state.resolvingResultId == null,
-                            resolving = result.id == state.resolvingResultId,
                             onFocused = {
                                 onResultFocused(result.id)
                                 if (
@@ -800,8 +797,6 @@ private fun NetworkResultCard(
     restoreFocus: Boolean,
     entryFocusRequester: FocusRequester?,
     leftFocusRequester: FocusRequester?,
-    enabled: Boolean,
-    resolving: Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
 ) {
@@ -815,7 +810,6 @@ private fun NetworkResultCard(
     }
     KaloscopeFocusSurface(
         onClick = onClick,
-        enabled = enabled,
         shape = RoundedCornerShape(15.dp),
         containerColor = Panel.copy(alpha = 0.65f),
         focusedContainerColor = ContentCardFocused,
@@ -875,10 +869,7 @@ private fun NetworkResultCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(7.dp))
-                SearchResultFooter(
-                    result = result,
-                    resolving = resolving,
-                )
+                SearchResultFooter(result)
             }
         }
     }
@@ -989,9 +980,7 @@ private fun BoxScope.SearchResultCoverMetadata(result: NetworkSearchResult) {
 @Composable
 private fun SearchResultFooter(
     result: NetworkSearchResult,
-    resolving: Boolean,
 ) {
-    val accentPalette = LocalAccentPalette.current
     val uploader = result.uploader?.let {
         stringResource(R.string.search_result_uploader, it)
     }
@@ -1006,47 +995,37 @@ private fun SearchResultFooter(
         contentAlignment = Alignment.CenterStart,
     ) {
         val sizeMaxWidth = maxWidth / 2
-        if (resolving) {
-            Text(
-                text = stringResource(R.string.resolving_playback),
-                color = accentPalette.primary,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (source != null) {
+                Text(
+                    text = source,
+                    color = Muted,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            } else if (result.size != null) {
+                Spacer(Modifier.weight(1f))
+            }
+            result.size?.let { size ->
                 if (source != null) {
-                    Text(
-                        text = source,
-                        color = Muted,
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                } else if (result.size != null) {
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
                 }
-                result.size?.let { size ->
-                    if (source != null) {
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Text(
-                        text = size,
-                        color = Muted.copy(alpha = 0.8f),
-                        fontSize = 11.sp,
-                        fontStyle = FontStyle.Italic,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.widthIn(max = sizeMaxWidth),
-                    )
-                }
+                Text(
+                    text = size,
+                    color = Muted.copy(alpha = 0.8f),
+                    fontSize = 11.sp,
+                    fontStyle = FontStyle.Italic,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.widthIn(max = sizeMaxWidth),
+                )
             }
         }
     }

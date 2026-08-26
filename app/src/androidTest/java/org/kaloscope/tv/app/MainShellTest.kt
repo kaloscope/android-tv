@@ -1236,8 +1236,7 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNode(hasText("网络搜索") and hasClickAction())
-            .assertIsFocused()
+        composeRule.onNodeWithTag("search-playback-loading").assertIsFocused()
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
         composeRule.waitForIdle()
@@ -1252,6 +1251,87 @@ class MainShellTest {
 
         composeRule.runOnIdle { assertEquals(1, cancellations) }
         composeRule.onNodeWithText("首页").assertIsSelected()
+    }
+
+    @Test
+    fun searchResolutionReplacesTheShellWithBlockingFullscreenLoading() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = deepSearchState().copy(resolvingResultId = "v25"),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SearchRoute,
+                )
+            }
+        }
+
+        val loading = composeRule.onNodeWithTag("search-playback-loading")
+            .assertIsFocused()
+        composeRule.onNodeWithTag("search-playback-loading-indicator").assertExists()
+        composeRule.onNodeWithText("正在获取资源…").assertExists()
+        composeRule.onNodeWithTag("search-results-grid").assertDoesNotExist()
+        composeRule.onNodeWithTag("main-nav-search").assertDoesNotExist()
+
+        loading.performKeyInput {
+            pressKey(Key.DirectionLeft)
+            pressKey(Key.DirectionRight)
+            pressKey(Key.DirectionUp)
+            pressKey(Key.DirectionDown)
+        }
+
+        loading.assertIsFocused()
+    }
+
+    @Test
+    fun failedSearchResolutionRestoresCardFocusAndShowsTheExistingError() {
+        var searchState by mutableStateOf(
+            deepSearchState().copy(focusedResultId = null),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SearchRoute,
+                )
+            }
+        }
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("network-result-v25"))
+                .fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("network-result-v25")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+
+        composeRule.runOnIdle {
+            searchState = searchState.copy(
+                focusedResultId = "v25",
+                resolvingResultId = "v25",
+            )
+        }
+        composeRule.onNodeWithTag("search-playback-loading").assertIsFocused()
+
+        composeRule.runOnIdle {
+            searchState = searchState.copy(
+                resolvingResultId = null,
+                playbackError = AppError.Offline,
+            )
+        }
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("network-result-v25"))
+                .fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
+        composeRule.onNodeWithText("无法打开资源", substring = true).assertExists()
     }
 
     @Test
@@ -1898,11 +1978,12 @@ class MainShellTest {
                             if (searchState.pendingPlaybackRequestId == requestId) {
                                 searchState = searchState.copy(
                                     pendingPlaybackRequestId = null,
+                                    resolvingResultId = null,
                                 )
                             }
                         },
                     ),
-                    playerState = PlayerUiState.Loading,
+                    playerState = PlayerUiState.Loading(),
                     playbackControllerFactory = remember(context) {
                         PlaybackControllerFactory(context.applicationContext)
                     },
@@ -1918,6 +1999,7 @@ class MainShellTest {
         composeRule.runOnIdle {
             searchState = searchState.copy(
                 pendingPlaybackRequestId = "network-request",
+                resolvingResultId = "v1",
             )
         }
         composeRule.onNodeWithTag("player-loading-indicator").assertExists()
@@ -1980,6 +2062,7 @@ class MainShellTest {
                             if (searchState.pendingReaderRequestId == requestId) {
                                 searchState = searchState.copy(
                                     pendingReaderRequestId = null,
+                                    resolvingResultId = null,
                                 )
                             }
                         },
@@ -2011,6 +2094,7 @@ class MainShellTest {
         composeRule.runOnIdle {
             searchState = searchState.copy(
                 pendingReaderRequestId = "reader-request",
+                resolvingResultId = "t1",
             )
         }
         composeRule.waitUntil(timeoutMillis = 3_000) {
@@ -2116,7 +2200,7 @@ private fun TestMainShell(
     searchActions: SearchActions = SearchActions(),
     libraryActions: LibraryActions = LibraryActions(),
     settingsActions: SettingsActions = SettingsActions(),
-    playerState: PlayerUiState = PlayerUiState.Loading,
+    playerState: PlayerUiState = PlayerUiState.Loading(),
     playbackControllerFactory: PlaybackControllerFactory? = null,
     readerState: ReaderUiState = ReaderUiState.Idle,
     readerActions: ReaderActions = ReaderActions(),

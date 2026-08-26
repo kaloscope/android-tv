@@ -21,7 +21,7 @@ class PlayerFeedbackOverlayTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun preparingUsesCenteredIndicatorWithoutMessage() {
+    fun preparingLabelsTheFinalPlaybackStage() {
         composeRule.setContent {
             KaloscopeTheme {
                 PlayerFeedbackOverlay(
@@ -34,7 +34,7 @@ class PlayerFeedbackOverlayTest {
         }
 
         composeRule.onNodeWithTag("player-loading-indicator").assertExists()
-        composeRule.onNodeWithText("正在准备播放").assertDoesNotExist()
+        composeRule.onNodeWithText("正在准备播放…").assertExists()
     }
 
     @Test

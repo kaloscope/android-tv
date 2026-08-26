@@ -10,6 +10,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import org.junit.Assert.assertTrue
@@ -52,5 +53,30 @@ class KaloscopeLoadingLayoutTest {
         assertTrue(indicator.top >= host.top)
         assertTrue(indicator.right <= host.right)
         assertTrue(indicator.bottom <= host.bottom)
+    }
+
+    @Test
+    fun optionalStatusMessageIsPlacedBelowTheIndicator() {
+        composeRule.setContent {
+            Box(
+                modifier = Modifier
+                    .width(640.dp)
+                    .height(360.dp),
+            ) {
+                KaloscopeLoadingLayout(
+                    testTag = "loading",
+                    message = "正在获取资源…",
+                )
+            }
+        }
+
+        val indicator = composeRule.onNodeWithTag("loading-indicator")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val message = composeRule.onNodeWithText("正在获取资源…")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(message.top > indicator.bottom)
     }
 }

@@ -48,11 +48,13 @@ import org.kaloscope.tv.app.navigation.selectRoot
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
+import org.kaloscope.tv.core.designsystem.KaloscopePlaybackLoadingLayout
 import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.network.ServerImagePolicy
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
+import org.kaloscope.tv.core.player.PlaybackPreparationStage
 import org.kaloscope.tv.feature.detail.MediaDetailScreen
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeBackdropPresentation
@@ -85,7 +87,7 @@ internal fun MainShell(
     settingsState: SettingsUiState = SettingsUiState.Content(TvSettings()),
     initialRoute: NavKey = HomeRoute,
     settingsActions: SettingsActions,
-    playerState: PlayerUiState = PlayerUiState.Loading,
+    playerState: PlayerUiState = PlayerUiState.Loading(),
     playbackControllerFactory: PlaybackControllerFactory? = null,
     playerActions: PlayerActions,
     readerState: ReaderUiState = ReaderUiState.Idle,
@@ -121,6 +123,8 @@ internal fun MainShell(
         ?.items
         .orEmpty()
         .associate { it.mediaId to it.positionSeconds }
+    val searchPlaybackPreparing = currentRoute == SearchRoute &&
+        (searchState as? SearchUiState.Content)?.resolvingResultId != null
 
     // TV launchers do not guarantee an initial Compose focus owner.
     LaunchedEffect(launchRoute) {
@@ -211,7 +215,9 @@ internal fun MainShell(
             currentRoute !is PlayerRoute &&
             currentRoute !is ReaderRoute,
     ) {
-        if (currentRoute != SearchRoute || !searchActions.cancelResolution()) {
+        if (currentRoute == SearchRoute && searchActions.cancelResolution()) {
+            destinationEntryKeepsTopFocus = false
+        } else {
             goBack()
         }
     }
@@ -289,57 +295,64 @@ internal fun MainShell(
                         }
                     }
                     entry<SearchRoute> {
-                        RootDestinationFrame {
-                            val pendingDestination = (
-                                searchState as? SearchUiState.Content
-                            )?.pendingDestination
-                            LaunchedEffect(pendingDestination) {
-                                when (val destination = pendingDestination) {
-                                    is SearchPendingDestination.Player -> {
-                                        val requestId = destination.requestId
-                                        destinationEntryKeepsTopFocus = false
-                                        backStack.openPlayer(requestId)
-                                        currentRoute = PlayerRoute(requestId)
-                                        playerActions.load(requestId)
-                                        searchActions.consumeDestination(requestId)
-                                    }
-
-                                    is SearchPendingDestination.Reader -> {
-                                        val requestId = destination.requestId
-                                        destinationEntryKeepsTopFocus = false
-                                        backStack.openReader(requestId)
-                                        currentRoute = ReaderRoute(requestId)
-                                        readerActions.load(requestId)
-                                        searchActions.consumeDestination(requestId)
-                                    }
-
-                                    null -> Unit
+                        val searchContent = searchState as? SearchUiState.Content
+                        val pendingDestination = searchContent?.pendingDestination
+                        LaunchedEffect(pendingDestination) {
+                            when (val destination = pendingDestination) {
+                                is SearchPendingDestination.Player -> {
+                                    val requestId = destination.requestId
+                                    destinationEntryKeepsTopFocus = false
+                                    backStack.openPlayer(requestId)
+                                    currentRoute = PlayerRoute(requestId)
+                                    playerActions.load(requestId)
+                                    searchActions.consumeDestination(requestId)
                                 }
+
+                                is SearchPendingDestination.Reader -> {
+                                    val requestId = destination.requestId
+                                    destinationEntryKeepsTopFocus = false
+                                    backStack.openReader(requestId)
+                                    currentRoute = ReaderRoute(requestId)
+                                    readerActions.load(requestId)
+                                    searchActions.consumeDestination(requestId)
+                                }
+
+                                null -> Unit
                             }
-                            SearchScreen(
-                                session = session,
-                                state = searchState,
-                                requestInitialFocus = !destinationEntryKeepsTopFocus,
-                                indexerEntryFocusRequester = searchContentEntryFocus,
-                                topNavigationFocusRequester = searchFocus,
-                                onRefreshIndexers = searchActions.refreshIndexers,
-                                onSelectIndexer = searchActions.selectIndexer,
-                                onQueryChange = searchActions.updateQuery,
-                                onSearch = searchActions.search,
-                                onRetry = searchActions.retry,
-                                onLoadMore = searchActions.loadMore,
-                                onResultFocused = { resultId ->
-                                    restoringSearchFocusAfterPlayer = false
-                                    searchActions.rememberFocusedResult(resultId)
-                                },
-                                onGridViewportChanged = searchActions.rememberGridViewport,
-                                onPlay = searchActions.play,
-                                onOpenFilters = searchActions.openFilters,
-                                onDismissFilters = searchActions.dismissFilters,
-                                onApplyFilters = searchActions.applyFilters,
-                                onClearFilters = searchActions.clearFilters,
-                                onManageServers = settingsActions.manageServers,
+                        }
+                        if (searchContent?.resolvingResultId != null) {
+                            KaloscopePlaybackLoadingLayout(
+                                stage = PlaybackPreparationStage.Resource,
+                                testTag = "search-playback-loading",
                             )
+                        } else {
+                            RootDestinationFrame {
+                                SearchScreen(
+                                    session = session,
+                                    state = searchState,
+                                    requestInitialFocus = !destinationEntryKeepsTopFocus,
+                                    indexerEntryFocusRequester = searchContentEntryFocus,
+                                    topNavigationFocusRequester = searchFocus,
+                                    onRefreshIndexers = searchActions.refreshIndexers,
+                                    onSelectIndexer = searchActions.selectIndexer,
+                                    onQueryChange = searchActions.updateQuery,
+                                    onSearch = searchActions.search,
+                                    onRetry = searchActions.retry,
+                                    onLoadMore = searchActions.loadMore,
+                                    onResultFocused = { resultId ->
+                                        restoringSearchFocusAfterPlayer = false
+                                        searchActions.rememberFocusedResult(resultId)
+                                    },
+                                    onGridViewportChanged =
+                                        searchActions.rememberGridViewport,
+                                    onPlay = searchActions.play,
+                                    onOpenFilters = searchActions.openFilters,
+                                    onDismissFilters = searchActions.dismissFilters,
+                                    onApplyFilters = searchActions.applyFilters,
+                                    onClearFilters = searchActions.clearFilters,
+                                    onManageServers = settingsActions.manageServers,
+                                )
+                            }
                         }
                     }
                     entry<LibraryRoute> {
@@ -468,7 +481,7 @@ internal fun MainShell(
                     }
                 },
             )
-            if (!currentRoute.isFullscreenMedia()) {
+            if (!currentRoute.isFullscreenMedia() && !searchPlaybackPreparing) {
                 AnimatedVisibility(
                     visible = currentRoute !is MediaDetailRoute,
                     enter = fadeIn(tween(KaloscopeMotion.ContentMillis)),

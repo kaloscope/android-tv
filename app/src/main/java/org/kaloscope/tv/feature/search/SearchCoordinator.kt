@@ -346,7 +346,6 @@ class SearchCoordinator(
                     requestStore.put(request)
                     updateContent {
                         copy(
-                            resolvingResultId = null,
                             playbackError = null,
                             pendingPlaybackRequestId = request.requestId,
                             pendingReaderRequestId = null,
@@ -400,6 +399,7 @@ class SearchCoordinator(
                     ?.takeUnless { it == requestId },
                 pendingReaderRequestId = content.pendingReaderRequestId
                     ?.takeUnless { it == requestId },
+                resolvingResultId = null,
             )
         }
     }
@@ -408,7 +408,6 @@ class SearchCoordinator(
         readerRequestStore.put(request)
         updateContent {
             copy(
-                resolvingResultId = null,
                 playbackError = null,
                 pendingPlaybackRequestId = null,
                 pendingReaderRequestId = request.requestId,

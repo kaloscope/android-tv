@@ -112,6 +112,7 @@ class PlayerViewModel @Inject constructor(
         cancelExtraRetries()
         currentRequestId = requestId
         loadJob?.cancel()
+        coordinator.beginLoad()
         loadJob = viewModelScope.launch {
             coordinator.load(session, requestId)
         }

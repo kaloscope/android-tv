@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
@@ -35,6 +36,7 @@ import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.player.PlaybackMode
+import org.kaloscope.tv.core.player.PlaybackPreparationStage
 import org.kaloscope.tv.core.player.ProgressReason
 import org.kaloscope.tv.core.player.LocalEpisodeRef
 import org.kaloscope.tv.core.player.PlaybackRequest
@@ -46,6 +48,48 @@ import org.kaloscope.tv.data.media.MediaRepository
 import org.kaloscope.tv.data.search.NetworkResourceRepository
 
 class PlayerViewModelSettingsTest {
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `new player load replaces stale content with preparation immediately`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val store = PlaybackRequestStore()
+            val viewModel = PlayerViewModel(
+                requestStore = store,
+                mediaRepository = PlaybackExtrasRepository(),
+                historyRepository = unusedHistoryRepository(),
+                networkResourceRepository = unusedNetworkResourceRepository(),
+            )
+            val firstRequestId = checkNotNull(
+                viewModel.createFromHistory(
+                    session(),
+                    history().copy(mediaId = 301, path = "/media/episode-1.mkv"),
+                ),
+            )
+            viewModel.load(session(), firstRequestId)
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value is PlayerUiState.Content)
+            val nextRequestId = checkNotNull(
+                viewModel.createFromHistory(
+                    session(),
+                    history().copy(mediaId = 302, path = "/media/episode-2.mkv"),
+                ),
+            )
+
+            viewModel.load(session(), nextRequestId)
+
+            assertEquals(
+                PlaybackPreparationStage.Resource,
+                (viewModel.uiState.value as PlayerUiState.Loading).stage,
+            )
+            viewModel.close(nextRequestId)
+            advanceUntilIdle()
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test
     fun `history playback request uses persisted playback defaults`() {
         val store = PlaybackRequestStore()

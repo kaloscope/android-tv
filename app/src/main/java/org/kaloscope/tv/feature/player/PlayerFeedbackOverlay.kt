@@ -25,10 +25,11 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
-import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
+import org.kaloscope.tv.core.designsystem.KaloscopePlaybackLoadingLayout
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.player.PlaybackFailure
 import org.kaloscope.tv.core.player.PlaybackFeedback
+import org.kaloscope.tv.core.player.PlaybackPreparationStage
 import org.kaloscope.tv.core.player.PlaybackSourceKind
 
 @Composable
@@ -40,7 +41,10 @@ internal fun PlayerFeedbackOverlay(
 ) {
     when (feedback) {
         PlaybackFeedback.Preparing ->
-            KaloscopeLoadingLayout("player-loading")
+            KaloscopePlaybackLoadingLayout(
+                stage = PlaybackPreparationStage.Playback,
+                testTag = "player-loading",
+            )
 
         PlaybackFeedback.SwitchingItem ->
             BlockingFeedbackMessage(stringResource(R.string.switching_episode))

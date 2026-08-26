@@ -11,12 +11,15 @@ import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SubtitleTrack
+import org.kaloscope.tv.core.player.PlaybackPreparationStage
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.data.media.MediaRepository
 
 sealed interface PlayerUiState {
-    data object Loading : PlayerUiState
+    data class Loading(
+        val stage: PlaybackPreparationStage = PlaybackPreparationStage.Resource,
+    ) : PlayerUiState
 
     data object MissingRequest : PlayerUiState
 
@@ -45,21 +48,31 @@ class PlayerCoordinator(
     private val requestStore: PlaybackRequestStore,
     private val mediaRepository: MediaRepository,
 ) {
-    private val mutableState = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading)
+    private val mutableState = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading())
 
     val state: StateFlow<PlayerUiState> = mutableState.asStateFlow()
+
+    fun beginLoad() {
+        mutableState.value = PlayerUiState.Loading()
+    }
 
     suspend fun load(
         session: Session,
         requestId: String,
     ) {
-        mutableState.value = PlayerUiState.Loading
+        beginLoad()
         val request = requestStore.get(requestId)
         if (request == null || request.serverId != session.server.id) {
             mutableState.value = PlayerUiState.MissingRequest
             return
         }
-        mutableState.value = buildContent(session, request)
+        mutableState.value = buildContent(
+            session = session,
+            request = request,
+            onPreparationStage = { stage ->
+                mutableState.value = PlayerUiState.Loading(stage)
+            },
+        )
     }
 
     fun beginItemSwitch() {
@@ -80,6 +93,7 @@ class PlayerCoordinator(
         session: Session,
         request: PlaybackRequest,
         progressError: AppError? = null,
+        onPreparationStage: (PlaybackPreparationStage) -> Unit = {},
     ): PlayerUiState.Content =
         when (request) {
             is PlaybackRequest.NetworkVideo -> PlayerUiState.Content(
@@ -91,7 +105,11 @@ class PlayerCoordinator(
             )
 
             is PlaybackRequest.LocalMedia -> {
-                val extras = loadLocalExtras(session, request.path)
+                val extras = loadLocalExtras(
+                    session = session,
+                    path = request.path,
+                    onPreparationStage = onPreparationStage,
+                )
                 PlayerUiState.Content(
                     request = request,
                     subtitles = extras.subtitles,
@@ -106,13 +124,19 @@ class PlayerCoordinator(
     private suspend fun loadLocalExtras(
         session: Session,
         path: String,
+        onPreparationStage: (PlaybackPreparationStage) -> Unit,
     ): LocalExtras {
         // Independent supplementary requests share startup latency and degrade separately.
         val (subtitleResult, danmakuResult, probeResult) = coroutineScope {
             val subtitles = async { mediaRepository.getSubtitleTracks(session, path) }
             val danmakus = async { mediaRepository.getDanmakus(session, path) }
             val probe = async { mediaRepository.getMediaProbe(session, path) }
-            Triple(subtitles.await(), danmakus.await(), probe.await())
+            val subtitleResult = subtitles.await()
+            val probeResult = probe.await()
+            if (!danmakus.isCompleted) {
+                onPreparationStage(PlaybackPreparationStage.Danmaku)
+            }
+            Triple(subtitleResult, danmakus.await(), probeResult)
         }
         return LocalExtras(
             subtitles = (subtitleResult as? AppResult.Success)?.value.orEmpty(),

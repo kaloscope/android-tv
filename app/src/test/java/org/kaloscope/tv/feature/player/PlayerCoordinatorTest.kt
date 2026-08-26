@@ -1,5 +1,8 @@
 package org.kaloscope.tv.feature.player
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -15,11 +18,53 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.SubtitleTrack
 import org.kaloscope.tv.core.player.PlaybackOrigin
+import org.kaloscope.tv.core.player.PlaybackPreparationStage
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.data.media.MediaRepository
 
 class PlayerCoordinatorTest {
+    @Test
+    fun `local load reports resource then danmaku preparation stages`() = runTest {
+        val store = PlaybackRequestStore()
+        val request = request()
+        store.put(request)
+        val subtitles = CompletableDeferred<AppResult<List<SubtitleTrack>>>()
+        val probe = CompletableDeferred<AppResult<MediaProbe>>()
+        val danmakus = CompletableDeferred<AppResult<List<DanmakuComment>>>()
+        val coordinator = PlayerCoordinator(
+            requestStore = store,
+            mediaRepository = FakeMediaRepository(
+                deferredSubtitles = subtitles,
+                deferredDanmakus = danmakus,
+                deferredProbe = probe,
+            ),
+        )
+
+        val loadJob = launch { coordinator.load(session(), request.requestId) }
+        runCurrent()
+
+        assertEquals(
+            PlaybackPreparationStage.Resource,
+            (coordinator.state.value as PlayerUiState.Loading).stage,
+        )
+
+        subtitles.complete(AppResult.Success(emptyList()))
+        probe.complete(AppResult.Success(probe()))
+        runCurrent()
+
+        assertEquals(
+            PlaybackPreparationStage.Danmaku,
+            (coordinator.state.value as PlayerUiState.Loading).stage,
+        )
+
+        danmakus.complete(AppResult.Success(listOf(danmaku())))
+        loadJob.join()
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals("danmaku-1", content.danmakus.single().id)
+    }
+
     @Test
     fun `load resolves local request and playback extras`() = runTest {
         val store = PlaybackRequestStore()
@@ -262,6 +307,9 @@ private class FakeMediaRepository(
     var subtitles: AppResult<List<SubtitleTrack>> = AppResult.Success(emptyList()),
     var danmakus: AppResult<List<DanmakuComment>> = AppResult.Success(emptyList()),
     var probe: AppResult<MediaProbe> = AppResult.Success(MediaProbe(0, emptyList())),
+    private val deferredSubtitles: CompletableDeferred<AppResult<List<SubtitleTrack>>>? = null,
+    private val deferredDanmakus: CompletableDeferred<AppResult<List<DanmakuComment>>>? = null,
+    private val deferredProbe: CompletableDeferred<AppResult<MediaProbe>>? = null,
 ) : MediaRepository {
     var subtitleCalls = 0
     var danmakuCalls = 0
@@ -290,7 +338,7 @@ private class FakeMediaRepository(
     ): AppResult<MediaProbe> {
         probeCalls += 1
         probePaths += path
-        return probe
+        return deferredProbe?.await() ?: probe
     }
 
     override suspend fun getSubtitleTracks(
@@ -298,7 +346,7 @@ private class FakeMediaRepository(
         path: String,
     ): AppResult<List<SubtitleTrack>> {
         subtitleCalls += 1
-        return subtitles
+        return deferredSubtitles?.await() ?: subtitles
     }
 
     override suspend fun getDanmakus(
@@ -306,7 +354,7 @@ private class FakeMediaRepository(
         path: String,
     ): AppResult<List<DanmakuComment>> {
         danmakuCalls += 1
-        return danmakus
+        return deferredDanmakus?.await() ?: danmakus
     }
 }
 

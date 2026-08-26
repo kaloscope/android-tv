@@ -1048,7 +1048,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun resolvingResultKeepsMetadataCardBounds() {
+    fun resolvingStateDoesNotReplaceCardMetadataInline() {
         val completeResult = result("v1").copy(
             misc = "1:30:00",
             uploader = "Admin",
@@ -1092,13 +1092,13 @@ class SearchScreenTest {
         assertEquals(initialBounds, resolvingBounds)
         composeRule.onNodeWithText(
             text = InstrumentationRegistry.getInstrumentation()
-                .targetContext.getString(R.string.resolving_playback),
+                .targetContext.getString(R.string.playback_preparation_resource),
             useUnmergedTree = true,
-        ).assertExists()
+        ).assertDoesNotExist()
         composeRule.onNodeWithText(
             text = "UP: Admin · 10 Hours Ago",
             useUnmergedTree = true,
-        ).assertDoesNotExist()
+        ).assertExists()
     }
 
     @Test

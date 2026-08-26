@@ -41,12 +41,13 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
-import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
+import org.kaloscope.tv.core.designsystem.KaloscopePlaybackLoadingLayout
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackFeedback
 import org.kaloscope.tv.core.player.PlaybackFeedbackPolicy
+import org.kaloscope.tv.core.player.PlaybackPreparationStage
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestNavigator
 import org.kaloscope.tv.core.player.PlaybackSettingsPolicy
@@ -65,9 +66,12 @@ fun PlayerScreen(
     onBack: () -> Unit,
 ) {
     when (state) {
-        PlayerUiState.Loading -> {
+        is PlayerUiState.Loading -> {
             BackHandler(onBack = onBack)
-            KaloscopeLoadingLayout("player-loading")
+            KaloscopePlaybackLoadingLayout(
+                stage = state.stage,
+                testTag = "player-loading",
+            )
         }
 
         PlayerUiState.MissingRequest -> {
@@ -156,7 +160,10 @@ private fun PlayerContent(
     }
     val controller = activeController
     if (controller == null) {
-        KaloscopeLoadingLayout("player-loading")
+        KaloscopePlaybackLoadingLayout(
+            stage = PlaybackPreparationStage.Playback,
+            testTag = "player-loading",
+        )
         return
     }
     val sessionSettings = requestSessionState.sessionSettings

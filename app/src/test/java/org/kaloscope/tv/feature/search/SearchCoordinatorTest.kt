@@ -295,7 +295,7 @@ class SearchCoordinatorTest {
     }
 
     @Test
-    fun `result click resolves details and creates direct network request`() = runTest {
+    fun `result click keeps preparation until playback destination is consumed`() = runTest {
         val store = PlaybackRequestStore()
         val repository = FakeSearchRepository(
             pages = mutableListOf(AppResult.Success(page("v1"))),
@@ -317,10 +317,16 @@ class SearchCoordinatorTest {
 
         val state = coordinator.state.value as SearchUiState.Content
         assertEquals("network-request", state.pendingPlaybackRequestId)
-        assertNull(state.resolvingResultId)
+        assertEquals("v1", state.resolvingResultId)
         val request = store.get("network-request") as PlaybackRequest.NetworkVideo
         assertEquals(PlaybackOrigin.NetworkSearch, request.origin)
         assertEquals("/_api/media/proxy?id=1", request.source.url)
+
+        coordinator.consumeDestination("network-request")
+
+        val consumed = coordinator.state.value as SearchUiState.Content
+        assertNull(consumed.pendingPlaybackRequestId)
+        assertNull(consumed.resolvingResultId)
     }
 
     @Test
@@ -343,6 +349,7 @@ class SearchCoordinatorTest {
         val state = coordinator.state.value as SearchUiState.Content
         assertEquals(listOf("v1"), state.results.items.map { it.id })
         assertEquals(AppError.Offline, state.playbackError)
+        assertNull(state.resolvingResultId)
     }
 
     @Test
