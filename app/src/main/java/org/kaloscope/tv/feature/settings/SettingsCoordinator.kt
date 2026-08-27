@@ -100,8 +100,35 @@ class SettingsCoordinator(
     suspend fun setDanmakuSettings(value: DanmakuSettings) =
         update { copy(danmaku = value) }
 
+    suspend fun setPlayerDanmakuPreferences(value: DanmakuSettings) =
+        update {
+            copy(
+                danmaku = danmaku.copy(
+                    textSize = value.textSize,
+                    speed = value.speed,
+                    opacityPercent = value.opacityPercent,
+                    displayAreaPercent = value.displayAreaPercent,
+                    visibleModes = value.visibleModes,
+                    blockColored = value.blockColored,
+                ),
+            )
+        }
+
     suspend fun setSubtitleSettings(value: SubtitleSettings) =
         update { copy(subtitle = SubtitleSettingsPolicy.sanitize(value)) }
+
+    suspend fun setPlayerSubtitlePreferences(value: SubtitleSettings) =
+        update {
+            copy(
+                subtitle = SubtitleSettingsPolicy.sanitize(
+                    subtitle.copy(
+                        displayMode = value.displayMode,
+                        fontScalePercent = value.fontScalePercent,
+                        verticalPositionPercent = value.verticalPositionPercent,
+                    ),
+                ),
+            )
+        }
 
     suspend fun setStartPage(value: StartPage) =
         update { copy(startPage = value) }
@@ -135,6 +162,7 @@ class SettingsCoordinator(
     private suspend fun update(transform: TvSettings.() -> TvSettings) {
         val content = mutableState.value as? SettingsUiState.Content ?: return
         val updated = content.settings.transform()
+        if (updated == content.settings) return
         pendingSettings = updated
         mutableState.value = content.copy(
             settings = updated,

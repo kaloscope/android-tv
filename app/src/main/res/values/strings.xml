@@ -65,6 +65,7 @@
     <string name="danmaku_settings_description">设置每次进入播放器时使用的弹幕默认值。</string>
     <string name="player_settings_title">设置</string>
     <string name="player_session_settings_description">此处调整仅对本次播放生效，不会修改全局默认值。</string>
+    <string name="player_synced_preferences_description">在此调整的部分显示偏好会自动同步为全局默认值。</string>
     <string name="danmaku_block_types">屏蔽类型</string>
     <string name="danmaku_block_types_description">选择默认屏蔽的弹幕类型，可多选。</string>
     <string name="danmaku_block_none">未屏蔽</string>
@@ -235,7 +236,7 @@
     <string name="reader_next_chapter">下一章</string>
     <string name="reader_chapters">章节</string>
     <string name="reader_settings">阅读设置</string>
-    <string name="reader_session_settings_description">此处调整仅对本次阅读生效，不会修改全局默认值。</string>
+    <string name="reader_session_settings_description">在此调整的部分阅读偏好会自动同步为全局默认值。</string>
     <string name="reader_request_missing">阅读请求已失效</string>
     <string name="reader_request_missing_description">请返回搜索页面并重新选择资源。</string>
     <string name="reader_empty_text">本章没有文本内容</string>

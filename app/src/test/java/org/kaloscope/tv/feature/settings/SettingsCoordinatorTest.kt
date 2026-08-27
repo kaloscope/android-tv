@@ -5,13 +5,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.AccentColor
+import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
+import org.kaloscope.tv.core.model.DanmakuTextSize
 import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ReaderChapterOrder
@@ -171,6 +174,96 @@ class SettingsCoordinatorTest {
         val state = coordinator.state.value as SettingsUiState.Content
         assertEquals(expected, state.settings.subtitle)
         assertEquals(expected, repository.saved?.subtitle)
+    }
+
+    @Test
+    fun `player subtitle preferences preserve session-only defaults`() = runTest {
+        val initial = SubtitleSettings(
+            enabled = false,
+            languagePreference = "chs|zh-CN",
+            displayMode = SubtitleDisplayMode.Stroke,
+            timeOffsetSeconds = 0f,
+            fontScalePercent = 100,
+            verticalPositionPercent = 2,
+        )
+        val repository = FakeSettingsRepository(TvSettings(subtitle = initial))
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+
+        coordinator.setPlayerSubtitlePreferences(
+            SubtitleSettings(
+                enabled = true,
+                languagePreference = "en",
+                displayMode = SubtitleDisplayMode.Background,
+                timeOffsetSeconds = 1.5f,
+                fontScalePercent = 125,
+                verticalPositionPercent = 8,
+            ),
+        )
+
+        val expected = initial.copy(
+            displayMode = SubtitleDisplayMode.Background,
+            fontScalePercent = 125,
+            verticalPositionPercent = 8,
+        )
+        val state = coordinator.state.value as SettingsUiState.Content
+        assertEquals(expected, state.settings.subtitle)
+        assertEquals(expected, repository.saved?.subtitle)
+    }
+
+    @Test
+    fun `player subtitle offset does not trigger a global save`() = runTest {
+        val initial = SubtitleSettings(timeOffsetSeconds = 0f)
+        val repository = FakeSettingsRepository(TvSettings(subtitle = initial))
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+
+        coordinator.setPlayerSubtitlePreferences(
+            initial.copy(timeOffsetSeconds = 1.5f),
+        )
+
+        val state = coordinator.state.value as SettingsUiState.Content
+        assertEquals(initial, state.settings.subtitle)
+        assertNull(repository.saved)
+        assertFalse(state.isSaving)
+    }
+
+    @Test
+    fun `player danmaku preferences preserve the session toggle`() = runTest {
+        val initial = DanmakuSettings(enabled = false)
+        val repository = FakeSettingsRepository(TvSettings(danmaku = initial))
+        val coordinator = SettingsCoordinator(repository, FakeServerRepository())
+        coordinator.load()
+
+        coordinator.setPlayerDanmakuPreferences(
+            DanmakuSettings(
+                enabled = true,
+                textSize = DanmakuTextSize.Large,
+                speed = DanmakuSpeed.Fast,
+                opacityPercent = 50,
+                displayAreaPercent = 25,
+                visibleModes = setOf(
+                    DanmakuDisplayMode.Scroll,
+                    DanmakuDisplayMode.Top,
+                ),
+                blockColored = true,
+            ),
+        )
+
+        val expected = initial.copy(
+            textSize = DanmakuTextSize.Large,
+            speed = DanmakuSpeed.Fast,
+            opacityPercent = 50,
+            displayAreaPercent = 25,
+            visibleModes = setOf(
+                DanmakuDisplayMode.Scroll,
+                DanmakuDisplayMode.Top,
+            ),
+            blockColored = true,
+        )
+        val state = coordinator.state.value as SettingsUiState.Content
+        assertEquals(expected, state.settings.danmaku)
+        assertEquals(expected, repository.saved?.danmaku)
     }
 
     @Test

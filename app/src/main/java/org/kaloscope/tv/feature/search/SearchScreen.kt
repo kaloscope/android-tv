@@ -858,12 +858,13 @@ private fun NetworkResultCard(
                     bottom = 8.dp,
                 ),
             ) {
-                // Reserve enough room for two CJK lines, but keep short titles close to metadata.
+                // Keep titles and metadata anchored to opposite edges across every card.
+                // Their minimum two-line heights trim the gap without shifting either anchor.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(41.dp),
-                    contentAlignment = Alignment.BottomStart,
+                    contentAlignment = Alignment.TopStart,
                 ) {
                     Text(
                         text = result.title,
@@ -876,7 +877,6 @@ private fun NetworkResultCard(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                Spacer(Modifier.height(3.dp))
                 SearchResultFooter(result)
             }
         }
@@ -998,7 +998,7 @@ private fun SearchResultFooter(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .height(34.dp)
+            .height(32.dp)
             .testTag("search-result-footer-${result.id}"),
         contentAlignment = Alignment.CenterStart,
     ) {

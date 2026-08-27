@@ -238,7 +238,11 @@ fun KaloscopeApp(
                         setAutoplayNext = settingsViewModel::setAutoplayNext,
                         setAccentColor = settingsViewModel::setAccentColor,
                         setDanmaku = settingsViewModel::setDanmakuSettings,
+                        setPlayerDanmakuPreferences =
+                            settingsViewModel::setPlayerDanmakuPreferences,
                         setSubtitles = settingsViewModel::setSubtitleSettings,
+                        setPlayerSubtitlePreferences =
+                            settingsViewModel::setPlayerSubtitlePreferences,
                         setStartPage = settingsViewModel::setStartPage,
                         setReaderChapterOrder =
                             settingsViewModel::setReaderChapterOrder,

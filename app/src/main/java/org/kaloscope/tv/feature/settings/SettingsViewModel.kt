@@ -59,8 +59,14 @@ class SettingsViewModel @Inject constructor(
     fun setDanmakuSettings(value: DanmakuSettings) =
         enqueueSettingsUpdate { coordinator.setDanmakuSettings(value) }
 
+    fun setPlayerDanmakuPreferences(value: DanmakuSettings) =
+        enqueueSettingsUpdate { coordinator.setPlayerDanmakuPreferences(value) }
+
     fun setSubtitleSettings(value: SubtitleSettings) =
         enqueueSettingsUpdate { coordinator.setSubtitleSettings(value) }
+
+    fun setPlayerSubtitlePreferences(value: SubtitleSettings) =
+        enqueueSettingsUpdate { coordinator.setPlayerSubtitlePreferences(value) }
 
     fun setStartPage(value: StartPage) =
         enqueueSettingsUpdate { coordinator.setStartPage(value) }

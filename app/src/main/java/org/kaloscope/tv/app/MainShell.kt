@@ -491,6 +491,10 @@ internal fun MainShell(
                             onNext = { playerActions.switchItem(1) },
                             onRetryExtra = playerActions.retryExtra,
                             onBack = ::goBack,
+                            onSubtitlePreferencesChanged =
+                                settingsActions.setPlayerSubtitlePreferences,
+                            onDanmakuPreferencesChanged =
+                                settingsActions.setPlayerDanmakuPreferences,
                         )
                     }
                     entry<ReaderRoute> {
@@ -505,6 +509,10 @@ internal fun MainShell(
                             onChapterOrder = readerActions.setChapterOrder,
                             onDismissChapterError = readerActions.dismissChapterError,
                             onDismissPageError = readerActions.dismissPageError,
+                            onImagePreferencesChanged =
+                                settingsActions.setImageReaderSettings,
+                            onTextPreferencesChanged =
+                                settingsActions.setTextReaderSettings,
                         )
                     }
                 },

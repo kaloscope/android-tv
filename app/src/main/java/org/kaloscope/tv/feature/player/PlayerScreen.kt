@@ -42,7 +42,9 @@ import kotlinx.coroutines.delay
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopePlaybackLoadingLayout
+import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackFeedback
@@ -64,6 +66,8 @@ fun PlayerScreen(
     onNext: () -> Unit,
     onRetryExtra: (PlayerExtra) -> Unit,
     onBack: () -> Unit,
+    onSubtitlePreferencesChanged: (SubtitleSettings) -> Unit = {},
+    onDanmakuPreferencesChanged: (DanmakuSettings) -> Unit = {},
 ) {
     when (state) {
         is PlayerUiState.Loading -> {
@@ -93,6 +97,8 @@ fun PlayerScreen(
             onNext = onNext,
             onRetryExtra = onRetryExtra,
             onBack = onBack,
+            onSubtitlePreferencesChanged = onSubtitlePreferencesChanged,
+            onDanmakuPreferencesChanged = onDanmakuPreferencesChanged,
         )
     }
 }
@@ -109,6 +115,8 @@ private fun PlayerContent(
     onNext: () -> Unit,
     onRetryExtra: (PlayerExtra) -> Unit,
     onBack: () -> Unit,
+    onSubtitlePreferencesChanged: (SubtitleSettings) -> Unit,
+    onDanmakuPreferencesChanged: (DanmakuSettings) -> Unit,
 ) {
     val playbackIdentity = state.request.playbackIdentity()
     var requestSessionState by remember(state.request.requestId) {
@@ -771,6 +779,8 @@ private fun PlayerContent(
                     settingsDrawerOpen = false
                     restoreSettingsFocus = true
                 },
+                onPersistSubtitlePreferences = onSubtitlePreferencesChanged,
+                onPersistDanmakuPreferences = onDanmakuPreferencesChanged,
             )
         }
         if (speedDrawerOpen) {

@@ -1028,6 +1028,86 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun imageSettingChangePublishesTheGlobalPreference() {
+        var state by mutableStateOf(imageState())
+        var persisted: ImageReaderSettings? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = {},
+                    onLoadMoreImages = {},
+                    onImageSettings = { state = state.copy(settings = it) },
+                    onTextSettings = {},
+                    onChapterOrder = {},
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                    onImagePreferencesChanged = { persisted = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("image-reader-scroll")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("reader-image-read-mode-setting")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNode(
+            hasClickAction() and hasTextExactly("滚动") and isFocused(),
+        )
+            .assertExists()
+            .performKeyInput {
+                pressKey(Key.DirectionDown)
+                pressKey(Key.Enter)
+            }
+
+        composeRule.runOnIdle {
+            assertEquals(ImageReadMode.Paged, state.settings.readMode)
+            assertEquals(ImageReadMode.Paged, persisted?.readMode)
+        }
+    }
+
+    @Test
+    fun textSettingChangePublishesTheGlobalPreference() {
+        var state by mutableStateOf(textState(text = "正文"))
+        var persisted: TextReaderSettings? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                ReaderScreen(
+                    session = session(),
+                    state = state,
+                    onBack = {},
+                    onSelectChapter = {},
+                    onLoadMoreImages = {},
+                    onImageSettings = {},
+                    onTextSettings = { state = state.copy(settings = it) },
+                    onChapterOrder = {},
+                    onDismissChapterError = {},
+                    onDismissPageError = {},
+                    onTextPreferencesChanged = { persisted = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("reader-font-size-setting")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.runOnIdle {
+            assertEquals(30, state.settings.fontSizeSp)
+            assertEquals(30, persisted?.fontSizeSp)
+        }
+    }
+
+    @Test
     fun backClosesReaderChoiceDialogBeforeDrawerAndRestoresFocus() {
         setReader(textState(text = "正文"))
 
@@ -1133,6 +1213,10 @@ class ReaderScreenTest {
             .performKeyInput { pressKey(Key.DirectionCenter) }
         control("章节").performKeyInput { pressKey(Key.DirectionRight) }
         control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithText(
+            "在此调整的部分阅读偏好会自动同步为全局默认值。",
+        ).assertExists()
 
         val icon = composeRule.onNodeWithTag(
             testTag = "reader-session-settings-hint-icon",

@@ -272,6 +272,11 @@ class PlayerSettingsDrawerTest {
         composeRule.runOnIdle {
             assertEquals(SubtitleDisplayMode.Background, harness.subtitleSettings.displayMode)
             assertEquals(1, harness.subtitleUpdateCount)
+            assertEquals(1, harness.subtitlePersistenceCount)
+            assertEquals(
+                SubtitleDisplayMode.Background,
+                harness.persistedSubtitleSettings?.displayMode,
+            )
         }
     }
 
@@ -301,6 +306,8 @@ class PlayerSettingsDrawerTest {
         composeRule.runOnIdle {
             assertEquals(55, harness.danmakuSettings.opacityPercent)
             assertEquals(1, harness.danmakuUpdateCount)
+            assertEquals(1, harness.danmakuPersistenceCount)
+            assertEquals(55, harness.persistedDanmakuSettings?.opacityPercent)
         }
     }
 
@@ -342,6 +349,7 @@ class PlayerSettingsDrawerTest {
         composeRule.runOnIdle {
             assertEquals(0f, harness.subtitleSettings.timeOffsetSeconds)
             assertEquals(1, harness.subtitleUpdateCount)
+            assertEquals(0, harness.subtitlePersistenceCount)
         }
     }
 
@@ -350,7 +358,7 @@ class PlayerSettingsDrawerTest {
         setDrawer(DrawerHarness())
 
         composeRule.onNodeWithText(
-            "此处调整仅对本次播放生效，不会修改全局默认值。",
+            "在此调整的部分显示偏好会自动同步为全局默认值。",
         ).assertExists()
         composeRule.onNodeWithTag(
             testTag = "player-session-settings-hint-icon",
@@ -449,9 +457,17 @@ class PlayerSettingsDrawerTest {
                             harness.subtitleUpdateCount += 1
                             harness.subtitleSettings = it
                         },
+                        onPersistSubtitlePreferences = {
+                            harness.subtitlePersistenceCount += 1
+                            harness.persistedSubtitleSettings = it
+                        },
                         onChangeDanmakuSettings = {
                             harness.danmakuUpdateCount += 1
                             harness.danmakuSettings = it
+                        },
+                        onPersistDanmakuPreferences = {
+                            harness.danmakuPersistenceCount += 1
+                            harness.persistedDanmakuSettings = it
                         },
                         onDismiss = { harness.dismissCount += 1 },
                     )
@@ -467,8 +483,12 @@ class PlayerSettingsDrawerTest {
         var selectedTrackId by mutableStateOf(initialSelectedTrackId)
         var subtitleSettings by mutableStateOf(initialSubtitleSettings)
         var danmakuSettings by mutableStateOf(DanmakuSettings())
+        var persistedSubtitleSettings: SubtitleSettings? = null
+        var persistedDanmakuSettings: DanmakuSettings? = null
         var subtitleUpdateCount = 0
         var danmakuUpdateCount = 0
+        var subtitlePersistenceCount = 0
+        var danmakuPersistenceCount = 0
         var dismissCount = 0
     }
 }

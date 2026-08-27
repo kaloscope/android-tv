@@ -387,6 +387,100 @@ class SearchScreenTest {
     }
 
     @Test
+    fun networkResultFooterPreservesTwoLineMetadataCapacity() {
+        val width = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.widthPixels
+        if (width != 1920) return
+        val uploader = "用于验证双行元信息容量的超长上传者名称"
+        val source = "UP: $uploader · 2026-08-27"
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = listOf(
+                            result("v1").copy(
+                                rating = null,
+                                category = null,
+                                uploader = uploader,
+                                uploadedAt = "2026-08-27",
+                                size = null,
+                            ),
+                        ),
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val layoutResults = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText(source, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(layoutResults)
+            }
+
+        assertEquals(2, layoutResults.single().lineCount)
+    }
+
+    @Test
+    fun networkResultTitlesStartAtSameTopAcrossLineCounts() {
+        val singleLineTitle = "单行标题"
+        val twoLineTitle = "第一行\n第二行"
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = listOf(
+                            result("v1").copy(title = singleLineTitle),
+                            result("v2").copy(title = twoLineTitle),
+                        ),
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val singleLineTop = composeRule
+            .onNodeWithText(singleLineTitle, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+        val twoLineTop = composeRule
+            .onNodeWithText(twoLineTitle, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertEquals(twoLineTop, singleLineTop, tolerance)
+    }
+
+    @Test
     fun singleLineNetworkTitleStaysCloseToFooterMetadata() {
         val title = "单行标题"
         val metadata = "最新"
@@ -438,7 +532,7 @@ class SearchScreenTest {
 
         assertTrue(
             "Single-line title and footer metadata should be visually close",
-            metadataTop - visibleTitleBottom <= 24f * density,
+            metadataTop - visibleTitleBottom <= 36f * density,
         )
     }
 

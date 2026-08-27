@@ -58,6 +58,8 @@ internal fun PlayerSettingsDrawer(
     onChangeSubtitleSettings: (SubtitleSettings) -> Unit,
     onChangeDanmakuSettings: (DanmakuSettings) -> Unit,
     onDismiss: () -> Unit,
+    onPersistSubtitlePreferences: (SubtitleSettings) -> Unit = {},
+    onPersistDanmakuPreferences: (DanmakuSettings) -> Unit = {},
 ) {
     val initialFocus = remember { FocusRequester() }
     val blockRowFocus = remember { FocusRequester() }
@@ -117,6 +119,16 @@ internal fun PlayerSettingsDrawer(
         activeChoice = choice
     }
 
+    fun updateSubtitlePreferences(value: SubtitleSettings) {
+        onChangeSubtitleSettings(value)
+        onPersistSubtitlePreferences(value)
+    }
+
+    fun updateDanmakuPreferences(value: DanmakuSettings) {
+        onChangeDanmakuSettings(value)
+        onPersistDanmakuPreferences(value)
+    }
+
     KaloscopeSidePanel(
         title = stringResource(R.string.player_settings_title),
         palette = palette,
@@ -125,7 +137,7 @@ internal fun PlayerSettingsDrawer(
         modifier = Modifier.testTag("player-settings-drawer"),
         footer = {
             KaloscopeSidePanelSessionHint(
-                text = stringResource(R.string.player_session_settings_description),
+                text = stringResource(R.string.player_synced_preferences_description),
                 color = Muted,
                 iconTestTag = "player-session-settings-hint-icon",
                 textTestTag = "player-session-settings-hint-text",
@@ -165,7 +177,7 @@ internal fun PlayerSettingsDrawer(
                         selected = subtitleSettings.displayMode,
                         label = ::subtitleDisplayModeLabel,
                         onSelect = { value ->
-                            onChangeSubtitleSettings(
+                            updateSubtitlePreferences(
                                 subtitleSettings.copy(displayMode = value),
                             )
                         },
@@ -193,8 +205,8 @@ internal fun PlayerSettingsDrawer(
                         ),
                         canDecrease = decreased != subtitleSettings,
                         canIncrease = increased != subtitleSettings,
-                        onDecrease = { onChangeSubtitleSettings(decreased) },
-                        onIncrease = { onChangeSubtitleSettings(increased) },
+                        onDecrease = { updateSubtitlePreferences(decreased) },
+                        onIncrease = { updateSubtitlePreferences(increased) },
                         modifier = Modifier.testTag("player-subtitle-font-scale-row"),
                         adjustmentTestTagPrefix = "player-subtitle-font-scale",
                     )
@@ -216,8 +228,8 @@ internal fun PlayerSettingsDrawer(
                         ),
                         canDecrease = decreased != subtitleSettings,
                         canIncrease = increased != subtitleSettings,
-                        onDecrease = { onChangeSubtitleSettings(decreased) },
-                        onIncrease = { onChangeSubtitleSettings(increased) },
+                        onDecrease = { updateSubtitlePreferences(decreased) },
+                        onIncrease = { updateSubtitlePreferences(increased) },
                         modifier = Modifier.testTag("player-subtitle-position-row"),
                         adjustmentTestTagPrefix = "player-subtitle-position",
                     )
@@ -268,7 +280,7 @@ internal fun PlayerSettingsDrawer(
                         selected = danmakuSettings.textSize,
                         label = ::danmakuTextSizeLabel,
                         onSelect = { value ->
-                            onChangeDanmakuSettings(danmakuSettings.copy(textSize = value))
+                            updateDanmakuPreferences(danmakuSettings.copy(textSize = value))
                         },
                         onOpenChoice = ::openChoice,
                         optionTestTag = {
@@ -289,7 +301,7 @@ internal fun PlayerSettingsDrawer(
                         selected = danmakuSettings.speed,
                         label = ::danmakuSpeedLabel,
                         onSelect = { value ->
-                            onChangeDanmakuSettings(danmakuSettings.copy(speed = value))
+                            updateDanmakuPreferences(danmakuSettings.copy(speed = value))
                         },
                         onOpenChoice = ::openChoice,
                         optionTestTag = {
@@ -315,8 +327,8 @@ internal fun PlayerSettingsDrawer(
                         ),
                         canDecrease = decreased != danmakuSettings,
                         canIncrease = increased != danmakuSettings,
-                        onDecrease = { onChangeDanmakuSettings(decreased) },
-                        onIncrease = { onChangeDanmakuSettings(increased) },
+                        onDecrease = { updateDanmakuPreferences(decreased) },
+                        onIncrease = { updateDanmakuPreferences(increased) },
                         modifier = Modifier.testTag("player-danmaku-opacity-row"),
                         adjustmentTestTagPrefix = "player-danmaku-opacity",
                     )
@@ -338,8 +350,8 @@ internal fun PlayerSettingsDrawer(
                         ),
                         canDecrease = decreased != danmakuSettings,
                         canIncrease = increased != danmakuSettings,
-                        onDecrease = { onChangeDanmakuSettings(decreased) },
-                        onIncrease = { onChangeDanmakuSettings(increased) },
+                        onDecrease = { updateDanmakuPreferences(decreased) },
+                        onIncrease = { updateDanmakuPreferences(increased) },
                         modifier = Modifier.testTag("player-danmaku-display-area-row"),
                         adjustmentTestTagPrefix = "player-danmaku-display-area",
                     )
@@ -361,7 +373,7 @@ internal fun PlayerSettingsDrawer(
     if (blockMenuOpen && danmakuSettings != null) {
         PlayerDanmakuBlockMenu(
             settings = danmakuSettings,
-            onChange = onChangeDanmakuSettings,
+            onChange = ::updateDanmakuPreferences,
             onDismiss = {
                 blockMenuOpen = false
                 restoreBlockRowFocus = true

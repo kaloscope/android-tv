@@ -105,6 +105,8 @@ fun ReaderScreen(
     onChapterOrder: (ReaderChapterOrder) -> Unit,
     onDismissChapterError: () -> Unit,
     onDismissPageError: () -> Unit,
+    onImagePreferencesChanged: (ImageReaderSettings) -> Unit = {},
+    onTextPreferencesChanged: (TextReaderSettings) -> Unit = {},
 ) {
     when (state) {
         ReaderUiState.Idle -> ReaderUnavailable(onBack)
@@ -120,6 +122,8 @@ fun ReaderScreen(
             onChapterOrder = onChapterOrder,
             onDismissChapterError = onDismissChapterError,
             onDismissPageError = onDismissPageError,
+            onImagePreferencesChanged = onImagePreferencesChanged,
+            onTextPreferencesChanged = onTextPreferencesChanged,
         )
     }
 }
@@ -136,6 +140,8 @@ private fun ActiveReader(
     onChapterOrder: (ReaderChapterOrder) -> Unit,
     onDismissChapterError: () -> Unit,
     onDismissPageError: () -> Unit,
+    onImagePreferencesChanged: (ImageReaderSettings) -> Unit,
+    onTextPreferencesChanged: (TextReaderSettings) -> Unit,
 ) {
     val contentFocus = remember { FocusRequester() }
     val loadingFocus = remember { FocusRequester() }
@@ -424,7 +430,10 @@ private fun ActiveReader(
                 is ReaderUiState.Image -> ImageReaderSettingsDrawer(
                     settings = state.settings,
                     chapterOrder = state.chapterOrder,
-                    onSettings = onImageSettings,
+                    onSettings = { value ->
+                        onImageSettings(value)
+                        onImagePreferencesChanged(value)
+                    },
                     onChapterOrder = onChapterOrder,
                     onDismiss = ::dismissDrawer,
                 )
@@ -436,7 +445,10 @@ private fun ActiveReader(
                     textColor = ReaderDrawerTextColor,
                     mutedColor = ReaderDrawerMutedColor,
                     controlContentColor = ReaderDrawerTextColor,
-                    onSettings = onTextSettings,
+                    onSettings = { value ->
+                        onTextSettings(value)
+                        onTextPreferencesChanged(value)
+                    },
                     onChapterOrder = onChapterOrder,
                     onDismiss = ::dismissDrawer,
                 )
