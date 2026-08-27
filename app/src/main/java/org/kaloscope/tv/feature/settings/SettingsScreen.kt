@@ -558,6 +558,7 @@ internal fun SettingActionRow(
     modifier: Modifier = Modifier,
     value: String = "",
     valueColor: Color? = null,
+    descriptionColor: Color? = null,
     onClick: () -> Unit,
 ) {
     KaloscopeButton(
@@ -574,7 +575,13 @@ internal fun SettingActionRow(
         },
         modifier = modifier.fillMaxWidth(),
     ) {
-        SettingRowContent(title, description, value, valueColor)
+        SettingRowContent(
+            title = title,
+            description = description,
+            value = value,
+            valueColor = valueColor,
+            descriptionColor = descriptionColor,
+        )
     }
 }
 
@@ -584,8 +591,13 @@ internal fun SettingRowContent(
     description: String,
     value: String,
     valueColor: Color? = null,
+    descriptionColor: Color? = null,
 ) {
-    SettingRowContent(title, description) {
+    SettingRowContent(
+        title = title,
+        description = description,
+        descriptionColor = descriptionColor,
+    ) {
         if (value.isNotEmpty()) {
             Text(
                 text = value,
@@ -601,6 +613,7 @@ internal fun SettingRowContent(
     title: String,
     description: String,
     unit: String? = null,
+    descriptionColor: Color? = null,
     trailingContent: @Composable RowScope.() -> Unit,
 ) {
     Row(
@@ -632,7 +645,7 @@ internal fun SettingRowContent(
             }
             Text(
                 description,
-                color = LocalContentColor.current.copy(alpha = 0.72f),
+                color = descriptionColor ?: LocalContentColor.current.copy(alpha = 0.72f),
                 fontSize = 13.sp,
             )
         }

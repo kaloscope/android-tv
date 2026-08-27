@@ -903,6 +903,7 @@ internal fun ServerAccountSettings(
             interactionsEnabled = interactionsEnabled,
             danger = true,
             valueColor = OnBackground,
+            descriptionColor = OnBackground,
             modifier = Modifier.focusRequester(logoutFocus),
             onClick = { onRequestLogout(logoutFocus) },
         )
