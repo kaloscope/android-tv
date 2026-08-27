@@ -2,6 +2,7 @@ package org.kaloscope.tv.core.model
 
 object DanmakuSettingsPolicy {
     val PERCENTAGE_VALUES: List<Int> = (20..100 step 5).toList()
+    const val DEFAULT_OPACITY_PERCENT = 80
 
     fun adjustOpacity(
         settings: DanmakuSettings,
@@ -41,6 +42,5 @@ object DanmakuSettingsPolicy {
         return PERCENTAGE_VALUES[targetIndex]
     }
 
-    private const val DEFAULT_OPACITY_PERCENT = 100
     private const val DEFAULT_DISPLAY_AREA_PERCENT = 75
 }

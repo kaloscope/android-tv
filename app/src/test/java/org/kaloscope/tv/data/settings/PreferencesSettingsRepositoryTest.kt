@@ -48,7 +48,7 @@ class PreferencesSettingsRepositoryTest {
                 enabled = true,
                 textSize = DanmakuTextSize.Medium,
                 speed = DanmakuSpeed.Standard,
-                opacityPercent = 100,
+                opacityPercent = 80,
                 displayAreaPercent = 75,
                 visibleModes = DanmakuDisplayMode.entries.toSet(),
             ),
@@ -271,7 +271,7 @@ class PreferencesSettingsRepositoryTest {
 
         assertEquals(DanmakuTextSize.Small, danmaku.textSize)
         assertEquals(DanmakuSpeed.Standard, danmaku.speed)
-        assertEquals(100, danmaku.opacityPercent)
+        assertEquals(80, danmaku.opacityPercent)
         assertEquals(75, danmaku.displayAreaPercent)
     }
 

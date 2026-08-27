@@ -4,7 +4,7 @@ data class DanmakuSettings(
     val enabled: Boolean = true,
     val textSize: DanmakuTextSize = DanmakuTextSize.Medium,
     val speed: DanmakuSpeed = DanmakuSpeed.Standard,
-    val opacityPercent: Int = 100,
+    val opacityPercent: Int = DanmakuSettingsPolicy.DEFAULT_OPACITY_PERCENT,
     val displayAreaPercent: Int = 75,
     val visibleModes: Set<DanmakuDisplayMode> = DanmakuDisplayMode.entries.toSet(),
     val blockColored: Boolean = false,

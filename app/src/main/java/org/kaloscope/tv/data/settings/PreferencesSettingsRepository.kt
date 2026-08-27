@@ -121,7 +121,7 @@ class PreferencesSettingsRepository @Inject constructor(
                 ),
                 opacityPercent = DanmakuSettingsPolicy.validPercentage(
                     this[DANMAKU_OPACITY],
-                    fallback = 100,
+                    fallback = DanmakuSettingsPolicy.DEFAULT_OPACITY_PERCENT,
                 ),
                 displayAreaPercent = DanmakuSettingsPolicy.validPercentage(
                     this[DANMAKU_DISPLAY_AREA],
