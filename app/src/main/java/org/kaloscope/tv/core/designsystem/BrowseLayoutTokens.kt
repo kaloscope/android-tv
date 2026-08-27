@@ -17,11 +17,13 @@ object BrowseLayoutTokens {
     val SidebarItemHorizontalPadding = 12.dp
     val SidebarIconTextSpacing = 8.dp
     val GridHorizontalContentPadding = 4.dp
-    val GridTopContentPadding = 2.dp
+    val GridTopContentPadding = 6.dp
     val GridBottomContentPadding = ScreenContentBottomPadding
     val GridHorizontalSpacing = 8.dp
+    val NetworkGridHorizontalSpacing = 10.dp
     val GridCardFocusBottomPadding = 6.dp
     val GridVerticalSpacing = 6.dp
     val PortraitGridMinWidth = 160.dp
     val LandscapeGridMinWidth = 200.dp
+    const val GridCardFocusScale = 1.02f
 }

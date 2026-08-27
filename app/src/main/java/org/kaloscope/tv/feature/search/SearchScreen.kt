@@ -699,7 +699,7 @@ private fun SearchResults(
                         bottom = BrowseLayoutTokens.GridBottomContentPadding,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(
-                        BrowseLayoutTokens.GridHorizontalSpacing,
+                        BrowseLayoutTokens.NetworkGridHorizontalSpacing,
                     ),
                     verticalArrangement = Arrangement.spacedBy(
                         BrowseLayoutTokens.GridVerticalSpacing,
@@ -813,7 +813,7 @@ private fun NetworkResultCard(
         shape = RoundedCornerShape(15.dp),
         containerColor = Panel.copy(alpha = 0.65f),
         focusedContainerColor = ContentCardFocused,
-        focusScale = 1.03f,
+        focusScale = BrowseLayoutTokens.GridCardFocusScale,
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = BrowseLayoutTokens.GridCardFocusBottomPadding)

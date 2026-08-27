@@ -56,10 +56,11 @@ import org.kaloscope.tv.core.model.SearchFilterType
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
-import org.kaloscope.tv.test.assertFocusedContentCardCornerRadius
 import org.kaloscope.tv.test.assertFocusedContentCardBottomInsideViewport
+import org.kaloscope.tv.test.assertFocusedContentCardCornerRadius
 import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
+import org.kaloscope.tv.test.assertFocusedContentCardTopClearance
 import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
 
 class SearchScreenTest {
@@ -284,7 +285,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun focusedNetworkResultUsesThreePercentScale() {
+    fun focusedNetworkResultUsesTwoPercentScale() {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             KaloscopeTheme {
@@ -329,6 +330,7 @@ class SearchScreenTest {
             label = "Network result card",
             resting = resting,
             focused = focused,
+            expectedScale = 1.02f,
             searchBounds = cardBounds,
             searchPadding = scaleSearchPadding,
         )
@@ -1467,7 +1469,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun portraitGridFitsExactlyFourResultsPerRowWithSharedSpacingAt1080p() {
+    fun portraitGridFitsExactlyFourResultsPerRowWithNetworkSpacingAt1080p() {
         val width = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.widthPixels
         if (width != 1920) return
@@ -1506,6 +1508,9 @@ class SearchScreenTest {
                 .fetchSemanticsNode()
                 .boundsInRoot
         }
+        val gridBounds = composeRule.onNodeWithTag("search-results-grid")
+            .fetchSemanticsNode()
+            .boundsInRoot
         val density = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
 
@@ -1518,10 +1523,10 @@ class SearchScreenTest {
         )
         assertTrue(
             "Portrait cards should use the expanded content width",
-            resultBounds.first().width >= 166f * density,
+            resultBounds.first().width >= 164f * density,
         )
         assertEquals(
-            8f * density,
+            10f * density,
             resultBounds[1].left - resultBounds[0].right,
             1f,
         )
@@ -1529,6 +1534,13 @@ class SearchScreenTest {
             12f * density,
             resultBounds[4].top - resultBounds[0].bottom,
             1f,
+        )
+        assertFocusedContentCardTopClearance(
+            label = "First-row network result",
+            cardBounds = resultBounds.first(),
+            viewportBounds = gridBounds,
+            density = density,
+            focusScale = 1.02f,
         )
     }
 

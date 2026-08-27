@@ -595,7 +595,7 @@ private fun MediaCard(
         onClick = onClick,
         shape = RoundedCornerShape(15.dp),
         focusedContainerColor = ContentCardFocused,
-        focusScale = 1.03f,
+        focusScale = BrowseLayoutTokens.GridCardFocusScale,
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = BrowseLayoutTokens.GridCardFocusBottomPadding)

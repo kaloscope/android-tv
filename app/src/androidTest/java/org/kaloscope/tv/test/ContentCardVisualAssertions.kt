@@ -33,6 +33,7 @@ internal fun assertFocusedContentCardScale(
     label: String,
     resting: Bitmap,
     focused: Bitmap,
+    expectedScale: Float,
     searchBounds: Rect? = null,
     searchPadding: Int = 0,
 ) {
@@ -41,12 +42,28 @@ internal fun assertFocusedContentCardScale(
     val focusedBounds = focused.findColorBounds(target, searchBounds, searchPadding)
     val widthScale = focusedBounds.width.toFloat() / restingBounds.width
     val heightScale = focusedBounds.height.toFloat() / restingBounds.height
-    // The short cover height rounds a 3% transform to only two pixels; width
-    // remains large enough to distinguish the former 1.04 scale from 1.03.
+    // Width is less sensitive than height to pixel rounding on short cards.
     assertTrue(
-        "$label focused scale expected 1.03 but was " +
+        "$label focused scale expected $expectedScale but was " +
             "width=$widthScale height=$heightScale",
-        abs(widthScale - 1.03f) <= 0.004f,
+        abs(widthScale - expectedScale) <= 0.004f,
+    )
+}
+
+internal fun assertFocusedContentCardTopClearance(
+    label: String,
+    cardBounds: Rect,
+    viewportBounds: Rect,
+    density: Float,
+    focusScale: Float,
+) {
+    val actualClearance = cardBounds.top - viewportBounds.top
+    val scaledOverhang = cardBounds.height * (focusScale - 1f) / 2f
+    val minimumClearance = scaledOverhang + density
+    assertTrue(
+        "$label must reserve the focused scale overhang plus 1dp above the first row, " +
+            "but clearance was ${actualClearance}px and required ${minimumClearance}px",
+        actualClearance >= minimumClearance,
     )
 }
 

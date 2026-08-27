@@ -41,9 +41,10 @@ import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
-import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardBottomInsideViewport
+import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
+import org.kaloscope.tv.test.assertFocusedContentCardTopClearance
 import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
 
 class LibraryScreenTest {
@@ -214,7 +215,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun focusedMediaCardUsesThreePercentScale() {
+    fun focusedMediaCardUsesTwoPercentScale() {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             KaloscopeTheme {
@@ -247,7 +248,12 @@ class LibraryScreenTest {
             .captureToImage()
             .asAndroidBitmap()
 
-        assertFocusedContentCardScale("Library media card", resting, focused)
+        assertFocusedContentCardScale(
+            label = "Library media card",
+            resting = resting,
+            focused = focused,
+            expectedScale = 1.02f,
+        )
     }
 
     @Test
@@ -556,6 +562,9 @@ class LibraryScreenTest {
                 .fetchSemanticsNode()
                 .boundsInRoot
         }
+        val gridBounds = composeRule.onNodeWithTag("library-results-grid")
+            .fetchSemanticsNode()
+            .boundsInRoot
         val density = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
 
@@ -579,6 +588,13 @@ class LibraryScreenTest {
             12f * density,
             cardBounds[4].top - cardBounds[0].bottom,
             1f,
+        )
+        assertFocusedContentCardTopClearance(
+            label = "First-row library card",
+            cardBounds = cardBounds.first(),
+            viewportBounds = gridBounds,
+            density = density,
+            focusScale = 1.02f,
         )
     }
 
