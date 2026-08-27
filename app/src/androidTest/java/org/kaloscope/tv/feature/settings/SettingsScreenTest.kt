@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
@@ -1170,7 +1171,8 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun logoutUsernameUsesReadableForegroundColor() {
+    fun logoutFocusUsesDefaultSurfaceWithOnlyDangerTitle() {
+        composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             KaloscopeTheme {
                 SettingsScreen(
@@ -1194,7 +1196,60 @@ class SettingsScreenTest {
             }
         }
 
-        assertEquals(OnBackground, textLayoutFor("tv_user").layoutInput.style.color)
+        val logout = composeRule.onNode(
+            hasClickAction() and hasText("退出登录") and hasText("tv_user"),
+        )
+        logout.performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(500)
+
+        assertCenterColor(
+            label = "focused logout row",
+            expected = AndroidColor.rgb(0xE8, 0xED, 0xF4),
+            actual = logout.captureToImage().asAndroidBitmap(),
+        )
+        assertEquals(Color(0xFFFF7D91), textLayoutFor("退出登录").layoutInput.style.color)
+        assertEquals(
+            Color(0xFF101725).copy(alpha = 0.72f),
+            textLayoutFor("清除当前服务器的登录状态。").layoutInput.style.color,
+        )
+        assertEquals(Color(0xFF101725), textLayoutFor("tv_user").layoutInput.style.color)
+    }
+
+    @Test
+    fun successfulConnectionColorsOnlyStatusTextGreen() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(),
+                        section = SettingsSection.ServerAccount,
+                        connection = SettingsConnection.Success("0.8.7"),
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeQuality = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        assertEquals(
+            Color(0xFF58D8A0),
+            textLayoutFor("连接成功 v0.8.7").layoutInput.style.color,
+        )
+        assertEquals(Color(0xFFF7F8FC), textLayoutFor("测试连接").layoutInput.style.color)
+        assertEquals(
+            Color(0xFFF7F8FC),
+            textLayoutFor("http://127.0.0.1:8000").layoutInput.style.color,
+        )
     }
 
     @Test

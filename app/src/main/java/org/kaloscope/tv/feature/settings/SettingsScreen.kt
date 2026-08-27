@@ -554,9 +554,9 @@ internal fun SettingActionRow(
     title: String,
     description: String,
     interactionsEnabled: Boolean,
-    danger: Boolean,
     modifier: Modifier = Modifier,
     value: String = "",
+    titleColor: Color? = null,
     valueColor: Color? = null,
     descriptionColor: Color? = null,
     onClick: () -> Unit,
@@ -568,17 +568,13 @@ internal fun SettingActionRow(
             }
         },
         size = KaloscopeControlSize.Row,
-        tone = if (danger) {
-            KaloscopeControlTone.Danger
-        } else {
-            KaloscopeControlTone.Default
-        },
         modifier = modifier.fillMaxWidth(),
     ) {
         SettingRowContent(
             title = title,
             description = description,
             value = value,
+            titleColor = titleColor,
             valueColor = valueColor,
             descriptionColor = descriptionColor,
         )
@@ -590,12 +586,14 @@ internal fun SettingRowContent(
     title: String,
     description: String,
     value: String,
+    titleColor: Color? = null,
     valueColor: Color? = null,
     descriptionColor: Color? = null,
 ) {
     SettingRowContent(
         title = title,
         description = description,
+        titleColor = titleColor,
         descriptionColor = descriptionColor,
     ) {
         if (value.isNotEmpty()) {
@@ -613,6 +611,7 @@ internal fun SettingRowContent(
     title: String,
     description: String,
     unit: String? = null,
+    titleColor: Color? = null,
     descriptionColor: Color? = null,
     trailingContent: @Composable RowScope.() -> Unit,
 ) {
@@ -622,12 +621,18 @@ internal fun SettingRowContent(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             if (unit == null) {
-                Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = title,
+                    color = titleColor ?: LocalContentColor.current,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = title,
                         modifier = Modifier.alignByBaseline(),
+                        color = titleColor ?: LocalContentColor.current,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
                     )

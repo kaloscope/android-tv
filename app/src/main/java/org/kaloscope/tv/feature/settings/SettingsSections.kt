@@ -37,7 +37,9 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeSelectionIndicatorType
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Success
 import org.kaloscope.tv.core.designsystem.accentPalette
 import org.kaloscope.tv.core.designsystem.danmakuBlockSummary
 import org.kaloscope.tv.core.designsystem.danmakuBlockTypeLabel
@@ -886,7 +888,11 @@ internal fun ServerAccountSettings(
             value = session.server.origin,
             interactionsEnabled = interactionsEnabled &&
                 connection != SettingsConnection.Testing,
-            danger = false,
+            descriptionColor = if (connection is SettingsConnection.Success) {
+                Success
+            } else {
+                null
+            },
             onClick = onTestConnection,
         )
         SettingActionRow(
@@ -894,7 +900,6 @@ internal fun ServerAccountSettings(
             description = stringResource(R.string.manage_servers_description),
             value = session.server.name,
             interactionsEnabled = interactionsEnabled,
-            danger = false,
             onClick = onManageServers,
         )
         SettingActionRow(
@@ -902,9 +907,7 @@ internal fun ServerAccountSettings(
             description = stringResource(R.string.logout_description),
             value = session.user.username,
             interactionsEnabled = interactionsEnabled,
-            danger = true,
-            valueColor = OnBackground,
-            descriptionColor = OnBackground,
+            titleColor = Danger,
             modifier = Modifier.focusRequester(logoutFocus),
             onClick = { onRequestLogout(logoutFocus) },
         )
