@@ -388,7 +388,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun readingSettingsConvertFontRelativeValuesToDp() {
+    fun readingSettingsKeepAbsoluteValuesIndependentOfFontScale() {
         val expectedFontRelativeDp = with(Density(density = 1f, fontScale = 2f)) {
             28.sp.toDp().value.roundToInt()
         }
@@ -403,7 +403,7 @@ class SettingsScreenTest {
             .assert(hasText("${expectedFontRelativeDp}dp", substring = false))
         composeRule.onNode(hasClickAction() and hasText("段间距"))
             .performScrollTo()
-            .assert(hasText("${expectedFontRelativeDp}dp", substring = false))
+            .assert(hasText("28dp", substring = false))
         composeRule.onNode(hasClickAction() and hasText("左右留白"))
             .performScrollTo()
             .assert(hasText("48dp", substring = false))
@@ -444,6 +444,45 @@ class SettingsScreenTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
 
         composeRule.runOnIdle { assertEquals(30, updatedFontSize) }
+    }
+
+    @Test
+    fun readingFontSizeAdjustmentKeepsParagraphSpacingFixed() {
+        var textSettings by mutableStateOf(TextReaderSettings())
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = TvSettings(textReader = textSettings),
+                        section = SettingsSection.Reading,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeQuality = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {},
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTextReaderSettings = { textSettings = it },
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        composeRule.onNode(hasClickAction() and hasText("字号"))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput {
+                pressKey(Key.Enter)
+                pressKey(Key.DirectionRight)
+            }
+
+        composeRule.onNode(hasClickAction() and hasText("段间距"))
+            .performScrollTo()
+            .assert(hasText("28dp", substring = false))
     }
 
     @Test
@@ -602,7 +641,7 @@ class SettingsScreenTest {
                 textReader = TextReaderSettings(
                     fontSizeSp = 20,
                     lineHeight = 1.4f,
-                    paragraphSpacingEm = 0f,
+                    paragraphSpacingDp = 0,
                     horizontalPaddingDp = 0,
                 ),
             ),

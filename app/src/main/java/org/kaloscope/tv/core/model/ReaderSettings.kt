@@ -54,7 +54,7 @@ data class TextReaderSettings(
     val font: TextReaderFont = TextReaderFont.System,
     val fontSizeSp: Int = ReaderSettingsPolicy.DEFAULT_FONT_SIZE_SP,
     val lineHeight: Float = ReaderSettingsPolicy.DEFAULT_LINE_HEIGHT,
-    val paragraphSpacingEm: Float = ReaderSettingsPolicy.DEFAULT_PARAGRAPH_SPACING_EM,
+    val paragraphSpacingDp: Int = ReaderSettingsPolicy.DEFAULT_PARAGRAPH_SPACING_DP,
     val horizontalPaddingDp: Int = ReaderSettingsPolicy.DEFAULT_HORIZONTAL_PADDING_DP,
 )
 
@@ -69,10 +69,10 @@ object ReaderSettingsPolicy {
     const val LINE_HEIGHT_STEP = 0.2f
     const val DEFAULT_LINE_HEIGHT = 1.8f
 
-    const val MIN_PARAGRAPH_SPACING_EM = 0f
-    const val MAX_PARAGRAPH_SPACING_EM = 2f
-    const val PARAGRAPH_SPACING_STEP_EM = 0.5f
-    const val DEFAULT_PARAGRAPH_SPACING_EM = 1f
+    const val MIN_PARAGRAPH_SPACING_DP = 0
+    const val MAX_PARAGRAPH_SPACING_DP = 88
+    const val PARAGRAPH_SPACING_STEP_DP = 4
+    const val DEFAULT_PARAGRAPH_SPACING_DP = 28
 
     const val MIN_HORIZONTAL_PADDING_DP = 0
     const val MAX_HORIZONTAL_PADDING_DP = 96
@@ -94,12 +94,10 @@ object ReaderSettingsPolicy {
                 maximumTenths = 30,
                 stepTenths = 2,
             ),
-            paragraphSpacingEm = snapTenths(
-                value = settings.paragraphSpacingEm,
-                default = DEFAULT_PARAGRAPH_SPACING_EM,
-                minimumTenths = 0,
-                maximumTenths = 20,
-                stepTenths = 5,
+            // Preserve exact legacy values even when they are outside the new 4 dp grid.
+            paragraphSpacingDp = settings.paragraphSpacingDp.coerceIn(
+                MIN_PARAGRAPH_SPACING_DP,
+                MAX_PARAGRAPH_SPACING_DP,
             ),
             horizontalPaddingDp = snapInt(
                 value = settings.horizontalPaddingDp,

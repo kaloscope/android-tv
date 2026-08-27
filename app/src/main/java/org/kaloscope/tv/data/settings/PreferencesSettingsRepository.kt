@@ -84,16 +84,19 @@ class PreferencesSettingsRepository @Inject constructor(
                 preferences[TEXT_READER_FONT_SIZE_SP] = textReader.fontSizeSp
                 preferences[TEXT_READER_LINE_HEIGHT_TENTHS] =
                     (textReader.lineHeight * 10).roundToInt()
-                preferences[TEXT_READER_PARAGRAPH_SPACING_HALVES] =
-                    (textReader.paragraphSpacingEm * 2).roundToInt()
+                preferences[TEXT_READER_PARAGRAPH_SPACING_DP] =
+                    textReader.paragraphSpacingDp
+                preferences.remove(TEXT_READER_PARAGRAPH_SPACING_HALVES)
                 preferences[TEXT_READER_HORIZONTAL_PADDING_DP] =
                     textReader.horizontalPaddingDp
             }
             settings
         }
 
-    private fun Preferences.toSettings(): TvSettings =
-        TvSettings(
+    private fun Preferences.toSettings(): TvSettings {
+        val fontSizeSp = this[TEXT_READER_FONT_SIZE_SP]
+            .validValue(READER_FONT_SIZES, ReaderSettingsPolicy.DEFAULT_FONT_SIZE_SP)
+        return TvSettings(
             accentColor = enumValue(
                 stored = this[ACCENT_COLOR],
                 fallback = AccentColor.Blue,
@@ -179,19 +182,18 @@ class PreferencesSettingsRepository @Inject constructor(
                     stored = this[TEXT_READER_FONT],
                     fallback = TextReaderFont.System,
                 ),
-                fontSizeSp = this[TEXT_READER_FONT_SIZE_SP]
-                    .validValue(READER_FONT_SIZES, ReaderSettingsPolicy.DEFAULT_FONT_SIZE_SP),
+                fontSizeSp = fontSizeSp,
                 lineHeight = this[TEXT_READER_LINE_HEIGHT_TENTHS]
                     .validValue(READER_LINE_HEIGHT_TENTHS, 18) / 10f,
-                paragraphSpacingEm = this[TEXT_READER_PARAGRAPH_SPACING_HALVES]
-                    .validValue(READER_PARAGRAPH_SPACING_HALVES, 2) / 2f,
+                paragraphSpacingDp = paragraphSpacingDp(fontSizeSp),
                 horizontalPaddingDp = this[TEXT_READER_HORIZONTAL_PADDING_DP]
                     .validValue(
                         READER_HORIZONTAL_PADDINGS,
                         ReaderSettingsPolicy.DEFAULT_HORIZONTAL_PADDING_DP,
-                    ),
+                ),
             ),
         )
+    }
 
     private suspend fun <T> localCall(
         context: String,
@@ -216,6 +218,20 @@ class PreferencesSettingsRepository @Inject constructor(
 
     private fun Int?.validValue(allowed: Set<Int>, fallback: Int): Int =
         this?.takeIf(allowed::contains) ?: fallback
+
+    private fun Preferences.paragraphSpacingDp(fontSizeSp: Int): Int {
+        val storedDp = this[TEXT_READER_PARAGRAPH_SPACING_DP]
+        if (storedDp != null) {
+            return storedDp.takeIf {
+                it in ReaderSettingsPolicy.MIN_PARAGRAPH_SPACING_DP..
+                    ReaderSettingsPolicy.MAX_PARAGRAPH_SPACING_DP
+            } ?: ReaderSettingsPolicy.DEFAULT_PARAGRAPH_SPACING_DP
+        }
+        // The legacy em value was rendered relative to the saved font size.
+        val legacyHalves = this[TEXT_READER_PARAGRAPH_SPACING_HALVES]
+            .validValue(READER_PARAGRAPH_SPACING_HALVES, 2)
+        return (fontSizeSp * legacyHalves / 2f).roundToInt()
+    }
 
     private companion object {
         val READER_FONT_SIZES = (20..44 step 2).toSet()
@@ -255,6 +271,8 @@ class PreferencesSettingsRepository @Inject constructor(
         val TEXT_READER_FONT_SIZE_SP = intPreferencesKey("text_reader_font_size_sp")
         val TEXT_READER_LINE_HEIGHT_TENTHS =
             intPreferencesKey("text_reader_line_height_tenths")
+        val TEXT_READER_PARAGRAPH_SPACING_DP =
+            intPreferencesKey("text_reader_paragraph_spacing_dp")
         val TEXT_READER_PARAGRAPH_SPACING_HALVES =
             intPreferencesKey("text_reader_paragraph_spacing_halves")
         val TEXT_READER_HORIZONTAL_PADDING_DP =

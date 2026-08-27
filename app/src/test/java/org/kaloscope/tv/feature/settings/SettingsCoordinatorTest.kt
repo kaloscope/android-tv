@@ -187,7 +187,7 @@ class SettingsCoordinatorTest {
             TextReaderSettings(
                 fontSizeSp = 31,
                 lineHeight = 3.2f,
-                paragraphSpacingEm = -1f,
+                paragraphSpacingDp = -1,
                 horizontalPaddingDp = 50,
             ),
         )
@@ -197,7 +197,7 @@ class SettingsCoordinatorTest {
         assertEquals(ImageReadMode.Paged, state.settings.imageReader.readMode)
         assertEquals(32, state.settings.textReader.fontSizeSp)
         assertEquals(3f, state.settings.textReader.lineHeight)
-        assertEquals(0f, state.settings.textReader.paragraphSpacingEm)
+        assertEquals(0, state.settings.textReader.paragraphSpacingDp)
         assertEquals(48, state.settings.textReader.horizontalPaddingDp)
         assertEquals(state.settings, repository.saved)
     }

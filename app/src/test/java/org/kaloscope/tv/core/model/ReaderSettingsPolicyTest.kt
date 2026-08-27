@@ -21,7 +21,7 @@ class ReaderSettingsPolicyTest {
                 font = TextReaderFont.System,
                 fontSizeSp = 28,
                 lineHeight = 1.8f,
-                paragraphSpacingEm = 1f,
+                paragraphSpacingDp = 28,
                 horizontalPaddingDp = 48,
             ),
             TvSettings().textReader,
@@ -34,14 +34,14 @@ class ReaderSettingsPolicyTest {
             TextReaderSettings(
                 fontSizeSp = 20,
                 lineHeight = 1.4f,
-                paragraphSpacingEm = 0f,
+                paragraphSpacingDp = 0,
                 horizontalPaddingDp = 0,
             ),
             ReaderSettingsPolicy.sanitize(
                 TextReaderSettings(
                     fontSizeSp = 19,
                     lineHeight = 1.31f,
-                    paragraphSpacingEm = -1f,
+                    paragraphSpacingDp = -1,
                     horizontalPaddingDp = -10,
                 ),
             ),
@@ -50,14 +50,14 @@ class ReaderSettingsPolicyTest {
             TextReaderSettings(
                 fontSizeSp = 44,
                 lineHeight = 3f,
-                paragraphSpacingEm = 2f,
+                paragraphSpacingDp = 88,
                 horizontalPaddingDp = 96,
             ),
             ReaderSettingsPolicy.sanitize(
                 TextReaderSettings(
                     fontSizeSp = 45,
                     lineHeight = 3.1f,
-                    paragraphSpacingEm = 2.4f,
+                    paragraphSpacingDp = 100,
                     horizontalPaddingDp = 102,
                 ),
             ),
@@ -66,14 +66,14 @@ class ReaderSettingsPolicyTest {
             TextReaderSettings(
                 fontSizeSp = 32,
                 lineHeight = 1.8f,
-                paragraphSpacingEm = 0.5f,
+                paragraphSpacingDp = 31,
                 horizontalPaddingDp = 48,
             ),
             ReaderSettingsPolicy.sanitize(
                 TextReaderSettings(
                     fontSizeSp = 31,
                     lineHeight = 1.73f,
-                    paragraphSpacingEm = 0.74f,
+                    paragraphSpacingDp = 31,
                     horizontalPaddingDp = 50,
                 ),
             ),
@@ -87,7 +87,6 @@ class ReaderSettingsPolicyTest {
             ReaderSettingsPolicy.sanitize(
                 TextReaderSettings(
                     lineHeight = Float.NaN,
-                    paragraphSpacingEm = Float.POSITIVE_INFINITY,
                 ),
             ),
         )

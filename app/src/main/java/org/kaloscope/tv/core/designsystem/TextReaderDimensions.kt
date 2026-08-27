@@ -17,7 +17,7 @@ internal fun TextReaderSettings.toDpDimensions(density: Density): TextReaderDpDi
         val effectiveFontSize = fontSizeSp.sp.toDp()
         TextReaderDpDimensions(
             fontSize = effectiveFontSize,
-            paragraphSpacing = effectiveFontSize * paragraphSpacingEm,
+            paragraphSpacing = paragraphSpacingDp.dp,
             horizontalPadding = horizontalPaddingDp.dp,
         )
     }

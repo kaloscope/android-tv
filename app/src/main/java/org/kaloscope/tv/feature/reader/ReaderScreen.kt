@@ -951,25 +951,25 @@ private fun TextReaderSettingsDrawer(
                 R.string.reader_dp_value,
                 dimensions.paragraphSpacing.value.roundToInt(),
             ),
-            canDecrease = settings.paragraphSpacingEm >
-                ReaderSettingsPolicy.MIN_PARAGRAPH_SPACING_EM,
-            canIncrease = settings.paragraphSpacingEm <
-                ReaderSettingsPolicy.MAX_PARAGRAPH_SPACING_EM,
+            canDecrease = settings.paragraphSpacingDp >
+                ReaderSettingsPolicy.MIN_PARAGRAPH_SPACING_DP,
+            canIncrease = settings.paragraphSpacingDp <
+                ReaderSettingsPolicy.MAX_PARAGRAPH_SPACING_DP,
             testTag = "reader-paragraph-spacing-setting",
             adjustmentTestTagPrefix = "reader-paragraph-spacing",
             onDecrease = {
                 onSettings(
                     settings.copy(
-                        paragraphSpacingEm = settings.paragraphSpacingEm -
-                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_EM,
+                        paragraphSpacingDp = settings.paragraphSpacingDp -
+                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_DP,
                     ),
                 )
             },
             onIncrease = {
                 onSettings(
                     settings.copy(
-                        paragraphSpacingEm = settings.paragraphSpacingEm +
-                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_EM,
+                        paragraphSpacingDp = settings.paragraphSpacingDp +
+                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_DP,
                     ),
                 )
             },

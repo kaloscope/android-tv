@@ -1,5 +1,6 @@
 package org.kaloscope.tv.data.settings
 
+import androidx.compose.ui.unit.Density
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -12,6 +13,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.designsystem.toDpDimensions
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
@@ -127,7 +129,7 @@ class PreferencesSettingsRepositoryTest {
                 font = TextReaderFont.Monospace,
                 fontSizeSp = 40,
                 lineHeight = 2.6f,
-                paragraphSpacingEm = 1.5f,
+                paragraphSpacingDp = 60,
                 horizontalPaddingDp = 84,
             ),
         )
@@ -136,6 +138,26 @@ class PreferencesSettingsRepositoryTest {
         val restored = PreferencesSettingsRepository(dataStore).getSettings()
 
         assertEquals(expected, (restored as AppResult.Success).value)
+    }
+
+    @Test
+    fun `legacy paragraph spacing stays fixed when font size changes`() = runTest {
+        val store = dataStore(this)
+        store.edit { preferences ->
+            preferences[intPreferencesKey("text_reader_font_size_sp")] = 32
+            preferences[intPreferencesKey("text_reader_paragraph_spacing_halves")] = 2
+        }
+
+        val result = PreferencesSettingsRepository(store).getSettings()
+        val settings = (result as AppResult.Success).value.textReader
+        val density = Density(density = 1f, fontScale = 1f)
+
+        assertEquals(32f, settings.toDpDimensions(density).paragraphSpacing.value, 0f)
+        assertEquals(
+            32f,
+            settings.copy(fontSizeSp = 40).toDpDimensions(density).paragraphSpacing.value,
+            0f,
+        )
     }
 
     @Test

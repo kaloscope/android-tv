@@ -315,24 +315,24 @@ internal fun ReadingSettings(
                 textDimensions.paragraphSpacing.value.roundToInt(),
             ),
             interactionsEnabled = interactionsEnabled,
-            canDecrease = settings.textReader.paragraphSpacingEm >
-                ReaderSettingsPolicy.MIN_PARAGRAPH_SPACING_EM,
-            canIncrease = settings.textReader.paragraphSpacingEm <
-                ReaderSettingsPolicy.MAX_PARAGRAPH_SPACING_EM,
+            canDecrease = settings.textReader.paragraphSpacingDp >
+                ReaderSettingsPolicy.MIN_PARAGRAPH_SPACING_DP,
+            canIncrease = settings.textReader.paragraphSpacingDp <
+                ReaderSettingsPolicy.MAX_PARAGRAPH_SPACING_DP,
             testTagPrefix = "reader-paragraph-spacing",
             onDecrease = {
                 onTextChange(
                     settings.textReader.copy(
-                        paragraphSpacingEm = settings.textReader.paragraphSpacingEm -
-                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_EM,
+                        paragraphSpacingDp = settings.textReader.paragraphSpacingDp -
+                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_DP,
                     ),
                 )
             },
             onIncrease = {
                 onTextChange(
                     settings.textReader.copy(
-                        paragraphSpacingEm = settings.textReader.paragraphSpacingEm +
-                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_EM,
+                        paragraphSpacingDp = settings.textReader.paragraphSpacingDp +
+                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_DP,
                     ),
                 )
             },

@@ -37,6 +37,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -800,7 +801,7 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textSettingsConvertFontRelativeValuesToDp() {
+    fun textSettingsKeepAbsoluteValuesIndependentOfFontScale() {
         val expectedFontRelativeDp = with(Density(density = 1f, fontScale = 2f)) {
             28.sp.toDp().value.roundToInt()
         }
@@ -814,7 +815,7 @@ class ReaderScreenTest {
         composeRule.onNodeWithTag("reader-font-size-setting")
             .assert(hasText("${expectedFontRelativeDp}dp", substring = false))
         composeRule.onNodeWithTag("reader-paragraph-spacing-setting")
-            .assert(hasText("${expectedFontRelativeDp}dp", substring = false))
+            .assert(hasText("28dp", substring = false))
         composeRule.onNodeWithTag("reader-horizontal-padding-setting")
             .assert(hasText("48dp", substring = false))
     }
@@ -827,7 +828,7 @@ class ReaderScreenTest {
                 settings = TextReaderSettings(
                     fontSizeSp = 28,
                     lineHeight = 1f,
-                    paragraphSpacingEm = 1f,
+                    paragraphSpacingDp = 28,
                 ),
             ),
             fontScale = 2f,
@@ -844,7 +845,7 @@ class ReaderScreenTest {
         val density = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
         val expectedSpacingPixels = with(Density(density = density, fontScale = 2f)) {
-            28.sp.toPx()
+            28.dp.toPx()
         }
 
         assertEquals(expectedSpacingPixels, second.top - first.bottom, 0.5f)
