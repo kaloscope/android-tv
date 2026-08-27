@@ -23,6 +23,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +52,7 @@ import org.kaloscope.tv.core.designsystem.readerBackgroundColor
 import org.kaloscope.tv.core.designsystem.subtitleDisplayModeLabel
 import org.kaloscope.tv.core.designsystem.textReaderFontLabel
 import org.kaloscope.tv.core.designsystem.textReaderThemeLabel
+import org.kaloscope.tv.core.designsystem.toDpDimensions
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuBlockPolicy
 import org.kaloscope.tv.core.model.DanmakuBlockType
@@ -75,6 +77,7 @@ import org.kaloscope.tv.core.model.TextReaderTheme
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeQuality
+import kotlin.math.roundToInt
 
 @Composable
 internal fun PlaybackSettings(
@@ -149,6 +152,7 @@ internal fun ReadingSettings(
     onImageChange: (ImageReaderSettings) -> Unit,
     onTextChange: (TextReaderSettings) -> Unit,
 ) {
+    val textDimensions = settings.textReader.toDpDimensions(LocalDensity.current)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -246,10 +250,9 @@ internal fun ReadingSettings(
         AdjustableSettingRow(
             title = stringResource(R.string.reader_font_size),
             description = stringResource(R.string.reader_font_size_description),
-            unit = stringResource(R.string.reader_unit_sp),
             value = stringResource(
-                R.string.reader_integer_value,
-                settings.textReader.fontSizeSp,
+                R.string.reader_dp_value,
+                textDimensions.fontSize.value.roundToInt(),
             ),
             interactionsEnabled = interactionsEnabled,
             canDecrease = settings.textReader.fontSizeSp >
@@ -307,10 +310,9 @@ internal fun ReadingSettings(
         AdjustableSettingRow(
             title = stringResource(R.string.reader_paragraph_spacing),
             description = stringResource(R.string.reader_paragraph_spacing_description),
-            unit = stringResource(R.string.reader_unit_em),
             value = stringResource(
-                R.string.reader_multiplier_value,
-                settings.textReader.paragraphSpacingEm,
+                R.string.reader_dp_value,
+                textDimensions.paragraphSpacing.value.roundToInt(),
             ),
             interactionsEnabled = interactionsEnabled,
             canDecrease = settings.textReader.paragraphSpacingEm >
@@ -338,10 +340,9 @@ internal fun ReadingSettings(
         AdjustableSettingRow(
             title = stringResource(R.string.reader_horizontal_padding),
             description = stringResource(R.string.reader_horizontal_padding_description),
-            unit = stringResource(R.string.reader_unit_dp),
             value = stringResource(
-                R.string.reader_integer_value,
-                settings.textReader.horizontalPaddingDp,
+                R.string.reader_dp_value,
+                textDimensions.horizontalPadding.value.roundToInt(),
             ),
             interactionsEnabled = interactionsEnabled,
             canDecrease = settings.textReader.horizontalPaddingDp >

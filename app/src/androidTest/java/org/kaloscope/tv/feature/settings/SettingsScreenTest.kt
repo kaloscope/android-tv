@@ -6,12 +6,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
@@ -34,6 +36,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasTextExactly
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -42,8 +45,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -64,6 +68,7 @@ import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeQuality
+import kotlin.math.roundToInt
 
 class SettingsScreenTest {
     @get:Rule
@@ -343,31 +348,65 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun readingSettingsSeparateParenthesizedUnitsFromValues() {
-        setSettingsContent(TvSettings(), SettingsSection.Reading)
+    fun readingSettingsShowUnifiedDpValuesBetweenAdjustmentArrows() {
+        setSettingsContent(
+            settings = TvSettings(),
+            section = SettingsSection.Reading,
+            fontScale = 1f,
+        )
 
         listOf(
-            listOf("字号", "(sp)", "28", "28 sp"),
-            listOf("段间距", "(em)", "1.0", "1.0 em"),
-            listOf("左右留白", "(dp)", "48", "48 dp"),
-        ).forEach { (title, unit, value, combinedValue) ->
-            val row = composeRule.onNode(hasClickAction() and hasText(title))
+            "字号" to "28dp",
+            "段间距" to "28dp",
+            "左右留白" to "48dp",
+        ).forEach { (title, value) ->
+            composeRule.onNode(hasClickAction() and hasText(title))
                 .performScrollTo()
-
-            row.assert(hasText(unit, substring = false))
                 .assert(hasText(value, substring = false))
-            composeRule.onNodeWithText(combinedValue, useUnmergedTree = true)
+        }
+        listOf("(sp)", "(em)", "(dp)", "28", "1.0", "48").forEach { oldValue ->
+            composeRule.onNodeWithText(oldValue, useUnmergedTree = true)
                 .assertDoesNotExist()
         }
 
-        composeRule.onNode(hasClickAction() and hasText("字号")).performScrollTo()
-        val title = textLayoutFor("字号")
-        val unit = textLayoutFor("(sp)")
+        val decrease = composeRule.onNodeWithTag(
+            testTag = "reader-font-size-decrease",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val value = composeRule.onAllNodesWithText(
+            text = "28dp",
+            useUnmergedTree = true,
+        )[0].fetchSemanticsNode().boundsInRoot
+        val increase = composeRule.onNodeWithTag(
+            testTag = "reader-font-size-increase",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
 
-        assertEquals(12f, unit.layoutInput.style.fontSize.value, 0f)
-        assertEquals(FontWeight.Light, unit.layoutInput.style.fontWeight)
-        assertTrue(unit.layoutInput.style.fontSize.value < title.layoutInput.style.fontSize.value)
-        assertTrue(unit.layoutInput.style.color.alpha < title.layoutInput.style.color.alpha)
+        assertTrue(decrease.right <= value.left)
+        assertTrue(value.right <= increase.left)
+        composeRule.onNodeWithText("正文行高相对于字号的倍数。").assertExists()
+    }
+
+    @Test
+    fun readingSettingsConvertFontRelativeValuesToDp() {
+        val expectedFontRelativeDp = with(Density(density = 1f, fontScale = 2f)) {
+            28.sp.toDp().value.roundToInt()
+        }
+        setSettingsContent(
+            settings = TvSettings(),
+            section = SettingsSection.Reading,
+            fontScale = 2f,
+        )
+
+        composeRule.onNode(hasClickAction() and hasText("字号"))
+            .performScrollTo()
+            .assert(hasText("${expectedFontRelativeDp}dp", substring = false))
+        composeRule.onNode(hasClickAction() and hasText("段间距"))
+            .performScrollTo()
+            .assert(hasText("${expectedFontRelativeDp}dp", substring = false))
+        composeRule.onNode(hasClickAction() and hasText("左右留白"))
+            .performScrollTo()
+            .assert(hasText("48dp", substring = false))
     }
 
     @Test
@@ -1845,29 +1884,38 @@ class SettingsScreenTest {
         section: SettingsSection,
         onTextReaderSettings: (TextReaderSettings) -> Unit = {},
         onSubtitleSettings: (SubtitleSettings) -> Unit = {},
+        fontScale: Float? = null,
     ) {
         composeRule.setContent {
-            KaloscopeTheme {
-                SettingsScreen(
-                    session = session(),
-                    state = SettingsUiState.Content(
-                        settings = settings,
-                        section = section,
-                    ),
-                    requestInitialFocus = false,
-                    onRetry = {},
-                    onSelectSection = {},
-                    onPlaybackMode = {},
-                    onTranscodeQuality = {},
-                    onAutoplayNext = {},
-                    onDanmakuSettings = {},
-                    onSubtitleSettings = onSubtitleSettings,
-                    onStartPage = {},
-                    onTextReaderSettings = onTextReaderSettings,
-                    onTestConnection = {},
-                    onManageServers = {},
-                    onLogout = {},
-                )
+            val currentDensity = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(
+                    density = currentDensity.density,
+                    fontScale = fontScale ?: currentDensity.fontScale,
+                ),
+            ) {
+                KaloscopeTheme {
+                    SettingsScreen(
+                        session = session(),
+                        state = SettingsUiState.Content(
+                            settings = settings,
+                            section = section,
+                        ),
+                        requestInitialFocus = false,
+                        onRetry = {},
+                        onSelectSection = {},
+                        onPlaybackMode = {},
+                        onTranscodeQuality = {},
+                        onAutoplayNext = {},
+                        onDanmakuSettings = {},
+                        onSubtitleSettings = onSubtitleSettings,
+                        onStartPage = {},
+                        onTextReaderSettings = onTextReaderSettings,
+                        onTestConnection = {},
+                        onManageServers = {},
+                        onLogout = {},
+                    )
+                }
             }
         }
     }

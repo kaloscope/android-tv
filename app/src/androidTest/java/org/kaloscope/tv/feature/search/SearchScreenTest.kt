@@ -335,6 +335,113 @@ class SearchScreenTest {
     }
 
     @Test
+    fun networkResultFooterTextAlignsToTheBottom() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = listOf(
+                            result("v1").copy(
+                                rating = null,
+                                category = null,
+                                uploadedAt = "最新",
+                                size = "第1话",
+                            ),
+                        ),
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val footerBottom = composeRule
+            .onNodeWithTag("search-result-footer-v1", useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .bottom
+        val updatedBottom = composeRule.onNodeWithText("最新", useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .bottom
+        val episodeBottom = composeRule.onNodeWithText("第1话", useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .bottom
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertEquals(footerBottom, updatedBottom, tolerance)
+        assertEquals(footerBottom, episodeBottom, tolerance)
+    }
+
+    @Test
+    fun networkResultFootersAlignAcrossTitleLineCounts() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = listOf(
+                            result("v1").copy(
+                                title = "单行标题",
+                                rating = null,
+                                category = null,
+                                uploadedAt = "最新",
+                                size = "第1话",
+                            ),
+                            result("v2").copy(
+                                title = "第一行\n第二行",
+                                rating = null,
+                                category = null,
+                                uploadedAt = "最新",
+                                size = "第2话",
+                            ),
+                        ),
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val singleLineFooter = composeRule
+            .onNodeWithTag("search-result-footer-v1", useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val twoLineFooter = composeRule
+            .onNodeWithTag("search-result-footer-v2", useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertEquals(singleLineFooter.top, twoLineFooter.top, tolerance)
+        assertEquals(singleLineFooter.bottom, twoLineFooter.bottom, tolerance)
+    }
+
+    @Test
     fun initialLoadingUsesCenteredIndicator() {
         composeRule.setContent {
             KaloscopeTheme {

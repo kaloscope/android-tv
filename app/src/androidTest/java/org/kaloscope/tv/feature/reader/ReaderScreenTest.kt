@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -15,8 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsFocused
@@ -26,13 +29,15 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasTextExactly
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.sp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -52,6 +57,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TextReaderTheme
+import kotlin.math.roundToInt
 
 class ReaderScreenTest {
     @get:Rule
@@ -755,37 +761,93 @@ class ReaderScreenTest {
     }
 
     @Test
-    fun textSettingsSeparateUnitsFromAdjustmentValues() {
-        setReader(textState(text = "正文"))
+    fun textSettingsShowUnifiedDpValuesBetweenAdjustmentArrows() {
+        setReader(textState(text = "正文"), fontScale = 1f)
 
         composeRule.onNodeWithTag("text-reader-content")
             .performKeyInput { pressKey(Key.DirectionCenter) }
         control("章节").performKeyInput { pressKey(Key.DirectionRight) }
         control("阅读设置").performKeyInput { pressKey(Key.Enter) }
 
-        listOf("(sp)", "(em)", "(dp)", "28", "1.8", "1.0", "48").forEach { text ->
-            composeRule.onNodeWithText(text, useUnmergedTree = true).assertExists()
+        listOf(
+            "reader-font-size-setting" to "28dp",
+            "reader-paragraph-spacing-setting" to "28dp",
+            "reader-horizontal-padding-setting" to "48dp",
+        ).forEach { (tag, value) ->
+            composeRule.onNodeWithTag(tag)
+                .assert(hasText(value, substring = false))
         }
-        listOf("sp", "em", "dp", "28 sp", "1.0 em", "48 dp").forEach { text ->
-            composeRule.onNodeWithText(text, useUnmergedTree = true).assertDoesNotExist()
+        listOf("(sp)", "(em)", "(dp)", "28", "1.0", "48").forEach { oldValue ->
+            composeRule.onNodeWithText(oldValue, useUnmergedTree = true)
+                .assertDoesNotExist()
         }
 
-        val title = composeRule.onNodeWithText("字号", useUnmergedTree = true)
-        val unit = composeRule.onNodeWithText("(sp)", useUnmergedTree = true)
-        val titleLayout = textLayoutForText("字号")
-        val unitLayout = textLayoutForText("(sp)")
-        val titleStyle = titleLayout.layoutInput.style
-        val unitStyle = unitLayout.layoutInput.style
-        val titleBaseline = title.fetchSemanticsNode().boundsInRoot.top + titleLayout.firstBaseline
-        val unitBaseline = unit.fetchSemanticsNode().boundsInRoot.top + unitLayout.firstBaseline
+        val decrease = composeRule.onNodeWithTag(
+            testTag = "reader-font-size-decrease",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val value = composeRule.onAllNodesWithText(
+            text = "28dp",
+            useUnmergedTree = true,
+        )[0].fetchSemanticsNode().boundsInRoot
+        val increase = composeRule.onNodeWithTag(
+            testTag = "reader-font-size-increase",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(decrease.right <= value.left)
+        assertTrue(value.right <= increase.left)
+    }
+
+    @Test
+    fun textSettingsConvertFontRelativeValuesToDp() {
+        val expectedFontRelativeDp = with(Density(density = 1f, fontScale = 2f)) {
+            28.sp.toDp().value.roundToInt()
+        }
+        setReader(textState(text = "正文"), fontScale = 2f)
+
+        composeRule.onNodeWithTag("text-reader-content")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        control("章节").performKeyInput { pressKey(Key.DirectionRight) }
+        control("阅读设置").performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("reader-font-size-setting")
+            .assert(hasText("${expectedFontRelativeDp}dp", substring = false))
+        composeRule.onNodeWithTag("reader-paragraph-spacing-setting")
+            .assert(hasText("${expectedFontRelativeDp}dp", substring = false))
+        composeRule.onNodeWithTag("reader-horizontal-padding-setting")
+            .assert(hasText("48dp", substring = false))
+    }
+
+    @Test
+    fun textParagraphSpacingUsesItsDpEquivalent() {
+        setReader(
+            state = textState(
+                text = "第一段\n\n第二段",
+                settings = TextReaderSettings(
+                    fontSizeSp = 28,
+                    lineHeight = 1f,
+                    paragraphSpacingEm = 1f,
+                ),
+            ),
+            fontScale = 2f,
+        )
+
+        val first = composeRule.onNodeWithTag(
+            testTag = "text-reader-paragraph-0",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val second = composeRule.onNodeWithTag(
+            testTag = "text-reader-paragraph-1",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
         val density = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
+        val expectedSpacingPixels = with(Density(density = density, fontScale = 2f)) {
+            28.sp.toPx()
+        }
 
-        assertEquals(12f, unitStyle.fontSize.value, 0f)
-        assertEquals(FontWeight.Light, unitStyle.fontWeight)
-        assertEquals(1f * density, titleBaseline - unitBaseline, 0.5f)
-        assertTrue(unitStyle.fontSize.value < titleStyle.fontSize.value)
-        assertTrue(unitStyle.color.alpha < titleStyle.color.alpha)
+        assertEquals(expectedSpacingPixels, second.top - first.bottom, 0.5f)
     }
 
     @Test
@@ -1169,21 +1231,30 @@ class ReaderScreenTest {
     private fun setReader(
         state: ReaderUiState.Active,
         onBack: () -> Unit = {},
+        fontScale: Float? = null,
     ) {
         composeRule.setContent {
-            KaloscopeTheme {
-                ReaderScreen(
-                    session = session(),
-                    state = state,
-                    onBack = onBack,
-                    onSelectChapter = {},
-                    onLoadMoreImages = {},
-                    onImageSettings = {},
-                    onTextSettings = {},
-                    onChapterOrder = {},
-                    onDismissChapterError = {},
-                    onDismissPageError = {},
-                )
+            val currentDensity = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(
+                    density = currentDensity.density,
+                    fontScale = fontScale ?: currentDensity.fontScale,
+                ),
+            ) {
+                KaloscopeTheme {
+                    ReaderScreen(
+                        session = session(),
+                        state = state,
+                        onBack = onBack,
+                        onSelectChapter = {},
+                        onLoadMoreImages = {},
+                        onImageSettings = {},
+                        onTextSettings = {},
+                        onChapterOrder = {},
+                        onDismissChapterError = {},
+                        onDismissPageError = {},
+                    )
+                }
             }
         }
     }

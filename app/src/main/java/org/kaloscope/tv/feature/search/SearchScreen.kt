@@ -867,6 +867,7 @@ private fun NetworkResultCard(
                     minLines = 2,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.height(36.dp),
                 )
                 Spacer(Modifier.height(7.dp))
                 SearchResultFooter(result)
@@ -997,7 +998,7 @@ private fun SearchResultFooter(
         val sizeMaxWidth = maxWidth / 2
         Row(
             modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Bottom,
         ) {
             if (source != null) {
                 Text(
@@ -1020,6 +1021,7 @@ private fun SearchResultFooter(
                     text = size,
                     color = Muted.copy(alpha = 0.8f),
                     fontSize = 11.sp,
+                    lineHeight = 14.sp,
                     fontStyle = FontStyle.Italic,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

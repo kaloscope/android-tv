@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
+import org.kaloscope.tv.core.designsystem.toDpDimensions
 import org.kaloscope.tv.core.model.ReaderTextContent
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.reader.ReaderBoundary
@@ -49,6 +50,7 @@ internal fun TextReaderSurface(
     onBoundary: (ReaderBoundary) -> Unit,
 ) {
     val palette = TextReaderPalettes.forTheme(settings.theme)
+    val dimensions = settings.toDpDimensions(LocalDensity.current)
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     BoxWithConstraints(
@@ -115,13 +117,13 @@ internal fun TextReaderSurface(
                         .fillMaxWidth()
                         .verticalScroll(scrollState)
                         .padding(
-                            start = settings.horizontalPaddingDp.dp,
-                            end = settings.horizontalPaddingDp.dp,
+                            start = dimensions.horizontalPadding,
+                            end = dimensions.horizontalPadding,
                             top = 12.dp,
                             bottom = 150.dp,
                         ),
                     verticalArrangement = Arrangement.spacedBy(
-                        (settings.fontSizeSp * settings.paragraphSpacingEm).dp,
+                        dimensions.paragraphSpacing,
                     ),
                 ) {
                     paragraphs.forEachIndexed { index, paragraph ->
