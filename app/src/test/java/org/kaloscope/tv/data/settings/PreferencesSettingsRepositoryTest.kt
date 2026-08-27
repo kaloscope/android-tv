@@ -114,7 +114,6 @@ class PreferencesSettingsRepositoryTest {
                 enabled = false,
                 languagePreference = "chs|zh-CN",
                 displayMode = SubtitleDisplayMode.Background,
-                timeOffsetSeconds = -0.5f,
                 fontScalePercent = 125,
                 verticalPositionPercent = 8,
             ),
@@ -138,6 +137,40 @@ class PreferencesSettingsRepositoryTest {
         val restored = PreferencesSettingsRepository(dataStore).getSettings()
 
         assertEquals(expected, (restored as AppResult.Success).value)
+    }
+
+    @Test
+    fun `subtitle time offset is not restored as a global setting`() = runTest {
+        val store = dataStore(this)
+        PreferencesSettingsRepository(store).saveSettings(
+            TvSettings(
+                subtitle = SubtitleSettings(timeOffsetSeconds = -0.5f),
+            ),
+        )
+
+        val restored = PreferencesSettingsRepository(store).getSettings()
+
+        assertEquals(
+            0f,
+            (restored as AppResult.Success).value.subtitle.timeOffsetSeconds,
+            0f,
+        )
+    }
+
+    @Test
+    fun `legacy subtitle time offset is ignored`() = runTest {
+        val store = dataStore(this)
+        store.edit { preferences ->
+            preferences[intPreferencesKey("subtitle_time_offset_tenths")] = -5
+        }
+
+        val restored = PreferencesSettingsRepository(store).getSettings()
+
+        assertEquals(
+            0f,
+            (restored as AppResult.Success).value.subtitle.timeOffsetSeconds,
+            0f,
+        )
     }
 
     @Test

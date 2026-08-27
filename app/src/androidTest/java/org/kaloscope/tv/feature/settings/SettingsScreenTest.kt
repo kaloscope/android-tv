@@ -717,7 +717,6 @@ class SettingsScreenTest {
         setSettingsContent(
             settings = TvSettings(
                 subtitle = SubtitleSettings(
-                    timeOffsetSeconds = 3_600f,
                     fontScalePercent = 200,
                     verticalPositionPercent = 15,
                 ),
@@ -728,7 +727,6 @@ class SettingsScreenTest {
         listOf(
             "subtitle-font-scale",
             "subtitle-vertical-position",
-            "subtitle-time-offset",
         ).forEach { tagPrefix ->
             composeRule.onNodeWithTag(
                 testTag = "$tagPrefix-decrease",
@@ -1741,7 +1739,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun subtitleCategoryShowsDefaultsAndUpdatesTheWholeModel() {
+    fun subtitleCategoryShowsOnlyReusableDefaultsAndUpdatesTheWholeModel() {
         var updatedSettings: SubtitleSettings? = null
         composeRule.setContent {
             KaloscopeTheme {
@@ -1781,11 +1779,12 @@ class SettingsScreenTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput {
                 pressKey(Key.Enter)
-                repeat(5) { pressKey(Key.DirectionDown) }
+                repeat(4) { pressKey(Key.DirectionDown) }
             }
-        composeRule.onNodeWithText("时间偏移")
+        composeRule.onNodeWithText("垂直位置")
             .assertIsFocused()
             .assertIsDisplayed()
+        composeRule.onNodeWithText("时间偏移").assertDoesNotExist()
 
         composeRule.runOnIdle {
             assertEquals(false, updatedSettings?.enabled)

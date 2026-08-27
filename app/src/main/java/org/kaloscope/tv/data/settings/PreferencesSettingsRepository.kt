@@ -69,8 +69,6 @@ class PreferencesSettingsRepository @Inject constructor(
                 preferences[SUBTITLE_ENABLED] = subtitle.enabled
                 preferences[SUBTITLE_LANGUAGE_PREFERENCE] = subtitle.languagePreference
                 preferences[SUBTITLE_DISPLAY_MODE] = subtitle.displayMode.storedValue
-                preferences[SUBTITLE_TIME_OFFSET_TENTHS] =
-                    (subtitle.timeOffsetSeconds * 10).toInt()
                 preferences[SUBTITLE_FONT_SCALE] = subtitle.fontScalePercent
                 preferences[SUBTITLE_VERTICAL_POSITION] = subtitle.verticalPositionPercent
                 preferences[READER_CHAPTER_ORDER] = settings.readerChapterOrder.storedValue
@@ -150,7 +148,6 @@ class PreferencesSettingsRepository @Inject constructor(
                         stored = this[SUBTITLE_DISPLAY_MODE],
                         fallback = SubtitleDisplayMode.Stroke,
                     ),
-                    timeOffsetSeconds = (this[SUBTITLE_TIME_OFFSET_TENTHS] ?: 0) / 10f,
                     fontScalePercent = this[SUBTITLE_FONT_SCALE] ?: 100,
                     verticalPositionPercent = this[SUBTITLE_VERTICAL_POSITION] ?: 2,
                 ),
@@ -256,8 +253,6 @@ class PreferencesSettingsRepository @Inject constructor(
         val SUBTITLE_LANGUAGE_PREFERENCE =
             stringPreferencesKey("subtitle_language_preference")
         val SUBTITLE_DISPLAY_MODE = stringPreferencesKey("subtitle_display_mode")
-        val SUBTITLE_TIME_OFFSET_TENTHS =
-            intPreferencesKey("subtitle_time_offset_tenths")
         val SUBTITLE_FONT_SCALE = intPreferencesKey("subtitle_font_scale")
         val SUBTITLE_VERTICAL_POSITION =
             intPreferencesKey("subtitle_vertical_position")

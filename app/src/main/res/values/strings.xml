@@ -128,7 +128,6 @@
     <string name="subtitle_vertical_position">垂直位置</string>
     <string name="subtitle_vertical_position_description">按确认键进入调节，左右键调整距画面底部的位置。</string>
     <string name="subtitle_time_offset">时间偏移</string>
-    <string name="subtitle_time_offset_description">按确认键进入调节；正值延迟，负值提前。</string>
     <string name="subtitle_time_offset_reset">重置字幕时间偏移</string>
     <string name="playback_speed">播放倍速</string>
     <string name="playback_quality_empty">暂无可用清晰度</string>

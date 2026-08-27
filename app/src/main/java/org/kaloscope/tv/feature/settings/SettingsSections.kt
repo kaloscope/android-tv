@@ -45,7 +45,6 @@ import org.kaloscope.tv.core.designsystem.danmakuBlockSummary
 import org.kaloscope.tv.core.designsystem.danmakuBlockTypeLabel
 import org.kaloscope.tv.core.designsystem.danmakuSpeedLabel
 import org.kaloscope.tv.core.designsystem.danmakuTextSizeLabel
-import org.kaloscope.tv.core.designsystem.formatSubtitleOffset
 import org.kaloscope.tv.core.designsystem.imagePageDirectionLabel
 import org.kaloscope.tv.core.designsystem.imageReadModeLabel
 import org.kaloscope.tv.core.designsystem.imageZoomModeLabel
@@ -502,23 +501,6 @@ internal fun SubtitleDefaultSettings(
             },
             onIncrease = {
                 onChange(SubtitleSettingsPolicy.adjustVerticalPosition(settings, 1))
-            },
-        )
-        AdjustableSettingRow(
-            title = stringResource(R.string.subtitle_time_offset),
-            description = stringResource(R.string.subtitle_time_offset_description),
-            value = formatSubtitleOffset(settings.timeOffsetSeconds),
-            interactionsEnabled = interactionsEnabled,
-            canDecrease = SubtitleSettingsPolicy.adjustTimeOffset(settings, -1)
-                .timeOffsetSeconds != settings.timeOffsetSeconds,
-            canIncrease = SubtitleSettingsPolicy.adjustTimeOffset(settings, 1)
-                .timeOffsetSeconds != settings.timeOffsetSeconds,
-            testTagPrefix = "subtitle-time-offset",
-            onDecrease = {
-                onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, -1))
-            },
-            onIncrease = {
-                onChange(SubtitleSettingsPolicy.adjustTimeOffset(settings, 1))
             },
         )
     }
