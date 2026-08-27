@@ -858,18 +858,25 @@ private fun NetworkResultCard(
                     bottom = 8.dp,
                 ),
             ) {
-                Text(
-                    text = result.title,
-                    color = OnBackground,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 18.sp,
-                    minLines = 2,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.height(36.dp),
-                )
-                Spacer(Modifier.height(7.dp))
+                // Reserve enough room for two CJK lines, but keep short titles close to metadata.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(41.dp),
+                    contentAlignment = Alignment.BottomStart,
+                ) {
+                    Text(
+                        text = result.title,
+                        color = OnBackground,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 18.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Spacer(Modifier.height(3.dp))
                 SearchResultFooter(result)
             }
         }

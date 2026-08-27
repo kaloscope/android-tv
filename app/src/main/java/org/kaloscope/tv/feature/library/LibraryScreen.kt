@@ -639,7 +639,9 @@ private fun MediaCard(
                 color = OnBackground,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                lineHeight = 18.sp,
+                minLines = 2,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
                 modifier = Modifier

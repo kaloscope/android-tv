@@ -387,6 +387,62 @@ class SearchScreenTest {
     }
 
     @Test
+    fun singleLineNetworkTitleStaysCloseToFooterMetadata() {
+        val title = "单行标题"
+        val metadata = "最新"
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = listOf(
+                            result("v1").copy(
+                                title = title,
+                                rating = null,
+                                category = null,
+                                uploadedAt = metadata,
+                                size = "第1话",
+                            ),
+                        ),
+                    ),
+                    requestInitialFocus = false,
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onPlay = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        val titleNode = composeRule.onNodeWithText(title, useUnmergedTree = true)
+        val titleBounds = titleNode.fetchSemanticsNode().boundsInRoot
+        val titleLayouts = mutableListOf<TextLayoutResult>()
+        titleNode.performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+            it(titleLayouts)
+        }
+        val visibleTitleBottom = titleBounds.top + titleLayouts.single().getLineBottom(0)
+        val metadataTop = composeRule.onNodeWithText(metadata, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+
+        assertTrue(
+            "Single-line title and footer metadata should be visually close",
+            metadataTop - visibleTitleBottom <= 24f * density,
+        )
+    }
+
+    @Test
     fun networkResultFootersAlignAcrossTitleLineCounts() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -1209,6 +1265,59 @@ class SearchScreenTest {
     }
 
     @Test
+    fun networkResultTitleUsesTwoLinesBeforeEllipsizing() {
+        val width = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.widthPixels
+        if (width != 1920) return
+        val longTitle =
+            "用于验证网络搜索标题能够完整显示两行并且只在第二行末尾进行省略的超长测试标题内容"
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 36.dp),
+                ) {
+                    SearchScreen(
+                        session = session(),
+                        state = state(
+                            results = listOf(
+                                result("v1").copy(title = longTitle),
+                            ),
+                        ),
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = {},
+                        onPlay = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
+            }
+        }
+
+        val layoutResults = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText(longTitle, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+                it(layoutResults)
+            }
+
+        val layout = layoutResults.single()
+        assertEquals(2, layout.lineCount)
+        assertEquals(false, layout.isLineEllipsized(0))
+        assertTrue(
+            "Long network result title should end with an ellipsis on the second line",
+            layout.isLineEllipsized(1),
+        )
+    }
+
+    @Test
     fun landscapeGridFitsExactlyThreeResultsPerRowInAuthenticatedFrameAt1080p() {
         val width = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.widthPixels
@@ -1218,7 +1327,7 @@ class SearchScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 44.dp),
+                        .padding(horizontal = 36.dp),
                 ) {
                     SearchScreen(
                         session = session(),
@@ -1242,18 +1351,24 @@ class SearchScreenTest {
             }
         }
 
-        val resultTops = (1..4).map { id ->
+        val resultBounds = (1..4).map { id ->
             composeRule.onNodeWithTag("network-result-v$id")
                 .fetchSemanticsNode()
-                .boundsInRoot.top
+                .boundsInRoot
         }
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
 
-        resultTops.take(3).forEach { top ->
-            assertEquals(resultTops.first(), top, 0.5f)
+        resultBounds.take(3).forEach { bounds ->
+            assertEquals(resultBounds.first().top, bounds.top, 0.5f)
         }
         assertTrue(
             "The fourth landscape result should start the second row",
-            resultTops[3] > resultTops.first(),
+            resultBounds[3].top > resultBounds.first().top,
+        )
+        assertTrue(
+            "Landscape cards should use the expanded content width",
+            resultBounds.first().width >= 224f * density,
         )
     }
 
@@ -1267,7 +1382,7 @@ class SearchScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 44.dp),
+                        .padding(horizontal = 36.dp),
                 ) {
                     SearchScreen(
                         session = session(),
@@ -1307,13 +1422,17 @@ class SearchScreenTest {
             "The fifth portrait result should start the second row",
             resultBounds[4].top > resultBounds.first().top,
         )
+        assertTrue(
+            "Portrait cards should use the expanded content width",
+            resultBounds.first().width >= 166f * density,
+        )
         assertEquals(
-            10f * density,
+            8f * density,
             resultBounds[1].left - resultBounds[0].right,
             1f,
         )
         assertEquals(
-            14f * density,
+            12f * density,
             resultBounds[4].top - resultBounds[0].bottom,
             1f,
         )
@@ -1549,7 +1668,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun resultsStartTwentySixDpBelowSearchField() {
+    fun resultsStartTwentyDpBelowSearchField() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -1585,7 +1704,7 @@ class SearchScreenTest {
             .boundsInRoot
 
         assertEquals(
-            26f * density,
+            20f * density,
             firstResultBounds.top - inputBounds.bottom,
             1f,
         )

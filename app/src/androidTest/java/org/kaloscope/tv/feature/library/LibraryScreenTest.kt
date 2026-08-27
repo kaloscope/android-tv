@@ -487,7 +487,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun resultsStartTwentySixDpBelowSearchField() {
+    fun resultsStartTwentyDpBelowSearchField() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -516,7 +516,7 @@ class LibraryScreenTest {
             .boundsInRoot
 
         assertEquals(
-            26f * density,
+            20f * density,
             firstResultBounds.top - inputBounds.bottom,
             1f,
         )
@@ -532,7 +532,7 @@ class LibraryScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 44.dp),
+                        .padding(horizontal = 36.dp),
                 ) {
                     LibraryScreen(
                         session = session(),
@@ -566,13 +566,17 @@ class LibraryScreenTest {
             "The fifth portrait card should start the second row",
             cardBounds[4].top > cardBounds.first().top,
         )
+        assertTrue(
+            "Media cards should use the expanded content width",
+            cardBounds.first().width >= 166f * density,
+        )
         assertEquals(
-            10f * density,
+            8f * density,
             cardBounds[1].left - cardBounds[0].right,
             1f,
         )
         assertEquals(
-            14f * density,
+            12f * density,
             cardBounds[4].top - cardBounds[0].bottom,
             1f,
         )
@@ -1059,6 +1063,41 @@ class LibraryScreenTest {
         assertEquals(4f * density, cardBounds.right - posterBounds.right, 1f)
         assertEquals(6f * density, posterTitleGap, 1f)
         assertEquals(4f * density, bottomPadding, 1f)
+    }
+
+    @Test
+    fun mediaCardReservesTwoTitleLines() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(
+                        media = listOf(
+                            mediaItems(1).single().copy(
+                                title = "足以占用两行的媒体标题",
+                            ),
+                        ),
+                    ),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        val titleHeight = composeRule.onNodeWithTag(
+            testTag = "media-title-1",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.height
+
+        assertEquals(36f * density, titleHeight, 1f)
     }
 
     @Test

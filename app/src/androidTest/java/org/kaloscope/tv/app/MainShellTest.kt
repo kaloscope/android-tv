@@ -1101,8 +1101,8 @@ class MainShellTest {
 
         val density = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
-        val expectedTop = 84f * density
-        val expectedHomeControlTop = 86f * density
+        val expectedTop = 74f * density
+        val expectedHomeControlTop = 76f * density
 
         assertEquals(
             expectedHomeControlTop,
@@ -1161,6 +1161,8 @@ class MainShellTest {
         val searchLeft = composeRule.onNodeWithTag("search-content")
             .fetchSemanticsNode()
             .boundsInRoot.left
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
 
         composeRule.onNode(hasText("媒体库") and hasClickAction())
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -1176,6 +1178,7 @@ class MainShellTest {
 
         assertEquals(searchLeft, libraryLeft, 1f)
         assertEquals(searchLeft, settingsLeft, 1f)
+        assertEquals(224f * density, searchLeft, 1f)
     }
 
     @Test
