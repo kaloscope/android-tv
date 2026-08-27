@@ -26,26 +26,21 @@ object ServerImageResolver {
         val serverOrigin = session.server.origin.removeSuffix("/")
         val absolute = raw.toHttpUrlOrNull()
         val resolvedUrl = when {
-            absolute != null -> when (policy) {
-                ServerImagePolicy.Direct -> absolute.toString()
-                ServerImagePolicy.Auto -> proxyUrl(
-                    serverOrigin = serverOrigin,
-                    rawValue = raw,
-                    store = absolute.queryParameter("proxy") == "store",
-                ) ?: return null
-                ServerImagePolicy.Proxy -> proxyUrl(
-                    serverOrigin = serverOrigin,
-                    rawValue = raw,
-                    store = false,
-                ) ?: return null
-                ServerImagePolicy.Store -> proxyUrl(
-                    serverOrigin = serverOrigin,
-                    rawValue = raw,
-                    store = true,
-                ) ?: return null
+            absolute == null -> if (raw.startsWith("/")) {
+                "$serverOrigin$raw"
+            } else {
+                "$serverOrigin/_api/$raw"
             }
-            raw.startsWith("/") -> "$serverOrigin$raw"
-            else -> "$serverOrigin/_api/$raw"
+
+            policy == ServerImagePolicy.Direct -> absolute.toString()
+
+            else -> proxyUrl(
+                serverOrigin = serverOrigin,
+                rawValue = raw,
+                store = policy == ServerImagePolicy.Store ||
+                    (policy == ServerImagePolicy.Auto &&
+                        absolute.queryParameter("proxy") == "store"),
+            ) ?: return null
         }
         // Authorization is derived after URL resolution to avoid leaking it off-origin.
         val authorization = if (

@@ -12,11 +12,6 @@ data class ResolvedPlaybackSource(
 )
 
 object PlaybackSourceResolver {
-    fun directStreamUrl(
-        session: Session,
-        path: String,
-    ): String = streamUrl(session, path, PlaybackSourceKind.Direct, TranscodeQuality.Medium)
-
     fun localMediaSource(
         session: Session,
         path: String,

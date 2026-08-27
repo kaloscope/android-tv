@@ -139,19 +139,21 @@ fun ServerImage(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            val headers = request.authorization?.let { authorization ->
-                NetworkHeaders.Builder()
-                    .set("Authorization", authorization)
+            val context = LocalContext.current
+            val imageRequest = remember(context, request.url, request.authorization) {
+                ImageRequest.Builder(context)
+                    .data(request.url)
+                    .apply {
+                        request.authorization?.let { authorization ->
+                            httpHeaders(
+                                NetworkHeaders.Builder()
+                                    .set("Authorization", authorization)
+                                    .build(),
+                            )
+                        }
+                    }
                     .build()
             }
-            val imageRequest = ImageRequest.Builder(LocalContext.current)
-                .data(request.url)
-                .apply {
-                    if (headers != null) {
-                        httpHeaders(headers)
-                    }
-                }
-                .build()
             AsyncImage(
                 model = imageRequest,
                 contentDescription = contentDescription,

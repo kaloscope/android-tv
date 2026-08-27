@@ -163,12 +163,14 @@ class SearchMapperTest {
     }
 
     @Test
-    fun `search items use video hint unless the item overrides it`() {
+    fun `search items inherit missing video type but keep explicit values`() {
         val model = IndexerResourcePageData(
             items = listOf(
                 resource(id = "hint", title = "配置类型", mediaType = "video"),
                 resource(id = "item", title = "资源类型", mediaType = "video")
                     .copy(videoType = "mp4"),
+                resource(id = "unknown", title = "未知类型", mediaType = "video")
+                    .copy(videoType = "custom"),
             ),
         ).toModel(
             pageNumber = 1,
@@ -177,7 +179,11 @@ class SearchMapperTest {
         )
 
         assertEquals(
-            listOf(NetworkVideoType.Dash, NetworkVideoType.Mp4),
+            listOf(
+                NetworkVideoType.Dash,
+                NetworkVideoType.Mp4,
+                NetworkVideoType.Unknown,
+            ),
             model.items.map { it.videoTypeHint },
         )
     }

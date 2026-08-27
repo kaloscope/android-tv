@@ -122,7 +122,7 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(playerControlScrim())
+            .background(PlayerControlScrim)
             .testTag("player-info-preview")
             .padding(horizontal = 50.dp),
     ) {
@@ -241,14 +241,13 @@ private fun PlayerStatusChip(
 private val PlayerControlPillShape = RoundedCornerShape(50)
 private val PlayerControlBorder = BorderStroke(1.dp, Color(0x996F7888))
 
-private fun playerControlScrim(): Brush =
-    Brush.verticalGradient(
-        listOf(
-            Color.Transparent,
-            Color(0x14050810),
-            Color(0xF2050810),
-        ),
-    )
+private val PlayerControlScrim = Brush.verticalGradient(
+    listOf(
+        Color.Transparent,
+        Color(0x14050810),
+        Color(0xF2050810),
+    ),
+)
 
 @Composable
 internal fun PlayerControls(
@@ -330,7 +329,7 @@ internal fun PlayerControls(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(playerControlScrim())
+            .background(PlayerControlScrim)
             .testTag("player-control-layer")
             .padding(
                 start = 50.dp,

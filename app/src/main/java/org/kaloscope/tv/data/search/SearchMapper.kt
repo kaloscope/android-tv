@@ -124,11 +124,7 @@ internal fun IndexerResourceData.toPlaybackSource(
             NetworkDefinition(label = label, url = definitionUrl)
         }
     }
-    val videoType = if (videoType.trimmedOrNull() == null) {
-        fallbackVideoType
-    } else {
-        videoType.toNetworkVideoType()
-    }
+    val videoType = videoType.resolveVideoType(fallbackVideoType)
     val serverSelectedDefinitionIndex = mappedDefinitions
         .indexOfFirst { it.label.matches(preferredDefinition) }
         .takeIf { it >= 0 }
@@ -211,11 +207,7 @@ private fun IndexerResourceData.toSearchResult(
         misc = misc.trimmedOrNull(),
         size = size.trimmedOrNull(),
         mediaType = resolvedMediaType,
-        videoTypeHint = if (videoType.trimmedOrNull() == null) {
-            videoTypeHint
-        } else {
-            videoType.toNetworkVideoType()
-        },
+        videoTypeHint = videoType.resolveVideoType(videoTypeHint),
     )
 }
 
@@ -240,6 +232,11 @@ internal fun String?.toNetworkVideoType(): NetworkVideoType =
         "mp4" -> NetworkVideoType.Mp4
         else -> NetworkVideoType.Unknown
     }
+
+private fun String?.resolveVideoType(fallback: NetworkVideoType): NetworkVideoType {
+    // Missing details inherit the catalog hint; explicit unknown values must not.
+    return if (trimmedOrNull() == null) fallback else toNetworkVideoType()
+}
 
 internal fun String?.toNetworkMediaType(): NetworkMediaType? =
     when (trimmedOrNull()?.lowercase()) {

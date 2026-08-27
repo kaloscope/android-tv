@@ -21,6 +21,21 @@ class ServerImageResolverTest {
     }
 
     @Test
+    fun `root relative server image preserves its API path`() {
+        val request = ServerImageResolver.resolve(
+            session = session(),
+            rawValue = "/_api/image/content?id=poster",
+        )
+
+        checkNotNull(request)
+        assertEquals(
+            "https://media.example/_api/image/content?id=poster",
+            request.url,
+        )
+        assertEquals("Token token-one", request.authorization)
+    }
+
+    @Test
     fun `proxied remote image is routed through current server`() {
         val request = ServerImageResolver.resolve(
             session = session(),
