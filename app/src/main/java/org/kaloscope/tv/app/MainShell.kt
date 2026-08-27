@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
@@ -113,6 +114,9 @@ internal fun MainShell(
     var restoringSearchFocusAfterPlayer by remember {
         mutableStateOf(false)
     }
+    var pendingReaderCloseRequestId by remember {
+        mutableStateOf<String?>(null)
+    }
     var homeBackdrop by remember(session.server.id) {
         mutableStateOf<HomeBackdropPresentation?>(null)
     }
@@ -125,6 +129,18 @@ internal fun MainShell(
         .associate { it.mediaId to it.positionSeconds }
     val searchPlaybackPreparing = currentRoute == SearchRoute &&
         (searchState as? SearchUiState.Content)?.resolvingResultId != null
+
+    LaunchedEffect(currentRoute, pendingReaderCloseRequestId) {
+        val requestId = pendingReaderCloseRequestId
+        if (currentRoute == SearchRoute && requestId != null) {
+            // Draw and present Search loading before releasing the outgoing Reader state.
+            withFrameNanos { }
+            withFrameNanos { }
+            readerActions.close(requestId)
+            searchActions.cancelResolution()
+            pendingReaderCloseRequestId = null
+        }
+    }
 
     // TV launchers do not guarantee an initial Compose focus owner.
     LaunchedEffect(launchRoute) {
@@ -193,9 +209,11 @@ internal fun MainShell(
         val returningToSearchFromFullscreen =
             (leavingRoute is PlayerRoute || leavingRoute is ReaderRoute) &&
                 returnRoute == SearchRoute
+        val readerReturningToSearch =
+            leavingRoute is ReaderRoute && returningToSearchFromFullscreen
         // Releasing player focus can briefly focus Home before Search restores its result.
         restoringSearchFocusAfterPlayer = returningToSearchFromFullscreen
-        if (returningToSearchFromFullscreen) {
+        if (returningToSearchFromFullscreen && !readerReturningToSearch) {
             // Keep Search covered until the fullscreen destination is ready,
             // then reveal it on pop.
             searchActions.cancelResolution()
@@ -210,7 +228,11 @@ internal fun MainShell(
             playerActions.close(leavingRoute.requestId)
         }
         if (leavingRoute is ReaderRoute) {
-            readerActions.close(leavingRoute.requestId)
+            if (readerReturningToSearch) {
+                pendingReaderCloseRequestId = leavingRoute.requestId
+            } else {
+                readerActions.close(leavingRoute.requestId)
+            }
         }
         backStack.handleMainBack()
         currentRoute = backStack.lastOrNull() ?: HomeRoute

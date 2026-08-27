@@ -2037,9 +2037,23 @@ class MainShellTest {
     }
 
     @Test
-    fun readerOpenedFromSearchClosesRequestAndRestoresResultFocus() {
+    fun readerBackShowsLoadingBeforeClosingAndRestoresResultFocus() {
         var closedRequestId: String? = null
         var preparationEnds = 0
+        var readerState by mutableStateOf<ReaderUiState>(
+            ReaderUiState.Text(
+                requestId = "reader-request",
+                serverId = "server-id",
+                content = ReaderTextContent.network(
+                    indexerId = 11,
+                    resourceId = "t1",
+                    title = "文本1",
+                    text = "正文",
+                ),
+                settings = TextReaderSettings(),
+                chapterOrder = ReaderChapterOrder.Ascending,
+            ),
+        )
         var searchState by mutableStateOf(
             deepSearchState().copy(
                 results = SearchResultsState.Content(
@@ -2088,20 +2102,12 @@ class MainShellTest {
                             }
                         },
                     ),
-                    readerState = ReaderUiState.Text(
-                        requestId = "reader-request",
-                        serverId = "server-id",
-                        content = ReaderTextContent.network(
-                            indexerId = 11,
-                            resourceId = "t1",
-                            title = "文本1",
-                            text = "正文",
-                        ),
-                        settings = TextReaderSettings(),
-                        chapterOrder = ReaderChapterOrder.Ascending,
-                    ),
+                    readerState = readerState,
                     readerActions = ReaderActions(
-                        close = { closedRequestId = it },
+                        close = {
+                            closedRequestId = it
+                            readerState = ReaderUiState.Idle
+                        },
                     ),
                 )
             }
@@ -2124,8 +2130,36 @@ class MainShellTest {
             ).fetchSemanticsNodes().size == 1
         }
 
+        composeRule.mainClock.autoAdvance = false
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.mainClock.advanceTimeByFrame()
+
+        val readerNodes = composeRule.onAllNodes(hasTestTag("text-reader-content"))
+            .fetchSemanticsNodes().size
+        val missingRequestNodes = composeRule.onAllNodes(hasText("阅读请求已失效"))
+            .fetchSemanticsNodes().size
+        val resultNodes = composeRule.onAllNodes(hasTestTag("network-result-t1"))
+            .fetchSemanticsNodes().size
+        assertEquals(
+            "closed=$closedRequestId preparationEnds=$preparationEnds " +
+                "reader=$readerNodes missing=$missingRequestNodes result=$resultNodes",
+            null,
+            closedRequestId,
+        )
+        assertEquals(0, preparationEnds)
+        assertEquals(0, missingRequestNodes)
+
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag("search-playback-loading").assertExists()
+        composeRule.onNodeWithText("阅读请求已失效").assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(null, closedRequestId)
+            assertEquals(0, preparationEnds)
+        }
+
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.autoAdvance = true
 
         composeRule.waitUntil(timeoutMillis = 3_000) {
             composeRule.onAllNodes(hasTestTag("text-reader-content"))
