@@ -42,9 +42,14 @@ class DanmakuPlaybackSynchronizerTest {
         val runtime = RecordingDanmakuRuntime()
         val synchronizer = DanmakuPlaybackSynchronizer(runtime)
 
-        synchronizer.onSettingsChanged(DanmakuSettings(blockColored = true))
+        synchronizer.onSettingsChanged(
+            DanmakuSettings(
+                opacityPercent = 50,
+                blockColored = true,
+            ),
+        )
 
-        assertEquals(listOf("settings:100"), runtime.commands)
+        assertEquals(listOf("settings:50"), runtime.commands)
     }
 
     @Test
