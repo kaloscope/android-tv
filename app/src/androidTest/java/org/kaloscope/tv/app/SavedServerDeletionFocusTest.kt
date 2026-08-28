@@ -1,5 +1,6 @@
 package org.kaloscope.tv.app
 
+import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -11,14 +12,17 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.server.SavedServerDeletionState
 import org.kaloscope.tv.feature.server.ServerSetupState
@@ -95,6 +99,47 @@ class SavedServerDeletionFocusTest {
         assertTrue(
             "Focused surface occupied ${occupiedFraction * 100}% of its bounds",
             occupiedFraction in 0.70f..0.86f,
+        )
+    }
+
+    @Test
+    fun focusedServerAndDeleteActionsHaveTheSameVisualHeight() {
+        setScreen()
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        composeRule.mainClock.advanceTimeBy(KaloscopeMotion.FocusMillis.toLong() + 20)
+
+        val focusedServerBounds = composeRule.onNodeWithTag("saved-server-home")
+            .assertIsFocused()
+            .getUnclippedBoundsInRoot()
+        val focusedServerHeight = composeRule.onRoot()
+            .captureToImage()
+            .asAndroidBitmap()
+            .visibleSurfaceHeight(
+                bounds = focusedServerBounds,
+                density = density,
+                surfaceColor = AndroidColor.rgb(0xE8, 0xED, 0xF4),
+            )
+        composeRule.onNodeWithTag("saved-server-home")
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.advanceTimeBy(KaloscopeMotion.FocusMillis.toLong() + 20)
+        val focusedDeleteBounds = composeRule.onNodeWithTag("delete-server-home")
+            .assertIsFocused()
+            .getUnclippedBoundsInRoot()
+        val focusedDeleteHeight = composeRule.onRoot()
+            .captureToImage()
+            .asAndroidBitmap()
+            .visibleSurfaceHeight(
+                bounds = focusedDeleteBounds,
+                density = density,
+                surfaceColor = AndroidColor.rgb(0x8F, 0x24, 0x37),
+            )
+
+        assertEquals(
+            "Focused server surface was $focusedServerHeight px high; " +
+                "focused delete surface was $focusedDeleteHeight px high",
+            focusedServerHeight,
+            focusedDeleteHeight,
         )
     }
 
@@ -386,4 +431,27 @@ class SavedServerDeletionFocusTest {
         SavedServer("home", "家庭服务器", "https://home.example"),
         SavedServer("demo", "演示", "https://demo.example"),
     )
+}
+
+private fun android.graphics.Bitmap.visibleSurfaceHeight(
+    bounds: androidx.compose.ui.unit.DpRect,
+    density: Float,
+    surfaceColor: Int,
+): Int {
+    val margin = (8 * density).roundToInt()
+    val left = (bounds.left.value * density).roundToInt()
+        .minus(margin)
+        .coerceAtLeast(0)
+    val right = (bounds.right.value * density).roundToInt()
+        .plus(margin)
+        .coerceAtMost(width - 1)
+    val top = (bounds.top.value * density).roundToInt()
+        .minus(margin)
+        .coerceAtLeast(0)
+    val bottom = (bounds.bottom.value * density).roundToInt()
+        .plus(margin)
+        .coerceAtMost(height - 1)
+    return (top..bottom).count { y ->
+        (left..right).any { x -> getPixel(x, y) == surfaceColor }
+    }
 }

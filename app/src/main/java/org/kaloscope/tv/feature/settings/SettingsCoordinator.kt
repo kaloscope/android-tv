@@ -150,7 +150,7 @@ class SettingsCoordinator(
         mutableState.value = content.copy(connection = SettingsConnection.Testing)
         when (val result = serverRepository.testConnection(session.server.origin)) {
             is AppResult.Success -> updateContent {
-                copy(connection = SettingsConnection.Success(result.value))
+                copy(connection = SettingsConnection.Success(result.value.version))
             }
 
             is AppResult.Failure -> updateContent {

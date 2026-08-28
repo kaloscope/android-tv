@@ -108,6 +108,40 @@ class ServerSetupFocusTest {
     }
 
     @Test
+    fun serverSchemeLabelIsCentered() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                ServerSetupScreen(
+                    savedServers = emptyList(),
+                    state = ServerSetupState(),
+                    onNameChange = {},
+                    onUrlChange = {},
+                    onTest = {},
+                    onSave = {},
+                    onSelectServer = {},
+                )
+            }
+        }
+
+        val buttonCenter = composeRule.onNodeWithTag("server-url-scheme")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .center
+        val labelCenter = composeRule.onNodeWithText(
+            text = "http://",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode()
+            .boundsInRoot
+            .center
+
+        assertTrue(
+            "Button center was $buttonCenter; label center was $labelCenter",
+            abs(buttonCenter.x - labelCenter.x) < 1f &&
+                abs(buttonCenter.y - labelCenter.y) < 1f,
+        )
+    }
+
+    @Test
     fun testingConnectionKeepsTestButtonFocusAndIgnoresRepeatCenter() {
         val state = mutableStateOf(
             ServerSetupState(
@@ -495,6 +529,62 @@ class ServerSetupFocusTest {
     }
 
     @Test
+    fun serverUrlSchemeTogglesAndBareAddressComposes() {
+        val state = mutableStateOf(ServerSetupState())
+        composeRule.setContent {
+            KaloscopeTheme {
+                ServerSetupScreen(
+                    savedServers = emptyList(),
+                    state = state.value,
+                    onNameChange = {},
+                    onUrlChange = { state.value = state.value.copy(url = it) },
+                    onTest = {},
+                    onSave = {},
+                    onSelectServer = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("http://").assertExists()
+        composeRule.onNodeWithText("例如：192.168.1.2:8000").assertExists()
+        composeRule.onNodeWithTag("server-url-scheme")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("https://").assertExists()
+        composeRule.onNodeWithTag("server-url-selector")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithTag("server-url-editor").performTextInput("media.example")
+
+        composeRule.runOnIdle {
+            assertEquals("https://media.example", state.value.url)
+        }
+    }
+
+    @Test
+    fun dpadMovesBetweenServerSchemeAndAddress() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                ServerSetupScreen(
+                    savedServers = emptyList(),
+                    state = ServerSetupState(),
+                    onNameChange = {},
+                    onUrlChange = {},
+                    onTest = {},
+                    onSave = {},
+                    onSelectServer = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("server-url-selector")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithTag("server-url-scheme")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("server-url-selector").assertIsFocused()
+    }
+
+    @Test
     fun dpadDownMovesFromServerNameToUrl() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -513,6 +603,6 @@ class ServerSetupFocusTest {
         composeRule.onNodeWithText("例如：家庭服务器")
             .performKeyInput { pressKey(Key.DirectionDown) }
 
-        composeRule.onNodeWithText("例如：http://192.168.1.2:8000").assertIsFocused()
+        composeRule.onNodeWithText("例如：192.168.1.2:8000").assertIsFocused()
     }
 }

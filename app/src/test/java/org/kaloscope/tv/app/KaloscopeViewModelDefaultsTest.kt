@@ -16,6 +16,7 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.storage.ServerStore
 import org.kaloscope.tv.data.auth.SessionRepository
+import org.kaloscope.tv.data.server.ServerConnectionInfo
 import org.kaloscope.tv.data.server.ServerRepository
 
 class KaloscopeViewModelDefaultsTest {
@@ -82,7 +83,7 @@ private class DefaultsServerStore(
 }
 
 private class DefaultsServerRepository : ServerRepository {
-    override suspend fun testConnection(origin: String): AppResult<String> =
+    override suspend fun testConnection(origin: String): AppResult<ServerConnectionInfo> =
         AppResult.Failure(AppError.Offline)
 
     override suspend fun saveServer(server: SavedServer) = error("Not used")

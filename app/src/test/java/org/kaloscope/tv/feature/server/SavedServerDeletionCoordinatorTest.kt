@@ -13,6 +13,7 @@ import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.data.auth.SessionRepository
+import org.kaloscope.tv.data.server.ServerConnectionInfo
 import org.kaloscope.tv.data.server.ServerRepository
 
 class SavedServerDeletionCoordinatorTest {
@@ -113,7 +114,7 @@ private class FakeDeletionServerRepository(
 ) : ServerRepository {
     var deleteCalls = 0
 
-    override suspend fun testConnection(origin: String): AppResult<String> =
+    override suspend fun testConnection(origin: String): AppResult<ServerConnectionInfo> =
         AppResult.Failure(AppError.Offline)
 
     override suspend fun saveServer(server: SavedServer) = Unit

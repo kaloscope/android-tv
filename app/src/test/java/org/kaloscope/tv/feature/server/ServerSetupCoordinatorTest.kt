@@ -12,6 +12,7 @@ import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.SavedServer
+import org.kaloscope.tv.data.server.ServerConnectionInfo
 import org.kaloscope.tv.data.server.ServerRepository
 
 class ServerSetupCoordinatorTest {
@@ -78,6 +79,25 @@ class ServerSetupCoordinatorTest {
         assertEquals("http://192.168.1.2:8000", coordinator.state.value.verifiedOrigin)
         assertEquals("0.5.3", coordinator.state.value.serverVersion)
         assertTrue(coordinator.state.value.canSave)
+    }
+
+    @Test
+    fun `http upgrade replaces the draft and saved origin`() = runBlocking {
+        val repository = UpgradingServerRepository()
+        val coordinator = coordinator(repository)
+        coordinator.updateName("Demo")
+        coordinator.updateUrl("http://demo.example")
+
+        coordinator.testConnection()
+
+        assertEquals("https://demo.example", coordinator.state.value.url)
+        assertEquals("https://demo.example", coordinator.state.value.verifiedOrigin)
+        assertEquals("0.8.7", coordinator.state.value.serverVersion)
+
+        val saved = coordinator.save()
+
+        assertEquals("https://demo.example", saved?.origin)
+        assertEquals(saved, repository.savedServer)
     }
 
     @Test
@@ -169,9 +189,15 @@ private class FakeServerRepository(
     var savedServer: SavedServer? = null
     var activeServerId: String? = null
 
-    override suspend fun testConnection(origin: String): AppResult<String> {
+    override suspend fun testConnection(origin: String): AppResult<ServerConnectionInfo> {
         testCalls += 1
-        return testResult
+        return when (testResult) {
+            is AppResult.Success -> AppResult.Success(
+                ServerConnectionInfo(origin = origin, version = testResult.value),
+            )
+
+            is AppResult.Failure -> testResult
+        }
     }
 
     override suspend fun saveServer(server: SavedServer) {
@@ -194,14 +220,35 @@ private class SuspendingServerRepository : ServerRepository {
     val release = CompletableDeferred<Unit>()
     var testCalls = 0
 
-    override suspend fun testConnection(origin: String): AppResult<String> {
+    override suspend fun testConnection(origin: String): AppResult<ServerConnectionInfo> {
         testCalls += 1
         firstCallStarted.complete(Unit)
         release.await()
-        return AppResult.Success("0.0.0")
+        return AppResult.Success(ServerConnectionInfo(origin = origin, version = "0.0.0"))
     }
 
     override suspend fun saveServer(server: SavedServer) = Unit
+
+    override suspend fun deleteServer(serverId: String): List<SavedServer> =
+        error("Not used")
+
+    override suspend fun setActiveServer(serverId: String) = Unit
+}
+
+private class UpgradingServerRepository : ServerRepository {
+    var savedServer: SavedServer? = null
+
+    override suspend fun testConnection(origin: String): AppResult<ServerConnectionInfo> =
+        AppResult.Success(
+            ServerConnectionInfo(
+                origin = "https://demo.example",
+                version = "0.8.7",
+            ),
+        )
+
+    override suspend fun saveServer(server: SavedServer) {
+        savedServer = server
+    }
 
     override suspend fun deleteServer(serverId: String): List<SavedServer> =
         error("Not used")

@@ -47,7 +47,7 @@ class KaloscopeApiContractTest {
 
         val response = api.getVersion()
 
-        assertEquals("1.2.3", response.data.version)
+        assertEquals("1.2.3", response.body()?.data?.version)
         assertEquals("/_api/system/version", server.takeRequest().path)
     }
 

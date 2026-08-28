@@ -3,11 +3,16 @@ package org.kaloscope.tv.data.server
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.SavedServer
 
+data class ServerConnectionInfo(
+    val origin: String,
+    val version: String,
+)
+
 /**
  * Owns verification and persistence operations for saved server endpoints.
  */
 interface ServerRepository {
-    suspend fun testConnection(origin: String): AppResult<String>
+    suspend fun testConnection(origin: String): AppResult<ServerConnectionInfo>
 
     suspend fun saveServer(server: SavedServer)
 

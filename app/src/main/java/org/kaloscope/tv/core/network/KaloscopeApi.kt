@@ -28,7 +28,7 @@ import org.kaloscope.tv.data.search.remote.IndexerResourcePageData
 
 interface KaloscopeApi {
     @GET("system/version")
-    suspend fun getVersion(): ApiEnvelope<VersionData>
+    suspend fun getVersion(): Response<ApiEnvelope<VersionData>>
 
     @FormUrlEncoded
     @POST("auth/login")

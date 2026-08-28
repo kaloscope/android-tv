@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -91,8 +92,11 @@ import org.kaloscope.tv.feature.login.LoginState
 import org.kaloscope.tv.feature.server.SavedServerDeletionState
 import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
+import org.kaloscope.tv.feature.server.ServerUrlDraft
+import org.kaloscope.tv.feature.server.ServerUrlScheme
 
 private val SetupProgressOutline = Color(0x33FFFFFF)
+private val SavedServerControlHeight = 48.dp
 
 private sealed interface ServerSetupFocusTarget {
     data object Name : ServerSetupFocusTarget
@@ -122,6 +126,7 @@ internal fun ServerSetupScreen(
 ) {
     val accentPalette = LocalAccentPalette.current
     val nameFocus = remember { FocusRequester() }
+    val urlSchemeFocus = remember { FocusRequester() }
     val urlFocus = remember { FocusRequester() }
     val testFocus = remember { FocusRequester() }
     val saveFocus = remember { FocusRequester() }
@@ -262,6 +267,7 @@ internal fun ServerSetupScreen(
                             onClick = { onSelectServer(server) },
                             modifier = Modifier
                                 .weight(1f)
+                                .height(SavedServerControlHeight)
                                 .testTag("saved-server-${server.id}")
                                 .focusRequester(serverFocusRequesters.getValue(server.id))
                                 .onPreviewKeyEvent { event ->
@@ -303,9 +309,8 @@ internal fun ServerSetupScreen(
                                     pendingDeletion = server
                                 },
                                 tone = KaloscopeControlTone.Danger,
-                                scaleOnFocus = false,
                                 modifier = Modifier
-                                    .size(48.dp)
+                                    .size(SavedServerControlHeight)
                                     .testTag("delete-server-${server.id}")
                                     .semantics {
                                         contentDescription = deleteDescription
@@ -388,15 +393,11 @@ internal fun ServerSetupScreen(
                 onMoveDown = { urlFocus.requestFocus() },
             )
             Spacer(Modifier.height(12.dp))
-            TvTextField(
-                value = state.url,
-                onValueChange = onUrlChange,
-                label = stringResource(R.string.server_url),
-                placeholder = stringResource(R.string.server_url_hint),
-                focusRequester = urlFocus,
-                imeAction = ImeAction.Next,
-                selectorTestTag = "server-url-selector",
-                editorTestTag = "server-url-editor",
+            ServerUrlField(
+                url = state.url,
+                onUrlChange = onUrlChange,
+                schemeFocus = urlSchemeFocus,
+                addressFocus = urlFocus,
                 onMoveUp = { nameFocus.requestFocus() },
                 onMoveDown = { testFocus.requestFocus() },
             )
@@ -489,6 +490,106 @@ internal fun ServerSetupScreen(
                     onDeleteServer(server)
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun ServerUrlField(
+    url: String,
+    onUrlChange: (String) -> Unit,
+    schemeFocus: FocusRequester,
+    addressFocus: FocusRequester,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+) {
+    val draft = ServerUrlDraft.from(url)
+    val schemeLabel = stringResource(
+        when (draft.scheme) {
+            ServerUrlScheme.Http -> R.string.server_scheme_http
+            ServerUrlScheme.Https -> R.string.server_scheme_https
+        },
+    )
+    val schemeDescription = stringResource(
+        R.string.server_scheme_description,
+        schemeLabel,
+    )
+
+    Text(
+        text = stringResource(R.string.server_url),
+        color = OnBackground,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(7.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        KaloscopeButton(
+            onClick = {
+                val nextScheme = when (draft.scheme) {
+                    ServerUrlScheme.Http -> ServerUrlScheme.Https
+                    ServerUrlScheme.Https -> ServerUrlScheme.Http
+                }
+                onUrlChange(draft.replaceScheme(nextScheme))
+            },
+            modifier = Modifier
+                .width(104.dp)
+                .height(48.dp)
+                .focusRequester(schemeFocus)
+                .testTag("server-url-scheme")
+                .semantics { contentDescription = schemeDescription }
+                .onPreviewKeyEvent { event ->
+                    when (event.key) {
+                        Key.DirectionUp -> {
+                            if (event.type == KeyEventType.KeyDown) onMoveUp()
+                            true
+                        }
+
+                        Key.DirectionDown -> {
+                            if (event.type == KeyEventType.KeyDown) onMoveDown()
+                            true
+                        }
+
+                        Key.DirectionRight -> {
+                            if (event.type == KeyEventType.KeyDown) {
+                                addressFocus.requestFocus()
+                            }
+                            true
+                        }
+
+                        else -> false
+                    }
+                },
+            variant = KaloscopeControlVariant.Filled,
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = schemeLabel,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+        TvTextField(
+            value = draft.address,
+            onValueChange = { onUrlChange(draft.replaceAddress(it)) },
+            placeholder = stringResource(R.string.server_url_hint),
+            modifier = Modifier.weight(1f),
+            focusRequester = addressFocus,
+            imeAction = ImeAction.Next,
+            selectorTestTag = "server-url-selector",
+            editorTestTag = "server-url-editor",
+            onMoveUp = onMoveUp,
+            onMoveDown = onMoveDown,
+            onMoveLeft = { schemeFocus.requestFocus() },
         )
     }
 }

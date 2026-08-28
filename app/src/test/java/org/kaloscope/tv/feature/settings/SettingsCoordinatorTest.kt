@@ -28,6 +28,7 @@ import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TvSettings
 import org.kaloscope.tv.core.player.PlaybackMode
 import org.kaloscope.tv.core.player.TranscodeQuality
+import org.kaloscope.tv.data.server.ServerConnectionInfo
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.data.settings.SettingsRepository
 
@@ -347,9 +348,15 @@ private class FakeServerRepository(
 ) : ServerRepository {
     var testedOrigin: String? = null
 
-    override suspend fun testConnection(origin: String): AppResult<String> {
+    override suspend fun testConnection(origin: String): AppResult<ServerConnectionInfo> {
         testedOrigin = origin
-        return connectionResult
+        return when (connectionResult) {
+            is AppResult.Success -> AppResult.Success(
+                ServerConnectionInfo(origin = origin, version = connectionResult.value),
+            )
+
+            is AppResult.Failure -> connectionResult
+        }
     }
 
     override suspend fun saveServer(server: SavedServer) = error("Not used")

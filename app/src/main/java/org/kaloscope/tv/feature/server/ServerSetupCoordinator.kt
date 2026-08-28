@@ -83,14 +83,18 @@ class ServerSetupCoordinator(
         mutableState.value = current.copy(isTesting = true, error = null)
         try {
             mutableState.value = when (val result = repository.testConnection(origin)) {
-                is AppResult.Success -> mutableState.value.copy(
-                    name = mutableState.value.name.ifBlank {
-                        URI(origin).host.removeSurrounding("[", "]")
-                    },
-                    isTesting = false,
-                    verifiedOrigin = origin,
-                    serverVersion = result.value,
-                )
+                is AppResult.Success -> {
+                    val connection = result.value
+                    mutableState.value.copy(
+                        name = mutableState.value.name.ifBlank {
+                            URI(connection.origin).host.removeSurrounding("[", "]")
+                        },
+                        url = connection.origin,
+                        isTesting = false,
+                        verifiedOrigin = connection.origin,
+                        serverVersion = connection.version,
+                    )
+                }
 
                 is AppResult.Failure -> mutableState.value.copy(
                     isTesting = false,

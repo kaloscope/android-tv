@@ -1,6 +1,7 @@
 package org.kaloscope.tv.test.golden
 
 import android.content.res.Resources
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -416,14 +417,17 @@ class P2GoldenScreenshotTest {
     @Test
     fun serverDeleteFocusMatches1080p() {
         if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             KaloscopeTheme {
                 GoldenServerSetup()
             }
         }
+        composeRule.mainClock.advanceTimeBy(1_000)
 
         composeRule.onNodeWithTag("saved-server-golden-server")
             .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.advanceTimeBy(1_000)
         composeRule.onNodeWithTag("delete-server-golden-server").assertIsFocused()
 
         assertGolden(
@@ -435,17 +439,26 @@ class P2GoldenScreenshotTest {
     @Test
     fun serverDeletionDialogMatches1080p() {
         if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             KaloscopeTheme {
                 GoldenServerSetup()
             }
         }
+        composeRule.mainClock.advanceTimeBy(1_000)
 
         composeRule.onNodeWithTag("saved-server-golden-server")
             .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.mainClock.autoAdvance = true
         composeRule.onNodeWithTag("delete-server-golden-server")
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.onNodeWithTag("confirm-dialog-cancel").assertIsFocused()
+        composeRule.waitForIdle()
+        composeRule.mainClock.autoAdvance = false
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        // Dialog owns a platform window whose enter animation does not use the Compose clock.
+        SystemClock.sleep(500)
 
         assertGolden(
             "server-deletion-dialog-1920",
