@@ -5,12 +5,11 @@ import androidx.media3.common.Player
 import java.lang.reflect.Proxy
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.kaloscope.tv.core.model.DanmakuSettings
 
 class DanmakuPlaybackBindingTest {
     @Test
     fun `transient listener detach preserves synchronization until disposal`() {
-        val runtime = BindingRecordingRuntime()
+        val runtime = RecordingDanmakuRuntime()
         val player = RecordingPlayer()
         val binding = DanmakuPlaybackBinding(
             player = player.instance,
@@ -85,28 +84,4 @@ private class RecordingPlayer {
             Double::class.javaPrimitiveType -> 0.0
             else -> null
         }
-}
-
-private class BindingRecordingRuntime : DanmakuRuntimeControl {
-    val commands = mutableListOf<String>()
-
-    override fun updateSettings(settings: DanmakuSettings) {
-        commands += "settings:${settings.opacityPercent}"
-    }
-
-    override fun start() {
-        commands += "start"
-    }
-
-    override fun pause() {
-        commands += "pause"
-    }
-
-    override fun seekTo(positionMillis: Long) {
-        commands += "seek:$positionMillis"
-    }
-
-    override fun updatePlaybackSpeed(speed: Float) {
-        commands += "speed:$speed"
-    }
 }

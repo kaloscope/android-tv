@@ -34,7 +34,7 @@ internal data class SearchActions(
     val loadMore: () -> Unit = {},
     val rememberFocusedResult: (String) -> Unit = {},
     val rememberGridViewport: (GridViewportSnapshot) -> Unit = {},
-    val play: (String) -> Unit = {},
+    val openResult: (String) -> Unit = {},
     val cancelResolution: () -> Boolean = { false },
     val openFilters: () -> Unit = {},
     val dismissFilters: () -> Unit = {},

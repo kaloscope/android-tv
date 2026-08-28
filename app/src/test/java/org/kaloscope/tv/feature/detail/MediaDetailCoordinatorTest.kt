@@ -5,19 +5,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
-import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaActor
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
-import org.kaloscope.tv.core.model.MediaPage
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
-import org.kaloscope.tv.core.model.SubtitleTrack
-import org.kaloscope.tv.data.media.MediaRepository
+import org.kaloscope.tv.test.StubMediaRepository
 
 class MediaDetailCoordinatorTest {
     @Test
@@ -124,20 +121,8 @@ class MediaDetailCoordinatorTest {
 
 private class DetailFakeRepository(
     private val details: MutableList<AppResult<MediaDetail>>,
-) : MediaRepository {
+) : StubMediaRepository() {
     val detailCalls = mutableListOf<Long>()
-
-    override suspend fun getLibraries(
-        session: Session,
-    ): AppResult<List<MediaLibrary>> = AppResult.Success(emptyList())
-
-    override suspend fun getMediaPage(
-        session: Session,
-        libraryId: Long,
-        pageNumber: Int,
-        pageSize: Int,
-        keyword: String?,
-    ): AppResult<MediaPage> = AppResult.Success(MediaPage(emptyList(), 0, 1, 20, false))
 
     override suspend fun getMediaDetail(
         session: Session,
@@ -146,21 +131,6 @@ private class DetailFakeRepository(
         detailCalls += mediaId
         return details.removeAt(0)
     }
-
-    override suspend fun getMediaProbe(
-        session: Session,
-        path: String,
-    ): AppResult<org.kaloscope.tv.core.model.MediaProbe> = error("Not used")
-
-    override suspend fun getSubtitleTracks(
-        session: Session,
-        path: String,
-    ): AppResult<List<SubtitleTrack>> = error("Not used")
-
-    override suspend fun getDanmakus(
-        session: Session,
-        path: String,
-    ): AppResult<List<DanmakuComment>> = error("Not used")
 }
 
 private fun detail(

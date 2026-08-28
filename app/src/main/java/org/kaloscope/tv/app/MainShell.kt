@@ -373,7 +373,7 @@ internal fun MainShell(
                                     },
                                     onGridViewportChanged =
                                         searchActions.rememberGridViewport,
-                                    onPlay = searchActions.play,
+                                    onOpenResult = searchActions.openResult,
                                     onOpenFilters = searchActions.openFilters,
                                     onDismissFilters = searchActions.dismissFilters,
                                     onApplyFilters = searchActions.applyFilters,

@@ -184,7 +184,7 @@
     <string name="playback_preparation_resource">正在获取资源…</string>
     <string name="playback_preparation_danmaku">正在获取弹幕…</string>
     <string name="playback_preparation_playback">正在准备播放…</string>
-    <string name="resolve_playback_failed">无法打开资源：%1$s</string>
+    <string name="resolve_resource_failed">无法打开资源：%1$s</string>
 
     <string name="reading_settings">阅读设置</string>
     <string name="reading_settings_title">阅读设置</string>

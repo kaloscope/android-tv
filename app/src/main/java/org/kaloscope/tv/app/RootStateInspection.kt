@@ -42,7 +42,7 @@ internal fun SearchUiState.hasUnauthorized(): Boolean =
 
                 else -> false
             }
-            resultUnauthorized || playbackError == AppError.Unauthorized
+            resultUnauthorized || resolutionError == AppError.Unauthorized
         }
 
         else -> false

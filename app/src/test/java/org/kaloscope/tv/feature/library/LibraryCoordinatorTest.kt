@@ -7,7 +7,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
-import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaLibrary
@@ -17,8 +16,7 @@ import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
-import org.kaloscope.tv.core.model.SubtitleTrack
-import org.kaloscope.tv.data.media.MediaRepository
+import org.kaloscope.tv.test.StubMediaRepository
 
 class LibraryCoordinatorTest {
     @Test
@@ -239,7 +237,7 @@ private class FakeMediaRepository(
     private val libraries: AppResult<List<MediaLibrary>>,
     private val pages: MutableList<AppResult<MediaPage>> = mutableListOf(),
     private val details: AppResult<MediaDetail> = AppResult.Failure(AppError.NotFound),
-) : MediaRepository {
+) : StubMediaRepository() {
     val pageCalls = mutableListOf<PageCall>()
 
     override suspend fun getLibraries(session: Session): AppResult<List<MediaLibrary>> =
@@ -260,21 +258,6 @@ private class FakeMediaRepository(
         session: Session,
         mediaId: Long,
     ): AppResult<MediaDetail> = details
-
-    override suspend fun getMediaProbe(
-        session: Session,
-        path: String,
-    ): AppResult<org.kaloscope.tv.core.model.MediaProbe> = error("Not used")
-
-    override suspend fun getSubtitleTracks(
-        session: Session,
-        path: String,
-    ): AppResult<List<SubtitleTrack>> = error("Not used")
-
-    override suspend fun getDanmakus(
-        session: Session,
-        path: String,
-    ): AppResult<List<DanmakuComment>> = error("Not used")
 }
 
 private fun libraries() = listOf(

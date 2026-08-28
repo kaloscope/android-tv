@@ -18,8 +18,6 @@ import org.kaloscope.tv.core.model.DanmakuComment
 import org.kaloscope.tv.core.model.DanmakuSettings
 import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.MediaDetail
-import org.kaloscope.tv.core.model.MediaLibrary
-import org.kaloscope.tv.core.model.MediaPage
 import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
@@ -44,8 +42,8 @@ import org.kaloscope.tv.core.player.PlaybackRequestStore
 import org.kaloscope.tv.core.player.TranscodeQuality
 import org.kaloscope.tv.core.player.TranscodeResolution
 import org.kaloscope.tv.data.history.HistoryRepository
-import org.kaloscope.tv.data.media.MediaRepository
 import org.kaloscope.tv.data.search.NetworkResourceRepository
+import org.kaloscope.tv.test.StubMediaRepository
 
 class PlayerViewModelSettingsTest {
     @Test
@@ -385,24 +383,8 @@ private class SequencedHistoryRepository : HistoryRepository {
 private class PlaybackExtrasRepository(
     var subtitleResult: AppResult<List<SubtitleTrack>> = AppResult.Success(emptyList()),
     var danmakuResult: AppResult<List<DanmakuComment>> = AppResult.Success(emptyList()),
-) : MediaRepository {
+) : StubMediaRepository() {
     val probePaths = mutableListOf<String>()
-
-    override suspend fun getLibraries(session: Session): AppResult<List<MediaLibrary>> =
-        error("Not used")
-
-    override suspend fun getMediaPage(
-        session: Session,
-        libraryId: Long,
-        pageNumber: Int,
-        pageSize: Int,
-        keyword: String?,
-    ): AppResult<MediaPage> = error("Not used")
-
-    override suspend fun getMediaDetail(
-        session: Session,
-        mediaId: Long,
-    ): AppResult<MediaDetail> = error("Not used")
 
     override suspend fun getMediaProbe(
         session: Session,
@@ -441,38 +423,7 @@ private fun unusedHistoryRepository() = object : HistoryRepository {
     ): AppResult<Unit> = error("Not used")
 }
 
-private fun unusedMediaRepository() = object : MediaRepository {
-    override suspend fun getLibraries(session: Session): AppResult<List<MediaLibrary>> =
-        error("Not used")
-
-    override suspend fun getMediaPage(
-        session: Session,
-        libraryId: Long,
-        pageNumber: Int,
-        pageSize: Int,
-        keyword: String?,
-    ): AppResult<MediaPage> = error("Not used")
-
-    override suspend fun getMediaDetail(
-        session: Session,
-        mediaId: Long,
-    ): AppResult<MediaDetail> = error("Not used")
-
-    override suspend fun getMediaProbe(
-        session: Session,
-        path: String,
-    ): AppResult<org.kaloscope.tv.core.model.MediaProbe> = error("Not used")
-
-    override suspend fun getSubtitleTracks(
-        session: Session,
-        path: String,
-    ): AppResult<List<SubtitleTrack>> = error("Not used")
-
-    override suspend fun getDanmakus(
-        session: Session,
-        path: String,
-    ): AppResult<List<DanmakuComment>> = error("Not used")
-}
+private fun unusedMediaRepository() = StubMediaRepository()
 
 private fun unusedNetworkResourceRepository() = object : NetworkResourceRepository {
     override suspend fun resolveResource(

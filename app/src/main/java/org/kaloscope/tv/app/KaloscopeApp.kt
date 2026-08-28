@@ -157,8 +157,8 @@ fun KaloscopeApp(
                         loadMore = { searchViewModel.loadNext(state.session) },
                         rememberFocusedResult = searchViewModel::rememberFocusedResult,
                         rememberGridViewport = searchViewModel::rememberGridViewport,
-                        play = { resultId ->
-                            searchViewModel.play(
+                        openResult = { resultId ->
+                            searchViewModel.openResult(
                                 state.session,
                                 resultId,
                                 currentSettings,

@@ -107,7 +107,7 @@ fun SearchScreen(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
-    onPlay: (String) -> Unit,
+    onOpenResult: (String) -> Unit,
     onOpenFilters: () -> Unit,
     onDismissFilters: () -> Unit,
     onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
@@ -140,7 +140,7 @@ fun SearchScreen(
             onLoadMore = onLoadMore,
             onResultFocused = onResultFocused,
             onGridViewportChanged = onGridViewportChanged,
-            onPlay = onPlay,
+            onOpenResult = onOpenResult,
             onOpenFilters = onOpenFilters,
             onDismissFilters = onDismissFilters,
             onApplyFilters = onApplyFilters,
@@ -163,7 +163,7 @@ private fun SearchContent(
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
     onGridViewportChanged: (GridViewportSnapshot) -> Unit,
-    onPlay: (String) -> Unit,
+    onOpenResult: (String) -> Unit,
     onOpenFilters: () -> Unit,
     onDismissFilters: () -> Unit,
     onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
@@ -271,7 +271,7 @@ private fun SearchContent(
                 onLoadMore = onLoadMore,
                 onResultFocused = onResultFocused,
                 onGridViewportChanged = onGridViewportChanged,
-                onPlay = onPlay,
+                onOpenResult = onOpenResult,
             )
         }
     }
@@ -588,7 +588,7 @@ private fun SearchResults(
     onLoadMore: () -> Unit,
     onResultFocused: (String) -> Unit,
     onGridViewportChanged: (GridViewportSnapshot) -> Unit,
-    onPlay: (String) -> Unit,
+    onOpenResult: (String) -> Unit,
 ) {
     when (val results = state.results) {
         SearchResultsState.AwaitingQuery -> SearchStatus(
@@ -669,10 +669,10 @@ private fun SearchResults(
                 }.distinctUntilChanged().collect(onGridViewportChanged)
             }
             Column(modifier = Modifier.fillMaxSize()) {
-                state.playbackError?.let { error ->
+                state.resolutionError?.let { error ->
                     Text(
                         text = stringResource(
-                            R.string.resolve_playback_failed,
+                            R.string.resolve_resource_failed,
                             appErrorText(error),
                         ),
                         color = Danger,
@@ -714,7 +714,7 @@ private fun SearchResults(
                             result = result,
                             coverRatio = coverRatio,
                             restoreFocus = result.id == restoreResultId &&
-                                (requestInitialFocus || state.playbackError != null),
+                                (requestInitialFocus || state.resolutionError != null),
                             entryFocusRequester = resultEntryFocusRequester.takeIf {
                                 resultIndex == firstVisibleResultIndex
                             },
@@ -738,7 +738,7 @@ private fun SearchResults(
                                     onLoadMore()
                                 }
                             },
-                            onClick = { onPlay(result.id) },
+                            onClick = { onOpenResult(result.id) },
                         )
                     }
                     if (results.hasNext && results.isLoadingMore) {

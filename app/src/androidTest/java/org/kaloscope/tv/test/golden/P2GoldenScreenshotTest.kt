@@ -154,7 +154,7 @@ class P2GoldenScreenshotTest {
                         onRetry = {},
                         onLoadMore = {},
                         onResultFocused = {},
-                        onPlay = {},
+                        onOpenResult = {},
                         onOpenFilters = {},
                         onDismissFilters = {},
                         onApplyFilters = {},

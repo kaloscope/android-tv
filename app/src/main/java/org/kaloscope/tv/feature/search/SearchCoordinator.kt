@@ -48,19 +48,14 @@ sealed interface SearchUiState {
         val focusedResultId: String? = null,
         val gridViewport: GridViewportSnapshot = GridViewportSnapshot.Top,
         val resolvingResultId: String? = null,
-        val playbackError: AppError? = null,
-        val pendingPlaybackRequestId: String? = null,
-        val pendingReaderRequestId: String? = null,
+        val resolutionError: AppError? = null,
+        val pendingDestination: SearchPendingDestination? = null,
     ) : SearchUiState {
         val indexers
             get() = profiles.map(IndexerSourceProfile::indexer)
 
         val selectedProfile: IndexerSourceProfile
             get() = profiles.first { it.indexer.id == selectedIndexerId }
-
-        val pendingDestination: SearchPendingDestination?
-            get() = pendingPlaybackRequestId?.let { SearchPendingDestination.Player(it) }
-                ?: pendingReaderRequestId?.let { SearchPendingDestination.Reader(it) }
     }
 }
 
@@ -148,7 +143,7 @@ class SearchCoordinator(
             focusedResultId = null,
             gridViewport = GridViewportSnapshot.Top,
             resolvingResultId = null,
-            playbackError = null,
+            resolutionError = null,
         )
         if (!profile.keywordRequired) {
             search(session)
@@ -174,7 +169,7 @@ class SearchCoordinator(
             focusedResultId = null,
             gridViewport = GridViewportSnapshot.Top,
             resolvingResultId = null,
-            playbackError = null,
+            resolutionError = null,
         )
         loadFirstPage(session, profile, keyword, content.appliedFilters)
     }
@@ -290,7 +285,7 @@ class SearchCoordinator(
         }
     }
 
-    suspend fun play(
+    suspend fun openResult(
         session: Session,
         resultId: String,
         settings: TvSettings = TvSettings(),
@@ -303,7 +298,7 @@ class SearchCoordinator(
         val generation = ++resolutionGeneration
         mutableState.value = content.copy(
             resolvingResultId = resultId,
-            playbackError = null,
+            resolutionError = null,
         )
         val resolved = try {
             networkResourceRepository.resolveResource(
@@ -328,7 +323,7 @@ class SearchCoordinator(
         }
         when (resolved) {
             is AppResult.Failure -> updateContent {
-                copy(resolvingResultId = null, playbackError = resolved.error)
+                copy(resolvingResultId = null, resolutionError = resolved.error)
             }
 
             is AppResult.Success -> when (val resource = resolved.value) {
@@ -346,9 +341,10 @@ class SearchCoordinator(
                     requestStore.put(request)
                     updateContent {
                         copy(
-                            playbackError = null,
-                            pendingPlaybackRequestId = request.requestId,
-                            pendingReaderRequestId = null,
+                            resolutionError = null,
+                            pendingDestination = SearchPendingDestination.Player(
+                                request.requestId,
+                            ),
                         )
                     }
                 }
@@ -390,16 +386,8 @@ class SearchCoordinator(
 
     fun consumeDestination(requestId: String) {
         val content = mutableState.value as? SearchUiState.Content ?: return
-        if (
-            content.pendingPlaybackRequestId == requestId ||
-            content.pendingReaderRequestId == requestId
-        ) {
-            mutableState.value = content.copy(
-                pendingPlaybackRequestId = content.pendingPlaybackRequestId
-                    ?.takeUnless { it == requestId },
-                pendingReaderRequestId = content.pendingReaderRequestId
-                    ?.takeUnless { it == requestId },
-            )
+        if (content.pendingDestination?.requestId == requestId) {
+            mutableState.value = content.copy(pendingDestination = null)
         }
     }
 
@@ -407,9 +395,8 @@ class SearchCoordinator(
         readerRequestStore.put(request)
         updateContent {
             copy(
-                playbackError = null,
-                pendingPlaybackRequestId = null,
-                pendingReaderRequestId = request.requestId,
+                resolutionError = null,
+                pendingDestination = SearchPendingDestination.Reader(request.requestId),
             )
         }
     }

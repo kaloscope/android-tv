@@ -76,11 +76,11 @@ class SearchViewModel @Inject constructor(
     fun rememberGridViewport(snapshot: GridViewportSnapshot) =
         coordinator.rememberGridViewport(snapshot)
 
-    fun play(
+    fun openResult(
         session: Session,
         resultId: String,
         settings: TvSettings = TvSettings(),
-    ) = startRequest { coordinator.play(session, resultId, settings) }
+    ) = startRequest { coordinator.openResult(session, resultId, settings) }
 
     fun cancelResolution(): Boolean {
         val cancelled = coordinator.cancelResolution()

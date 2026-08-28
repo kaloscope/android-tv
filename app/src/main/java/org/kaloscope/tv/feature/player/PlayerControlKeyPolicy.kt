@@ -61,12 +61,22 @@ internal object PlayerControlKeyPolicy {
         context: PlayerControlContext,
         key: PlayerRemoteKey,
         phase: PlayerKeyPhase,
-    ): PlayerControlCommand? =
-        when (context) {
-            PlayerControlContext.HiddenControls -> hiddenControlsCommand(key, phase)
-            PlayerControlContext.Preview -> previewCommand(key, phase)
-            PlayerControlContext.Progress -> progressCommand(key, phase)
+    ): PlayerControlCommand? {
+        if (phase == PlayerKeyPhase.Up) {
+            return if (key == PlayerRemoteKey.Left || key == PlayerRemoteKey.Right) {
+                PlayerControlCommand.SubmitSeekPreview
+            } else {
+                null
+            }
         }
+        return when (context) {
+            PlayerControlContext.HiddenControls,
+            PlayerControlContext.Preview,
+            -> overlayCommand(context, key)
+
+            PlayerControlContext.Progress -> progressCommand(key)
+        }
+    }
 
     fun previewTarget(
         currentTargetMillis: Long,
@@ -85,51 +95,11 @@ internal object PlayerControlKeyPolicy {
             PlayerBackContext.Player -> PlayerControlCommand.ExitPlayer
         }
 
-    private fun hiddenControlsCommand(
+    private fun overlayCommand(
+        context: PlayerControlContext,
         key: PlayerRemoteKey,
-        phase: PlayerKeyPhase,
-    ): PlayerControlCommand? {
-        if (
-            phase == PlayerKeyPhase.Up &&
-            (key == PlayerRemoteKey.Left || key == PlayerRemoteKey.Right)
-        ) {
-            return PlayerControlCommand.SubmitSeekPreview
-        }
-        if (phase != PlayerKeyPhase.Down) {
-            return null
-        }
-        return when (key) {
-            PlayerRemoteKey.Center ->
-                PlayerControlCommand.TogglePlaybackAndShowControls
-
-            PlayerRemoteKey.Left ->
-                PlayerControlCommand.SeekAndShowPreview(-SEEK_INCREMENT_MILLIS)
-
-            PlayerRemoteKey.Right ->
-                PlayerControlCommand.SeekAndShowPreview(SEEK_INCREMENT_MILLIS)
-
-            PlayerRemoteKey.Up,
-            PlayerRemoteKey.Down,
-            -> PlayerControlCommand.ShowPreview
-
-            PlayerRemoteKey.Back -> null
-        }
-    }
-
-    private fun previewCommand(
-        key: PlayerRemoteKey,
-        phase: PlayerKeyPhase,
-    ): PlayerControlCommand? {
-        if (
-            phase == PlayerKeyPhase.Up &&
-            (key == PlayerRemoteKey.Left || key == PlayerRemoteKey.Right)
-        ) {
-            return PlayerControlCommand.SubmitSeekPreview
-        }
-        if (phase != PlayerKeyPhase.Down) {
-            return null
-        }
-        return when (key) {
+    ): PlayerControlCommand? =
+        when (key) {
             PlayerRemoteKey.Center ->
                 PlayerControlCommand.TogglePlaybackAndShowControls
 
@@ -140,39 +110,46 @@ internal object PlayerControlKeyPolicy {
                 PlayerControlCommand.SeekAndShowPreview(SEEK_INCREMENT_MILLIS)
 
             PlayerRemoteKey.Up ->
-                PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.Progress)
+                if (context == PlayerControlContext.HiddenControls) {
+                    PlayerControlCommand.ShowPreview
+                } else {
+                    PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.Progress)
+                }
+
+            PlayerRemoteKey.Down ->
+                if (context == PlayerControlContext.HiddenControls) {
+                    PlayerControlCommand.ShowPreview
+                } else {
+                    PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause)
+                }
+
+            PlayerRemoteKey.Back ->
+                if (context == PlayerControlContext.Preview) {
+                    PlayerControlCommand.HideControls
+                } else {
+                    null
+                }
+        }
+
+    private fun progressCommand(
+        key: PlayerRemoteKey,
+    ): PlayerControlCommand? =
+        when (key) {
+            PlayerRemoteKey.Left ->
+                PlayerControlCommand.PreviewSeek(-SEEK_INCREMENT_MILLIS)
+
+            PlayerRemoteKey.Right ->
+                PlayerControlCommand.PreviewSeek(SEEK_INCREMENT_MILLIS)
+
+            PlayerRemoteKey.Center ->
+                PlayerControlCommand.TogglePlaybackAndShowControls
 
             PlayerRemoteKey.Down ->
                 PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause)
 
-            PlayerRemoteKey.Back -> PlayerControlCommand.HideControls
-        }
-    }
-
-    private fun progressCommand(
-        key: PlayerRemoteKey,
-        phase: PlayerKeyPhase,
-    ): PlayerControlCommand? =
-        when {
-            phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Left ->
-                PlayerControlCommand.PreviewSeek(-SEEK_INCREMENT_MILLIS)
-
-            phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Right ->
-                PlayerControlCommand.PreviewSeek(SEEK_INCREMENT_MILLIS)
-
-            phase == PlayerKeyPhase.Up &&
-                (key == PlayerRemoteKey.Left || key == PlayerRemoteKey.Right) ->
-                PlayerControlCommand.SubmitSeekPreview
-
-            phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Center ->
-                PlayerControlCommand.TogglePlaybackAndShowControls
-
-            phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Down ->
-                PlayerControlCommand.ShowFullControls(PlayerControlFocusTarget.PlayPause)
-
-            phase == PlayerKeyPhase.Down && key == PlayerRemoteKey.Back ->
+            PlayerRemoteKey.Back ->
                 PlayerControlCommand.HideControls
 
-            else -> null
+            PlayerRemoteKey.Up -> null
         }
 }

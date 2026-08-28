@@ -148,7 +148,7 @@ class LibraryCoordinator(
                 session = session,
                 libraryId = content.selectedLibraryId,
                 pageNumber = nextPage,
-                keyword = content.submittedKeyword.nonBlankOrNull(),
+                keyword = content.submittedKeyword.takeIf(String::isNotBlank),
             )
         ) {
             is AppResult.Failure -> updateContent {
@@ -196,7 +196,7 @@ class LibraryCoordinator(
             val result = repository.getMediaPage(
                 session = session,
                 libraryId = content.selectedLibraryId,
-                keyword = content.submittedKeyword.nonBlankOrNull(),
+                keyword = content.submittedKeyword.takeIf(String::isNotBlank),
             )
         ) {
             is AppResult.Failure -> updateContent {
@@ -227,5 +227,3 @@ class LibraryCoordinator(
         mutableState.value = content.transform()
     }
 }
-
-private fun String.nonBlankOrNull(): String? = takeIf(String::isNotBlank)

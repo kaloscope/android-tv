@@ -1,6 +1,7 @@
 package org.kaloscope.tv.feature.player
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -10,9 +11,6 @@ import org.junit.Test
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
 import org.kaloscope.tv.core.model.DanmakuComment
-import org.kaloscope.tv.core.model.MediaDetail
-import org.kaloscope.tv.core.model.MediaLibrary
-import org.kaloscope.tv.core.model.MediaPage
 import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
@@ -21,8 +19,9 @@ import org.kaloscope.tv.core.player.PlaybackOrigin
 import org.kaloscope.tv.core.player.PlaybackPreparationStage
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestStore
-import org.kaloscope.tv.data.media.MediaRepository
+import org.kaloscope.tv.test.StubMediaRepository
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class PlayerCoordinatorTest {
     @Test
     fun `local load reports resource then danmaku preparation stages`() = runTest {
@@ -310,27 +309,11 @@ private class FakeMediaRepository(
     private val deferredSubtitles: CompletableDeferred<AppResult<List<SubtitleTrack>>>? = null,
     private val deferredDanmakus: CompletableDeferred<AppResult<List<DanmakuComment>>>? = null,
     private val deferredProbe: CompletableDeferred<AppResult<MediaProbe>>? = null,
-) : MediaRepository {
+) : StubMediaRepository() {
     var subtitleCalls = 0
     var danmakuCalls = 0
     var probeCalls = 0
     val probePaths = mutableListOf<String>()
-
-    override suspend fun getLibraries(session: Session): AppResult<List<MediaLibrary>> =
-        error("Not used")
-
-    override suspend fun getMediaPage(
-        session: Session,
-        libraryId: Long,
-        pageNumber: Int,
-        pageSize: Int,
-        keyword: String?,
-    ): AppResult<MediaPage> = error("Not used")
-
-    override suspend fun getMediaDetail(
-        session: Session,
-        mediaId: Long,
-    ): AppResult<MediaDetail> = error("Not used")
 
     override suspend fun getMediaProbe(
         session: Session,

@@ -313,10 +313,13 @@ class SearchCoordinatorTest {
         coordinator.updateQuery("星际")
         coordinator.search(session())
 
-        coordinator.play(session(), "v1")
+        coordinator.openResult(session(), "v1")
 
         val state = coordinator.state.value as SearchUiState.Content
-        assertEquals("network-request", state.pendingPlaybackRequestId)
+        assertEquals(
+            SearchPendingDestination.Player("network-request"),
+            state.pendingDestination,
+        )
         assertEquals("v1", state.resolvingResultId)
         val request = store.get("network-request") as PlaybackRequest.NetworkVideo
         assertEquals(PlaybackOrigin.NetworkSearch, request.origin)
@@ -325,7 +328,7 @@ class SearchCoordinatorTest {
         coordinator.consumeDestination("network-request")
 
         val consumed = coordinator.state.value as SearchUiState.Content
-        assertNull(consumed.pendingPlaybackRequestId)
+        assertNull(consumed.pendingDestination)
         assertEquals("v1", consumed.resolvingResultId)
 
         assertTrue(coordinator.cancelResolution())
@@ -349,11 +352,11 @@ class SearchCoordinatorTest {
         coordinator.updateQuery("星际")
         coordinator.search(session())
 
-        coordinator.play(session(), "v1")
+        coordinator.openResult(session(), "v1")
 
         val state = coordinator.state.value as SearchUiState.Content
         assertEquals(listOf("v1"), state.results.items.map { it.id })
-        assertEquals(AppError.Offline, state.playbackError)
+        assertEquals(AppError.Offline, state.resolutionError)
         assertNull(state.resolvingResultId)
     }
 
@@ -376,7 +379,7 @@ class SearchCoordinatorTest {
         coordinator.updateQuery("星际")
         coordinator.search(session())
 
-        coordinator.play(
+        coordinator.openResult(
             session = session(),
             resultId = "v1",
             settings = TvSettings(transcodeQuality = TranscodeQuality.Low),
@@ -423,7 +426,7 @@ class SearchCoordinatorTest {
         coordinator.updateQuery("comic")
         coordinator.search(session())
 
-        coordinator.play(
+        coordinator.openResult(
             session(),
             "v1",
             TvSettings(
@@ -475,7 +478,7 @@ class SearchCoordinatorTest {
         coordinator.load(session())
         coordinator.updateQuery("book")
         coordinator.search(session())
-        coordinator.play(
+        coordinator.openResult(
             session(),
             "v1",
             TvSettings(textReader = textSettings),
@@ -510,7 +513,7 @@ class SearchCoordinatorTest {
         coordinator.updateQuery("video")
         coordinator.search(session())
 
-        val job = launch { coordinator.play(session(), "v1") }
+        val job = launch { coordinator.openResult(session(), "v1") }
         resolutionStarted.await()
         assertEquals(
             "v1",
@@ -542,7 +545,7 @@ class SearchCoordinatorTest {
         coordinator.updateQuery("video")
         coordinator.search(session())
 
-        val job = launch { coordinator.play(session(), "v1") }
+        val job = launch { coordinator.openResult(session(), "v1") }
         resolutionStarted.await()
 
         assertTrue(coordinator.cancelResolution())

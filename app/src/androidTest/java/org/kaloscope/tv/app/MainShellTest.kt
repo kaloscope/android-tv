@@ -86,6 +86,7 @@ import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.player.PlayerUiState
 import org.kaloscope.tv.feature.reader.ReaderUiState
+import org.kaloscope.tv.feature.search.SearchPendingDestination
 import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.settings.SettingsConnection
@@ -1325,7 +1326,7 @@ class MainShellTest {
         composeRule.runOnIdle {
             searchState = searchState.copy(
                 resolvingResultId = null,
-                playbackError = AppError.Offline,
+                resolutionError = AppError.Offline,
             )
         }
 
@@ -1988,9 +1989,9 @@ class MainShellTest {
                             }
                         },
                         consumeDestination = { requestId ->
-                            if (searchState.pendingPlaybackRequestId == requestId) {
+                            if (searchState.pendingDestination?.requestId == requestId) {
                                 searchState = searchState.copy(
-                                    pendingPlaybackRequestId = null,
+                                    pendingDestination = null,
                                 )
                             }
                         },
@@ -2010,7 +2011,7 @@ class MainShellTest {
             .assertIsFocused()
         composeRule.runOnIdle {
             searchState = searchState.copy(
-                pendingPlaybackRequestId = "network-request",
+                pendingDestination = SearchPendingDestination.Player("network-request"),
                 resolvingResultId = "v1",
             )
         }
@@ -2098,9 +2099,9 @@ class MainShellTest {
                             }
                         },
                         consumeDestination = { requestId ->
-                            if (searchState.pendingReaderRequestId == requestId) {
+                            if (searchState.pendingDestination?.requestId == requestId) {
                                 searchState = searchState.copy(
-                                    pendingReaderRequestId = null,
+                                    pendingDestination = null,
                                 )
                             }
                         },
@@ -2123,7 +2124,7 @@ class MainShellTest {
             .assertIsFocused()
         composeRule.runOnIdle {
             searchState = searchState.copy(
-                pendingReaderRequestId = "reader-request",
+                pendingDestination = SearchPendingDestination.Reader("reader-request"),
                 resolvingResultId = "t1",
             )
         }
