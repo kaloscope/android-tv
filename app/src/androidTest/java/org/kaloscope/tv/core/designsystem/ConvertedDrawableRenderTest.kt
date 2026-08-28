@@ -84,6 +84,7 @@ class ConvertedDrawableRenderTest {
         val cutoutProbes = listOf(
             CutoutProbe("audited-info-icon", R.drawable.ic_info, 12f, 5f),
             CutoutProbe("audited-delete-icon", R.drawable.ic_delete, 12f, 12f),
+            CutoutProbe("audited-delete-left-interior", R.drawable.ic_delete, 8f, 12f),
             CutoutProbe("audited-image-broken-icon", R.drawable.ic_image_broken, 8f, 8f),
         )
     }
