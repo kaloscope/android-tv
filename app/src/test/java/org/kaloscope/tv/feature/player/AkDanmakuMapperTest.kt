@@ -1,6 +1,7 @@
 package org.kaloscope.tv.feature.player
 
 import com.kuaishou.akdanmaku.data.DanmakuItemData
+import com.kuaishou.akdanmaku.ecs.component.filter.DuplicateMergedFilter
 import com.kuaishou.akdanmaku.ecs.component.filter.TextColorFilter
 import com.kuaishou.akdanmaku.ecs.component.filter.TypeFilter
 import org.junit.Assert.assertEquals
@@ -45,6 +46,34 @@ class AkDanmakuMapperTest {
     }
 
     @Test
+    fun `duplicate merge follows the upstream ten second grouping window`() {
+        val mapped = listOf(
+            comment("first", "same", "scroll", null, 0),
+            comment("other", "other", "scroll", null, 500),
+            comment("boundary", "same", "top", null, 10_000),
+            comment("next-group", "same", "bottom", null, 10_001),
+            comment("next-boundary", "same", "scroll", null, 20_001),
+        ).toAkDanmakuData()
+
+        assertEquals(
+            listOf("same", "other", "same", "same", "same"),
+            mapped
+                .filterNot {
+                    it.mergedType == DanmakuItemData.MERGED_TYPE_MERGED
+                }
+                .map { it.content },
+        )
+        assertEquals(
+            listOf("same X2", "other", "same X2"),
+            mapped
+                .filterNot {
+                    it.mergedType == DanmakuItemData.MERGED_TYPE_ORIGINAL
+                }
+                .map { it.content },
+        )
+    }
+
+    @Test
     fun `settings map to non-overlapping Ak config and type filter`() {
         val config = DanmakuSettings(
             enabled = false,
@@ -63,7 +92,7 @@ class AkDanmakuMapperTest {
         assertEquals(0.25f, config.screenPart, 0f)
         assertFalse(config.allowOverlap)
 
-        val typeFilter = config.dataFilter.single() as TypeFilter
+        val typeFilter = config.dataFilter.filterIsInstance<TypeFilter>().single()
         assertFalse(
             DanmakuItemData.DANMAKU_MODE_ROLLING in typeFilter.filterSet,
         )
@@ -72,6 +101,9 @@ class AkDanmakuMapperTest {
         )
         assertTrue(
             DanmakuItemData.DANMAKU_MODE_CENTER_BOTTOM in typeFilter.filterSet,
+        )
+        assertFalse(
+            config.dataFilter.filterIsInstance<DuplicateMergedFilter>().single().enable,
         )
     }
 

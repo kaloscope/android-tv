@@ -20,6 +20,9 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,6 +67,44 @@ fun KaloscopeSidePanelSelectionRow(
                     maxLines = 1,
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun KaloscopeSidePanelToggleRow(
+    title: String,
+    checked: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    KaloscopeButton(
+        onClick = onToggle,
+        size = KaloscopeControlSize.Row,
+        modifier = modifier
+            .fillMaxWidth()
+            .consumeHorizontalDirections()
+            .semantics {
+                toggleableState = if (checked) {
+                    ToggleableState.On
+                } else {
+                    ToggleableState.Off
+                }
+            },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            Spacer(Modifier.width(12.dp))
+            KaloscopeSwitchIndicator(checked = checked)
         }
     }
 }

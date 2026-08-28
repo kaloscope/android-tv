@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -37,6 +38,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasTextExactly
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -1499,7 +1501,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("默认开启弹幕")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput {
-                repeat(5) { pressKey(Key.DirectionDown) }
+                repeat(6) { pressKey(Key.DirectionDown) }
             }
 
         composeRule.onNodeWithText("屏蔽类型")
@@ -1537,10 +1539,10 @@ class SettingsScreenTest {
         }
 
         listOf(
-            SettingsSection.Playback to "自动播放下一集",
-            SettingsSection.Danmaku to "默认开启弹幕",
-            SettingsSection.Subtitle to "默认开启字幕",
-        ).forEach { (section, title) ->
+            Triple(SettingsSection.Playback, "自动播放下一集", 1),
+            Triple(SettingsSection.Danmaku, "默认开启弹幕", 2),
+            Triple(SettingsSection.Subtitle, "默认开启字幕", 1),
+        ).forEach { (section, title, expectedSwitchCount) ->
             composeRule.runOnIdle { state = state.copy(section = section) }
 
             composeRule.onNode(hasClickAction() and hasText(title))
@@ -1551,10 +1553,10 @@ class SettingsScreenTest {
                         ToggleableState.On,
                     ),
                 )
-            composeRule.onNodeWithTag(
+            composeRule.onAllNodesWithTag(
                 testTag = "setting-switch-indicator",
                 useUnmergedTree = true,
-            ).assertExists()
+            ).assertCountEquals(expectedSwitchCount)
             composeRule.onNodeWithText("开启", useUnmergedTree = true).assertDoesNotExist()
             composeRule.onNodeWithText("关闭", useUnmergedTree = true).assertDoesNotExist()
         }
@@ -1662,6 +1664,59 @@ class SettingsScreenTest {
         composeRule.runOnIdle {
             assertEquals(false, updatedSettings?.enabled)
         }
+    }
+
+    @Test
+    fun danmakuDuplicateMergeDefaultsOffAndUpdatesTheWholeModel() {
+        var settings by mutableStateOf(TvSettings())
+        var updatedSettings: DanmakuSettings? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                SettingsScreen(
+                    session = session(),
+                    state = SettingsUiState.Content(
+                        settings = settings,
+                        section = SettingsSection.Danmaku,
+                    ),
+                    onRetry = {},
+                    onSelectSection = {},
+                    onPlaybackMode = {},
+                    onTranscodeQuality = {},
+                    onAutoplayNext = {},
+                    onDanmakuSettings = {
+                        updatedSettings = it
+                        settings = settings.copy(danmaku = it)
+                    },
+                    onSubtitleSettings = {},
+                    onStartPage = {},
+                    onTestConnection = {},
+                    onManageServers = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        val row = composeRule.onNode(hasClickAction() and hasText("合并重复"))
+        row.performScrollTo()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ToggleableState,
+                    ToggleableState.Off,
+                ),
+            )
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsFocused()
+
+        composeRule.runOnIdle {
+            assertEquals(true, updatedSettings?.mergeDuplicates)
+        }
+        row.assert(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.ToggleableState,
+                ToggleableState.On,
+            ),
+        )
     }
 
     @Test

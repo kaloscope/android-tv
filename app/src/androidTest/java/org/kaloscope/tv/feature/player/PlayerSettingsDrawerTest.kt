@@ -12,6 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -330,6 +334,37 @@ class PlayerSettingsDrawerTest {
             assertEquals(70, harness.danmakuSettings.displayAreaPercent)
             assertEquals(1, harness.danmakuUpdateCount)
         }
+    }
+
+    @Test
+    fun duplicateMergeToggleUpdatesSessionAndPersistedPreferences() {
+        val harness = DrawerHarness()
+        setDrawer(harness)
+        scrollRowIntoView("player-danmaku-merge-duplicates-row")
+
+        val row = composeRule.onNodeWithTag("player-danmaku-merge-duplicates-row")
+        row.assert(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.ToggleableState,
+                ToggleableState.Off,
+            ),
+        )
+        row.performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+            .assertIsFocused()
+
+        composeRule.runOnIdle {
+            assertEquals(true, harness.danmakuSettings.mergeDuplicates)
+            assertEquals(1, harness.danmakuUpdateCount)
+            assertEquals(1, harness.danmakuPersistenceCount)
+            assertEquals(true, harness.persistedDanmakuSettings?.mergeDuplicates)
+        }
+        row.assert(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.ToggleableState,
+                ToggleableState.On,
+            ),
+        )
     }
 
     @Test

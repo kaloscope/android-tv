@@ -110,6 +110,7 @@ class SettingsCoordinator(
                     displayAreaPercent = value.displayAreaPercent,
                     visibleModes = value.visibleModes,
                     blockColored = value.blockColored,
+                    mergeDuplicates = value.mergeDuplicates,
                 ),
             )
         }

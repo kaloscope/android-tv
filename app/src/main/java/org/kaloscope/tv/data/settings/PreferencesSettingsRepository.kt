@@ -65,6 +65,7 @@ class PreferencesSettingsRepository @Inject constructor(
                 preferences[DANMAKU_BOTTOM_VISIBLE] =
                     DanmakuDisplayMode.Bottom in settings.danmaku.visibleModes
                 preferences[DANMAKU_COLORED_BLOCKED] = settings.danmaku.blockColored
+                preferences[DANMAKU_MERGE_DUPLICATES] = settings.danmaku.mergeDuplicates
                 val subtitle = SubtitleSettingsPolicy.sanitize(settings.subtitle)
                 preferences[SUBTITLE_ENABLED] = subtitle.enabled
                 preferences[SUBTITLE_LANGUAGE_PREFERENCE] = subtitle.languagePreference
@@ -139,6 +140,7 @@ class PreferencesSettingsRepository @Inject constructor(
                     }
                 },
                 blockColored = this[DANMAKU_COLORED_BLOCKED] ?: false,
+                mergeDuplicates = this[DANMAKU_MERGE_DUPLICATES] ?: false,
             ),
             subtitle = SubtitleSettingsPolicy.sanitize(
                 SubtitleSettings(
@@ -249,6 +251,7 @@ class PreferencesSettingsRepository @Inject constructor(
         val DANMAKU_TOP_VISIBLE = booleanPreferencesKey("danmaku_top_visible")
         val DANMAKU_BOTTOM_VISIBLE = booleanPreferencesKey("danmaku_bottom_visible")
         val DANMAKU_COLORED_BLOCKED = booleanPreferencesKey("danmaku_colored_blocked")
+        val DANMAKU_MERGE_DUPLICATES = booleanPreferencesKey("danmaku_merge_duplicates")
         val SUBTITLE_ENABLED = booleanPreferencesKey("subtitle_enabled")
         val SUBTITLE_LANGUAGE_PREFERENCE =
             stringPreferencesKey("subtitle_language_preference")

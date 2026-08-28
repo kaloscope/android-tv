@@ -1,9 +1,11 @@
 package org.kaloscope.tv.feature.player
 
 import com.kuaishou.akdanmaku.data.DanmakuItemData
+import com.kuaishou.akdanmaku.ecs.component.filter.DuplicateMergedFilter
 import com.kuaishou.akdanmaku.ecs.component.filter.TextColorFilter
 import com.kuaishou.akdanmaku.ecs.component.filter.TypeFilter
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -12,6 +14,31 @@ import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
 
 class AkDanmakuRuntimeConfigStateTest {
+    @Test
+    fun `duplicate merge toggles the retained filter and advances generation`() {
+        val state = AkDanmakuRuntimeConfigState()
+        val initialConfig = state.update(
+            DanmakuSettings(mergeDuplicates = false),
+        )
+        val retainedFilter = initialConfig.dataFilter
+            .filterIsInstance<DuplicateMergedFilter>()
+            .single()
+        val initialGeneration = initialConfig.filterGeneration
+
+        assertFalse(retainedFilter.enable)
+
+        val updatedConfig = state.update(
+            DanmakuSettings(mergeDuplicates = true),
+        )
+
+        assertSame(
+            retainedFilter,
+            updatedConfig.dataFilter.filterIsInstance<DuplicateMergedFilter>().single(),
+        )
+        assertTrue(retainedFilter.enable)
+        assertTrue(updatedConfig.filterGeneration > initialGeneration)
+    }
+
     @Test
     fun `same-size positional update mutates installed filter and advances generation`() {
         val state = AkDanmakuRuntimeConfigState()
@@ -30,7 +57,7 @@ class AkDanmakuRuntimeConfigStateTest {
         )
 
         assertEquals(installedFilters.size, updatedConfig.dataFilter.size)
-        val retainedTypeFilter = installedFilters.single() as TypeFilter
+        val retainedTypeFilter = installedFilters.filterIsInstance<TypeFilter>().single()
         assertTrue(
             DanmakuItemData.DANMAKU_MODE_ROLLING in retainedTypeFilter.filterSet,
         )

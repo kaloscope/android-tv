@@ -31,6 +31,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelPalette
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSectionHeader
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSelectionRow
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSessionHint
+import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelToggleRow
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
@@ -354,6 +355,22 @@ internal fun PlayerSettingsDrawer(
                         onIncrease = { updateDanmakuPreferences(increased) },
                         modifier = Modifier.testTag("player-danmaku-display-area-row"),
                         adjustmentTestTagPrefix = "player-danmaku-display-area",
+                    )
+                }
+                item {
+                    KaloscopeSidePanelToggleRow(
+                        title = stringResource(R.string.danmaku_merge_duplicates),
+                        checked = danmakuSettings.mergeDuplicates,
+                        onToggle = {
+                            updateDanmakuPreferences(
+                                danmakuSettings.copy(
+                                    mergeDuplicates = !danmakuSettings.mergeDuplicates,
+                                ),
+                            )
+                        },
+                        modifier = Modifier.testTag(
+                            "player-danmaku-merge-duplicates-row",
+                        ),
                     )
                 }
                 item {

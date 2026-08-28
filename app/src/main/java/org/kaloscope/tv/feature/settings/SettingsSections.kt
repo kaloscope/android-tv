@@ -727,6 +727,15 @@ internal fun DanmakuDefaultSettings(
             },
             onSelect = { onChange(settings.copy(displayAreaPercent = it)) },
         )
+        ToggleSettingRow(
+            title = stringResource(R.string.danmaku_merge_duplicates),
+            description = stringResource(R.string.danmaku_merge_duplicates_description),
+            checked = settings.mergeDuplicates,
+            interactionsEnabled = interactionsEnabled,
+            onToggle = {
+                onChange(settings.copy(mergeDuplicates = !settings.mergeDuplicates))
+            },
+        )
         ChoiceSettingRow(
             title = stringResource(R.string.danmaku_block_types),
             description = stringResource(R.string.danmaku_block_types_description),

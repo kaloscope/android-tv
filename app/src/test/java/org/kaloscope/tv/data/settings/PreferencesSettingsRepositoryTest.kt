@@ -246,6 +246,7 @@ class PreferencesSettingsRepositoryTest {
                 DanmakuDisplayMode.Top,
             ),
             blockColored = true,
+            mergeDuplicates = true,
         )
 
         PreferencesSettingsRepository(store).saveSettings(

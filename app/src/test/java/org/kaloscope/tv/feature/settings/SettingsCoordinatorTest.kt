@@ -248,6 +248,7 @@ class SettingsCoordinatorTest {
                     DanmakuDisplayMode.Top,
                 ),
                 blockColored = true,
+                mergeDuplicates = true,
             ),
         )
 
@@ -261,6 +262,7 @@ class SettingsCoordinatorTest {
                 DanmakuDisplayMode.Top,
             ),
             blockColored = true,
+            mergeDuplicates = true,
         )
         val state = coordinator.state.value as SettingsUiState.Content
         assertEquals(expected, state.settings.danmaku)

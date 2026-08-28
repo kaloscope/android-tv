@@ -116,6 +116,8 @@
     <string name="danmaku_opacity_description">设置弹幕文字的默认不透明度。</string>
     <string name="danmaku_display_area">显示区域</string>
     <string name="danmaku_display_area_description">限制弹幕占用屏幕高度，避免遮挡画面。</string>
+    <string name="danmaku_merge_duplicates">合并重复</string>
+    <string name="danmaku_merge_duplicates_description">合并内容相同的弹幕。</string>
     <string name="percentage_value">%1$d%%</string>
     <string name="default_subtitle">默认开启字幕</string>
     <string name="default_subtitle_description">有字幕时默认显示，播放中仍可临时关闭。</string>
