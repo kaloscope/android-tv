@@ -52,24 +52,44 @@ class LocalActionIconResourceTest {
     fun deleteIconPreservesWebUiGeometry() {
         val document = parse("ic_delete")
         val root = document.documentElement
-        val path = document.singlePath()
+        val paths = document.paths()
 
-        assertResourceFrame("ic_delete", root, document)
-        assertEquals(deletePath, path.androidAttribute("pathData"))
-        assertEquals("#FFFFFF", path.androidAttribute("fillColor"))
-        assertEquals("", path.androidAttribute("strokeColor"))
+        assertResourceFrame(
+            resourceName = "ic_delete",
+            root = root,
+            document = document,
+            expectedPathCount = deletePaths.size,
+        )
+        assertEquals(deletePaths, paths.map { it.androidAttribute("pathData") })
+        assertEquals(
+            listOf("#FFFFFF", "#FFFFFF", "#FFFFFF"),
+            paths.map { it.androidAttribute("fillColor") },
+        )
+        assertEquals(
+            listOf("", "", ""),
+            paths.map { it.androidAttribute("strokeColor") },
+        )
+        assertEquals(
+            listOf("evenOdd", "", ""),
+            paths.map { it.androidAttribute("fillType") },
+        )
     }
 
     private fun assertResourceFrame(
         resourceName: String,
         root: Element,
         document: Document,
+        expectedPathCount: Int = 1,
     ) {
         assertEquals("$resourceName width", "24dp", root.androidAttribute("width"))
         assertEquals("$resourceName height", "24dp", root.androidAttribute("height"))
         assertEquals("$resourceName viewportWidth", "24", root.androidAttribute("viewportWidth"))
         assertEquals("$resourceName viewportHeight", "24", root.androidAttribute("viewportHeight"))
-        assertEquals("$resourceName path count", 1, document.getElementsByTagName("path").length)
+        assertEquals(
+            "$resourceName path count",
+            expectedPathCount,
+            document.getElementsByTagName("path").length,
+        )
         assertEquals("$resourceName group count", 0, document.getElementsByTagName("group").length)
     }
 
@@ -84,6 +104,11 @@ class LocalActionIconResourceTest {
 
     private fun Document.singlePath(): Element =
         getElementsByTagName("path").item(0) as Element
+
+    private fun Document.paths(): List<Element> {
+        val nodes = getElementsByTagName("path")
+        return (0 until nodes.length).map { nodes.item(it) as Element }
+    }
 
     private fun Element.androidAttribute(name: String): String =
         getAttributeNS(androidNamespace, name)
@@ -114,13 +139,15 @@ class LocalActionIconResourceTest {
                 "a.75.75 0 0 1-1.5 0v-5a.75.75 0 0 1 .75-.75M12 9a1 1 0 1 0 0-2" +
                 "a1 1 0 0 0 0 2"
 
-        const val deletePath =
-            "M10 5h4a2 2 0 1 0-4 0M8.5 5a3.5 3.5 0 1 1 7 0h5.75" +
+        val deletePaths = listOf(
+            "M10 5h4a2 2 0 1 0-4 0zM8.5 5a3.5 3.5 0 1 1 7 0h5.75" +
                 "a.75.75 0 0 1 0 1.5h-1.32l-1.17 12.111A3.75 3.75 0 0 1 15.026 22" +
                 "H8.974a3.75 3.75 0 0 1-3.733-3.389L4.07 6.5H2.75a.75.75 0 0 1 0-1.5z" +
-                "m2 4.75a.75.75 0 0 0-1.5 0v7.5a.75.75 0 0 0 1.5 0z" +
-                "M14.25 9a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-1.5 0v-7.5" +
-                "a.75.75 0 0 1 .75-.75m-7.516 9.467a2.25 2.25 0 0 0 2.24 2.033h6.052" +
-                "a2.25 2.25 0 0 0 2.24-2.033L18.424 6.5H5.576z"
+                "M6.734 18.467a2.25 2.25 0 0 0 2.24 2.033h6.052" +
+                "a2.25 2.25 0 0 0 2.24-2.033L18.424 6.5H5.576z",
+            "M10.5 9.75a.75.75 0 0 0-1.5 0v7.5a.75.75 0 0 0 1.5 0z",
+            "M14.25 9a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-1.5 0v-7.5" +
+                "a.75.75 0 0 1 .75-.75z",
+        )
     }
 }
