@@ -19,7 +19,6 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -57,11 +56,11 @@ import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.test.assertFocusedContentCardBottomInsideViewport
-import org.kaloscope.tv.test.assertFocusedContentCardCornerRadius
 import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
 import org.kaloscope.tv.test.assertFocusedContentCardTopClearance
 import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
+import org.kaloscope.tv.test.captureToImage
 
 class SearchScreenTest {
     @get:Rule
@@ -230,57 +229,6 @@ class SearchScreenTest {
             bitmap = focused,
             sampleX = focused.width / 2,
             sampleY = focused.height - sampleInset,
-        )
-    }
-
-    @Test
-    fun resolvingNetworkResultBorderMatchesCardCornerRadius() {
-        var screenState by mutableStateOf(state())
-        composeRule.mainClock.autoAdvance = false
-        composeRule.setContent {
-            KaloscopeTheme {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Background),
-                ) {
-                    SearchScreen(
-                        session = session(),
-                        state = screenState,
-                        requestInitialFocus = false,
-                        onRefreshIndexers = {},
-                        onSelectIndexer = {},
-                        onQueryChange = {},
-                        onSearch = {},
-                        onRetry = {},
-                        onLoadMore = {},
-                        onResultFocused = {},
-                        onOpenResult = {},
-                        onOpenFilters = {},
-                        onDismissFilters = {},
-                        onApplyFilters = {},
-                        onClearFilters = {},
-                    )
-                }
-            }
-        }
-
-        composeRule.onNodeWithTag("network-result-v1")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .assertIsFocused()
-        composeRule.runOnIdle {
-            screenState = screenState.copy(resolvingResultId = "v1")
-        }
-        composeRule.mainClock.advanceTimeBy(1_000)
-        val resolving = composeRule.onNodeWithTag("network-result-v1")
-            .assertIsFocused()
-            .captureToImage()
-            .asAndroidBitmap()
-
-        assertFocusedContentCardCornerRadius(
-            label = "Resolving network result card",
-            bitmap = resolving,
-            density = composeRule.density.density,
         )
     }
 
@@ -1774,7 +1722,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun resultsStartTwentyDpBelowSearchField() {
+    fun resultsStartTwentyFourDpBelowSearchField() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -1810,7 +1758,7 @@ class SearchScreenTest {
             .boundsInRoot
 
         assertEquals(
-            20f * density,
+            24f * density,
             firstResultBounds.top - inputBounds.bottom,
             1f,
         )

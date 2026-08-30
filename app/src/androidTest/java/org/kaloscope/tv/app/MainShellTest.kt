@@ -31,7 +31,6 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
@@ -92,6 +91,9 @@ import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.settings.SettingsConnection
 import org.kaloscope.tv.feature.settings.SettingsSection
 import org.kaloscope.tv.feature.settings.SettingsUiState
+import org.kaloscope.tv.test.captureDeviceScreen
+import org.kaloscope.tv.test.captureScreenRegion
+import org.kaloscope.tv.test.captureToImage
 
 class MainShellTest {
     @get:Rule
@@ -422,7 +424,6 @@ class MainShellTest {
     @Test
     fun topNavigationIconIsStillCrossfadingHalfwayThroughFocusMotion() {
         var route by mutableStateOf<NavKey>(HomeRoute)
-        composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             KaloscopeTheme {
                 val homeFocus = remember { FocusRequester() }
@@ -453,24 +454,27 @@ class MainShellTest {
         val start = composeRule.onNodeWithTag(
             "main-nav-icon-search-regular",
             useUnmergedTree = true,
-        ).captureToImage().asAndroidBitmap()
+        ).captureScreenRegion()
 
+        composeRule.mainClock.autoAdvance = false
         composeRule.runOnIdle { route = SearchRoute }
         composeRule.mainClock.advanceTimeBy(
             KaloscopeMotion.FocusMillis.toLong() / 2,
         )
+        composeRule.waitForIdle()
         val inProgress = composeRule.onNodeWithTag(
             "main-nav-icon-search-filled",
             useUnmergedTree = true,
-        ).captureToImage().asAndroidBitmap()
+        ).captureScreenRegion()
 
         composeRule.mainClock.advanceTimeBy(
             KaloscopeMotion.FocusMillis.toLong() / 2 + 20,
         )
+        composeRule.waitForIdle()
         val settled = composeRule.onNodeWithTag(
             "main-nav-icon-search-filled",
             useUnmergedTree = true,
-        ).captureToImage().asAndroidBitmap()
+        ).captureScreenRegion()
 
         val foreground = OnBackground.toArgb()
         var selectedOnlyPixels = 0
@@ -563,7 +567,8 @@ class MainShellTest {
             }
         }
 
-        val homeBitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
+        composeRule.waitForIdle()
+        val homeBitmap = captureDeviceScreen()
         val sampleX = homeBitmap.width * 3 / 4
         val sampleY = 20
         val homePixel = homeBitmap.getPixel(sampleX, sampleY)
@@ -571,7 +576,8 @@ class MainShellTest {
         composeRule.runOnIdle {
             route = SearchRoute
         }
-        val searchBitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
+        composeRule.waitForIdle()
+        val searchBitmap = captureDeviceScreen()
         val searchPixel = searchBitmap.getPixel(sampleX, sampleY)
 
         assertEquals(

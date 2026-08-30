@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -29,7 +29,9 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextRange
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
@@ -66,6 +68,7 @@ import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchScreen
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.server.ServerSetupState
+import org.kaloscope.tv.test.captureToImage
 
 class P2GoldenScreenshotTest {
     @get:Rule
@@ -305,9 +308,23 @@ class P2GoldenScreenshotTest {
         composeRule.onNodeWithTag("golden-search-selection")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.waitForIdle()
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        // The platform input session can asynchronously restore its initial cursor position.
+        SystemClock.sleep(500)
+        composeRule.waitForIdle()
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onNodeWithTag("golden-search-selection")
             .performSemanticsAction(SemanticsActions.SetSelection) {
                 it(1, 5, false)
             }
+        composeRule.mainClock.advanceTimeBy(100)
+        assertEquals(
+            TextRange(1, 5),
+            composeRule.onNodeWithTag("golden-search-selection")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.TextSelectionRange],
+        )
         assertGolden(
             "search-selection-1920",
             composeRule.onNodeWithTag("golden-search-selection")

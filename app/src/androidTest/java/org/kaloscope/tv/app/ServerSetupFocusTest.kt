@@ -6,7 +6,6 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -25,6 +24,7 @@ import org.junit.Test
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.server.ServerSetupError
 import org.kaloscope.tv.feature.server.ServerSetupState
+import org.kaloscope.tv.test.captureToImage
 
 class ServerSetupFocusTest {
     @get:Rule

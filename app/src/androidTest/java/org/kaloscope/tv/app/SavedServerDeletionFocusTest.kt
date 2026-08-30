@@ -3,16 +3,13 @@ package org.kaloscope.tv.app
 import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
@@ -26,6 +23,8 @@ import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.server.SavedServerDeletionState
 import org.kaloscope.tv.feature.server.ServerSetupState
+import org.kaloscope.tv.test.captureDeviceScreen
+import org.kaloscope.tv.test.captureScreenRegion
 
 class SavedServerDeletionFocusTest {
     @get:Rule
@@ -62,8 +61,7 @@ class SavedServerDeletionFocusTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
 
         val bitmap = composeRule.onNodeWithTag("delete-server-home")
-            .captureToImage()
-            .asAndroidBitmap()
+            .captureScreenRegion()
         val lightPixelRows = (0 until bitmap.height).count { y ->
             (0 until bitmap.width).any { x ->
                 val pixel = bitmap.getPixel(x, y)
@@ -86,8 +84,7 @@ class SavedServerDeletionFocusTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
 
         val bitmap = composeRule.onNodeWithTag("delete-server-home")
-            .captureToImage()
-            .asAndroidBitmap()
+            .captureScreenRegion()
         val foregroundPixels = (0 until bitmap.height).sumOf { y ->
             (0 until bitmap.width).count { x ->
                 android.graphics.Color.red(bitmap.getPixel(x, y)) > 70
@@ -112,9 +109,8 @@ class SavedServerDeletionFocusTest {
         val focusedServerBounds = composeRule.onNodeWithTag("saved-server-home")
             .assertIsFocused()
             .getUnclippedBoundsInRoot()
-        val focusedServerHeight = composeRule.onRoot()
-            .captureToImage()
-            .asAndroidBitmap()
+        composeRule.waitForIdle()
+        val focusedServerHeight = captureDeviceScreen()
             .visibleSurfaceHeight(
                 bounds = focusedServerBounds,
                 density = density,
@@ -126,9 +122,8 @@ class SavedServerDeletionFocusTest {
         val focusedDeleteBounds = composeRule.onNodeWithTag("delete-server-home")
             .assertIsFocused()
             .getUnclippedBoundsInRoot()
-        val focusedDeleteHeight = composeRule.onRoot()
-            .captureToImage()
-            .asAndroidBitmap()
+        composeRule.waitForIdle()
+        val focusedDeleteHeight = captureDeviceScreen()
             .visibleSurfaceHeight(
                 bounds = focusedDeleteBounds,
                 density = density,

@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
@@ -58,6 +57,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.model.TextReaderTheme
+import org.kaloscope.tv.test.captureToImage
 import kotlin.math.roundToInt
 
 class ReaderScreenTest {

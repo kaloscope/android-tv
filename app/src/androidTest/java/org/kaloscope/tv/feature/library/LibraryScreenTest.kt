@@ -14,7 +14,6 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -46,6 +45,7 @@ import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
 import org.kaloscope.tv.test.assertFocusedContentCardTopClearance
 import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
+import org.kaloscope.tv.test.captureToImage
 
 class LibraryScreenTest {
     @get:Rule
@@ -493,7 +493,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun resultsStartTwentyDpBelowSearchField() {
+    fun resultsStartTwentyFourDpBelowSearchField() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -522,7 +522,7 @@ class LibraryScreenTest {
             .boundsInRoot
 
         assertEquals(
-            20f * density,
+            24f * density,
             firstResultBounds.top - inputBounds.bottom,
             1f,
         )

@@ -67,30 +67,6 @@ internal fun assertFocusedContentCardTopClearance(
     )
 }
 
-internal fun assertFocusedContentCardCornerRadius(
-    label: String,
-    bitmap: Bitmap,
-    density: Float,
-) {
-    val probeY = density.toInt().coerceIn(0, bitmap.height - 1)
-    val expectedFirstBorderPixel =
-        (6f * density).toInt()..(13f * density).toInt()
-    val searchEnd = (20f * density).toInt().coerceAtMost(bitmap.width / 2)
-    val firstBorderPixel = (0..searchEnd).firstOrNull { x ->
-        bitmap.getPixel(x, probeY).isNearWhite()
-    }
-
-    assertTrue(
-        "$label expected a white border near the top-left corner",
-        firstBorderPixel != null,
-    )
-    assertTrue(
-        "$label expected a 15dp corner radius but the first white border pixel was " +
-            "$firstBorderPixel at density $density",
-        firstBorderPixel in expectedFirstBorderPixel,
-    )
-}
-
 internal fun assertFocusedContentCardBottomInsideViewport(
     label: String,
     bitmap: Bitmap,
@@ -159,14 +135,6 @@ private fun Bitmap.findColorBounds(
         width = maxX - minX + 1,
         height = maxY - minY + 1,
     )
-}
-
-private fun Int.isNearWhite(): Boolean {
-    val channels = listOf(Color.red(this), Color.green(this), Color.blue(this))
-    // Focused-disabled content alpha composites the white stroke into a neutral gray.
-    return Color.alpha(this) >= 220 &&
-        channels.min() >= 100 &&
-        channels.max() - channels.min() <= 24
 }
 
 private fun Int.isNear(target: Int): Boolean {

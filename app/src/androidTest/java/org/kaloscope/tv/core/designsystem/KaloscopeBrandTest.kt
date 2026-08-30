@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.platform.app.InstrumentationRegistry
@@ -22,6 +21,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.R
 import org.kaloscope.tv.app.KaloscopeTheme
+import org.kaloscope.tv.test.captureToImage
 
 class KaloscopeBrandTest {
     @get:Rule

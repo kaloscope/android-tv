@@ -21,7 +21,6 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertContentDescriptionEquals
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -46,6 +45,7 @@ import org.kaloscope.tv.core.designsystem.accentPalette
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.MediaChapter
 import org.kaloscope.tv.core.model.NetworkDefinition
+import org.kaloscope.tv.test.captureToImage
 
 class PlayerControlsTest {
     @get:Rule

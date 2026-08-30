@@ -65,6 +65,7 @@ fun TvTextField(
     isPassword: Boolean = false,
     imeAction: ImeAction = ImeAction.Done,
     onImeAction: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
     onMoveLeft: (() -> Unit)? = null,
@@ -84,6 +85,7 @@ fun TvTextField(
             isPassword = isPassword,
             imeAction = imeAction,
             onImeAction = onImeAction,
+            onBack = onBack,
             onMoveUp = onMoveUp,
             onMoveDown = onMoveDown,
             onMoveLeft = onMoveLeft,
@@ -119,6 +121,7 @@ private fun TvTextFieldSurface(
     isPassword: Boolean,
     imeAction: ImeAction,
     onImeAction: () -> Unit,
+    onBack: (() -> Unit)?,
     onMoveUp: (() -> Unit)?,
     onMoveDown: (() -> Unit)?,
     onMoveLeft: (() -> Unit)?,
@@ -248,13 +251,26 @@ private fun TvTextFieldSurface(
                 }
             }
             .onPreInterceptKeyBeforeSoftKeyboard { event ->
-                if (editing && event.key == Key.Back) {
-                    if (event.type == KeyEventType.KeyDown) {
-                        exitEditing()
-                    }
-                    true
-                } else {
+                if (event.key != Key.Back) {
                     false
+                } else {
+                    when {
+                        editing -> {
+                            if (event.type == KeyEventType.KeyDown) {
+                                exitEditing()
+                            }
+                            true
+                        }
+
+                        onBack != null -> {
+                            if (event.type == KeyEventType.KeyDown) {
+                                onBack()
+                            }
+                            true
+                        }
+
+                        else -> false
+                    }
                 }
             }
             .onPreviewKeyEvent { event ->
@@ -271,6 +287,11 @@ private fun TvTextFieldSurface(
                 ) {
                     pendingActivationKey = null
                     enterEditing()
+                    true
+                } else if (!editing && event.key == Key.Back && onBack != null) {
+                    if (event.type == KeyEventType.KeyDown) {
+                        onBack()
+                    }
                     true
                 } else if (event.type != KeyEventType.KeyDown) {
                     false

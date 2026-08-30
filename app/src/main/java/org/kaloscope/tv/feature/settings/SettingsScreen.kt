@@ -706,6 +706,7 @@ private fun SubtitleLanguageDialog(
                     placeholder = stringResource(R.string.subtitle_language_preference_any),
                     focusRequester = textFocus,
                     imeAction = ImeAction.Done,
+                    onBack = onDismiss,
                     selectorTestTag = "subtitle-language-selector",
                     editorTestTag = "subtitle-language-editor",
                     modifier = Modifier
