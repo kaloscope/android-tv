@@ -39,6 +39,7 @@ fun KaloscopeSidePanelSelectionRow(
     value: String = "",
     selected: Boolean = false,
     maxLines: Int = 1,
+    leadingContent: (@Composable () -> Unit)? = null,
 ) {
     KaloscopeButton(
         onClick = onClick,
@@ -52,6 +53,10 @@ fun KaloscopeSidePanelSelectionRow(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            leadingContent?.let { content ->
+                content()
+                Spacer(Modifier.width(12.dp))
+            }
             Text(
                 text = title,
                 modifier = Modifier.weight(1f),

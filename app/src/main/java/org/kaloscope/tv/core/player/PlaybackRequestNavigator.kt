@@ -21,7 +21,17 @@ object PlaybackRequestNavigator {
         if (current < 0) {
             return null
         }
-        val target = request.siblings.getOrNull(current + offset) ?: return null
+        return selectLocalEpisode(request, current + offset)
+    }
+
+    fun selectLocalEpisode(
+        request: PlaybackRequest.LocalMedia,
+        episodeIndex: Int,
+    ): PlaybackRequest.LocalMedia? {
+        val target = request.siblings.getOrNull(episodeIndex) ?: return null
+        if (target.mediaId == request.mediaId) {
+            return null
+        }
         return request.copy(
             mediaId = target.mediaId,
             path = target.path,
@@ -37,7 +47,15 @@ object PlaybackRequestNavigator {
         offset: Int,
     ): Int? {
         val current = request.source.selectedChapterIndex ?: return null
-        return (current + offset).takeIf(request.source.chapters.indices::contains)
+        return selectNetworkEpisode(request, current + offset)
+    }
+
+    fun selectNetworkEpisode(
+        request: PlaybackRequest.NetworkVideo,
+        episodeIndex: Int,
+    ): Int? = episodeIndex.takeIf {
+        it != request.source.selectedChapterIndex &&
+            it in request.source.chapters.indices
     }
 
     fun selectDefinition(

@@ -20,8 +20,10 @@ import org.kaloscope.tv.core.model.DanmakuSpeed
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaProbe
 import org.kaloscope.tv.core.model.MediaSummary
+import org.kaloscope.tv.core.model.NetworkChapter
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkSearchResult
+import org.kaloscope.tv.core.model.NetworkVideoType
 import org.kaloscope.tv.core.model.ReaderContent
 import org.kaloscope.tv.core.model.ReaderImageContent
 import org.kaloscope.tv.core.model.ReaderImagePage
@@ -158,6 +160,41 @@ class PlayerViewModelSettingsTest {
     }
 
     @Test
+    fun `local playback request passes sibling posters to the player`() {
+        val store = PlaybackRequestStore()
+        val viewModel = PlayerViewModel(
+            requestStore = store,
+            mediaRepository = unusedMediaRepository(),
+            historyRepository = unusedHistoryRepository(),
+            networkResourceRepository = unusedNetworkResourceRepository(),
+        )
+        val episodes = listOf(
+            mediaSummary(301, "/episode-1.mkv", "Episode 1").copy(
+                posterPath = "/posters/episode-1.webp",
+            ),
+            mediaSummary(302, "/episode-2.mkv", "Episode 2").copy(
+                posterPath = null,
+            ),
+        )
+
+        val requestId = checkNotNull(
+            viewModel.createFromSummary(
+                session = session(),
+                summary = episodes.first(),
+                siblings = episodes,
+                parentTitle = "Series title",
+                resumePositionSeconds = null,
+            ),
+        )
+
+        val request = store.get(requestId) as PlaybackRequest.LocalMedia
+        assertEquals(
+            listOf("/posters/episode-1.webp", null),
+            request.siblings.map { it.posterPath },
+        )
+    }
+
+    @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun `unknown duration still records local playback position`() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
@@ -291,6 +328,101 @@ class PlayerViewModelSettingsTest {
 
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
+    fun `local episode selection switches to the requested absolute index`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val store = PlaybackRequestStore()
+            val mediaRepository = PlaybackExtrasRepository()
+            val viewModel = PlayerViewModel(
+                requestStore = store,
+                mediaRepository = mediaRepository,
+                historyRepository = unusedHistoryRepository(),
+                networkResourceRepository = unusedNetworkResourceRepository(),
+            )
+            val episodes = listOf(
+                mediaSummary(301, "/episode-1.mkv", "Episode 1"),
+                mediaSummary(302, "/episode-2.mkv", "Episode 2"),
+                mediaSummary(303, "/episode-3.mkv", "Episode 3"),
+            )
+            val requestId = checkNotNull(
+                viewModel.createFromDetail(
+                    session = session(),
+                    detail = mediaDetail(episodes.first()),
+                    siblings = episodes,
+                    resumePositionSeconds = 42,
+                ),
+            )
+            viewModel.load(session(), requestId)
+            advanceUntilIdle()
+
+            viewModel.selectEpisode(session(), episodeIndex = 2)
+            advanceUntilIdle()
+
+            val selected = store.get(requestId) as PlaybackRequest.LocalMedia
+            assertEquals(303L, selected.mediaId)
+            assertEquals("/episode-3.mkv", selected.path)
+            assertEquals(0L, selected.resumePositionSeconds)
+            assertEquals(
+                listOf("/episode-1.mkv", "/episode-3.mkv"),
+                mediaRepository.probePaths,
+            )
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `network episode selection resolves the requested absolute index`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val store = PlaybackRequestStore()
+            val networkRepository = RecordingNetworkResourceRepository()
+            val request = PlaybackRequest.NetworkVideo(
+                requestId = "network-request",
+                serverId = "server-1",
+                title = "Episode 1",
+                source = NetworkPlaybackSource(
+                    indexerId = 7,
+                    resourceId = "series-1",
+                    title = "Episode 1",
+                    url = "https://cdn.example.test/episode-1.m3u8",
+                    videoType = NetworkVideoType.Hls,
+                    danmakus = emptyList(),
+                    chapters = listOf(
+                        NetworkChapter("episode-1", null, "Episode 1", null),
+                        NetworkChapter("episode-2", null, "Episode 2", null),
+                        NetworkChapter("episode-3", null, "Episode 3", null),
+                    ),
+                    selectedChapterIndex = 0,
+                ),
+            )
+            store.put(request)
+            val viewModel = PlayerViewModel(
+                requestStore = store,
+                mediaRepository = unusedMediaRepository(),
+                historyRepository = unusedHistoryRepository(),
+                networkResourceRepository = networkRepository,
+            )
+            viewModel.load(session(), request.requestId)
+            advanceUntilIdle()
+
+            viewModel.selectEpisode(session(), episodeIndex = 2)
+            advanceUntilIdle()
+
+            assertEquals(2, networkRepository.requestedChapterIndex)
+            val selected = store.get(request.requestId) as PlaybackRequest.NetworkVideo
+            assertEquals(2, selected.source.selectedChapterIndex)
+            assertEquals("Episode 3", selected.title)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun `subtitle retry publishes recovered tracks`() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
@@ -408,6 +540,45 @@ private class PlaybackExtrasRepository(
         session: Session,
         path: String,
     ): AppResult<List<DanmakuComment>> = danmakuResult
+}
+
+private class RecordingNetworkResourceRepository : NetworkResourceRepository {
+    var requestedChapterIndex: Int? = null
+
+    override suspend fun resolveResource(
+        session: Session,
+        indexerId: Long,
+        result: NetworkSearchResult,
+        preferredDefinition: TranscodeResolution,
+    ): AppResult<ResolvedNetworkResource> = error("Not used")
+
+    override suspend fun resolveVideoChapter(
+        session: Session,
+        source: NetworkPlaybackSource,
+        chapterIndex: Int,
+        preferredDefinition: TranscodeResolution,
+    ): AppResult<NetworkPlaybackSource> {
+        requestedChapterIndex = chapterIndex
+        val chapter = source.chapters[chapterIndex]
+        return AppResult.Success(
+            source.copy(
+                title = chapter.title,
+                url = "https://cdn.example.test/episode-${chapterIndex + 1}.m3u8",
+                selectedChapterIndex = chapterIndex,
+            ),
+        )
+    }
+
+    override suspend fun resolveReaderChapter(
+        session: Session,
+        content: ReaderContent,
+        chapterIndex: Int,
+    ): AppResult<ReaderContent> = error("Not used")
+
+    override suspend fun loadImagePage(
+        session: Session,
+        content: ReaderImageContent,
+    ): AppResult<ReaderImagePage> = error("Not used")
 }
 
 private fun unusedHistoryRepository() = object : HistoryRepository {

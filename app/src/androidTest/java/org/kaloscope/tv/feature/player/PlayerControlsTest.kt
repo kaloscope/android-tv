@@ -206,6 +206,123 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun episodeChooserOnlyAppearsWhenMultipleEpisodesAreAvailable() {
+        var episodesEnabled by mutableStateOf(false)
+
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(episodesEnabled = episodesEnabled),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-episodes").assertDoesNotExist()
+        composeRule.runOnIdle { episodesEnabled = true }
+        composeRule.onNodeWithTag("player-episodes")
+            .assertIsDisplayed()
+            .assertContentDescriptionEquals("选集")
+    }
+
+    @Test
+    fun episodeChooserMatchesTransportButtonSizeAndOccupiesTheLeftEdge() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(episodesEnabled = true),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val chooserBounds = composeRule.onNodeWithTag("player-episodes")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val previousBounds = composeRule.onNodeWithTag("player-previous")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertEquals(previousBounds.width, chooserBounds.width, 1f)
+        assertEquals(previousBounds.height, chooserBounds.height, 1f)
+        assertTrue(chooserBounds.right < previousBounds.left)
+    }
+
+    @Test
+    fun episodeChooserInvokesItsActionFromTheRemoteCenterKey() {
+        var openCount = 0
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(episodesEnabled = true),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                    onOpenEpisodes = { openCount += 1 },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("player-episodes")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+
+        composeRule.runOnIdle { assertEquals(1, openCount) }
+    }
+
+    @Test
     fun transportAndCollapsedAuxiliaryControlsMatchApprovedShapes() {
         lateinit var density: Density
 
@@ -1609,6 +1726,119 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun progressSizesAndClampsBufferedSegmentFromBufferedPosition() {
+        lateinit var density: Density
+        var bufferedPositionMillis by mutableStateOf(45_000L)
+
+        composeRule.setContent {
+            density = LocalDensity.current
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState().copy(
+                        bufferedPositionMillis = bufferedPositionMillis,
+                    ),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val trackWidth = composeRule.onNodeWithTag("player-progress-track")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .width
+        val tolerance = with(density) { 1.dp.toPx() }
+        val bufferedWidth = composeRule.onNodeWithTag("player-progress-buffered")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .width
+        assertEquals(trackWidth * 0.75f, bufferedWidth, tolerance)
+
+        composeRule.runOnIdle {
+            bufferedPositionMillis = 90_000L
+        }
+        val clampedBufferedWidth = composeRule.onNodeWithTag("player-progress-buffered")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .width
+        assertEquals(trackWidth, clampedBufferedWidth, tolerance)
+    }
+
+    @Test
+    fun bufferedProgressIsVisiblySofterThanPlayedProgress() {
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalAccentPalette provides AccentColor.Green.accentPalette(),
+            ) {
+                MaterialTheme {
+                    PlayerControls(
+                        state = controlsState().copy(
+                            playWhenReady = true,
+                            bufferedPositionMillis = 45_000L,
+                        ),
+                        playFocus = remember { FocusRequester() },
+                        definitionFocus = remember { FocusRequester() },
+                        settingsFocus = remember { FocusRequester() },
+                        subtitleFocus = remember { FocusRequester() },
+                        speedFocus = remember { FocusRequester() },
+                        onPrevious = {},
+                        onRewind = {},
+                        onPlayPause = {},
+                        onForward = {},
+                        onNext = {},
+                        onToggleSubtitles = {},
+                        onOpenSpeed = {},
+                        onToggleDanmakus = {},
+                        onOpenSettings = {},
+                        onOpenDefinitions = {},
+                        onSeekPreviewBy = {},
+                        onSeekPreviewFinished = {},
+                        onHideControls = {},
+                        onInteraction = {},
+                    )
+                }
+            }
+        }
+
+        val track = composeRule.onNodeWithTag("player-progress-track")
+            .captureToImage()
+            .asAndroidBitmap()
+        val centerY = track.height / 2
+        val playedPixel = track.getPixel(track.width / 12, centerY)
+        val bufferedPixel = track.getPixel(track.width / 2, centerY)
+        val backgroundPixel = track.getPixel(track.width * 9 / 10, centerY)
+        val playedGreen = android.graphics.Color.green(playedPixel)
+        val bufferedGreen = android.graphics.Color.green(bufferedPixel)
+        val backgroundGreen = android.graphics.Color.green(backgroundPixel)
+
+        assertTrue(
+            "Buffered progress should remain visible above the track background",
+            bufferedGreen > backgroundGreen,
+        )
+        assertTrue(
+            "Buffered progress should be softer than played progress",
+            bufferedGreen < playedGreen,
+        )
+    }
+
+    @Test
     fun progressUsesConfiguredAccentWhilePlayingAndInactiveColorWhilePaused() {
         var playWhenReady by mutableStateOf(true)
 
@@ -1798,6 +2028,46 @@ class PlayerControlsTest {
             "Preview progress should stay at the bottom edge",
             layerBounds.bottom - trackBounds.bottom <= maximumBottomGap,
         )
+    }
+
+    @Test
+    fun infoPreviewShowsBufferedProgressWithSofterColor() {
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalAccentPalette provides AccentColor.Green.accentPalette(),
+            ) {
+                MaterialTheme {
+                    PlayerInfoPreview(
+                        state = controlsState().copy(
+                            playWhenReady = true,
+                            bufferedPositionMillis = 45_000L,
+                        ),
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("player-preview-progress-buffered").assertIsDisplayed()
+        val trackNode = composeRule.onNodeWithTag("player-preview-progress-track")
+        val trackBounds = trackNode.fetchSemanticsNode().boundsInRoot
+        val bufferedBounds = composeRule.onNodeWithTag("player-preview-progress-buffered")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        assertEquals(trackBounds.width * 0.75f, bufferedBounds.width, 1f)
+
+        val track = trackNode.captureToImage().asAndroidBitmap()
+        val centerY = track.height / 2
+        val playedGreen = android.graphics.Color.green(
+            track.getPixel(track.width / 12, centerY),
+        )
+        val bufferedGreen = android.graphics.Color.green(
+            track.getPixel(track.width / 2, centerY),
+        )
+        val backgroundGreen = android.graphics.Color.green(
+            track.getPixel(track.width * 9 / 10, centerY),
+        )
+        assertTrue(bufferedGreen > backgroundGreen)
+        assertTrue(bufferedGreen < playedGreen)
     }
 
     @Test
@@ -2038,6 +2308,7 @@ class PlayerControlsTest {
     private fun controlsState(
         previousEnabled: Boolean = true,
         nextEnabled: Boolean = true,
+        episodesEnabled: Boolean = false,
         subtitles: PlayerActionUiState = PlayerActionUiState(enabled = true),
         danmakus: PlayerActionUiState = PlayerActionUiState(enabled = true),
         quality: PlayerActionUiState = PlayerActionUiState(enabled = true),
@@ -2054,6 +2325,7 @@ class PlayerControlsTest {
             progressSaveFailed = false,
             previousEnabled = previousEnabled,
             nextEnabled = nextEnabled,
+            episodesEnabled = episodesEnabled,
             subtitles = subtitles,
             danmakus = danmakus,
             settings = settings,

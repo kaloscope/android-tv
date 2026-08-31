@@ -196,12 +196,7 @@ class PlayerViewModel @Inject constructor(
         val request = (uiState.value as? PlayerUiState.Content)?.request ?: return
         if (request is PlaybackRequest.LocalMedia) {
             val selected = PlaybackRequestNavigator.selectLocalAdjacent(request, offset) ?: return
-            cancelExtraRetries()
-            coordinator.beginItemSwitch()
-            loadJob?.cancel()
-            loadJob = viewModelScope.launch {
-                coordinator.replaceRequest(session, selected)
-            }
+            switchToLocalEpisode(session, selected)
             return
         }
         val networkRequest = request as PlaybackRequest.NetworkVideo
@@ -209,6 +204,47 @@ class PlayerViewModel @Inject constructor(
             networkRequest,
             offset,
         ) ?: return
+        switchToNetworkEpisode(session, networkRequest, chapterIndex)
+    }
+
+    fun selectEpisode(
+        session: Session,
+        episodeIndex: Int,
+    ) {
+        val request = (uiState.value as? PlayerUiState.Content)?.request ?: return
+        if (request is PlaybackRequest.LocalMedia) {
+            val selected = PlaybackRequestNavigator.selectLocalEpisode(
+                request,
+                episodeIndex,
+            ) ?: return
+            switchToLocalEpisode(session, selected)
+            return
+        }
+        val networkRequest = request as PlaybackRequest.NetworkVideo
+        val chapterIndex = PlaybackRequestNavigator.selectNetworkEpisode(
+            networkRequest,
+            episodeIndex,
+        ) ?: return
+        switchToNetworkEpisode(session, networkRequest, chapterIndex)
+    }
+
+    private fun switchToLocalEpisode(
+        session: Session,
+        request: PlaybackRequest.LocalMedia,
+    ) {
+        cancelExtraRetries()
+        coordinator.beginItemSwitch()
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            coordinator.replaceRequest(session, request)
+        }
+    }
+
+    private fun switchToNetworkEpisode(
+        session: Session,
+        request: PlaybackRequest.NetworkVideo,
+        chapterIndex: Int,
+    ) {
         cancelExtraRetries()
         coordinator.beginItemSwitch()
         loadJob?.cancel()
@@ -216,14 +252,14 @@ class PlayerViewModel @Inject constructor(
             when (
                 val result = networkResourceRepository.resolveVideoChapter(
                     session = session,
-                    source = networkRequest.source,
+                    source = request.source,
                     chapterIndex = chapterIndex,
-                    preferredDefinition = networkRequest.preferredDefinition,
+                    preferredDefinition = request.preferredDefinition,
                 )
             ) {
                 is AppResult.Success -> coordinator.replaceRequest(
                     session,
-                    networkRequest.copy(
+                    request.copy(
                         title = result.value.title,
                         source = result.value,
                         resumePositionMillis = 0,
@@ -319,6 +355,7 @@ class PlayerViewModel @Inject constructor(
                     title = item.title,
                     seasonNumber = item.season,
                     episodeNumber = item.episode,
+                    posterPath = item.posterPath,
                 ).takeIf { it.mediaId > 0 && it.path.isNotBlank() && it.title.isNotBlank() }
             },
             autoplayNext = settings.autoplayNext,

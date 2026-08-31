@@ -281,6 +281,9 @@ fun KaloscopeApp(
                         switchItem = { offset ->
                             playerViewModel.switchAdjacent(state.session, offset)
                         },
+                        selectEpisode = { index ->
+                            playerViewModel.selectEpisode(state.session, index)
+                        },
                         retryExtra = { extra ->
                             playerViewModel.retryExtra(state.session, extra)
                         },

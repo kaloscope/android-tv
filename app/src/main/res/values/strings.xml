@@ -302,6 +302,7 @@
     <string name="progress_save_failed">播放继续进行，但进度暂时无法保存</string>
     <string name="previous_episode">上一集</string>
     <string name="next_episode">下一集</string>
+    <string name="episode_selection">选集</string>
     <string name="playback_quality">清晰度</string>
     <string name="playback_quality_with_value">清晰度，%1$s</string>
     <string name="player_progress">播放进度</string>

@@ -95,6 +95,7 @@ internal data class PlayerControlsUiState(
     val title: String,
     val playWhenReady: Boolean,
     val positionMillis: Long,
+    val bufferedPositionMillis: Long = positionMillis,
     val durationMillis: Long,
     val playbackModeLabel: String,
     val qualityControlLabel: String = playbackModeLabel,
@@ -109,6 +110,7 @@ internal data class PlayerControlsUiState(
     val quality: PlayerActionUiState,
     val secondaryTitle: String? = null,
     val chapters: List<MediaChapter> = emptyList(),
+    val episodesEnabled: Boolean = false,
 )
 
 @Composable
@@ -119,6 +121,15 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
     } else {
         0f
     }
+    val bufferedProgress = if (state.durationMillis > 0) {
+        (state.bufferedPositionMillis.toFloat() / state.durationMillis).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val progressColor = playerProgressColor(
+        playWhenReady = state.playWhenReady,
+        activeColor = accentPalette.primary,
+    )
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -152,13 +163,20 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
         ) {
             Box(
                 modifier = Modifier
+                    .fillMaxWidth(bufferedProgress)
+                    .fillMaxHeight()
+                    .background(
+                        progressColor.copy(alpha = BUFFERED_PROGRESS_ALPHA),
+                        RoundedCornerShape(9.dp),
+                    )
+                    .testTag("player-preview-progress-buffered"),
+            )
+            Box(
+                modifier = Modifier
                     .fillMaxWidth(progress)
                     .fillMaxHeight()
                     .background(
-                        playerProgressColor(
-                            playWhenReady = state.playWhenReady,
-                            activeColor = accentPalette.primary,
-                        ),
+                        progressColor,
                         RoundedCornerShape(9.dp),
                     ),
             )
@@ -254,6 +272,7 @@ internal fun PlayerControls(
     state: PlayerControlsUiState,
     playFocus: FocusRequester,
     progressFocus: FocusRequester? = null,
+    episodesFocus: FocusRequester? = null,
     definitionFocus: FocusRequester,
     settingsFocus: FocusRequester,
     subtitleFocus: FocusRequester,
@@ -276,10 +295,13 @@ internal fun PlayerControls(
     onActionRowVisibilityChange: (Boolean) -> Unit = {},
     onRetrySubtitles: () -> Unit = {},
     onRetryDanmakus: () -> Unit = {},
+    onOpenEpisodes: () -> Unit = {},
 ) {
     var playFocusRequestVersion by remember { mutableLongStateOf(0) }
     val defaultProgressFocus = remember { FocusRequester() }
     val resolvedProgressFocus = progressFocus ?: defaultProgressFocus
+    val defaultEpisodesFocus = remember { FocusRequester() }
+    val resolvedEpisodesFocus = episodesFocus ?: defaultEpisodesFocus
     val forwardFocus = remember { FocusRequester() }
     val nextFocus = remember { FocusRequester() }
     val danmakuFocus = remember { FocusRequester() }
@@ -350,6 +372,7 @@ internal fun PlayerControls(
         Spacer(Modifier.height(8.dp))
         SeekablePlayerProgress(
             positionMillis = state.positionMillis,
+            bufferedPositionMillis = state.bufferedPositionMillis,
             durationMillis = state.durationMillis,
             chapters = state.chapters,
             progressFocus = resolvedProgressFocus,
@@ -398,6 +421,18 @@ internal fun PlayerControls(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (state.episodesEnabled) {
+                            PlayerCircleButton(
+                                label = stringResource(R.string.episode_selection),
+                                iconRes = R.drawable.ic_action_episodes,
+                                action = PlayerActionUiState(enabled = true),
+                                onClick = onOpenEpisodes,
+                                modifier = Modifier
+                                    .focusRequester(resolvedEpisodesFocus)
+                                    .testTag("player-episodes"),
+                                upFocus = resolvedProgressFocus,
+                            )
+                        }
                         if (state.previousEnabled) {
                             PlayerCircleButton(
                                 label = stringResource(R.string.previous_episode),
@@ -823,6 +858,7 @@ private fun PlayerControlErrorBadge() {
 @Composable
 private fun SeekablePlayerProgress(
     positionMillis: Long,
+    bufferedPositionMillis: Long,
     durationMillis: Long,
     chapters: List<MediaChapter>,
     progressFocus: FocusRequester,
@@ -844,6 +880,11 @@ private fun SeekablePlayerProgress(
     val displayPosition = positionMillis
     val progress = if (enabled) {
         (displayPosition.toFloat() / durationMillis).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val bufferedProgress = if (enabled) {
+        (bufferedPositionMillis.toFloat() / durationMillis).coerceIn(0f, 1f)
     } else {
         0f
     }
@@ -936,6 +977,18 @@ private fun SeekablePlayerProgress(
                 }
                 Canvas(
                     modifier = Modifier
+                        .fillMaxWidth(bufferedProgress)
+                        .fillMaxHeight()
+                        .testTag("player-progress-buffered"),
+                ) {
+                    val radius = size.height / 2
+                    drawRoundRect(
+                        color = progressColor.copy(alpha = BUFFERED_PROGRESS_ALPHA),
+                        cornerRadius = CornerRadius(radius, radius),
+                    )
+                }
+                Canvas(
+                    modifier = Modifier
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
                         .testTag("player-progress-played"),
@@ -1023,6 +1076,8 @@ private fun playerProgressColor(
     playWhenReady: Boolean,
     activeColor: Color,
 ): Color = if (playWhenReady) activeColor else Subtle
+
+private const val BUFFERED_PROGRESS_ALPHA = 0.35f
 
 internal fun Key.toPlayerRemoteKey(): PlayerRemoteKey? =
     when (this) {

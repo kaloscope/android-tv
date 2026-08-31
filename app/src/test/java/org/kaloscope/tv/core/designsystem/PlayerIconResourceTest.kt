@@ -126,6 +126,11 @@ class PlayerIconResourceTest {
         const val androidNamespace = "http://schemas.android.com/apk/res/android"
 
         val convertedTransportPaths = mapOf(
+            "ic_action_episodes" to
+                "M4 4h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2m11 1.5H4" +
+                "a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V6a.5.5 0 0 0-.5-.5M4.563 16A2 2 0 0 0 6.5 17.5h9" +
+                "a4 4 0 0 0 4-4v-5A2 2 0 0 0 18 6.563V13.5a2.5 2.5 0 0 1-2.5 2.5zm2.5 2.5A2 2 0 0 0 9 20h7.25" +
+                "A5.75 5.75 0 0 0 22 14.25V11a2 2 0 0 0-1.5-1.937v5.187a4.25 4.25 0 0 1-4.25 4.25z",
             "ic_action_previous" to
                 "M21 4.753c0-1.408-1.578-2.24-2.74-1.444L7.763 10.503a1.75 1.75 0 0 0-.01 2.88l10.499 7.302" +
                 "c1.16.807 2.749-.024 2.749-1.437zM19.109 4.547a.25.25 0 0 1 .39.206v14.495a.25.25 0 0 1-.392.205" +

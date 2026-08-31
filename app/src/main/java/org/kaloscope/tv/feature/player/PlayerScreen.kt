@@ -64,6 +64,7 @@ fun PlayerScreen(
     onSelectDefinition: (Int, Long) -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onSelectEpisode: (Int) -> Unit,
     onRetryExtra: (PlayerExtra) -> Unit,
     onBack: () -> Unit,
     onSubtitlePreferencesChanged: (SubtitleSettings) -> Unit = {},
@@ -95,6 +96,7 @@ fun PlayerScreen(
             onSelectDefinition = onSelectDefinition,
             onPrevious = onPrevious,
             onNext = onNext,
+            onSelectEpisode = onSelectEpisode,
             onRetryExtra = onRetryExtra,
             onBack = onBack,
             onSubtitlePreferencesChanged = onSubtitlePreferencesChanged,
@@ -113,6 +115,7 @@ private fun PlayerContent(
     onSelectDefinition: (Int, Long) -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onSelectEpisode: (Int) -> Unit,
     onRetryExtra: (PlayerExtra) -> Unit,
     onBack: () -> Unit,
     onSubtitlePreferencesChanged: (SubtitleSettings) -> Unit,
@@ -196,6 +199,7 @@ private fun PlayerContent(
         onDispose(seekCoordinator::cancelPendingInteraction)
     }
     val seekState by seekCoordinator.state.collectAsStateWithLifecycle()
+    var bufferedPositionMillis by remember(playbackIdentity) { mutableLongStateOf(0L) }
     val initialControlTransition = PlayerControlLayerPolicy.initialTransition()
     var controlLayer by remember(playbackIdentity) {
         mutableStateOf(initialControlTransition.layer)
@@ -214,13 +218,16 @@ private fun PlayerContent(
     var danmakuRuntimeAvailable by remember(playbackIdentity) {
         mutableStateOf(true)
     }
+    var episodeDrawerOpen by remember { mutableStateOf(false) }
+    var restoreEpisodeFocus by remember { mutableStateOf(false) }
     var definitionDrawerOpen by remember { mutableStateOf(false) }
     var restoreDefinitionFocus by remember { mutableStateOf(false) }
     var settingsDrawerOpen by remember { mutableStateOf(false) }
     var restoreSettingsFocus by remember { mutableStateOf(false) }
     var speedDrawerOpen by remember { mutableStateOf(false) }
     var restoreSpeedFocus by remember { mutableStateOf(false) }
-    val sidePanelOpen = definitionDrawerOpen || settingsDrawerOpen || speedDrawerOpen
+    val sidePanelOpen =
+        episodeDrawerOpen || definitionDrawerOpen || settingsDrawerOpen || speedDrawerOpen
     var interactionVersion by remember { mutableLongStateOf(0) }
     var playbackToggleFeedbackId by remember(playbackIdentity) { mutableLongStateOf(0) }
     var playbackToggleFeedback by remember(playbackIdentity) {
@@ -229,10 +236,14 @@ private fun PlayerContent(
     val playerFocus = remember { FocusRequester() }
     val progressFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
+    val episodeFocus = remember { FocusRequester() }
     val definitionFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
     val subtitleFocus = remember { FocusRequester() }
     val speedFocus = remember { FocusRequester() }
+    val episodeEntries = remember(state.request) {
+        PlayerEpisodePresentation.entries(state.request)
+    }
     val hasNext = PlaybackRequestNavigator.hasNext(state.request)
     val controlsHandleBack =
         controlLayer != PlayerControlLayer.Hidden &&
@@ -264,6 +275,7 @@ private fun PlayerContent(
     LaunchedEffect(controller, seekCoordinator) {
         while (true) {
             seekCoordinator.reportPlayerPosition(controller.player.currentPosition)
+            bufferedPositionMillis = controller.player.bufferedPosition.coerceAtLeast(0L)
             delay(500)
         }
     }
@@ -279,9 +291,7 @@ private fun PlayerContent(
         interactionVersion,
         status.failure,
         status.fallbackInProgress,
-        definitionDrawerOpen,
-        settingsDrawerOpen,
-        speedDrawerOpen,
+        sidePanelOpen,
         feedback,
     ) {
         val autoHideDelayMillis = PlayerControlLayerPolicy.autoHideDelayMillis(
@@ -290,9 +300,7 @@ private fun PlayerContent(
         )
         if (
             autoHideDelayMillis != null &&
-            !definitionDrawerOpen &&
-            !settingsDrawerOpen &&
-            !speedDrawerOpen &&
+            !sidePanelOpen &&
             feedback == PlaybackFeedback.Ready
         ) {
             delay(autoHideDelayMillis)
@@ -309,16 +317,13 @@ private fun PlayerContent(
     LaunchedEffect(
         controlLayer,
         requestedControlsFocus,
-        definitionDrawerOpen,
-        settingsDrawerOpen,
-        speedDrawerOpen,
+        sidePanelOpen,
     ) {
         if (
             controlLayer == PlayerControlLayer.Controls &&
             PlayerControlLayerPolicy.allowsControlFocus(feedback) &&
-            !definitionDrawerOpen &&
-            !settingsDrawerOpen &&
-            !speedDrawerOpen &&
+            !sidePanelOpen &&
+            !restoreEpisodeFocus &&
             !restoreDefinitionFocus &&
             !restoreSettingsFocus &&
             !restoreSpeedFocus
@@ -329,9 +334,7 @@ private fun PlayerContent(
             }
         } else if (
             controlLayer != PlayerControlLayer.Controls &&
-            !definitionDrawerOpen &&
-            !settingsDrawerOpen &&
-            !speedDrawerOpen
+            !sidePanelOpen
         ) {
             playerFocus.requestFocus()
         }
@@ -346,9 +349,8 @@ private fun PlayerContent(
         if (
             shouldRequestFocus &&
             controlLayer == PlayerControlLayer.Controls &&
-            !definitionDrawerOpen &&
-            !settingsDrawerOpen &&
-            !speedDrawerOpen &&
+            !sidePanelOpen &&
+            !restoreEpisodeFocus &&
             !restoreDefinitionFocus &&
             !restoreSettingsFocus &&
             !restoreSpeedFocus
@@ -357,6 +359,23 @@ private fun PlayerContent(
                 PlayerControlFocusTarget.Progress -> progressFocus.requestFocus()
                 PlayerControlFocusTarget.PlayPause -> playFocus.requestFocus()
             }
+        }
+    }
+    LaunchedEffect(
+        episodeDrawerOpen,
+        restoreEpisodeFocus,
+        state.switchingItem,
+        episodeEntries,
+    ) {
+        if (
+            !episodeDrawerOpen &&
+            restoreEpisodeFocus &&
+            !state.switchingItem &&
+            episodeEntries.size > 1
+        ) {
+            withFrameNanos { }
+            episodeFocus.requestFocus()
+            restoreEpisodeFocus = false
         }
     }
     LaunchedEffect(definitionDrawerOpen, restoreDefinitionFocus) {
@@ -382,6 +401,8 @@ private fun PlayerContent(
     }
     LaunchedEffect(status.failure) {
         if (status.failure != null) {
+            episodeDrawerOpen = false
+            restoreEpisodeFocus = false
             definitionDrawerOpen = false
             settingsDrawerOpen = false
             speedDrawerOpen = false
@@ -412,16 +433,12 @@ private fun PlayerContent(
             .focusable(
                 enabled =
                     controlLayer != PlayerControlLayer.Controls &&
-                        !definitionDrawerOpen &&
-                        !settingsDrawerOpen &&
-                        !speedDrawerOpen,
+                        !sidePanelOpen,
             )
             .onPreviewKeyEvent { event ->
                 if (
                     controlLayer == PlayerControlLayer.Controls ||
-                    definitionDrawerOpen ||
-                    settingsDrawerOpen ||
-                    speedDrawerOpen
+                    sidePanelOpen
                 ) {
                     if (event.type == KeyEventType.KeyDown) {
                         interactionVersion += 1
@@ -514,9 +531,7 @@ private fun PlayerContent(
                 PlaybackFeedback.Rebuffering,
                 PlaybackFeedback.FallingBack,
             ) &&
-            !definitionDrawerOpen &&
-            !settingsDrawerOpen &&
-            !speedDrawerOpen &&
+            !sidePanelOpen &&
             !state.switchingItem
         ) {
             controlLayer
@@ -566,6 +581,7 @@ private fun PlayerContent(
                 secondaryTitle = secondaryTitle,
                 playWhenReady = status.playWhenReady,
                 positionMillis = seekState.displayPositionMillis,
+                bufferedPositionMillis = bufferedPositionMillis,
                 durationMillis = status.effectiveDurationMillis,
                 playbackModeLabel = playbackStatusLabel,
                 qualityControlLabel = qualityControlLabel,
@@ -594,6 +610,7 @@ private fun PlayerContent(
                 ),
                 quality = PlayerActionUiState(enabled = definitions.size > 1),
                 chapters = state.mediaProbe?.chapters.orEmpty(),
+                episodesEnabled = episodeEntries.size > 1,
             )
             AnimatedPlayerControlLayer(layer = displayedControlLayer) { renderedLayer ->
                 when (renderedLayer) {
@@ -604,6 +621,7 @@ private fun PlayerContent(
                         actionRowVisible = actionRowVisible,
                         onActionRowVisibilityChange = { actionRowVisible = it },
                         progressFocus = progressFocus,
+                        episodesFocus = episodeFocus,
                         definitionFocus = definitionFocus,
                         settingsFocus = settingsFocus,
                         subtitleFocus = subtitleFocus,
@@ -637,6 +655,13 @@ private fun PlayerContent(
                             controller.recordItemSwitchProgress()
                             onNext()
                         },
+                        onOpenEpisodes = {
+                            interactionVersion += 1
+                            episodeDrawerOpen = true
+                            definitionDrawerOpen = false
+                            settingsDrawerOpen = false
+                            speedDrawerOpen = false
+                        },
                         onToggleSubtitles = {
                             interactionVersion += 1
                             requestSessionState = requestSessionState.copy(
@@ -648,6 +673,7 @@ private fun PlayerContent(
                         },
                         onOpenSpeed = {
                             interactionVersion += 1
+                            episodeDrawerOpen = false
                             speedDrawerOpen = true
                             settingsDrawerOpen = false
                             definitionDrawerOpen = false
@@ -662,12 +688,14 @@ private fun PlayerContent(
                         },
                         onOpenSettings = {
                             interactionVersion += 1
+                            episodeDrawerOpen = false
                             settingsDrawerOpen = true
                             definitionDrawerOpen = false
                             speedDrawerOpen = false
                         },
                         onOpenDefinitions = {
                             interactionVersion += 1
+                            episodeDrawerOpen = false
                             definitionDrawerOpen = true
                             settingsDrawerOpen = false
                             speedDrawerOpen = false
@@ -705,6 +733,24 @@ private fun PlayerContent(
                 }
             },
         )
+        if (episodeDrawerOpen) {
+            PlayerEpisodeDrawer(
+                session = session,
+                episodes = episodeEntries,
+                onSelect = { episodeIndex ->
+                    interactionVersion += 1
+                    episodeDrawerOpen = false
+                    restoreEpisodeFocus = true
+                    controller.recordItemSwitchProgress()
+                    onSelectEpisode(episodeIndex)
+                },
+                onDismiss = {
+                    interactionVersion += 1
+                    episodeDrawerOpen = false
+                    restoreEpisodeFocus = true
+                },
+            )
+        }
         if (definitionDrawerOpen) {
             PlayerDefinitionDrawer(
                 definitions = (state.request as? PlaybackRequest.NetworkVideo)

@@ -33,6 +33,7 @@ class PlayerScreenTest {
                     onSelectDefinition = { _, _ -> },
                     onPrevious = {},
                     onNext = {},
+                    onSelectEpisode = {},
                     onRetryExtra = {},
                     onBack = {},
                 )
@@ -58,6 +59,7 @@ class PlayerScreenTest {
                     onSelectDefinition = { _, _ -> },
                     onPrevious = {},
                     onNext = {},
+                    onSelectEpisode = {},
                     onRetryExtra = {},
                     onBack = {},
                 )

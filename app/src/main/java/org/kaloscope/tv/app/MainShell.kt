@@ -489,6 +489,7 @@ internal fun MainShell(
                             onSelectDefinition = playerActions.selectDefinition,
                             onPrevious = { playerActions.switchItem(-1) },
                             onNext = { playerActions.switchItem(1) },
+                            onSelectEpisode = playerActions.selectEpisode,
                             onRetryExtra = playerActions.retryExtra,
                             onBack = ::goBack,
                             onSubtitlePreferencesChanged =

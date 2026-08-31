@@ -36,12 +36,42 @@ class PlaybackRequestNavigatorTest {
     }
 
     @Test
+    fun `local episode selection uses the requested absolute index`() {
+        val selected = PlaybackRequestNavigator.selectLocalEpisode(
+            request = localRequest(),
+            episodeIndex = 1,
+        )
+
+        checkNotNull(selected)
+        assertEquals(302, selected.mediaId)
+        assertEquals("/episode-2.mkv", selected.path)
+        assertEquals(0L, selected.resumePositionSeconds)
+    }
+
+    @Test
+    fun `local episode selection ignores the current and invalid indices`() {
+        val request = localRequest()
+
+        assertEquals(null, PlaybackRequestNavigator.selectLocalEpisode(request, 0))
+        assertEquals(null, PlaybackRequestNavigator.selectLocalEpisode(request, 9))
+    }
+
+    @Test
     fun `network adjacent chapter reports target index`() {
         val request = networkRequest()
 
         assertFalse(PlaybackRequestNavigator.hasPrevious(request))
         assertTrue(PlaybackRequestNavigator.hasNext(request))
         assertEquals(1, PlaybackRequestNavigator.adjacentNetworkChapter(request, 1))
+    }
+
+    @Test
+    fun `network episode selection validates an absolute chapter index`() {
+        val request = networkRequest()
+
+        assertEquals(1, PlaybackRequestNavigator.selectNetworkEpisode(request, 1))
+        assertEquals(null, PlaybackRequestNavigator.selectNetworkEpisode(request, 0))
+        assertEquals(null, PlaybackRequestNavigator.selectNetworkEpisode(request, 9))
     }
 
     @Test

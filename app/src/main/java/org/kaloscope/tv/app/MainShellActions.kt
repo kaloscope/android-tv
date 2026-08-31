@@ -89,6 +89,7 @@ internal data class PlayerActions(
         { _, _, _, _ -> },
     val selectDefinition: (Int, Long) -> Unit = { _, _ -> },
     val switchItem: (Int) -> Unit = {},
+    val selectEpisode: (Int) -> Unit = {},
     val retryExtra: (PlayerExtra) -> Unit = {},
     val close: (String) -> Unit = {},
 )
