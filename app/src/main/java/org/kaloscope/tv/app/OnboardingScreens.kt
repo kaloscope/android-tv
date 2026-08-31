@@ -525,6 +525,18 @@ private fun ServerUrlField(
         R.string.server_scheme_description,
         schemeLabel,
     )
+    val schemeShape = RoundedCornerShape(
+        topStart = 12.dp,
+        topEnd = 0.dp,
+        bottomEnd = 0.dp,
+        bottomStart = 12.dp,
+    )
+    val addressShape = RoundedCornerShape(
+        topStart = 0.dp,
+        topEnd = 12.dp,
+        bottomEnd = 12.dp,
+        bottomStart = 0.dp,
+    )
 
     Text(
         text = stringResource(R.string.server_url),
@@ -535,7 +547,6 @@ private fun ServerUrlField(
     Spacer(Modifier.height(7.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         KaloscopeButton(
@@ -575,7 +586,7 @@ private fun ServerUrlField(
                     }
                 },
             variant = KaloscopeControlVariant.Filled,
-            shape = RoundedCornerShape(12.dp),
+            shape = schemeShape,
             contentPadding = PaddingValues(horizontal = 12.dp),
         ) {
             Box(
@@ -589,19 +600,26 @@ private fun ServerUrlField(
                 )
             }
         }
-        TvTextField(
-            value = draft.address,
-            onValueChange = { onUrlChange(draft.replaceAddress(it)) },
-            placeholder = stringResource(R.string.server_url_hint),
-            modifier = Modifier.weight(1f),
-            focusRequester = addressFocus,
-            imeAction = ImeAction.Next,
-            selectorTestTag = "server-url-selector",
-            editorTestTag = "server-url-editor",
-            onMoveUp = onMoveUp,
-            onMoveDown = onMoveDown,
-            onMoveLeft = { schemeFocus.requestFocus() },
-        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .testTag("server-url-address-segment"),
+        ) {
+            TvTextField(
+                value = draft.address,
+                onValueChange = { onUrlChange(draft.replaceAddress(it)) },
+                placeholder = stringResource(R.string.server_url_hint),
+                modifier = Modifier.fillMaxWidth(),
+                focusRequester = addressFocus,
+                imeAction = ImeAction.Next,
+                selectorTestTag = "server-url-selector",
+                editorTestTag = "server-url-editor",
+                onMoveUp = onMoveUp,
+                onMoveDown = onMoveDown,
+                onMoveLeft = { schemeFocus.requestFocus() },
+                shape = addressShape,
+            )
+        }
     }
 }
 

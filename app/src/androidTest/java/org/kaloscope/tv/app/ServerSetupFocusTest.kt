@@ -142,6 +142,40 @@ class ServerSetupFocusTest {
     }
 
     @Test
+    fun serverUrlSegmentsFormOneContinuousField() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                ServerSetupScreen(
+                    savedServers = emptyList(),
+                    state = ServerSetupState(),
+                    onNameChange = {},
+                    onUrlChange = {},
+                    onTest = {},
+                    onSave = {},
+                    onSelectServer = {},
+                )
+            }
+        }
+
+        val schemeBounds = composeRule.onNodeWithTag("server-url-scheme")
+            .getUnclippedBoundsInRoot()
+        val addressBounds = composeRule.onNodeWithTag("server-url-address-segment")
+            .getUnclippedBoundsInRoot()
+
+        assertEquals(
+            "URL segments must meet without a gap",
+            schemeBounds.right,
+            addressBounds.left,
+        )
+        assertEquals("URL segments must align at the top", schemeBounds.top, addressBounds.top)
+        assertEquals(
+            "URL segments must align at the bottom",
+            schemeBounds.bottom,
+            addressBounds.bottom,
+        )
+    }
+
+    @Test
     fun testingConnectionKeepsTestButtonFocusAndIgnoresRepeatCenter() {
         val state = mutableStateOf(
             ServerSetupState(

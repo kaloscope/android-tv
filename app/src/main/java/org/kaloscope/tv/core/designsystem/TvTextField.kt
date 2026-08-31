@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -72,6 +73,7 @@ fun TvTextField(
     onMoveRight: (() -> Unit)? = null,
     selectorTestTag: String? = null,
     editorTestTag: String? = null,
+    shape: Shape = RoundedCornerShape(12.dp),
 ) {
     val internalFocus = remember { FocusRequester() }
     val fieldFocus = focusRequester ?: internalFocus
@@ -92,6 +94,7 @@ fun TvTextField(
             onMoveRight = onMoveRight,
             selectorTestTag = selectorTestTag,
             editorTestTag = editorTestTag,
+            shape = shape,
         )
     }
 
@@ -128,6 +131,7 @@ private fun TvTextFieldSurface(
     onMoveRight: (() -> Unit)?,
     selectorTestTag: String?,
     editorTestTag: String?,
+    shape: Shape,
 ) {
     val accentPalette = LocalAccentPalette.current
     var editing by remember { mutableStateOf(false) }
@@ -143,7 +147,6 @@ private fun TvTextFieldSurface(
     }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val shape = RoundedCornerShape(12.dp)
     val fieldTextStyle = MaterialTheme.typography.bodyLarge.copy(
         color = OnBackground,
         fontSize = 17.sp,
