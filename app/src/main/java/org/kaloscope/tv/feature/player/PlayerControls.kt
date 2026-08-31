@@ -422,8 +422,11 @@ internal fun PlayerControls(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (state.episodesEnabled) {
-                            PlayerCircleButton(
-                                label = stringResource(R.string.episode_selection),
+                            val episodeSelectionLabel = stringResource(R.string.episode_selection)
+                            PlayerAuxiliaryButton(
+                                visibleLabel = episodeSelectionLabel,
+                                accessibilityLabel = episodeSelectionLabel,
+                                labelTag = "player-episodes-label",
                                 iconRes = R.drawable.ic_action_episodes,
                                 action = PlayerActionUiState(enabled = true),
                                 onClick = onOpenEpisodes,

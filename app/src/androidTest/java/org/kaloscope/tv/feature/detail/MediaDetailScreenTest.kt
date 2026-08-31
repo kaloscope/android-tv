@@ -22,6 +22,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -1360,7 +1363,7 @@ class MediaDetailScreenTest {
     }
 
     @Test
-    fun moreInfoShowsSeriesPlotBeforeEpisodePlot() {
+    fun moreInfoShowsSeriesTitleAndPlotBeforeEpisodeTitleAndPlot() {
         val parent = series().copy(plot = "整部剧的父级简介")
         val childDetail = parent.copy(
             id = 301,
@@ -1395,19 +1398,27 @@ class MediaDetailScreenTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithText("剧集简介").assertExists()
-        composeRule.onNodeWithText("分集简介").assertExists()
+        val insideMoreInfoPanel = hasAnyAncestor(hasTestTag("detail-more-info-panel"))
+        val seriesTitleTop = composeRule
+            .onNode(hasText("群星档案") and insideMoreInfoPanel)
+            .fetchSemanticsNode().boundsInRoot.top
         val seriesPlotTop = composeRule.onNodeWithTag("detail-more-info-series-plot")
             .assertTextContains("整部剧的父级简介")
+            .fetchSemanticsNode().boundsInRoot.top
+        val episodeTitleTop = composeRule
+            .onNode(hasText("S1E1 - 启程") and insideMoreInfoPanel)
             .fetchSemanticsNode().boundsInRoot.top
         val episodePlotTop = composeRule.onNodeWithTag("detail-more-info-episode-plot")
             .assertTextContains("第一集独有的分集简介")
             .fetchSemanticsNode().boundsInRoot.top
 
         assertTrue(
-            "Series plot should appear before episode plot: " +
-                "series=$seriesPlotTop, episode=$episodePlotTop",
-            seriesPlotTop < episodePlotTop,
+            "Series title and plot should appear before episode title and plot: " +
+                "seriesTitle=$seriesTitleTop, seriesPlot=$seriesPlotTop, " +
+                "episodeTitle=$episodeTitleTop, episodePlot=$episodePlotTop",
+            seriesTitleTop < seriesPlotTop &&
+                seriesPlotTop < episodeTitleTop &&
+                episodeTitleTop < episodePlotTop,
         )
     }
 

@@ -363,13 +363,20 @@ internal fun MediaDetailCinematicLayout(
         if (moreInfoOpen) {
             DetailMoreInfoPanel(
                 viewportSize = DpSize(maxWidth, maxHeight),
-                title = focusedChild?.let(::mediaChildDisplayTitle) ?: parent.title,
+                title = if (sectionKind == MediaChildSectionKind.Episodes) {
+                    parent.title
+                } else {
+                    focusedChild?.let(::mediaChildDisplayTitle) ?: parent.title
+                },
                 generalPlot = displayedPlot.takeIf {
                     sectionKind != MediaChildSectionKind.Episodes
                 },
                 seriesPlot = parentPlot.takeIf {
                     sectionKind == MediaChildSectionKind.Episodes
                 },
+                episodeTitle = focusedChild
+                    ?.let(::mediaChildDisplayTitle)
+                    ?.takeIf { sectionKind == MediaChildSectionKind.Episodes },
                 episodePlot = focusedChildPlot.takeIf {
                     sectionKind == MediaChildSectionKind.Episodes &&
                         it?.trim() != parentPlot?.trim()

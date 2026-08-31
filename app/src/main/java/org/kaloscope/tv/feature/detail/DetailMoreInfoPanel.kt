@@ -54,6 +54,7 @@ internal fun DetailMoreInfoPanel(
     title: String,
     generalPlot: String?,
     seriesPlot: String?,
+    episodeTitle: String?,
     episodePlot: String?,
     genres: List<String>,
     closeFocusRequester: FocusRequester,
@@ -148,7 +149,9 @@ internal fun DetailMoreInfoPanel(
                     episodePlot?.takeIf(String::isNotBlank)?.let { fullPlot ->
                         item(key = "episode-plot") {
                             DetailSynopsisSection(
-                                title = stringResource(R.string.detail_episode_synopsis),
+                                title = episodeTitle
+                                    ?.takeIf(String::isNotBlank)
+                                    ?: stringResource(R.string.detail_episode_synopsis),
                                 plot = fullPlot,
                                 testTag = "detail-more-info-episode-plot",
                             )

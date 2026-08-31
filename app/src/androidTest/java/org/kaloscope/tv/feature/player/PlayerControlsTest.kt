@@ -244,6 +244,53 @@ class PlayerControlsTest {
     }
 
     @Test
+    fun episodeChooserExpandsItsLabelWhenFocused() {
+        composeRule.setContent {
+            MaterialTheme {
+                PlayerControls(
+                    state = controlsState(episodesEnabled = true),
+                    playFocus = remember { FocusRequester() },
+                    definitionFocus = remember { FocusRequester() },
+                    settingsFocus = remember { FocusRequester() },
+                    subtitleFocus = remember { FocusRequester() },
+                    speedFocus = remember { FocusRequester() },
+                    onPrevious = {},
+                    onRewind = {},
+                    onPlayPause = {},
+                    onForward = {},
+                    onNext = {},
+                    onToggleSubtitles = {},
+                    onOpenSpeed = {},
+                    onToggleDanmakus = {},
+                    onOpenSettings = {},
+                    onOpenDefinitions = {},
+                    onSeekPreviewBy = {},
+                    onSeekPreviewFinished = {},
+                    onHideControls = {},
+                    onInteraction = {},
+                )
+            }
+        }
+
+        val collapsedWidth = composeRule.onNodeWithTag("player-episodes")
+            .getUnclippedBoundsInRoot()
+            .let { it.right - it.left }
+        composeRule.onNodeWithTag("player-episodes-label").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("player-episodes")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("player-episodes-label").assertIsDisplayed()
+        val expandedWidth = composeRule.onNodeWithTag("player-episodes")
+            .getUnclippedBoundsInRoot()
+            .let { it.right - it.left }
+
+        assertTrue(
+            "Focused chooser width $expandedWidth must exceed collapsed width $collapsedWidth",
+            expandedWidth > collapsedWidth,
+        )
+    }
+
+    @Test
     fun episodeChooserMatchesTransportButtonSizeAndOccupiesTheLeftEdge() {
         composeRule.setContent {
             MaterialTheme {
