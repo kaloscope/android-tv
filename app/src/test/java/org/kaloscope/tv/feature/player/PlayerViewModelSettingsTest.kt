@@ -171,9 +171,11 @@ class PlayerViewModelSettingsTest {
         val episodes = listOf(
             mediaSummary(301, "/episode-1.mkv", "Episode 1").copy(
                 posterPath = "/posters/episode-1.webp",
+                aired = "2026-07-20",
             ),
             mediaSummary(302, "/episode-2.mkv", "Episode 2").copy(
                 posterPath = null,
+                aired = "2026-07-27",
             ),
         )
 
@@ -191,6 +193,10 @@ class PlayerViewModelSettingsTest {
         assertEquals(
             listOf("/posters/episode-1.webp", null),
             request.siblings.map { it.posterPath },
+        )
+        assertEquals(
+            listOf("2026-07-20", "2026-07-27"),
+            request.siblings.map { it.aired },
         )
     }
 

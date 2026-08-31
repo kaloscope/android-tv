@@ -53,6 +53,7 @@ data class LocalEpisodeRef(
     val seasonNumber: Int? = null,
     val episodeNumber: Int? = null,
     val posterPath: String? = null,
+    val aired: String? = null,
 )
 
 enum class PlaybackOrigin {

@@ -356,6 +356,7 @@ class PlayerViewModel @Inject constructor(
                     seasonNumber = item.season,
                     episodeNumber = item.episode,
                     posterPath = item.posterPath,
+                    aired = item.aired,
                 ).takeIf { it.mediaId > 0 && it.path.isNotBlank() && it.title.isNotBlank() }
             },
             autoplayNext = settings.autoplayNext,

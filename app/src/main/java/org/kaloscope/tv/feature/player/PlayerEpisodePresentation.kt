@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.player
 
+import org.kaloscope.tv.core.model.formatEpisodeDisplayTitle
 import org.kaloscope.tv.core.player.PlaybackRequest
 
 internal data class PlayerEpisodeEntry(
@@ -9,6 +10,7 @@ internal data class PlayerEpisodeEntry(
     val posterPath: String?,
     val showPoster: Boolean,
     val selected: Boolean,
+    val supportingText: String? = null,
 )
 
 internal object PlayerEpisodePresentation {
@@ -18,10 +20,15 @@ internal object PlayerEpisodePresentation {
                 PlayerEpisodeEntry(
                     stableId = "local:${episode.mediaId}",
                     sourceIndex = index,
-                    title = episode.title,
+                    title = formatEpisodeDisplayTitle(
+                        title = episode.title,
+                        seasonNumber = episode.seasonNumber,
+                        episodeNumber = episode.episodeNumber,
+                    ),
                     posterPath = episode.posterPath,
                     showPoster = true,
                     selected = episode.mediaId == request.mediaId,
+                    supportingText = episode.aired?.trim()?.takeIf(String::isNotEmpty),
                 )
             }
 

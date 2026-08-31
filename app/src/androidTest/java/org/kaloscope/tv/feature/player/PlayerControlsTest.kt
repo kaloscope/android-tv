@@ -275,11 +275,17 @@ class PlayerControlsTest {
         val collapsedWidth = composeRule.onNodeWithTag("player-episodes")
             .getUnclippedBoundsInRoot()
             .let { it.right - it.left }
-        composeRule.onNodeWithTag("player-episodes-label").assertDoesNotExist()
+        composeRule.onNodeWithTag(
+            testTag = "player-episodes-label",
+            useUnmergedTree = true,
+        ).assertDoesNotExist()
 
         composeRule.onNodeWithTag("player-episodes")
             .performSemanticsAction(SemanticsActions.RequestFocus)
-        composeRule.onNodeWithTag("player-episodes-label").assertIsDisplayed()
+        composeRule.onNodeWithTag(
+            testTag = "player-episodes-label",
+            useUnmergedTree = true,
+        ).assertIsDisplayed()
         val expandedWidth = composeRule.onNodeWithTag("player-episodes")
             .getUnclippedBoundsInRoot()
             .let { it.right - it.left }

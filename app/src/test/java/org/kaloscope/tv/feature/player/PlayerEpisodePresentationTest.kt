@@ -27,14 +27,20 @@ class PlayerEpisodePresentationTest {
                     LocalEpisodeRef(
                         mediaId = 301,
                         path = "/episode-1.mkv",
-                        title = "Episode 1",
+                        title = "S03E04 水王级魔术师",
+                        seasonNumber = 3,
+                        episodeNumber = 4,
                         posterPath = "/posters/episode-1.webp",
+                        aired = "2026-07-20",
                     ),
                     LocalEpisodeRef(
                         mediaId = 302,
                         path = "/episode-2.mkv",
-                        title = "Episode 2",
+                        title = "E5 - 庆祝",
+                        seasonNumber = 3,
+                        episodeNumber = 5,
                         posterPath = null,
+                        aired = "2026-07-27",
                     ),
                 ),
             ),
@@ -42,10 +48,17 @@ class PlayerEpisodePresentationTest {
 
         assertEquals(listOf(0, 1), entries.map { it.sourceIndex })
         assertEquals(listOf("local:301", "local:302"), entries.map { it.stableId })
-        assertEquals(listOf("Episode 1", "Episode 2"), entries.map { it.title })
+        assertEquals(
+            listOf("S3E4 - 水王级魔术师", "S3E5 - 庆祝"),
+            entries.map { it.title },
+        )
         assertEquals(
             listOf("/posters/episode-1.webp", null),
             entries.map { it.posterPath },
+        )
+        assertEquals(
+            listOf("2026-07-20", "2026-07-27"),
+            entries.map { it.supportingText },
         )
         assertEquals(listOf(false, true), entries.map { it.selected })
         assertTrue(entries.all { it.showPoster })
