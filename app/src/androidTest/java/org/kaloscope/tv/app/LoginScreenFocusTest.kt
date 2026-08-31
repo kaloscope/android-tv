@@ -120,6 +120,10 @@ class LoginScreenFocusTest {
         composeRule.onNodeWithText("正在登录…")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag(
+            testTag = "login-loading-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
         composeRule.runOnIdle {
             assertEquals(1, loginRequests)
         }

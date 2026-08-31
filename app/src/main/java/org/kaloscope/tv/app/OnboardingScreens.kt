@@ -70,6 +70,7 @@ import org.kaloscope.tv.core.designsystem.BackgroundRaised
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.KaloscopeBrand
+import org.kaloscope.tv.core.designsystem.KaloscopeBusyIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeConfirmDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
@@ -424,6 +425,11 @@ internal fun ServerSetupScreen(
                     } else {
                         stringResource(R.string.test_connection)
                     },
+                    loadingIndicatorTestTag = if (state.isTesting) {
+                        "server-test-loading-indicator"
+                    } else {
+                        null
+                    },
                     // Keep the focused test action enabled or Compose moves D-pad focus.
                     enabled = !state.isSaving,
                     onClick = {
@@ -441,6 +447,11 @@ internal fun ServerSetupScreen(
                             stringResource(R.string.saving)
                         } else {
                             stringResource(R.string.save_continue)
+                        },
+                        loadingIndicatorTestTag = if (state.isSaving) {
+                            "server-save-loading-indicator"
+                        } else {
+                            null
                         },
                         // Keep the focused action eligible for D-pad focus while saving.
                         enabled = state.canSave || state.isSaving,
@@ -657,6 +668,11 @@ internal fun LoginScreen(
                         stringResource(R.string.logging_in)
                     } else {
                         stringResource(R.string.login)
+                    },
+                    loadingIndicatorTestTag = if (state.isSubmitting) {
+                        "login-loading-indicator"
+                    } else {
+                        null
                     },
                     // Keep the focused action eligible for D-pad focus while submitting.
                     enabled = true,
@@ -894,6 +910,7 @@ private fun PrimaryButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    loadingIndicatorTestTag: String? = null,
 ) {
     KaloscopeButton(
         onClick = onClick,
@@ -902,15 +919,26 @@ private fun PrimaryButton(
         variant = KaloscopeControlVariant.Filled,
         size = KaloscopeControlSize.Compact,
     ) {
-        Text(
-            text = text,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 3.dp),
-        )
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            loadingIndicatorTestTag?.let { testTag ->
+                KaloscopeBusyIndicator(
+                    modifier = Modifier.testTag(testTag),
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(
+                text = text,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 

@@ -2601,6 +2601,39 @@ class SearchScreenTest {
     }
 
     @Test
+    fun loadingNextPageShowsInlineIndicatorAndMessage() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                SearchScreen(
+                    session = session(),
+                    state = state(
+                        results = (1..20).map { result("v$it") },
+                        hasNext = true,
+                        isLoadingMore = true,
+                    ),
+                    onRefreshIndexers = {},
+                    onSelectIndexer = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onResultFocused = {},
+                    onGridViewportChanged = {},
+                    onOpenResult = {},
+                    onOpenFilters = {},
+                    onDismissFilters = {},
+                    onApplyFilters = {},
+                    onClearFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(20)
+        composeRule.onNodeWithTag("search-load-more-loading-indicator").assertExists()
+        composeRule.onNodeWithText("正在加载…").assertExists()
+    }
+
+    @Test
     fun finalPageDoesNotPrefetchOrRenderPagingFooter() {
         var loads = 0
         val results = (1..20).map { result("v$it") }

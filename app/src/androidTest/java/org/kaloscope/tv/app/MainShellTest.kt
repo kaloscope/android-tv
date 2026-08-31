@@ -1062,6 +1062,10 @@ class MainShellTest {
         composeRule.onNodeWithText("测试连接")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag(
+            testTag = "settings-connection-loading-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
         composeRule.runOnIdle {
             assertEquals(1, tests)
         }

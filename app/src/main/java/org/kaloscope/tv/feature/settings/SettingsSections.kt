@@ -877,6 +877,11 @@ internal fun ServerAccountSettings(
             title = stringResource(R.string.test_connection),
             description = connectionDescription(connection),
             value = session.server.origin,
+            loadingIndicatorTestTag = if (connection == SettingsConnection.Testing) {
+                "settings-connection-loading-indicator"
+            } else {
+                null
+            },
             interactionsEnabled = interactionsEnabled &&
                 connection != SettingsConnection.Testing,
             descriptionColor = if (connection is SettingsConnection.Success) {

@@ -175,6 +175,10 @@ class ServerSetupFocusTest {
         composeRule.onNodeWithText("正在测试…")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag(
+            testTag = "server-test-loading-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
         composeRule.runOnIdle {
             assertEquals(1, tests)
         }
@@ -257,6 +261,10 @@ class ServerSetupFocusTest {
         composeRule.onNodeWithText("正在保存…")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag(
+            testTag = "server-save-loading-indicator",
+            useUnmergedTree = true,
+        ).assertExists()
         composeRule.runOnIdle {
             assertEquals(1, saves)
         }

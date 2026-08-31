@@ -53,6 +53,7 @@ import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeBusyIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialog
@@ -559,6 +560,7 @@ internal fun SettingActionRow(
     titleColor: Color? = null,
     valueColor: Color? = null,
     descriptionColor: Color? = null,
+    loadingIndicatorTestTag: String? = null,
     onClick: () -> Unit,
 ) {
     KaloscopeButton(
@@ -577,6 +579,7 @@ internal fun SettingActionRow(
             titleColor = titleColor,
             valueColor = valueColor,
             descriptionColor = descriptionColor,
+            loadingIndicatorTestTag = loadingIndicatorTestTag,
         )
     }
 }
@@ -589,6 +592,7 @@ internal fun SettingRowContent(
     titleColor: Color? = null,
     valueColor: Color? = null,
     descriptionColor: Color? = null,
+    loadingIndicatorTestTag: String? = null,
 ) {
     SettingRowContent(
         title = title,
@@ -602,6 +606,12 @@ internal fun SettingRowContent(
                 color = valueColor ?: LocalContentColor.current,
                 fontSize = 15.sp,
             )
+        }
+        loadingIndicatorTestTag?.let { testTag ->
+            if (value.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
+            }
+            KaloscopeBusyIndicator(modifier = Modifier.testTag(testTag))
         }
     }
 }

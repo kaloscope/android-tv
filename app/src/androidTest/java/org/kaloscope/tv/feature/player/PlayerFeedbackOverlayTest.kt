@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
@@ -38,7 +39,7 @@ class PlayerFeedbackOverlayTest {
     }
 
     @Test
-    fun switchingUsesBlockingCenterMessage() {
+    fun switchingUsesBlockingIndicatorWithMessageBelow() {
         composeRule.setContent {
             KaloscopeTheme {
                 PlayerFeedbackOverlay(
@@ -50,11 +51,18 @@ class PlayerFeedbackOverlayTest {
             }
         }
 
-        composeRule.onNodeWithText("正在切换剧集…").assertIsDisplayed()
+        val indicator = composeRule.onNodeWithTag("player-switching-loading-indicator")
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val message = composeRule.onNodeWithText("正在切换剧集…")
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+
+        assertTrue(message.top > indicator.bottom)
     }
 
     @Test
-    fun fallbackIsAPlainBanner() {
+    fun fallbackBannerIncludesBusyIndicator() {
         composeRule.setContent {
             KaloscopeTheme {
                 PlayerFeedbackOverlay(
@@ -65,6 +73,7 @@ class PlayerFeedbackOverlayTest {
                 )
             }
         }
+        composeRule.onNodeWithTag("player-fallback-loading-indicator").assertIsDisplayed()
         composeRule.onNodeWithText("直连失败，正在切换转码…").assertIsDisplayed()
     }
 

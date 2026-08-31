@@ -6,7 +6,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -54,6 +53,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeChoiceDialogOption
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanel
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelAdjustmentRow
 import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelChoiceRow
@@ -144,7 +144,6 @@ private fun ActiveReader(
     onTextPreferencesChanged: (TextReaderSettings) -> Unit,
 ) {
     val contentFocus = remember { FocusRequester() }
-    val loadingFocus = remember { FocusRequester() }
     val controlFocus = remember {
         ReaderControlTarget.entries.associateWith { FocusRequester() }
     }
@@ -266,10 +265,8 @@ private fun ActiveReader(
         }
     }
     LaunchedEffect(state.isChapterLoading) {
-        withFrameNanos { }
-        if (state.isChapterLoading) {
-            loadingFocus.requestFocus()
-        } else if (drawer == null) {
+        if (!state.isChapterLoading && drawer == null) {
+            withFrameNanos { }
             if (controlsVisible) {
                 requestControl(entryControlTarget())
             } else {
@@ -478,22 +475,14 @@ private fun ActiveReader(
             }
         }
         if (state.isChapterLoading) {
-            Box(
+            KaloscopeLoadingLayout(
+                testTag = "reader-chapter-loading",
+                message = stringResource(R.string.reader_switching_chapter),
+                blockInteraction = true,
                 modifier = Modifier
-                    .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.72f))
-                    .focusRequester(loadingFocus)
-                    .focusable()
                     .onPreviewKeyEvent { true }
-                    .testTag("reader-chapter-loading"),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.reader_switching_chapter),
-                    color = Color.White,
-                    fontSize = 22.sp,
-                )
-            }
+            )
         }
     }
 }

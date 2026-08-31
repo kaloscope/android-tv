@@ -1278,6 +1278,35 @@ class LibraryScreenTest {
     }
 
     @Test
+    fun loadingNextPageShowsInlineIndicatorAndMessage() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(
+                        media = mediaItems(20),
+                        hasNext = true,
+                        isLoadingMore = true,
+                    ),
+                    restoreMediaId = null,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onGridViewportChanged = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-results-grid").performScrollToIndex(20)
+        composeRule.onNodeWithTag("library-load-more-loading-indicator").assertExists()
+        composeRule.onNodeWithText("正在加载…").assertExists()
+    }
+
+    @Test
     fun finalPageDoesNotPrefetchOrRenderPagingFooter() {
         var loads = 0
         composeRule.setContent {

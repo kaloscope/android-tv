@@ -3,10 +3,12 @@ package org.kaloscope.tv.feature.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,8 +26,10 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeBusyIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
+import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.KaloscopePlaybackLoadingLayout
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.player.PlaybackFailure
@@ -46,23 +51,36 @@ internal fun PlayerFeedbackOverlay(
                 testTag = "player-loading",
             )
 
-        PlaybackFeedback.SwitchingItem ->
-            BlockingFeedbackMessage(stringResource(R.string.switching_episode))
+        PlaybackFeedback.SwitchingItem -> KaloscopeLoadingLayout(
+            testTag = "player-switching-loading",
+            modifier = Modifier.background(Color(0x99000000)),
+            message = stringResource(R.string.switching_episode),
+            blockInteraction = true,
+        )
 
         PlaybackFeedback.FallingBack -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.TopCenter,
             ) {
-                Text(
-                    text = stringResource(R.string.player_fallback_banner),
-                    color = OnBackground,
-                    fontSize = 14.sp,
+                Row(
                     modifier = Modifier
                         .padding(top = 34.dp)
                         .background(Color(0xCC000000), RoundedCornerShape(8.dp))
                         .padding(horizontal = 16.dp, vertical = 10.dp),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    KaloscopeBusyIndicator(
+                        modifier = Modifier.testTag("player-fallback-loading-indicator"),
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.width(9.dp))
+                    Text(
+                        text = stringResource(R.string.player_fallback_banner),
+                        color = OnBackground,
+                        fontSize = 14.sp,
+                    )
+                }
             }
         }
 
@@ -77,23 +95,6 @@ internal fun PlayerFeedbackOverlay(
             )
 
         PlaybackFeedback.Ready -> Unit
-    }
-}
-
-@Composable
-private fun BlockingFeedbackMessage(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x99000000)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = message,
-            color = OnBackground,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
     }
 }
 

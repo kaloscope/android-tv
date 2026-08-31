@@ -655,6 +655,24 @@ class ReaderScreenTest {
     }
 
     @Test
+    fun chapterLoadingCoversReaderWithIndicatorAndMessageBelow() {
+        setReader(textState(text = "正文").copy(isChapterLoading = true))
+
+        val screen = composeRule.onNodeWithTag("reader-screen")
+            .fetchSemanticsNode().boundsInRoot
+        val loading = composeRule.onNodeWithTag("reader-chapter-loading")
+            .assertIsFocused()
+            .fetchSemanticsNode().boundsInRoot
+        val indicator = composeRule.onNodeWithTag("reader-chapter-loading-indicator")
+            .fetchSemanticsNode().boundsInRoot
+        val message = composeRule.onNodeWithText("正在切换章节…")
+            .fetchSemanticsNode().boundsInRoot
+
+        assertEquals(screen, loading)
+        assertTrue(message.top > indicator.bottom)
+    }
+
+    @Test
     fun textSettingsStayDarkOnLightReadingTheme() {
         setReader(
             textState(

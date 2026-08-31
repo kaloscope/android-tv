@@ -69,6 +69,7 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.KaloscopeBusyIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
@@ -746,12 +747,23 @@ private fun SearchResults(
                             key = "search-load-more-loading",
                             span = { GridItemSpan(maxLineSpan) },
                         ) {
-                            Text(
-                                text = stringResource(R.string.loading_more),
-                                color = Muted,
-                                fontSize = 14.sp,
+                            Row(
                                 modifier = Modifier.testTag("search-load-more-loading"),
-                            )
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                KaloscopeBusyIndicator(
+                                    modifier = Modifier.testTag(
+                                        "search-load-more-loading-indicator",
+                                    ),
+                                    color = Muted,
+                                )
+                                Text(
+                                    text = stringResource(R.string.loading_more),
+                                    color = Muted,
+                                    fontSize = 14.sp,
+                                )
+                            }
                         }
                     }
                     if (
