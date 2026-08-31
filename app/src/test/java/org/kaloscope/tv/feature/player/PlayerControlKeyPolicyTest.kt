@@ -187,14 +187,18 @@ class PlayerControlKeyPolicyTest {
     }
 
     @Test
-    fun `back hides controls before leaving playback`() {
+    fun `back hides controls then requests confirmation before leaving playback`() {
         assertEquals(
             PlayerControlCommand.HideControls,
             PlayerControlKeyPolicy.backCommand(PlayerBackContext.Controls),
         )
         assertEquals(
-            PlayerControlCommand.ExitPlayer,
+            PlayerControlCommand.ShowExitConfirmation,
             PlayerControlKeyPolicy.backCommand(PlayerBackContext.Player),
+        )
+        assertEquals(
+            PlayerControlCommand.ExitPlayer,
+            PlayerControlKeyPolicy.backCommand(PlayerBackContext.ExitConfirmation),
         )
     }
 

@@ -234,6 +234,13 @@ private fun PlayerContent(
     val subtitleFocus = remember { FocusRequester() }
     val speedFocus = remember { FocusRequester() }
     val hasNext = PlaybackRequestNavigator.hasNext(state.request)
+    val controlsHandleBack =
+        controlLayer != PlayerControlLayer.Hidden &&
+            feedback in setOf(
+                PlaybackFeedback.Ready,
+                PlaybackFeedback.Rebuffering,
+                PlaybackFeedback.FallingBack,
+            )
     val togglePlaybackWithFeedback = {
         val playWhenReady = controller.togglePlayPause()
         playbackToggleFeedbackId += 1
@@ -241,26 +248,6 @@ private fun PlayerContent(
             id = playbackToggleFeedbackId,
             playWhenReady = playWhenReady,
         )
-    }
-
-    BackHandler(enabled = !sidePanelOpen) {
-        val context = if (
-            controlLayer != PlayerControlLayer.Hidden &&
-                feedback in setOf(
-                    PlaybackFeedback.Ready,
-                    PlaybackFeedback.Rebuffering,
-                    PlaybackFeedback.FallingBack,
-                )
-        ) {
-            PlayerBackContext.Controls
-        } else {
-            PlayerBackContext.Player
-        }
-        when (PlayerControlKeyPolicy.backCommand(context)) {
-            PlayerControlCommand.HideControls -> controlLayer = PlayerControlLayer.Hidden
-            PlayerControlCommand.ExitPlayer -> onBack()
-            else -> Unit
-        }
     }
 
     LaunchedEffect(controller, sessionSettings.selectedSubtitleTrackId) {
@@ -829,6 +816,14 @@ private fun PlayerContent(
                 interactionVersion += 1
                 controller.retry()
             },
+        )
+        PlayerExitConfirmation(
+            enabled = !sidePanelOpen,
+            controlsVisible = controlsHandleBack,
+            cancellationSignal = interactionVersion,
+            resetKey = playbackIdentity,
+            onHideControls = { controlLayer = PlayerControlLayer.Hidden },
+            onExit = onBack,
         )
     }
 }

@@ -28,6 +28,7 @@ internal enum class PlayerControlFocusTarget {
 internal enum class PlayerBackContext {
     Controls,
     Player,
+    ExitConfirmation,
 }
 
 internal sealed interface PlayerControlCommand {
@@ -50,6 +51,8 @@ internal sealed interface PlayerControlCommand {
     data object SubmitSeekPreview : PlayerControlCommand
 
     data object HideControls : PlayerControlCommand
+
+    data object ShowExitConfirmation : PlayerControlCommand
 
     data object ExitPlayer : PlayerControlCommand
 }
@@ -92,7 +95,8 @@ internal object PlayerControlKeyPolicy {
     fun backCommand(context: PlayerBackContext): PlayerControlCommand =
         when (context) {
             PlayerBackContext.Controls -> PlayerControlCommand.HideControls
-            PlayerBackContext.Player -> PlayerControlCommand.ExitPlayer
+            PlayerBackContext.Player -> PlayerControlCommand.ShowExitConfirmation
+            PlayerBackContext.ExitConfirmation -> PlayerControlCommand.ExitPlayer
         }
 
     private fun overlayCommand(
