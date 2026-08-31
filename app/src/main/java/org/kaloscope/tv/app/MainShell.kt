@@ -28,11 +28,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import org.kaloscope.tv.R
 import org.kaloscope.tv.app.navigation.HomeRoute
 import org.kaloscope.tv.app.navigation.LibraryRoute
 import org.kaloscope.tv.app.navigation.MediaDetailRoute
@@ -48,6 +50,8 @@ import org.kaloscope.tv.app.navigation.openSettings
 import org.kaloscope.tv.app.navigation.selectRoot
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
+import org.kaloscope.tv.core.designsystem.KaloscopeConfirmDialog
+import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.KaloscopePlaybackLoadingLayout
 import org.kaloscope.tv.core.designsystem.ServerBackdrop
@@ -91,6 +95,7 @@ internal fun MainShell(
     playerState: PlayerUiState = PlayerUiState.Loading(),
     playbackControllerFactory: PlaybackControllerFactory? = null,
     playerActions: PlayerActions,
+    onExit: () -> Unit,
     readerState: ReaderUiState = ReaderUiState.Idle,
     readerActions: ReaderActions = ReaderActions(),
 ) {
@@ -109,6 +114,9 @@ internal fun MainShell(
         mutableStateOf<NavKey>(backStack.lastOrNull() ?: HomeRoute)
     }
     var destinationEntryKeepsTopFocus by remember {
+        mutableStateOf(false)
+    }
+    var exitConfirmationOpen by remember {
         mutableStateOf(false)
     }
     var restoringSearchFocusAfterPlayer by remember {
@@ -239,14 +247,15 @@ internal fun MainShell(
     }
 
     BackHandler(
-        enabled = currentRoute != HomeRoute &&
-            currentRoute !is PlayerRoute &&
-            currentRoute !is ReaderRoute,
+        enabled = currentRoute == HomeRoute ||
+            currentRoute == SearchRoute ||
+            currentRoute == LibraryRoute ||
+            currentRoute == SettingsRoute,
     ) {
         if (currentRoute == SearchRoute && searchActions.cancelResolution()) {
             destinationEntryKeepsTopFocus = false
         } else {
-            goBack()
+            exitConfirmationOpen = true
         }
     }
 
@@ -553,6 +562,20 @@ internal fun MainShell(
                     )
                 }
             }
+        }
+        if (exitConfirmationOpen) {
+            KaloscopeConfirmDialog(
+                title = stringResource(R.string.exit_confirmation_title),
+                message = stringResource(R.string.exit_confirmation_message),
+                cancelLabel = stringResource(R.string.cancel),
+                confirmLabel = stringResource(R.string.exit_app),
+                confirmTone = KaloscopeControlTone.Danger,
+                onDismiss = { exitConfirmationOpen = false },
+                onConfirm = {
+                    exitConfirmationOpen = false
+                    onExit()
+                },
+            )
         }
     }
 }

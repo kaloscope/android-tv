@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
                 settingsViewModel = settingsViewModel,
                 readerViewModel = readerViewModel,
                 playbackControllerFactory = playbackControllerFactory,
+                onExit = ::finish,
             )
         }
     }

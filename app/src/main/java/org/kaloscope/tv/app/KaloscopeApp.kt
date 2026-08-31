@@ -33,6 +33,7 @@ fun KaloscopeApp(
     settingsViewModel: SettingsViewModel,
     readerViewModel: ReaderViewModel,
     playbackControllerFactory: PlaybackControllerFactory,
+    onExit: () -> Unit,
 ) {
     val bootstrapState by viewModel.bootstrapState.collectAsStateWithLifecycle()
     val homeState by mainViewModel.homeState.collectAsStateWithLifecycle()
@@ -307,6 +308,7 @@ fun KaloscopeApp(
                         dismissPageError = readerViewModel::dismissPageError,
                         close = readerViewModel::close,
                     ),
+                    onExit = onExit,
                 )
             }
 

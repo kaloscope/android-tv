@@ -64,18 +64,11 @@ fun MutableList<NavKey>.openReader(requestId: String) {
 }
 
 fun MutableList<NavKey>.handleMainBack(): Boolean =
-    when {
-        size > 1 -> {
-            removeLastOrNull()
-            true
-        }
-
-        lastOrNull() != HomeRoute -> {
-            selectRoot(HomeRoute)
-            true
-        }
-
-        else -> false
+    if (size > 1) {
+        removeLastOrNull()
+        true
+    } else {
+        false
     }
 
 fun StartPage.toRootRoute(): NavKey =

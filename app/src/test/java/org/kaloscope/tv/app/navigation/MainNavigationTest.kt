@@ -79,6 +79,14 @@ class MainNavigationTest {
     }
 
     @Test
+    fun `non-home root delegates back without changing route`() {
+        val backStack = mutableListOf<NavKey>(LibraryRoute)
+
+        assertFalse(backStack.handleMainBack())
+        assertEquals(listOf(LibraryRoute), backStack)
+    }
+
+    @Test
     fun `saved start page selects the matching root route`() {
         assertEquals(HomeRoute, StartPage.Home.toRootRoute())
         assertEquals(SearchRoute, StartPage.Search.toRootRoute())

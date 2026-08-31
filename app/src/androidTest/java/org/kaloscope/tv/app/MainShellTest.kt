@@ -116,6 +116,97 @@ class MainShellTest {
     }
 
     @Test
+    fun backFromRootShowsExitConfirmationWithoutChangingRoute() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = LibraryRoute,
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsSelected()
+            .assertIsFocused()
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertExists()
+        composeRule.onNodeWithText("确认退出？").assertExists()
+        composeRule.onNodeWithText("确定要关闭当前应用吗？").assertExists()
+        composeRule.onNodeWithTag("confirm-dialog-cancel").assertIsFocused()
+        composeRule.onNode(hasText("媒体库") and hasClickAction()).assertIsSelected()
+        composeRule.onNode(hasText("首页") and hasClickAction()).assertIsNotSelected()
+    }
+
+    @Test
+    fun backDismissesExitConfirmationWithoutExitingAndRestoresFocus() {
+        var exits = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = LibraryRoute,
+                    onExit = { exits += 1 },
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertExists()
+
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertDoesNotExist()
+        composeRule.onNode(hasText("媒体库") and hasClickAction()).assertIsFocused()
+        composeRule.runOnIdle { assertEquals(0, exits) }
+    }
+
+    @Test
+    fun confirmingExitInvokesExitCallback() {
+        var exits = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    onExit = { exits += 1 },
+                )
+            }
+        }
+
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+        composeRule.runOnIdle { assertEquals(0, exits) }
+
+        composeRule.onNodeWithTag("confirm-dialog-confirm")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertDoesNotExist()
+        composeRule.runOnIdle { assertEquals(1, exits) }
+    }
+
+    @Test
     fun directionUpThroughHomeContentFocusesActiveHomeNavigation() {
         composeRule.setContent {
             KaloscopeTheme {
@@ -1221,7 +1312,7 @@ class MainShellTest {
     }
 
     @Test
-    fun backCancelsSearchResolutionBeforeLeavingSearch() {
+    fun backCancelsSearchResolutionBeforeShowingExitConfirmation() {
         var searchState by mutableStateOf(
             deepSearchState().copy(resolvingResultId = "v25"),
         )
@@ -1256,6 +1347,7 @@ class MainShellTest {
         composeRule.waitForIdle()
 
         composeRule.runOnIdle { assertEquals(1, cancellations) }
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertDoesNotExist()
         composeRule.onNodeWithText("网络搜索").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
 
@@ -1264,7 +1356,9 @@ class MainShellTest {
         composeRule.waitForIdle()
 
         composeRule.runOnIdle { assertEquals(1, cancellations) }
-        composeRule.onNodeWithText("首页").assertIsSelected()
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertExists()
+        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
     }
 
     @Test
@@ -1407,6 +1501,7 @@ class MainShellTest {
             assertEquals(0, applications)
         }
         composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertDoesNotExist()
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
         composeRule.onNodeWithText("网络搜索").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
@@ -2274,6 +2369,7 @@ private fun TestMainShell(
     playbackControllerFactory: PlaybackControllerFactory? = null,
     readerState: ReaderUiState = ReaderUiState.Idle,
     readerActions: ReaderActions = ReaderActions(),
+    onExit: () -> Unit = {},
 ) {
     MainShell(
         session = session,
@@ -2293,6 +2389,7 @@ private fun TestMainShell(
         playerActions = PlayerActions(),
         readerState = readerState,
         readerActions = readerActions,
+        onExit = onExit,
     )
 }
 

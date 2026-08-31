@@ -41,6 +41,9 @@
     <string name="logout">退出登录</string>
     <string name="logout_confirmation_title">退出登录？</string>
     <string name="logout_confirmation_message">将退出服务器“%1$s”上的账号“%2$s”，并清除保存的登录状态。</string>
+    <string name="exit_app">退出</string>
+    <string name="exit_confirmation_title">确认退出？</string>
+    <string name="exit_confirmation_message">确定要关闭当前应用吗？</string>
 
     <string name="home">首页</string>
     <string name="search">网络搜索</string>
