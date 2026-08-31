@@ -118,10 +118,16 @@ internal fun MediaDetailCinematicLayout(
     val moreInfoCloseFocusRequester = remember(parent.id) { FocusRequester() }
     var moreInfoOpen by remember(parent.id) { mutableStateOf(false) }
     var verticalScrollInProgress by remember(parent.id) { mutableStateOf(false) }
-    val displayedPlot = focusedChildDetail
+    val sectionKind = childSectionKind(parent)
+    val parentPlot = parent.plot?.takeIf(String::isNotBlank)
+    val focusedChildPlot = focusedChildDetail
         ?.plot
         ?.takeIf(String::isNotBlank)
-        ?: parent.plot
+    val displayedPlot = if (sectionKind == MediaChildSectionKind.Episodes) {
+        parentPlot ?: focusedChildPlot
+    } else {
+        focusedChildPlot ?: parentPlot
+    }
 
     fun dismissMoreInfo() {
         moreInfoOpen = false
@@ -219,8 +225,6 @@ internal fun MediaDetailCinematicLayout(
         } else {
             (maxWidth * 0.18f).coerceIn(176.dp, 260.dp)
         }
-        val sectionKind = childSectionKind(parent)
-
         ServerBackdrop(
             session = session,
             backdropPath = resolveDetailBackdrop(parent, focusedChild),
@@ -360,7 +364,16 @@ internal fun MediaDetailCinematicLayout(
             DetailMoreInfoPanel(
                 viewportSize = DpSize(maxWidth, maxHeight),
                 title = focusedChild?.let(::mediaChildDisplayTitle) ?: parent.title,
-                plot = displayedPlot,
+                generalPlot = displayedPlot.takeIf {
+                    sectionKind != MediaChildSectionKind.Episodes
+                },
+                seriesPlot = parentPlot.takeIf {
+                    sectionKind == MediaChildSectionKind.Episodes
+                },
+                episodePlot = focusedChildPlot.takeIf {
+                    sectionKind == MediaChildSectionKind.Episodes &&
+                        it?.trim() != parentPlot?.trim()
+                },
                 genres = parent.genres,
                 closeFocusRequester = moreInfoCloseFocusRequester,
                 onDismiss = ::dismissMoreInfo,

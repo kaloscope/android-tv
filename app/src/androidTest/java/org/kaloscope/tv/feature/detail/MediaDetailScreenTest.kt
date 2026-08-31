@@ -1324,7 +1324,7 @@ class MediaDetailScreenTest {
     }
 
     @Test
-    fun focusedChildDetailReplacesParentPlot() {
+    fun focusedChildDetailKeepsSeriesPlotInHero() {
         val parent = series().copy(plot = "整部剧的父级简介")
         val childDetail = parent.copy(
             id = 301,
@@ -1355,8 +1355,60 @@ class MediaDetailScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("第一集独有的分集简介").assertExists()
-        composeRule.onNodeWithText("整部剧的父级简介").assertDoesNotExist()
+        composeRule.onNodeWithText("整部剧的父级简介").assertExists()
+        composeRule.onNodeWithText("第一集独有的分集简介").assertDoesNotExist()
+    }
+
+    @Test
+    fun moreInfoShowsSeriesPlotBeforeEpisodePlot() {
+        val parent = series().copy(plot = "整部剧的父级简介")
+        val childDetail = parent.copy(
+            id = 301,
+            title = "启程",
+            path = "/media/episode-1.mkv",
+            plot = "第一集独有的分集简介",
+            season = 1,
+            episode = 1,
+            children = emptyList(),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                MediaDetailScreen(
+                    session = session(),
+                    state = MediaDetailUiState.Content(
+                        parent = parent,
+                        focusedChildId = 301,
+                        focusedChildDetail = childDetail,
+                    ),
+                    resumePositionsByMediaId = emptyMap(),
+                    onBack = {},
+                    onRetry = {},
+                    onChildFocused = {},
+                    onChildViewportChanged = {},
+                    onPlayParent = { _, _ -> },
+                    onPlayChild = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("detail-more-info-action")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.onNodeWithText("剧集简介").assertExists()
+        composeRule.onNodeWithText("分集简介").assertExists()
+        val seriesPlotTop = composeRule.onNodeWithTag("detail-more-info-series-plot")
+            .assertTextContains("整部剧的父级简介")
+            .fetchSemanticsNode().boundsInRoot.top
+        val episodePlotTop = composeRule.onNodeWithTag("detail-more-info-episode-plot")
+            .assertTextContains("第一集独有的分集简介")
+            .fetchSemanticsNode().boundsInRoot.top
+
+        assertTrue(
+            "Series plot should appear before episode plot: " +
+                "series=$seriesPlotTop, episode=$episodePlotTop",
+            seriesPlotTop < episodePlotTop,
+        )
     }
 
     @Test
@@ -1413,14 +1465,15 @@ class MediaDetailScreenTest {
         }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("第一集简介").assertExists()
+        composeRule.onNodeWithText(parentPlot).assertExists()
+        composeRule.onNodeWithText("第一集简介").assertDoesNotExist()
         val updatedPosterTop = composeRule.onNodeWithTag("detail-parent-poster-201")
             .fetchSemanticsNode().boundsInRoot.top
         val updatedCarouselOffset = composeRule.onNodeWithTag("detail-child-carousel")
             .fetchSemanticsNode().boundsInRoot.top - updatedPosterTop
         val tolerance = with(composeRule.density) { 1.dp.toPx() }
         assertTrue(
-            "Child plot replacement moved the episode carousel: " +
+            "Child detail arrival moved the episode carousel: " +
                 "before=$initialCarouselOffset, after=$updatedCarouselOffset",
             kotlin.math.abs(initialCarouselOffset - updatedCarouselOffset) <= tolerance,
         )

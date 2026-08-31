@@ -52,7 +52,9 @@ import org.kaloscope.tv.core.designsystem.PanelElevated
 internal fun DetailMoreInfoPanel(
     viewportSize: DpSize,
     title: String,
-    plot: String?,
+    generalPlot: String?,
+    seriesPlot: String?,
+    episodePlot: String?,
     genres: List<String>,
     closeFocusRequester: FocusRequester,
     onDismiss: () -> Unit,
@@ -125,21 +127,30 @@ internal fun DetailMoreInfoPanel(
                         .testTag("detail-more-info-content"),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    plot?.takeIf(String::isNotBlank)?.let { fullPlot ->
+                    generalPlot?.takeIf(String::isNotBlank)?.let { fullPlot ->
                         item(key = "plot") {
-                            Text(
-                                text = stringResource(R.string.detail_synopsis),
-                                color = accentPalette.primary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
+                            DetailSynopsisSection(
+                                title = stringResource(R.string.detail_synopsis),
+                                plot = fullPlot,
+                                testTag = "detail-more-info-plot",
                             )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = fullPlot,
-                                color = OnBackground,
-                                fontSize = 16.sp,
-                                lineHeight = 24.sp,
-                                modifier = Modifier.testTag("detail-more-info-plot"),
+                        }
+                    }
+                    seriesPlot?.takeIf(String::isNotBlank)?.let { fullPlot ->
+                        item(key = "series-plot") {
+                            DetailSynopsisSection(
+                                title = stringResource(R.string.detail_series_synopsis),
+                                plot = fullPlot,
+                                testTag = "detail-more-info-series-plot",
+                            )
+                        }
+                    }
+                    episodePlot?.takeIf(String::isNotBlank)?.let { fullPlot ->
+                        item(key = "episode-plot") {
+                            DetailSynopsisSection(
+                                title = stringResource(R.string.detail_episode_synopsis),
+                                plot = fullPlot,
+                                testTag = "detail-more-info-episode-plot",
                             )
                         }
                     }
@@ -178,4 +189,27 @@ internal fun DetailMoreInfoPanel(
             }
         }
     }
+}
+
+@Composable
+private fun DetailSynopsisSection(
+    title: String,
+    plot: String,
+    testTag: String,
+) {
+    val accentPalette = LocalAccentPalette.current
+    Text(
+        text = title,
+        color = accentPalette.primary,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = plot,
+        color = OnBackground,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        modifier = Modifier.testTag(testTag),
+    )
 }

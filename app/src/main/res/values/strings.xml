@@ -264,6 +264,8 @@
     <string name="cast_title">演职人员</string>
     <string name="detail_more_info">更多信息</string>
     <string name="detail_synopsis">简介</string>
+    <string name="detail_series_synopsis">剧集简介</string>
+    <string name="detail_episode_synopsis">分集简介</string>
     <string name="detail_genres">类型</string>
     <string name="close">关闭</string>
     <string name="director_title">导演</string>
