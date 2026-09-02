@@ -26,6 +26,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,6 +77,7 @@ fun PlayerScreen(
             KaloscopePlaybackLoadingLayout(
                 stage = state.stage,
                 testTag = "player-loading",
+                modifier = Modifier.keepScreenOn(),
             )
         }
 
@@ -174,6 +176,7 @@ private fun PlayerContent(
         KaloscopePlaybackLoadingLayout(
             stage = PlaybackPreparationStage.Playback,
             testTag = "player-loading",
+            modifier = Modifier.keepScreenOn(),
         )
         return
     }
@@ -424,9 +427,21 @@ private fun PlayerContent(
     val danmakusFailed = PlayerExtra.Danmakus in state.extraErrors
     val danmakusAvailable =
         state.danmakus.isNotEmpty() && danmakuRuntimeAvailable && !danmakusFailed
+    val keepScreenOnModifier =
+        if (
+            PlayerKeepScreenOnPolicy.shouldKeepScreenOn(
+                playWhenReady = status.playWhenReady,
+                playbackState = status.playbackState,
+                hasFailure = status.failure != null,
+            )
+        ) {
+            Modifier.keepScreenOn()
+        } else {
+            Modifier
+        }
 
     Box(
-        modifier = Modifier
+        modifier = keepScreenOnModifier
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(playerFocus)

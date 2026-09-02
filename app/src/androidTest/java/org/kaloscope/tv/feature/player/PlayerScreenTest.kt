@@ -1,10 +1,15 @@
 package org.kaloscope.tv.feature.player
 
+import android.view.View
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
@@ -68,6 +73,42 @@ class PlayerScreenTest {
 
         composeRule.onNodeWithTag("player-loading-indicator").assertExists()
         composeRule.onNodeWithText("正在获取弹幕…").assertExists()
+    }
+
+    @Test
+    fun playerPreparationKeepsTheScreenOnOnlyWhileComposed() {
+        val showPlayer = mutableStateOf(true)
+        lateinit var composeView: View
+        composeRule.setContent {
+            composeView = LocalView.current
+            if (showPlayer.value) {
+                KaloscopeTheme {
+                    val context = LocalContext.current
+                    PlayerScreen(
+                        session = session(),
+                        state = PlayerUiState.Loading(PlaybackPreparationStage.Playback),
+                        controllerFactory = remember(context) {
+                            PlaybackControllerFactory(context)
+                        },
+                        onProgress = { _, _, _, _ -> },
+                        onSelectDefinition = { _, _ -> },
+                        onPrevious = {},
+                        onNext = {},
+                        onSelectEpisode = {},
+                        onRetryExtra = {},
+                        onBack = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.runOnIdle {
+            assertTrue(composeView.keepScreenOn)
+            showPlayer.value = false
+        }
+        composeRule.runOnIdle {
+            assertFalse(composeView.keepScreenOn)
+        }
     }
 }
 
