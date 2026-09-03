@@ -126,7 +126,7 @@ class PreferencesSettingsRepository @Inject constructor(
                 ),
                 displayAreaPercent = DanmakuSettingsPolicy.validPercentage(
                     this[DANMAKU_DISPLAY_AREA],
-                    fallback = 75,
+                    fallback = DanmakuSettingsPolicy.DEFAULT_DISPLAY_AREA_PERCENT,
                 ),
                 visibleModes = buildSet {
                     if (this@toSettings[DANMAKU_SCROLL_VISIBLE] ?: true) {
@@ -140,7 +140,8 @@ class PreferencesSettingsRepository @Inject constructor(
                     }
                 },
                 blockColored = this[DANMAKU_COLORED_BLOCKED] ?: false,
-                mergeDuplicates = this[DANMAKU_MERGE_DUPLICATES] ?: false,
+                mergeDuplicates = this[DANMAKU_MERGE_DUPLICATES]
+                    ?: DanmakuSettingsPolicy.DEFAULT_MERGE_DUPLICATES,
             ),
             subtitle = SubtitleSettingsPolicy.sanitize(
                 SubtitleSettings(

@@ -82,6 +82,7 @@ class AkDanmakuMapperTest {
             opacityPercent = 50,
             displayAreaPercent = 25,
             visibleModes = setOf(DanmakuDisplayMode.Scroll),
+            mergeDuplicates = false,
         ).toAkDanmakuConfig()
 
         assertFalse(config.visibility)

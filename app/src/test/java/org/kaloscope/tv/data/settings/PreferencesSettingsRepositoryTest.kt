@@ -36,7 +36,7 @@ import org.kaloscope.tv.core.player.TranscodeQuality
 
 class PreferencesSettingsRepositoryTest {
     @Test
-    fun `missing preferences return P0 defaults`() = runTest {
+    fun `missing preferences return product defaults`() = runTest {
         val repository = repository(this)
 
         val result = repository.getSettings()
@@ -48,9 +48,10 @@ class PreferencesSettingsRepositoryTest {
                 enabled = true,
                 textSize = DanmakuTextSize.Medium,
                 speed = DanmakuSpeed.Standard,
-                opacityPercent = 80,
-                displayAreaPercent = 75,
+                opacityPercent = 75,
+                displayAreaPercent = 50,
                 visibleModes = DanmakuDisplayMode.entries.toSet(),
+                mergeDuplicates = true,
             ),
             result.value.danmaku,
         )
@@ -246,7 +247,7 @@ class PreferencesSettingsRepositoryTest {
                 DanmakuDisplayMode.Top,
             ),
             blockColored = true,
-            mergeDuplicates = true,
+            mergeDuplicates = false,
         )
 
         PreferencesSettingsRepository(store).saveSettings(
@@ -272,8 +273,8 @@ class PreferencesSettingsRepositoryTest {
 
         assertEquals(DanmakuTextSize.Small, danmaku.textSize)
         assertEquals(DanmakuSpeed.Standard, danmaku.speed)
-        assertEquals(80, danmaku.opacityPercent)
-        assertEquals(75, danmaku.displayAreaPercent)
+        assertEquals(75, danmaku.opacityPercent)
+        assertEquals(50, danmaku.displayAreaPercent)
     }
 
     private fun repository(
