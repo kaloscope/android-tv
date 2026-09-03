@@ -64,10 +64,14 @@ object ReaderSettingsPolicy {
     const val FONT_SIZE_STEP_SP = 2
     const val DEFAULT_FONT_SIZE_SP = 28
 
-    const val MIN_LINE_HEIGHT = 1.4f
-    const val MAX_LINE_HEIGHT = 3f
-    const val LINE_HEIGHT_STEP = 0.2f
-    const val DEFAULT_LINE_HEIGHT = 1.8f
+    const val MIN_LINE_HEIGHT_TENTHS = 14
+    const val MAX_LINE_HEIGHT_TENTHS = 30
+    const val LINE_HEIGHT_STEP_TENTHS = 2
+    const val DEFAULT_LINE_HEIGHT_TENTHS = 18
+    const val MIN_LINE_HEIGHT = MIN_LINE_HEIGHT_TENTHS / 10f
+    const val MAX_LINE_HEIGHT = MAX_LINE_HEIGHT_TENTHS / 10f
+    const val LINE_HEIGHT_STEP = LINE_HEIGHT_STEP_TENTHS / 10f
+    const val DEFAULT_LINE_HEIGHT = DEFAULT_LINE_HEIGHT_TENTHS / 10f
 
     const val MIN_PARAGRAPH_SPACING_DP = 0
     const val MAX_PARAGRAPH_SPACING_DP = 88
@@ -90,9 +94,9 @@ object ReaderSettingsPolicy {
             lineHeight = snapTenths(
                 value = settings.lineHeight,
                 default = DEFAULT_LINE_HEIGHT,
-                minimumTenths = 14,
-                maximumTenths = 30,
-                stepTenths = 2,
+                minimumTenths = MIN_LINE_HEIGHT_TENTHS,
+                maximumTenths = MAX_LINE_HEIGHT_TENTHS,
+                stepTenths = LINE_HEIGHT_STEP_TENTHS,
             ),
             // Preserve exact legacy values even when they are outside the new 4 dp grid.
             paragraphSpacingDp = settings.paragraphSpacingDp.coerceIn(
@@ -101,6 +105,56 @@ object ReaderSettingsPolicy {
             ),
             horizontalPaddingDp = snapInt(
                 value = settings.horizontalPaddingDp,
+                minimum = MIN_HORIZONTAL_PADDING_DP,
+                maximum = MAX_HORIZONTAL_PADDING_DP,
+                step = HORIZONTAL_PADDING_STEP_DP,
+            ),
+        )
+
+    fun adjustFontSize(
+        settings: TextReaderSettings,
+        offset: Int,
+    ): TextReaderSettings =
+        settings.copy(
+            fontSizeSp = snapInt(
+                value = settings.fontSizeSp + offset * FONT_SIZE_STEP_SP,
+                minimum = MIN_FONT_SIZE_SP,
+                maximum = MAX_FONT_SIZE_SP,
+                step = FONT_SIZE_STEP_SP,
+            ),
+        )
+
+    fun adjustLineHeight(
+        settings: TextReaderSettings,
+        offset: Int,
+    ): TextReaderSettings =
+        settings.copy(
+            lineHeight = snapTenths(
+                value = settings.lineHeight + offset * LINE_HEIGHT_STEP,
+                default = DEFAULT_LINE_HEIGHT,
+                minimumTenths = MIN_LINE_HEIGHT_TENTHS,
+                maximumTenths = MAX_LINE_HEIGHT_TENTHS,
+                stepTenths = LINE_HEIGHT_STEP_TENTHS,
+            ),
+        )
+
+    fun adjustParagraphSpacing(
+        settings: TextReaderSettings,
+        offset: Int,
+    ): TextReaderSettings =
+        settings.copy(
+            paragraphSpacingDp = (
+                settings.paragraphSpacingDp + offset * PARAGRAPH_SPACING_STEP_DP
+            ).coerceIn(MIN_PARAGRAPH_SPACING_DP, MAX_PARAGRAPH_SPACING_DP),
+        )
+
+    fun adjustHorizontalPadding(
+        settings: TextReaderSettings,
+        offset: Int,
+    ): TextReaderSettings =
+        settings.copy(
+            horizontalPaddingDp = snapInt(
+                value = settings.horizontalPaddingDp + offset * HORIZONTAL_PADDING_STEP_DP,
                 minimum = MIN_HORIZONTAL_PADDING_DP,
                 maximum = MAX_HORIZONTAL_PADDING_DP,
                 step = HORIZONTAL_PADDING_STEP_DP,

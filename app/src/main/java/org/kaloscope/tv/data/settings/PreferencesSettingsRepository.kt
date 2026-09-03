@@ -184,13 +184,16 @@ class PreferencesSettingsRepository @Inject constructor(
                 ),
                 fontSizeSp = fontSizeSp,
                 lineHeight = this[TEXT_READER_LINE_HEIGHT_TENTHS]
-                    .validValue(READER_LINE_HEIGHT_TENTHS, 18) / 10f,
+                    .validValue(
+                        READER_LINE_HEIGHT_TENTHS,
+                        ReaderSettingsPolicy.DEFAULT_LINE_HEIGHT_TENTHS,
+                    ) / 10f,
                 paragraphSpacingDp = paragraphSpacingDp(fontSizeSp),
                 horizontalPaddingDp = this[TEXT_READER_HORIZONTAL_PADDING_DP]
                     .validValue(
                         READER_HORIZONTAL_PADDINGS,
                         ReaderSettingsPolicy.DEFAULT_HORIZONTAL_PADDING_DP,
-                ),
+                    ),
             ),
         )
     }
@@ -234,10 +237,20 @@ class PreferencesSettingsRepository @Inject constructor(
     }
 
     private companion object {
-        val READER_FONT_SIZES = (20..44 step 2).toSet()
-        val READER_LINE_HEIGHT_TENTHS = (14..30 step 2).toSet()
+        // Stored values must match a value the TV controls can emit; corrupt values fall back.
+        val READER_FONT_SIZES =
+            (ReaderSettingsPolicy.MIN_FONT_SIZE_SP..
+                ReaderSettingsPolicy.MAX_FONT_SIZE_SP step
+                ReaderSettingsPolicy.FONT_SIZE_STEP_SP).toSet()
+        val READER_LINE_HEIGHT_TENTHS =
+            (ReaderSettingsPolicy.MIN_LINE_HEIGHT_TENTHS..
+                ReaderSettingsPolicy.MAX_LINE_HEIGHT_TENTHS step
+                ReaderSettingsPolicy.LINE_HEIGHT_STEP_TENTHS).toSet()
         val READER_PARAGRAPH_SPACING_HALVES = (0..4).toSet()
-        val READER_HORIZONTAL_PADDINGS = (0..96 step 12).toSet()
+        val READER_HORIZONTAL_PADDINGS =
+            (ReaderSettingsPolicy.MIN_HORIZONTAL_PADDING_DP..
+                ReaderSettingsPolicy.MAX_HORIZONTAL_PADDING_DP step
+                ReaderSettingsPolicy.HORIZONTAL_PADDING_STEP_DP).toSet()
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val START_PAGE = stringPreferencesKey("start_page")
         val PLAYBACK_MODE = stringPreferencesKey("playback_mode")

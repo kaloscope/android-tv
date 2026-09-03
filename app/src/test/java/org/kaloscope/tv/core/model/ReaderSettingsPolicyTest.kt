@@ -91,4 +91,65 @@ class ReaderSettingsPolicyTest {
             ),
         )
     }
+
+    @Test
+    fun `text adjustments use the supported TV steps`() {
+        val settings = TextReaderSettings()
+
+        assertEquals(
+            settings.copy(fontSizeSp = 30),
+            ReaderSettingsPolicy.adjustFontSize(settings, 1),
+        )
+        assertEquals(
+            settings.copy(lineHeight = 2f),
+            ReaderSettingsPolicy.adjustLineHeight(settings, 1),
+        )
+        assertEquals(
+            settings.copy(paragraphSpacingDp = 32),
+            ReaderSettingsPolicy.adjustParagraphSpacing(settings, 1),
+        )
+        assertEquals(
+            settings.copy(horizontalPaddingDp = 60),
+            ReaderSettingsPolicy.adjustHorizontalPadding(settings, 1),
+        )
+    }
+
+    @Test
+    fun `text adjustments stop at supported bounds`() {
+        val minimum = TextReaderSettings(
+            fontSizeSp = 20,
+            lineHeight = 1.4f,
+            paragraphSpacingDp = 0,
+            horizontalPaddingDp = 0,
+        )
+        val maximum = TextReaderSettings(
+            fontSizeSp = 44,
+            lineHeight = 3f,
+            paragraphSpacingDp = 88,
+            horizontalPaddingDp = 96,
+        )
+
+        assertEquals(minimum, ReaderSettingsPolicy.adjustFontSize(minimum, -1))
+        assertEquals(minimum, ReaderSettingsPolicy.adjustLineHeight(minimum, -1))
+        assertEquals(minimum, ReaderSettingsPolicy.adjustParagraphSpacing(minimum, -1))
+        assertEquals(minimum, ReaderSettingsPolicy.adjustHorizontalPadding(minimum, -1))
+        assertEquals(maximum, ReaderSettingsPolicy.adjustFontSize(maximum, 1))
+        assertEquals(maximum, ReaderSettingsPolicy.adjustLineHeight(maximum, 1))
+        assertEquals(maximum, ReaderSettingsPolicy.adjustParagraphSpacing(maximum, 1))
+        assertEquals(maximum, ReaderSettingsPolicy.adjustHorizontalPadding(maximum, 1))
+    }
+
+    @Test
+    fun `a text adjustment leaves unrelated settings unchanged`() {
+        val settings = TextReaderSettings(
+            lineHeight = 1.5f,
+            paragraphSpacingDp = 13,
+            horizontalPaddingDp = 25,
+        )
+
+        assertEquals(
+            settings.copy(fontSizeSp = 30),
+            ReaderSettingsPolicy.adjustFontSize(settings, 1),
+        )
+    }
 }

@@ -262,20 +262,10 @@ internal fun ReadingSettings(
                 ReaderSettingsPolicy.MAX_FONT_SIZE_SP,
             testTagPrefix = "reader-font-size",
             onDecrease = {
-                onTextChange(
-                    settings.textReader.copy(
-                        fontSizeSp = settings.textReader.fontSizeSp -
-                            ReaderSettingsPolicy.FONT_SIZE_STEP_SP,
-                    ),
-                )
+                onTextChange(ReaderSettingsPolicy.adjustFontSize(settings.textReader, -1))
             },
             onIncrease = {
-                onTextChange(
-                    settings.textReader.copy(
-                        fontSizeSp = settings.textReader.fontSizeSp +
-                            ReaderSettingsPolicy.FONT_SIZE_STEP_SP,
-                    ),
-                )
+                onTextChange(ReaderSettingsPolicy.adjustFontSize(settings.textReader, 1))
             },
         )
         AdjustableSettingRow(
@@ -292,20 +282,10 @@ internal fun ReadingSettings(
                 ReaderSettingsPolicy.MAX_LINE_HEIGHT,
             testTagPrefix = "reader-line-height",
             onDecrease = {
-                onTextChange(
-                    settings.textReader.copy(
-                        lineHeight = settings.textReader.lineHeight -
-                            ReaderSettingsPolicy.LINE_HEIGHT_STEP,
-                    ),
-                )
+                onTextChange(ReaderSettingsPolicy.adjustLineHeight(settings.textReader, -1))
             },
             onIncrease = {
-                onTextChange(
-                    settings.textReader.copy(
-                        lineHeight = settings.textReader.lineHeight +
-                            ReaderSettingsPolicy.LINE_HEIGHT_STEP,
-                    ),
-                )
+                onTextChange(ReaderSettingsPolicy.adjustLineHeight(settings.textReader, 1))
             },
         )
         AdjustableSettingRow(
@@ -323,18 +303,12 @@ internal fun ReadingSettings(
             testTagPrefix = "reader-paragraph-spacing",
             onDecrease = {
                 onTextChange(
-                    settings.textReader.copy(
-                        paragraphSpacingDp = settings.textReader.paragraphSpacingDp -
-                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_DP,
-                    ),
+                    ReaderSettingsPolicy.adjustParagraphSpacing(settings.textReader, -1),
                 )
             },
             onIncrease = {
                 onTextChange(
-                    settings.textReader.copy(
-                        paragraphSpacingDp = settings.textReader.paragraphSpacingDp +
-                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_DP,
-                    ),
+                    ReaderSettingsPolicy.adjustParagraphSpacing(settings.textReader, 1),
                 )
             },
         )
@@ -353,18 +327,12 @@ internal fun ReadingSettings(
             testTagPrefix = "reader-horizontal-padding",
             onDecrease = {
                 onTextChange(
-                    settings.textReader.copy(
-                        horizontalPaddingDp = settings.textReader.horizontalPaddingDp -
-                            ReaderSettingsPolicy.HORIZONTAL_PADDING_STEP_DP,
-                    ),
+                    ReaderSettingsPolicy.adjustHorizontalPadding(settings.textReader, -1),
                 )
             },
             onIncrease = {
                 onTextChange(
-                    settings.textReader.copy(
-                        horizontalPaddingDp = settings.textReader.horizontalPaddingDp +
-                            ReaderSettingsPolicy.HORIZONTAL_PADDING_STEP_DP,
-                    ),
+                    ReaderSettingsPolicy.adjustHorizontalPadding(settings.textReader, 1),
                 )
             },
         )

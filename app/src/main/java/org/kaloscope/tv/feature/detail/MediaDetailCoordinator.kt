@@ -56,21 +56,16 @@ class MediaDetailCoordinator(
     }
 
     fun rememberFocusedChild(childId: Long): Boolean {
-        var detailLoadRequired = false
-        updateContent { content ->
-            if (content.parent.children.none { it.id == childId }) {
-                content
-            } else {
-                val cachedDetail = childDetailCache[childId]
-                detailLoadRequired = cachedDetail == null
-                content.copy(
-                    focusedChildId = childId,
-                    focusedChildDetail = cachedDetail,
-                    childDetailError = null,
-                )
-            }
-        }
-        return detailLoadRequired
+        val content = mutableState.value as? MediaDetailUiState.Content ?: return false
+        if (content.parent.children.none { it.id == childId }) return false
+
+        val cachedDetail = childDetailCache[childId]
+        mutableState.value = content.copy(
+            focusedChildId = childId,
+            focusedChildDetail = cachedDetail,
+            childDetailError = null,
+        )
+        return cachedDetail == null
     }
 
     suspend fun loadFocusedChild(
@@ -130,16 +125,10 @@ class MediaDetailCoordinator(
     }
 
     fun rememberChildViewport(snapshot: GridViewportSnapshot) {
-        updateContent { content ->
-            if (content.childViewport == snapshot) content else content.copy(childViewport = snapshot)
-        }
-    }
-
-    private inline fun updateContent(
-        transform: (MediaDetailUiState.Content) -> MediaDetailUiState.Content,
-    ) {
         val content = mutableState.value as? MediaDetailUiState.Content ?: return
-        mutableState.value = transform(content)
+        if (content.childViewport != snapshot) {
+            mutableState.value = content.copy(childViewport = snapshot)
+        }
     }
 
     private inline fun publishChildResult(

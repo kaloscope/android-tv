@@ -140,19 +140,10 @@ internal fun PlayerInfoPreview(state: PlayerControlsUiState) {
         Spacer(Modifier.weight(1f))
         PlayerPlaybackSummary(state)
         Spacer(Modifier.height(8.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = formatPlayerDuration(state.positionMillis),
-                color = Muted,
-                fontSize = 14.sp,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = formatPlayerDuration(state.durationMillis),
-                color = Muted,
-                fontSize = 14.sp,
-            )
-        }
+        PlayerTimelineLabels(
+            positionMillis = state.positionMillis,
+            durationMillis = state.durationMillis,
+        )
         Spacer(Modifier.height(4.dp))
         Box(
             modifier = Modifier
@@ -312,13 +303,21 @@ internal fun PlayerControls(
         quality = state.quality,
         settings = state.settings,
     )
-    val auxiliaryFocusRequesters = mapOf(
-        PlayerAuxiliaryControl.Subtitle to subtitleFocus,
-        PlayerAuxiliaryControl.Danmaku to danmakuFocus,
-        PlayerAuxiliaryControl.Speed to speedFocus,
-        PlayerAuxiliaryControl.Quality to definitionFocus,
-        PlayerAuxiliaryControl.Settings to settingsFocus,
-    )
+    val auxiliaryFocusRequesters = remember(
+        subtitleFocus,
+        danmakuFocus,
+        speedFocus,
+        definitionFocus,
+        settingsFocus,
+    ) {
+        mapOf(
+            PlayerAuxiliaryControl.Subtitle to subtitleFocus,
+            PlayerAuxiliaryControl.Danmaku to danmakuFocus,
+            PlayerAuxiliaryControl.Speed to speedFocus,
+            PlayerAuxiliaryControl.Quality to definitionFocus,
+            PlayerAuxiliaryControl.Settings to settingsFocus,
+        )
+    }
     val supplementaryGroupStartFocus = auxiliaryFocusRequesters.getValue(
         visibleAuxiliaryControls.first(),
     )
@@ -390,21 +389,10 @@ internal fun PlayerControls(
             onInteraction = onInteraction,
             modifier = Modifier.fillMaxWidth(),
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = formatPlayerDuration(state.positionMillis),
-                color = Muted,
-                fontSize = 14.sp,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = formatPlayerDuration(state.durationMillis),
-                color = Muted,
-                fontSize = 14.sp,
-            )
-        }
+        PlayerTimelineLabels(
+            positionMillis = state.positionMillis,
+            durationMillis = state.durationMillis,
+        )
         Box(
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -639,6 +627,26 @@ private fun PlayerActionRowVisibility(
             Spacer(Modifier.height(12.dp))
             content()
         }
+    }
+}
+
+@Composable
+private fun PlayerTimelineLabels(
+    positionMillis: Long,
+    durationMillis: Long,
+) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = formatPlayerDuration(positionMillis),
+            color = Muted,
+            fontSize = 14.sp,
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = formatPlayerDuration(durationMillis),
+            color = Muted,
+            fontSize = 14.sp,
+        )
     }
 }
 

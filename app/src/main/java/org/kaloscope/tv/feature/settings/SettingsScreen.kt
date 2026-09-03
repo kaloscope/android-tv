@@ -1,6 +1,7 @@
 package org.kaloscope.tv.feature.settings
 
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -316,6 +317,7 @@ private fun SettingsMenu(
         verticalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SidebarItemSpacing),
     ) {
         for (section in SettingsSection.entries) {
+            val presentation = section.presentation
             KaloscopeButton(
                 onClick = {
                     if (interactionsEnabled && selected != section) {
@@ -353,11 +355,11 @@ private fun SettingsMenu(
                     },
             ) {
                 KaloscopeNavigationIcon(
-                    iconRes = section.iconResource(),
-                    modifier = Modifier.testTag(section.iconTestTag()),
+                    iconRes = presentation.iconRes,
+                    modifier = Modifier.testTag(presentation.iconTestTag),
                 )
                 Spacer(Modifier.width(10.dp))
-                Text(sectionLabel(section))
+                Text(stringResource(presentation.labelRes))
             }
         }
     }
@@ -385,6 +387,7 @@ private fun SettingsPanel(
     onImageReaderSettings: (ImageReaderSettings) -> Unit,
     onTextReaderSettings: (TextReaderSettings) -> Unit,
 ) {
+    val presentation = state.section.presentation
     key(state.section) {
         LazyColumn(
             modifier = modifier
@@ -396,13 +399,13 @@ private fun SettingsPanel(
             item {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = sectionTitle(state.section),
+                        text = stringResource(presentation.titleRes),
                         color = OnBackground,
                         fontSize = 27.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = sectionDescription(state.section),
+                        text = stringResource(presentation.descriptionRes),
                         color = Muted,
                         fontSize = 15.sp,
                     )
@@ -768,59 +771,69 @@ private fun SettingsStatus(
     }
 }
 
-@DrawableRes
-private fun SettingsSection.iconResource(): Int =
-    when (this) {
-        SettingsSection.Playback -> R.drawable.ic_settings_playback
-        SettingsSection.Danmaku -> R.drawable.ic_settings_danmaku
-        SettingsSection.Subtitle -> R.drawable.ic_settings_subtitle
-        SettingsSection.Reading -> R.drawable.ic_settings_reading
-        SettingsSection.Behavior -> R.drawable.ic_settings_behavior
-        SettingsSection.ServerAccount -> R.drawable.ic_settings_server_account
-    }
+private val SettingsSection.presentation: SettingsSectionPresentation
+    get() = settingsSectionPresentations.getValue(this)
 
-private fun SettingsSection.iconTestTag(): String =
-    when (this) {
-        SettingsSection.Playback -> "settings-section-icon-playback"
-        SettingsSection.Danmaku -> "settings-section-icon-danmaku"
-        SettingsSection.Subtitle -> "settings-section-icon-subtitle"
-        SettingsSection.Reading -> "settings-section-icon-reading"
-        SettingsSection.Behavior -> "settings-section-icon-behavior"
-        SettingsSection.ServerAccount -> "settings-section-icon-server-account"
-    }
-
-@Composable
-private fun sectionLabel(section: SettingsSection): String =
+// Keep menu and panel resources in one exhaustive mapping so new sections cannot drift.
+private val settingsSectionPresentations = SettingsSection.entries.associateWith { section ->
     when (section) {
-        SettingsSection.Playback -> stringResource(R.string.playback_settings)
-        SettingsSection.Danmaku -> stringResource(R.string.danmaku)
-        SettingsSection.Subtitle -> stringResource(R.string.subtitle)
-        SettingsSection.Reading -> stringResource(R.string.reading_settings)
-        SettingsSection.Behavior -> stringResource(R.string.client_behavior)
-        SettingsSection.ServerAccount -> stringResource(R.string.server_and_account)
-    }
+        SettingsSection.Playback -> SettingsSectionPresentation(
+            iconRes = R.drawable.ic_settings_playback,
+            iconTestTag = "settings-section-icon-playback",
+            labelRes = R.string.playback_settings,
+            titleRes = R.string.playback_settings_title,
+            descriptionRes = R.string.playback_settings_description,
+        )
 
-@Composable
-private fun sectionTitle(section: SettingsSection): String =
-    when (section) {
-        SettingsSection.Playback -> stringResource(R.string.playback_settings_title)
-        SettingsSection.Danmaku -> stringResource(R.string.danmaku_settings_title)
-        SettingsSection.Subtitle -> stringResource(R.string.subtitle_settings_title)
-        SettingsSection.Reading -> stringResource(R.string.reading_settings_title)
-        SettingsSection.Behavior -> stringResource(R.string.client_behavior)
-        SettingsSection.ServerAccount -> stringResource(R.string.server_and_account)
-    }
+        SettingsSection.Danmaku -> SettingsSectionPresentation(
+            iconRes = R.drawable.ic_settings_danmaku,
+            iconTestTag = "settings-section-icon-danmaku",
+            labelRes = R.string.danmaku,
+            titleRes = R.string.danmaku_settings_title,
+            descriptionRes = R.string.danmaku_settings_description,
+        )
 
-@Composable
-private fun sectionDescription(section: SettingsSection): String =
-    when (section) {
-        SettingsSection.Playback -> stringResource(R.string.playback_settings_description)
-        SettingsSection.Danmaku -> stringResource(R.string.danmaku_settings_description)
-        SettingsSection.Subtitle -> stringResource(R.string.subtitle_settings_description)
-        SettingsSection.Reading -> stringResource(R.string.reading_settings_description)
-        SettingsSection.Behavior -> stringResource(R.string.client_behavior_description)
-        SettingsSection.ServerAccount -> stringResource(R.string.server_account_description)
+        SettingsSection.Subtitle -> SettingsSectionPresentation(
+            iconRes = R.drawable.ic_settings_subtitle,
+            iconTestTag = "settings-section-icon-subtitle",
+            labelRes = R.string.subtitle,
+            titleRes = R.string.subtitle_settings_title,
+            descriptionRes = R.string.subtitle_settings_description,
+        )
+
+        SettingsSection.Reading -> SettingsSectionPresentation(
+            iconRes = R.drawable.ic_settings_reading,
+            iconTestTag = "settings-section-icon-reading",
+            labelRes = R.string.reading_settings,
+            titleRes = R.string.reading_settings_title,
+            descriptionRes = R.string.reading_settings_description,
+        )
+
+        SettingsSection.Behavior -> SettingsSectionPresentation(
+            iconRes = R.drawable.ic_settings_behavior,
+            iconTestTag = "settings-section-icon-behavior",
+            labelRes = R.string.client_behavior,
+            titleRes = R.string.client_behavior,
+            descriptionRes = R.string.client_behavior_description,
+        )
+
+        SettingsSection.ServerAccount -> SettingsSectionPresentation(
+            iconRes = R.drawable.ic_settings_server_account,
+            iconTestTag = "settings-section-icon-server-account",
+            labelRes = R.string.server_and_account,
+            titleRes = R.string.server_and_account,
+            descriptionRes = R.string.server_account_description,
+        )
     }
+}
+
+private data class SettingsSectionPresentation(
+    @DrawableRes val iconRes: Int,
+    val iconTestTag: String,
+    @StringRes val labelRes: Int,
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int,
+)
 
 @Composable
 internal fun playbackModeLabel(mode: PlaybackMode): String =

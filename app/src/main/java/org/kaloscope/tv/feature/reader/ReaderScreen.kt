@@ -802,18 +802,10 @@ private fun ImageReaderSettingsDrawer(
         controlContentColor = ReaderDrawerTextColor,
         onDismiss = onDismiss,
     ) { onOpenChoice ->
-        ReaderChoiceSettingRow(
-            title = stringResource(R.string.reader_chapter_order),
-            values = ReaderChapterOrder.entries,
-            selected = chapterOrder,
-            label = ::readerChapterOrderLabel,
-            onSelect = onChapterOrder,
+        ReaderChapterOrderSettingRow(
+            chapterOrder = chapterOrder,
+            onChapterOrder = onChapterOrder,
             onOpenChoice = onOpenChoice,
-            optionTestTag = {
-                "reader-chapter-order-option-${it.name.lowercase()}"
-            },
-            requestInitialFocus = true,
-            testTag = "reader-chapter-order-setting",
         )
         ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_image_read_mode),
@@ -865,18 +857,10 @@ private fun TextReaderSettingsDrawer(
         controlContentColor = controlContentColor,
         onDismiss = onDismiss,
     ) { onOpenChoice ->
-        ReaderChoiceSettingRow(
-            title = stringResource(R.string.reader_chapter_order),
-            values = ReaderChapterOrder.entries,
-            selected = chapterOrder,
-            label = ::readerChapterOrderLabel,
-            onSelect = onChapterOrder,
+        ReaderChapterOrderSettingRow(
+            chapterOrder = chapterOrder,
+            onChapterOrder = onChapterOrder,
             onOpenChoice = onOpenChoice,
-            optionTestTag = {
-                "reader-chapter-order-option-${it.name.lowercase()}"
-            },
-            requestInitialFocus = true,
-            testTag = "reader-chapter-order-setting",
         )
         ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_text_theme),
@@ -910,18 +894,10 @@ private fun TextReaderSettingsDrawer(
             testTag = "reader-font-size-setting",
             adjustmentTestTagPrefix = "reader-font-size",
             onDecrease = {
-                onSettings(
-                    settings.copy(
-                        fontSizeSp = settings.fontSizeSp - ReaderSettingsPolicy.FONT_SIZE_STEP_SP,
-                    ),
-                )
+                onSettings(ReaderSettingsPolicy.adjustFontSize(settings, -1))
             },
             onIncrease = {
-                onSettings(
-                    settings.copy(
-                        fontSizeSp = settings.fontSizeSp + ReaderSettingsPolicy.FONT_SIZE_STEP_SP,
-                    ),
-                )
+                onSettings(ReaderSettingsPolicy.adjustFontSize(settings, 1))
             },
         )
         ReaderNumericSettingRow(
@@ -932,18 +908,10 @@ private fun TextReaderSettingsDrawer(
             testTag = "reader-line-height-setting",
             adjustmentTestTagPrefix = "reader-line-height",
             onDecrease = {
-                onSettings(
-                    settings.copy(
-                        lineHeight = settings.lineHeight - ReaderSettingsPolicy.LINE_HEIGHT_STEP,
-                    ),
-                )
+                onSettings(ReaderSettingsPolicy.adjustLineHeight(settings, -1))
             },
             onIncrease = {
-                onSettings(
-                    settings.copy(
-                        lineHeight = settings.lineHeight + ReaderSettingsPolicy.LINE_HEIGHT_STEP,
-                    ),
-                )
+                onSettings(ReaderSettingsPolicy.adjustLineHeight(settings, 1))
             },
         )
         ReaderNumericSettingRow(
@@ -959,20 +927,10 @@ private fun TextReaderSettingsDrawer(
             testTag = "reader-paragraph-spacing-setting",
             adjustmentTestTagPrefix = "reader-paragraph-spacing",
             onDecrease = {
-                onSettings(
-                    settings.copy(
-                        paragraphSpacingDp = settings.paragraphSpacingDp -
-                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_DP,
-                    ),
-                )
+                onSettings(ReaderSettingsPolicy.adjustParagraphSpacing(settings, -1))
             },
             onIncrease = {
-                onSettings(
-                    settings.copy(
-                        paragraphSpacingDp = settings.paragraphSpacingDp +
-                            ReaderSettingsPolicy.PARAGRAPH_SPACING_STEP_DP,
-                    ),
-                )
+                onSettings(ReaderSettingsPolicy.adjustParagraphSpacing(settings, 1))
             },
         )
         ReaderNumericSettingRow(
@@ -988,20 +946,10 @@ private fun TextReaderSettingsDrawer(
             testTag = "reader-horizontal-padding-setting",
             adjustmentTestTagPrefix = "reader-horizontal-padding",
             onDecrease = {
-                onSettings(
-                    settings.copy(
-                        horizontalPaddingDp = settings.horizontalPaddingDp -
-                            ReaderSettingsPolicy.HORIZONTAL_PADDING_STEP_DP,
-                    ),
-                )
+                onSettings(ReaderSettingsPolicy.adjustHorizontalPadding(settings, -1))
             },
             onIncrease = {
-                onSettings(
-                    settings.copy(
-                        horizontalPaddingDp = settings.horizontalPaddingDp +
-                            ReaderSettingsPolicy.HORIZONTAL_PADDING_STEP_DP,
-                    ),
-                )
+                onSettings(ReaderSettingsPolicy.adjustHorizontalPadding(settings, 1))
             },
         )
     }
@@ -1079,6 +1027,25 @@ private fun ReaderSettingsDrawerFrame(
             )
         }
     }
+}
+
+@Composable
+private fun ReaderChapterOrderSettingRow(
+    chapterOrder: ReaderChapterOrder,
+    onChapterOrder: (ReaderChapterOrder) -> Unit,
+    onOpenChoice: (FocusRequester, ReaderSettingsChoice) -> Unit,
+) {
+    ReaderChoiceSettingRow(
+        title = stringResource(R.string.reader_chapter_order),
+        values = ReaderChapterOrder.entries,
+        selected = chapterOrder,
+        label = ::readerChapterOrderLabel,
+        onSelect = onChapterOrder,
+        onOpenChoice = onOpenChoice,
+        optionTestTag = { "reader-chapter-order-option-${it.name.lowercase()}" },
+        requestInitialFocus = true,
+        testTag = "reader-chapter-order-setting",
+    )
 }
 
 @Composable

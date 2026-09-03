@@ -2,6 +2,7 @@ package org.kaloscope.tv.app
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
@@ -131,10 +132,12 @@ internal fun MainShell(
     var libraryBackdrop by remember(session.server.id) {
         mutableStateOf<LibraryBackdropPresentation?>(null)
     }
-    val resumePositionsByMediaId = (homeState as? HomeUiState.Content)
-        ?.items
-        .orEmpty()
-        .associate { it.mediaId to it.positionSeconds }
+    val resumePositionsByMediaId = remember(homeState) {
+        (homeState as? HomeUiState.Content)
+            ?.items
+            .orEmpty()
+            .associate { it.mediaId to it.positionSeconds }
+    }
     val searchPlaybackPreparing = currentRoute == SearchRoute &&
         (searchState as? SearchUiState.Content)?.resolvingResultId != null
 
@@ -176,6 +179,20 @@ internal fun MainShell(
     fun selectRoot(route: NavKey) {
         backStack.selectRoot(route)
         currentRoute = route
+    }
+
+    fun navigateToMediaDetail(mediaId: Long) {
+        destinationEntryKeepsTopFocus = false
+        restoreMediaId = null
+        backStack.openMediaDetail(mediaId)
+        currentRoute = MediaDetailRoute(mediaId)
+        detailActions.open(mediaId)
+    }
+
+    fun navigateToPlayer(requestId: String) {
+        backStack.openPlayer(requestId)
+        currentRoute = PlayerRoute(requestId)
+        playerActions.load(requestId)
     }
 
     fun activateTopDestination(
@@ -265,20 +282,10 @@ internal fun MainShell(
                 backStack = backStack,
                 onBack = ::goBack,
                 transitionSpec = {
-                    if (initialState.key.isFullscreenMedia() || targetState.key.isFullscreenMedia()) {
-                        EnterTransition.None togetherWith ExitTransition.None
-                    } else {
-                        fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
-                            fadeOut(tween(KaloscopeMotion.ContentMillis))
-                    }
+                    mainContentTransform(initialState.key, targetState.key)
                 },
                 popTransitionSpec = {
-                    if (initialState.key.isFullscreenMedia() || targetState.key.isFullscreenMedia()) {
-                        EnterTransition.None togetherWith ExitTransition.None
-                    } else {
-                        fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
-                            fadeOut(tween(KaloscopeMotion.ContentMillis))
-                    }
+                    mainContentTransform(initialState.key, targetState.key)
                 },
                 entryProvider = entryProvider {
                     entry<HomeRoute> {
@@ -311,21 +318,11 @@ internal fun MainShell(
                                         keepTopBarFocus = false,
                                     )
                                 },
-                                onOpenMedia = { mediaId ->
-                                    destinationEntryKeepsTopFocus = false
-                                    restoreMediaId = null
-                                    backStack.openMediaDetail(mediaId)
-                                    currentRoute = MediaDetailRoute(mediaId)
-                                    detailActions.open(mediaId)
-                                },
+                                onOpenMedia = ::navigateToMediaDetail,
                                 onPlayHistory = { item ->
                                     destinationEntryKeepsTopFocus = false
                                     restoreMediaId = item.mediaId
-                                    homeActions.play(item)?.let { requestId ->
-                                        backStack.openPlayer(requestId)
-                                        currentRoute = PlayerRoute(requestId)
-                                        playerActions.load(requestId)
-                                    }
+                                    homeActions.play(item)?.let(::navigateToPlayer)
                                 },
                                 onBackdropChanged = { homeBackdrop = it },
                             )
@@ -339,9 +336,7 @@ internal fun MainShell(
                                 is SearchPendingDestination.Player -> {
                                     val requestId = destination.requestId
                                     destinationEntryKeepsTopFocus = false
-                                    backStack.openPlayer(requestId)
-                                    currentRoute = PlayerRoute(requestId)
-                                    playerActions.load(requestId)
+                                    navigateToPlayer(requestId)
                                     searchActions.consumeDestination(requestId)
                                 }
 
@@ -419,13 +414,7 @@ internal fun MainShell(
                                 onMediaFocused = libraryActions.rememberFocusedMedia,
                                 onGridViewportChanged = libraryActions.rememberGridViewport,
                                 onBackdropChanged = { libraryBackdrop = it },
-                                onOpenMedia = { mediaId ->
-                                    destinationEntryKeepsTopFocus = false
-                                    restoreMediaId = null
-                                    backStack.openMediaDetail(mediaId)
-                                    currentRoute = MediaDetailRoute(mediaId)
-                                    detailActions.open(mediaId)
-                                },
+                                onOpenMedia = ::navigateToMediaDetail,
                             )
                         }
                     }
@@ -470,19 +459,13 @@ internal fun MainShell(
                             onChildViewportChanged = detailActions.rememberChildViewport,
                             onPlayParent = { detail, resume ->
                                 destinationEntryKeepsTopFocus = false
-                                detailActions.playParent(detail, resume)?.let { requestId ->
-                                    backStack.openPlayer(requestId)
-                                    currentRoute = PlayerRoute(requestId)
-                                    playerActions.load(requestId)
-                                }
+                                detailActions.playParent(detail, resume)
+                                    ?.let(::navigateToPlayer)
                             },
                             onPlayChild = { child, resume ->
                                 destinationEntryKeepsTopFocus = false
-                                detailActions.playChild(child, resume)?.let { requestId ->
-                                    backStack.openPlayer(requestId)
-                                    currentRoute = PlayerRoute(requestId)
-                                    playerActions.load(requestId)
-                                }
+                                detailActions.playChild(child, resume)
+                                    ?.let(::navigateToPlayer)
                             },
                         )
                     }
@@ -582,6 +565,17 @@ internal fun MainShell(
 
 private fun Any?.isFullscreenMedia(): Boolean =
     this is PlayerRoute || this is ReaderRoute
+
+private fun mainContentTransform(
+    initialKey: Any?,
+    targetKey: Any?,
+): ContentTransform =
+    if (initialKey.isFullscreenMedia() || targetKey.isFullscreenMedia()) {
+        EnterTransition.None togetherWith ExitTransition.None
+    } else {
+        fadeIn(tween(KaloscopeMotion.ContentMillis)) togetherWith
+            fadeOut(tween(KaloscopeMotion.ContentMillis))
+    }
 
 @Composable
 private fun RootDestinationFrame(

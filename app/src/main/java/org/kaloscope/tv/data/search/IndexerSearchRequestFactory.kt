@@ -23,7 +23,7 @@ internal fun buildIndexerSearchRequest(
     put("keyword", keyword.trim())
     put("mobile", false)
     for (definition in profile.filters) {
-        if (definition.key in BASE_SEARCH_KEYS) {
+        if (definition.key in RESERVED_INDEXER_SEARCH_KEYS) {
             continue
         }
         when (val value = filters[definition.key]) {
@@ -69,7 +69,7 @@ private fun SearchFilterValue.Multiple.validValues(
     return definition.options.map { it.value }.filter(selected::contains)
 }
 
-private val BASE_SEARCH_KEYS = setOf(
+internal val RESERVED_INDEXER_SEARCH_KEYS = setOf(
     "\$start",
     "page_num",
     "page_size",

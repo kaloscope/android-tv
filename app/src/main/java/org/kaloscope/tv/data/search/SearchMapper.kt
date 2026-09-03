@@ -49,7 +49,7 @@ internal fun IndexerPageData.toModels(): List<NetworkIndexer> =
 internal fun IndexerSearchConfigData.toFilterDefinitions(): List<SearchFilterDefinition> =
     filters.mapNotNull filter@{ (rawKey, data) ->
         val key = rawKey.trimmedOrNull() ?: return@filter null
-        if (key in RESERVED_SEARCH_FILTER_KEYS) {
+        if (key in RESERVED_INDEXER_SEARCH_KEYS) {
             return@filter null
         }
         val type = when (data.type.trimmedOrNull()?.lowercase()) {
@@ -270,11 +270,3 @@ private fun SearchFilterType.requiresOptions(): Boolean =
     this == SearchFilterType.Radio ||
         this == SearchFilterType.Checkbox ||
         this == SearchFilterType.Select
-
-private val RESERVED_SEARCH_FILTER_KEYS = setOf(
-    "\$start",
-    "page_num",
-    "page_size",
-    "keyword",
-    "mobile",
-)
