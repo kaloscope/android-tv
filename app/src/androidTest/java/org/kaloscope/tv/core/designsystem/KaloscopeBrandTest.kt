@@ -1,6 +1,7 @@
 package org.kaloscope.tv.core.designsystem
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
 import android.graphics.drawable.AdaptiveIconDrawable
@@ -113,6 +114,21 @@ class KaloscopeBrandTest {
             widthDp = 320,
             heightDp = 180,
         )
+    }
+
+    @Test
+    fun tvBannerUsesOemCompatibleBitmapArtwork() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val bitmap =
+            context.resources.openRawResource(R.drawable.tv_banner).use { input ->
+                checkNotNull(BitmapFactory.decodeStream(input)) {
+                    "TV banner must be packaged as bitmap artwork"
+                }
+            }
+
+        assertEquals(320, bitmap.width)
+        assertEquals(180, bitmap.height)
+        assertTrue("TV banner background must be opaque", !bitmap.hasAlpha())
     }
 
     private fun assertLogoMatchesVisibleTextHeight(compact: Boolean) {

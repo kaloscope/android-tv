@@ -25,6 +25,7 @@
         <!-- TV displays are landscape-only, as required by the TV app quality guidelines. -->
         <activity
             android:name=".MainActivity"
+            android:banner="@drawable/tv_banner"
             android:exported="true"
             android:screenOrientation="landscape"
             tools:ignore="DiscouragedApi">
