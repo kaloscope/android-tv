@@ -15,7 +15,7 @@ class ApiClientFactory @Inject constructor(
 ) {
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 

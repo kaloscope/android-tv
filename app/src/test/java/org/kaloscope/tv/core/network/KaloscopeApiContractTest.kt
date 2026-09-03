@@ -322,6 +322,21 @@ class KaloscopeApiContractTest {
     }
 
     @Test
+    fun `danmaku match waits for uncached server fetch`() = runTest {
+        server.enqueue(
+            jsonResponse(fixture("danmaku-match-success.json"))
+                .setHeadersDelay(16, TimeUnit.SECONDS),
+        )
+
+        val response = api.getDanmakus(
+            authorization = "Token fixture-token",
+            body = MediaResourceData("/media/video.mkv"),
+        )
+
+        assertEquals("fixture-comment-1", response.data.comments.first().id)
+    }
+
+    @Test
     fun `history progress sends video relation and accepts empty response`() = runTest {
         server.enqueue(MockResponse().setResponseCode(204))
 
