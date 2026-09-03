@@ -44,6 +44,7 @@ import org.kaloscope.tv.test.assertFocusedContentCardBottomInsideViewport
 import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
 import org.kaloscope.tv.test.assertFocusedContentCardTopClearance
+import org.kaloscope.tv.test.assertGridRowReservesFocusedScaleHeight
 import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
 import org.kaloscope.tv.test.captureToImage
 
@@ -584,10 +585,11 @@ class LibraryScreenTest {
             cardBounds[1].left - cardBounds[0].right,
             1f,
         )
-        assertEquals(
-            12f * density,
-            cardBounds[4].top - cardBounds[0].bottom,
-            1f,
+        assertGridRowReservesFocusedScaleHeight(
+            label = "Library media cards",
+            firstRowCardBounds = cardBounds[0],
+            nextRowCardBounds = cardBounds[4],
+            rowSpacingPixels = 6f * density,
         )
         assertFocusedContentCardTopClearance(
             label = "First-row library card",

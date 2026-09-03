@@ -21,7 +21,7 @@ object BrowseLayoutTokens {
     val GridBottomContentPadding = ScreenContentBottomPadding
     val GridHorizontalSpacing = 8.dp
     val NetworkGridHorizontalSpacing = 10.dp
-    val GridCardFocusBottomPadding = 6.dp
+    val GridCardFocusEdgeClearance = 1.dp
     val GridVerticalSpacing = 6.dp
     val PortraitGridMinWidth = 160.dp
     val LandscapeGridMinWidth = 200.dp

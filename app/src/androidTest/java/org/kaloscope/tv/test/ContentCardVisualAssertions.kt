@@ -67,6 +67,21 @@ internal fun assertFocusedContentCardTopClearance(
     )
 }
 
+internal fun assertGridRowReservesFocusedScaleHeight(
+    label: String,
+    firstRowCardBounds: Rect,
+    nextRowCardBounds: Rect,
+    rowSpacingPixels: Float,
+) {
+    val expectedRowStride = firstRowCardBounds.height + rowSpacingPixels
+    val actualRowStride = nextRowCardBounds.top - firstRowCardBounds.top
+    assertTrue(
+        "$label focus bounds must expose the full reserved row height; " +
+            "expected $expectedRowStride px but was $actualRowStride px",
+        abs(actualRowStride - expectedRowStride) <= 1f,
+    )
+}
+
 internal fun assertFocusedContentCardBottomInsideViewport(
     label: String,
     bitmap: Bitmap,

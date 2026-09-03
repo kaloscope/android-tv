@@ -1,13 +1,18 @@
 package org.kaloscope.tv.core.designsystem
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
@@ -24,16 +29,33 @@ fun KaloscopeFocusSurface(
     selectedContainerColor: Color? = null,
     focusedContainerColor: Color = PanelElevated,
     focusScale: Float = 1.03f,
+    focusScaleEdgeClearance: Dp? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     val restingColor = if (selected) {
         selectedContainerColor ?: LocalAccentPalette.current.panelSelected
     } else {
         containerColor
     }
+    val baseModifier = modifier.semantics { this.selected = selected }
+    val surfaceModifier = focusScaleEdgeClearance?.let { edgeClearance ->
+        baseModifier
+            .focusable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+            )
+            .reserveFocusedScaleHeight(
+                focusScale = focusScale,
+                edgeClearance = edgeClearance,
+            )
+            // Surface adds its own focus target after the supplied modifier. Keep that
+            // inner target out of traversal so relocation uses these reserved bounds.
+            .focusProperties { canFocus = false }
+    } ?: baseModifier
     Surface(
         onClick = onClick,
-        modifier = modifier.semantics { this.selected = selected },
+        modifier = surfaceModifier,
         enabled = enabled,
         shape = ClickableSurfaceDefaults.shape(shape = shape),
         colors = ClickableSurfaceDefaults.colors(
@@ -55,6 +77,7 @@ fun KaloscopeFocusSurface(
                 shape = shape,
             ),
         ),
+        interactionSource = interactionSource,
         content = content,
     )
 }

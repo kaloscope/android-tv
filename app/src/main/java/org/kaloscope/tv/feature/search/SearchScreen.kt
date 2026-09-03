@@ -84,7 +84,6 @@ import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
 import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.designsystem.appErrorText
-import org.kaloscope.tv.core.designsystem.focusSafeBottomPadding
 import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.NetworkIndexer
@@ -826,9 +825,9 @@ private fun NetworkResultCard(
         containerColor = Panel.copy(alpha = 0.65f),
         focusedContainerColor = ContentCardFocused,
         focusScale = BrowseLayoutTokens.GridCardFocusScale,
+        focusScaleEdgeClearance = BrowseLayoutTokens.GridCardFocusEdgeClearance,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = BrowseLayoutTokens.GridCardFocusBottomPadding)
             .testTag("network-result-${result.id}")
             .focusRequester(focusRequester)
             .focusProperties {
@@ -839,7 +838,6 @@ private fun NetworkResultCard(
                     onFocused()
                 }
             }
-            .focusSafeBottomPadding(BrowseLayoutTokens.GridCardFocusBottomPadding)
             .semantics(mergeDescendants = true) {},
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

@@ -59,6 +59,7 @@ import org.kaloscope.tv.test.assertFocusedContentCardBottomInsideViewport
 import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
 import org.kaloscope.tv.test.assertFocusedContentCardTopClearance
+import org.kaloscope.tv.test.assertGridRowReservesFocusedScaleHeight
 import org.kaloscope.tv.test.assertSidebarNavigationSurfaces
 import org.kaloscope.tv.test.captureToImage
 
@@ -1478,10 +1479,11 @@ class SearchScreenTest {
             resultBounds[1].left - resultBounds[0].right,
             1f,
         )
-        assertEquals(
-            12f * density,
-            resultBounds[4].top - resultBounds[0].bottom,
-            1f,
+        assertGridRowReservesFocusedScaleHeight(
+            label = "Network result cards",
+            firstRowCardBounds = resultBounds[0],
+            nextRowCardBounds = resultBounds[4],
+            rowSpacingPixels = 6f * density,
         )
         assertFocusedContentCardTopClearance(
             label = "First-row network result",
