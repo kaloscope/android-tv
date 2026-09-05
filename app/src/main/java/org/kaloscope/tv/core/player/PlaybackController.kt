@@ -20,6 +20,10 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,6 +60,8 @@ class PlaybackController internal constructor(
         is PlaybackRequest.NetworkVideo -> PlaybackSourceKind.Network
     }
     private var fallbackAttempted = false
+    private val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val stallWatchdog = PlaybackStallWatchdog(controllerScope, ::onBufferingTimeout)
     private val subtitleClock = SubtitleClock()
     private var selectedSubtitleTrackId = SubtitleSelectionPolicy.preferredTrackId(
         subtitles,
@@ -87,6 +93,11 @@ class PlaybackController internal constructor(
                 effectiveDurationMillis = player.duration
                     .takeIf { it > 0 }
                     ?: probeDurationMillis.coerceAtLeast(0L),
+            )
+            stallWatchdog.update(
+                playbackState = player.playbackState,
+                playWhenReady = player.playWhenReady,
+                hasFailure = mutableStatus.value.failure != null,
             )
             if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) &&
                 player.playbackState == Player.STATE_READY
@@ -247,6 +258,8 @@ class PlaybackController internal constructor(
     }
 
     fun release() {
+        stallWatchdog.cancel()
+        controllerScope.cancel()
         record(ProgressReason.Exit)
         player.removeListener(listener)
         mediaSession.release()
@@ -257,9 +270,21 @@ class PlaybackController internal constructor(
         target: PlaybackSourceKind,
         positionMillis: Long,
     ) {
+        stallWatchdog.cancel()
         player.setMediaItem(buildMediaItem(target), positionMillis)
         player.prepare()
         player.playWhenReady = true
+        stallWatchdog.update(player.playbackState, player.playWhenReady, hasFailure = false)
+    }
+
+    private fun onBufferingTimeout() {
+        record(ProgressReason.Error)
+        mutableStatus.value = mutableStatus.value.copy(
+            fallbackInProgress = false,
+            failure = PlaybackFailure.Timeout,
+        )
+        // Stop the stalled loader; retry prepares the source again with a fresh deadline.
+        player.stop()
     }
 
     private fun buildMediaItem(target: PlaybackSourceKind): MediaItem {

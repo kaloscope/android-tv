@@ -139,6 +139,7 @@ private fun feedbackErrorText(
     sourceKind: PlaybackSourceKind,
 ): String =
     when (failure) {
+        PlaybackFailure.Timeout -> stringResource(R.string.playback_loading_timeout)
         PlaybackFailure.Network -> stringResource(R.string.playback_network_failed)
         PlaybackFailure.Unauthorized -> stringResource(R.string.playback_unauthorized)
         PlaybackFailure.Forbidden -> stringResource(R.string.error_forbidden)

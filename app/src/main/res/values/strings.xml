@@ -292,6 +292,7 @@
     <string name="direct_playback_failed">直连播放失败</string>
     <string name="transcode_playback_failed">转码播放失败</string>
     <string name="playback_network_failed">网络连接中断</string>
+    <string name="playback_loading_timeout">播放加载超时，请重试或返回</string>
     <string name="playback_unauthorized">播放凭据已失效</string>
     <string name="playback_media_missing">媒体文件不可用</string>
     <string name="playback_auto_direct">自动 · 直连</string>

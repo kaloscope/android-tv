@@ -32,6 +32,7 @@ enum class TranscodeQuality(
 }
 
 enum class PlaybackFailure {
+    Timeout,
     Source,
     Decoder,
     Network,

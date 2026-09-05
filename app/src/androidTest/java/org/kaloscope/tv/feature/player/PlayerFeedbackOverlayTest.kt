@@ -78,6 +78,27 @@ class PlayerFeedbackOverlayTest {
     }
 
     @Test
+    fun timeoutReplacesLoadingWithFocusedRetry() {
+        var retries = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                PlayerFeedbackOverlay(
+                    feedback = PlaybackFeedback.Failed,
+                    failure = PlaybackFailure.Timeout,
+                    sourceKind = PlaybackSourceKind.Network,
+                    onRetry = { retries += 1 },
+                )
+            }
+        }
+        composeRule.onNodeWithTag("player-loading").assertDoesNotExist()
+        composeRule.onNodeWithText("播放加载超时，请重试或返回").assertIsDisplayed()
+        composeRule.onNodeWithText("重试")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle { assertEquals(1, retries) }
+    }
+
+    @Test
     fun failureFocusesRetryAndHandlesRemoteClick() {
         var retries = 0
         composeRule.setContent {

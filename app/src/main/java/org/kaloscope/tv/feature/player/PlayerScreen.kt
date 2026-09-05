@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -173,6 +174,7 @@ private fun PlayerContent(
     }
     val controller = activeController
     if (controller == null) {
+        BackHandler(onBack = onBack)
         KaloscopePlaybackLoadingLayout(
             stage = PlaybackPreparationStage.Playback,
             testTag = "player-loading",
@@ -451,6 +453,16 @@ private fun PlayerContent(
                         !sidePanelOpen,
             )
             .onPreviewKeyEvent { event ->
+                // Back belongs to the exit/drawer handlers and must not cancel its own confirmation.
+                if (event.key == Key.Back) {
+                    return@onPreviewKeyEvent false
+                }
+                if (feedback == PlaybackFeedback.Preparing ||
+                    feedback == PlaybackFeedback.SwitchingItem
+                ) {
+                    // The page receives preview events before the loading overlay can consume them.
+                    return@onPreviewKeyEvent true
+                }
                 if (
                     controlLayer == PlayerControlLayer.Controls ||
                     sidePanelOpen
