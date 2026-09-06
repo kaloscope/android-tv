@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.search
 
+import android.os.SystemClock
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -2429,6 +2430,138 @@ class SearchScreenTest {
 
         apply.performKeyInput { pressKey(Key.DirectionLeft) }
         clear.assertIsFocused()
+    }
+
+    @Test
+    fun menuFromDeepResultsOpensFiltersAndBackRestoresButton() {
+        assertMenuShortcutFromDeepResults(filtersAvailable = true)
+    }
+
+    @Test
+    fun menuWithoutFiltersFocusesSearchWithoutSubmitting() {
+        assertMenuShortcutFromDeepResults(filtersAvailable = false)
+    }
+
+    @Test
+    fun heldMenuDoesNotReopenDismissedFilters() {
+        assertMenuShortcutFromDeepResults(
+            filtersAvailable = true,
+            holdAcrossDismissal = true,
+        )
+    }
+
+    @Test
+    fun menuDuringGridScrollKeepsFocusOnSearchAction() {
+        assertMenuShortcutFromDeepResults(filtersAvailable = false, duringScroll = true)
+    }
+
+    @Test
+    fun menuDuringGridScrollKeepsFocusInsideFilters() {
+        assertMenuShortcutFromDeepResults(filtersAvailable = true, duringScroll = true)
+    }
+
+    private fun assertMenuShortcutFromDeepResults(
+        filtersAvailable: Boolean,
+        holdAcrossDismissal: Boolean = false,
+        duringScroll: Boolean = false,
+    ) {
+        var currentState by mutableStateOf(
+            state(
+                filters = if (filtersAvailable) listOf(regionFilter()) else emptyList(),
+                coverRatio = 2f / 3f,
+                results = (1..48).map { result("v$it") },
+                focusedResultId = "v25",
+                gridViewport = GridViewportSnapshot(24, 0),
+            ),
+        )
+        var filterOpens = 0
+        var searches = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    Modifier.fillMaxSize().padding(
+                        start = 36.dp, top = 74.dp, end = 36.dp, bottom = 16.dp,
+                    ),
+                ) {
+                    SearchScreen(
+                        session = session(),
+                        state = currentState,
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = { searches += 1 },
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = { currentState = currentState.copy(focusedResultId = it) },
+                        onGridViewportChanged = { currentState = currentState.copy(gridViewport = it) },
+                        onOpenResult = {},
+                        onOpenFilters = {
+                            filterOpens += 1
+                            currentState = currentState.copy(filterDrawerOpen = true)
+                        },
+                        onDismissFilters = { currentState = currentState.copy(filterDrawerOpen = false) },
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
+        val viewport = currentState.gridViewport
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val downTime = SystemClock.uptimeMillis()
+        fun sendMenu(action: Int, repeatCount: Int = 0) {
+            instrumentation.sendKeySync(
+                AndroidKeyEvent(
+                    downTime, SystemClock.uptimeMillis(), action,
+                    AndroidKeyEvent.KEYCODE_MENU, repeatCount,
+                ),
+            )
+        }
+
+        // A held key arriving from another control must not activate the shortcut.
+        sendMenu(AndroidKeyEvent.ACTION_DOWN, repeatCount = 1)
+        sendMenu(AndroidKeyEvent.ACTION_UP)
+        composeRule.onNodeWithTag("network-result-v25").assertIsFocused()
+        composeRule.runOnIdle { assertEquals(0, filterOpens) }
+
+        try {
+            if (duringScroll) {
+                composeRule.mainClock.autoAdvance = false
+                repeat(2) { instrumentation.sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
+            }
+            sendMenu(AndroidKeyEvent.ACTION_DOWN)
+        } finally {
+            composeRule.mainClock.autoAdvance = true
+        }
+        if (filtersAvailable) {
+            composeRule.onNodeWithTag("filter-option-region-all").assertIsFocused()
+            repeat(3) { sendMenu(AndroidKeyEvent.ACTION_DOWN, repeatCount = it + 1) }
+            if (!holdAcrossDismissal) sendMenu(AndroidKeyEvent.ACTION_UP)
+            composeRule.onNodeWithTag("filter-option-region-all").assertIsFocused()
+            instrumentation.sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+            composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
+            if (holdAcrossDismissal) {
+                repeat(3) { sendMenu(AndroidKeyEvent.ACTION_DOWN, repeatCount = it + 4) }
+                sendMenu(AndroidKeyEvent.ACTION_UP)
+            }
+            composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
+            composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
+        } else {
+            repeat(3) { sendMenu(AndroidKeyEvent.ACTION_DOWN, repeatCount = it + 1) }
+            sendMenu(AndroidKeyEvent.ACTION_UP)
+            composeRule.onNodeWithTag("search-action-button").assertIsFocused()
+            composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
+        }
+        composeRule.runOnIdle {
+            assertEquals(if (filtersAvailable) 1 else 0, filterOpens)
+            assertEquals(0, searches)
+            if (!duringScroll) {
+                assertEquals("v25", currentState.focusedResultId)
+                assertEquals(viewport, currentState.gridViewport)
+            }
+        }
     }
 
     @Test

@@ -1392,6 +1392,7 @@ class MainShellTest {
             pressKey(Key.DirectionRight)
             pressKey(Key.DirectionUp)
             pressKey(Key.DirectionDown)
+            pressKey(Key.Menu)
         }
 
         loading.assertIsFocused()
@@ -1448,6 +1449,15 @@ class MainShellTest {
 
     @Test
     fun backClosesSearchFiltersWithoutLeavingSearchOrApplying() {
+        assertBackClosesSearchFilters(openWithMenu = false)
+    }
+
+    @Test
+    fun menuOpensSearchFiltersWithoutLeavingSearch() {
+        assertBackClosesSearchFilters(openWithMenu = true)
+    }
+
+    private fun assertBackClosesSearchFilters(openWithMenu: Boolean) {
         val baseSearchState = deepSearchState()
         var searchState by mutableStateOf(
             baseSearchState.copy(
@@ -1489,10 +1499,20 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithTag("search-filter-button")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
+        if (openWithMenu) {
+            composeRule.onNodeWithTag("network-result-v25")
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            InstrumentationRegistry.getInstrumentation()
+                .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_MENU)
+        } else {
+            composeRule.onNodeWithTag("search-filter-button")
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .performKeyInput { pressKey(Key.Enter) }
+        }
         composeRule.onNodeWithTag("search-filter-drawer").assertExists()
+        composeRule.onNodeWithTag("filter-input-title").assertIsFocused()
+        composeRule.onNodeWithTag("main-nav-search").assertIsSelected()
         composeRule.onNodeWithTag("filter-clear")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()

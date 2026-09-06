@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
@@ -198,6 +199,8 @@ private fun SearchContent(
         indexerEntryFocus
     }
     val filterButtonFocus = remember { FocusRequester() }
+    val searchActionFocus = remember { FocusRequester() }
+    val filtersAvailable = state.selectedProfile.filters.isNotEmpty()
     val resultEntryFocus = remember { FocusRequester() }
     val hasFocusableResults = (state.results as? SearchResultsState.Content)
         ?.items
@@ -220,8 +223,30 @@ private fun SearchContent(
             restoreFilterFocus = false
         }
     }
+    fun openFilters() {
+        filterButtonFocus.requestFocus()
+        restoreFilterFocus = true
+        onOpenFilters()
+    }
     Row(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            // Let result-card preview handling cancel pending grid focus before this shortcut.
+            .onKeyEvent { event ->
+                if (event.key != Key.Menu) return@onKeyEvent false
+                if (
+                    event.type == KeyEventType.KeyDown &&
+                    event.nativeKeyEvent.repeatCount == 0 &&
+                    !state.filterDrawerOpen
+                ) {
+                    if (filtersAvailable) {
+                        openFilters()
+                    } else {
+                        searchActionFocus.requestFocus()
+                    }
+                }
+                true
+            },
         horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.PaneSpacing),
     ) {
         IndexerSidebar(
@@ -244,17 +269,15 @@ private fun SearchContent(
         ) {
             SearchInput(
                 value = state.query,
-                filtersAvailable = state.selectedProfile.filters.isNotEmpty(),
+                filtersAvailable = filtersAvailable,
                 filtersActive = state.appliedFilters.isNotEmpty(),
                 inputFocusRequester = searchInputFocus,
                 filterFocusRequester = filterButtonFocus,
+                searchActionFocusRequester = searchActionFocus,
                 topNavigationFocusRequester = topNavigationFocusRequester,
                 onValueChange = onQueryChange,
                 onSearch = onSearch,
-                onOpenFilters = {
-                    restoreFilterFocus = true
-                    onOpenFilters()
-                },
+                onOpenFilters = ::openFilters,
             )
             Spacer(Modifier.height(BrowseLayoutTokens.HeaderContentSpacing))
             SearchResults(
@@ -496,16 +519,16 @@ private fun SearchInput(
     filtersActive: Boolean,
     inputFocusRequester: FocusRequester,
     filterFocusRequester: FocusRequester,
+    searchActionFocusRequester: FocusRequester,
     topNavigationFocusRequester: FocusRequester?,
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
     onOpenFilters: () -> Unit,
 ) {
-    val searchActionFocus = remember { FocusRequester() }
     val firstActionFocus = if (filtersAvailable) {
         filterFocusRequester
     } else {
-        searchActionFocus
+        searchActionFocusRequester
     }
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -537,7 +560,7 @@ private fun SearchInput(
                     .focusRequester(filterFocusRequester)
                     .focusProperties {
                         topNavigationFocusRequester?.let { up = it }
-                        right = searchActionFocus
+                        right = searchActionFocusRequester
                     }
                     .testTag("search-filter-button"),
                 variant = KaloscopeControlVariant.Filled,
@@ -562,7 +585,7 @@ private fun SearchInput(
             onClick = onSearch,
             modifier = Modifier
                 .size(BrowseLayoutTokens.SearchControlHeight)
-                .focusRequester(searchActionFocus)
+                .focusRequester(searchActionFocusRequester)
                 .focusProperties {
                     topNavigationFocusRequester?.let { up = it }
                     right = FocusRequester.Cancel
