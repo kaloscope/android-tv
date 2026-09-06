@@ -2,6 +2,8 @@ package org.kaloscope.tv.app
 
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
+import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -26,6 +28,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotFocused
@@ -42,6 +45,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
@@ -1798,6 +1802,135 @@ class MainShellTest {
         composeRule.onNodeWithTag("main-nav-search")
             .assertIsSelected()
             .assertIsFocused()
+    }
+
+    @Test
+    fun heldUpFromPortraitSearchResultsKeepsSearchNavigation() {
+        assertHeldUpFromSearchResults(coverRatio = 2f / 3f, columns = 4)
+    }
+
+    @Test
+    fun heldUpFromLandscapeSearchResultsKeepsSearchNavigation() {
+        assertHeldUpFromSearchResults(coverRatio = 16f / 9f, columns = 3)
+    }
+
+    @Test
+    fun rapidUpFromPortraitSearchResultsKeepsSearchNavigation() {
+        assertHeldUpFromSearchResults(coverRatio = 2f / 3f, columns = 4, burstSize = 3)
+    }
+
+    @Test
+    fun rapidUpFromLandscapeSearchResultsKeepsSearchNavigation() {
+        assertHeldUpFromSearchResults(coverRatio = 16f / 9f, columns = 3, burstSize = 3)
+    }
+
+    @Test
+    fun rapidUpFromTallSearchResultsKeepsSearchNavigation() {
+        assertHeldUpFromSearchResults(coverRatio = 0.5f, columns = 4, burstSize = 3)
+    }
+
+    @Test
+    fun rapidUpAfterFailedSearchPlaybackKeepsSearchNavigation() {
+        assertHeldUpFromSearchResults(
+            coverRatio = 2f / 3f,
+            columns = 4,
+            burstSize = 3,
+            resolutionError = AppError.Offline,
+        )
+    }
+
+    private fun assertHeldUpFromSearchResults(
+        coverRatio: Float,
+        columns: Int,
+        burstSize: Int = 1,
+        resolutionError: AppError? = null,
+    ) {
+        val baseState = deepSearchState()
+        var searchState by mutableStateOf(
+            baseState.copy(
+                profiles = (11L..13L).map { indexerId ->
+                    val profile = baseState.profiles.single()
+                    profile.copy(
+                        indexer = NetworkIndexer(indexerId, "站点$indexerId", null),
+                        coverRatio = coverRatio,
+                        filters = listOf(
+                            SearchFilterDefinition("title", "标题", SearchFilterType.Text),
+                        ),
+                    )
+                },
+                focusedResultId = null,
+                resolutionError = resolutionError,
+            ),
+        )
+        var libraryOpens = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    searchState = searchState,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                    initialRoute = SearchRoute,
+                    searchActions = SearchActions(
+                        rememberFocusedResult = { searchState = searchState.copy(focusedResultId = it) },
+                        rememberGridViewport = { searchState = searchState.copy(gridViewport = it) },
+                    ),
+                    libraryActions = LibraryActions(open = { libraryOpens += 1 }),
+                )
+            }
+        }
+
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        for (column in 1..columns) {
+            composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(24)
+            composeRule.onNodeWithTag("network-result-v${24 + column}")
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+            // Keep scrolling and focus animations in flight while keys cross into navigation.
+            composeRule.mainClock.autoAdvance = false
+            val downTime = SystemClock.uptimeMillis()
+            try {
+                repeat(24) { frame ->
+                    val previousResultId = searchState.focusedResultId
+                    repeat(burstSize) {
+                        val event = AndroidKeyEvent(
+                            downTime, SystemClock.uptimeMillis(),
+                            AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_UP,
+                            if (burstSize == 1) frame else 0,
+                            0, -1, 0, 0, InputDevice.SOURCE_DPAD,
+                        )
+                        instrumentation.sendKeySync(event)
+                        if (burstSize > 1) {
+                            instrumentation.sendKeySync(
+                                AndroidKeyEvent.changeAction(event, AndroidKeyEvent.ACTION_UP),
+                            )
+                        }
+                    }
+                    composeRule.mainClock.advanceTimeBy(16)
+                    composeRule.waitForIdle()
+                    val navigation = composeRule.onNodeWithTag("main-nav-search")
+                        .fetchSemanticsNode()
+                    val focusedNodes = composeRule.onAllNodes(isFocused()).fetchSemanticsNodes()
+                    assertTrue(
+                        "Up from column $column at frame $frame after $previousResultId: " +
+                            focusedNodes.joinToString { it.config.toString() },
+                        navigation.config[SemanticsProperties.Selected],
+                    )
+                }
+            } finally {
+                instrumentation.sendKeySync(
+                    AndroidKeyEvent(
+                        downTime, SystemClock.uptimeMillis(),
+                        AndroidKeyEvent.ACTION_UP, AndroidKeyEvent.KEYCODE_DPAD_UP,
+                        0, 0, -1, 0, 0, InputDevice.SOURCE_DPAD,
+                    ),
+                )
+                composeRule.mainClock.autoAdvance = true
+            }
+            composeRule.onNodeWithTag("main-nav-search").assertIsFocused().assertIsSelected()
+            composeRule.runOnIdle { assertEquals(0, libraryOpens) }
+        }
     }
 
     @Test
