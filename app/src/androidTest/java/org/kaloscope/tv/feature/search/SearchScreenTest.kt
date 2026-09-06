@@ -543,6 +543,114 @@ class SearchScreenTest {
     }
 
     @Test
+    fun portraitGridDownKeepsFourthColumnAcrossScrolls() {
+        assertVerticalResultNavigation(
+            coverRatio = 2f / 3f,
+            expectedIds = listOf(4, 8, 12, 16, 20),
+        )
+    }
+
+    @Test
+    fun portraitGridDownKeepsThirdColumnAcrossScrolls() {
+        assertVerticalResultNavigation(
+            coverRatio = 2f / 3f,
+            expectedIds = listOf(3, 7, 11, 15, 19),
+        )
+    }
+
+    @Test
+    fun landscapeGridDownKeepsThirdColumnAcrossScrolls() {
+        assertVerticalResultNavigation(
+            coverRatio = 16f / 9f,
+            expectedIds = listOf(3, 6, 9, 12, 15),
+        )
+    }
+
+    @Test
+    fun portraitGridKeepsFirstColumnWithFocusRestorationEnabled() {
+        assertVerticalResultNavigation(
+            coverRatio = 2f / 3f,
+            expectedIds = listOf(1, 5, 9, 13, 17),
+            requestInitialFocus = true,
+        )
+    }
+
+    @Test
+    fun portraitGridRapidDownKeepsFourthColumnAcrossScrolls() {
+        assertVerticalResultNavigation(
+            coverRatio = 2f / 3f,
+            expectedIds = listOf(4, 8, 12, 16, 20),
+            rapidNavigation = true,
+        )
+    }
+
+    private fun assertVerticalResultNavigation(
+        coverRatio: Float,
+        expectedIds: List<Int>,
+        requestInitialFocus: Boolean = false,
+        rapidNavigation: Boolean = false,
+    ) {
+        var currentState by mutableStateOf(
+            state(
+                coverRatio = coverRatio,
+                results = (1..40).map { result("v$it") },
+            ),
+        )
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 36.dp, top = 74.dp, end = 36.dp, bottom = 16.dp),
+                ) {
+                    SearchScreen(
+                        session = session(),
+                        state = currentState,
+                        requestInitialFocus = requestInitialFocus,
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = { currentState = currentState.copy(focusedResultId = it) },
+                        onGridViewportChanged = { currentState = currentState.copy(gridViewport = it) },
+                        onOpenResult = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("network-result-v${expectedIds.first()}")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        if (rapidNavigation) {
+            composeRule.onRoot().performKeyInput {
+                repeat(expectedIds.size - 1) { pressKey(Key.DirectionDown) }
+            }
+            composeRule.onNodeWithTag("network-result-v${expectedIds.last()}").assertIsFocused()
+            return
+        }
+        expectedIds.zipWithNext().forEach { (from, to) ->
+            composeRule.onNodeWithTag("network-result-v$from")
+                .performKeyInput { pressKey(Key.DirectionDown) }
+            composeRule.runOnIdle {
+                assertEquals("Down from v$from", "v$to", currentState.focusedResultId)
+            }
+            composeRule.onNodeWithTag("network-result-v$to").assertIsFocused()
+        }
+        expectedIds.reversed().zipWithNext().forEach { (from, to) ->
+            composeRule.onNodeWithTag("network-result-v$from")
+                .performKeyInput { pressKey(Key.DirectionUp) }
+            composeRule.onNodeWithTag("network-result-v$to").assertIsFocused()
+        }
+    }
+
+    @Test
     fun initialLoadingUsesCenteredIndicator() {
         composeRule.setContent {
             KaloscopeTheme {

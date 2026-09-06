@@ -50,6 +50,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -64,6 +69,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
@@ -616,6 +622,29 @@ private fun SearchResults(
                 initialFirstVisibleItemScrollOffset =
                     state.gridViewport.firstVisibleItemScrollOffset,
             )
+            val offscreenResultFocus = remember { FocusRequester() }
+            var pendingFocusResultId by remember(
+                state.selectedIndexerId,
+                state.submittedKeyword,
+                state.appliedFilters,
+            ) {
+                mutableStateOf<String?>(null)
+            }
+            LaunchedEffect(pendingFocusResultId) {
+                val targetId = pendingFocusResultId ?: return@LaunchedEffect
+                val targetIndex = results.items.indexOfFirst { it.id == targetId }
+                if (targetIndex < 0) {
+                    pendingFocusResultId = null
+                    return@LaunchedEffect
+                }
+                gridState.scrollToItem(targetIndex)
+                snapshotFlow {
+                    gridState.layoutInfo.visibleItemsInfo.any { it.key == targetId }
+                }.first { it }
+                withFrameNanos { }
+                offscreenResultFocus.requestFocus()
+                pendingFocusResultId = null
+            }
             val firstVisibleResultIndex by remember(gridState, results.items.size) {
                 derivedStateOf {
                     if (results.items.isEmpty()) {
@@ -710,6 +739,36 @@ private fun SearchResults(
                         key = { _, result -> result.id },
                     ) { resultIndex, result ->
                         NetworkResultCard(
+                            modifier = Modifier.onPreviewKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown) {
+                                    return@onPreviewKeyEvent false
+                                }
+                                val columns = gridState.layoutInfo.maxSpan
+                                val delta = when (event.key) {
+                                    Key.DirectionUp -> -columns
+                                    Key.DirectionDown -> columns
+                                    else -> {
+                                        pendingFocusResultId = null
+                                        return@onPreviewKeyEvent false
+                                    }
+                                }
+                                val fromIndex = pendingFocusResultId?.let { targetId ->
+                                    results.items.indexOfFirst { it.id == targetId }
+                                } ?: resultIndex
+                                val targetIndex = fromIndex + delta
+                                if (fromIndex < 0 || targetIndex !in results.items.indices) {
+                                    return@onPreviewKeyEvent pendingFocusResultId != null
+                                }
+                                val targetIsVisible = gridState.layoutInfo.visibleItemsInfo
+                                    .any { it.index == targetIndex }
+                                if (pendingFocusResultId == null && targetIsVisible) {
+                                    return@onPreviewKeyEvent false
+                                }
+                                // Beyond-bounds search adds individual items and may select the
+                                // next row's first card before its same-column sibling is placed.
+                                pendingFocusResultId = results.items[targetIndex].id
+                                true
+                            },
                             session = session,
                             result = result,
                             coverRatio = coverRatio,
@@ -717,6 +776,9 @@ private fun SearchResults(
                                 (requestInitialFocus || state.resolutionError != null),
                             entryFocusRequester = resultEntryFocusRequester.takeIf {
                                 resultIndex == firstVisibleResultIndex
+                            },
+                            offscreenFocusRequester = offscreenResultFocus.takeIf {
+                                result.id == pendingFocusResultId
                             },
                             leftFocusRequester = resultExitFocusRequester.takeIf {
                                 resultIndex in leftmostResultIndices
@@ -802,11 +864,13 @@ private fun SearchResults(
 
 @Composable
 private fun NetworkResultCard(
+    modifier: Modifier,
     session: Session,
     result: NetworkSearchResult,
     coverRatio: Float,
     restoreFocus: Boolean,
     entryFocusRequester: FocusRequester?,
+    offscreenFocusRequester: FocusRequester?,
     leftFocusRequester: FocusRequester?,
     onFocused: () -> Unit,
     onClick: () -> Unit,
@@ -826,10 +890,13 @@ private fun NetworkResultCard(
         focusedContainerColor = ContentCardFocused,
         focusScale = BrowseLayoutTokens.GridCardFocusScale,
         focusScaleEdgeClearance = BrowseLayoutTokens.GridCardFocusEdgeClearance,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .testTag("network-result-${result.id}")
             .focusRequester(focusRequester)
+            .then(
+                offscreenFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+            )
             .focusProperties {
                 leftFocusRequester?.let { left = it }
             }
