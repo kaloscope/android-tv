@@ -1,345 +1,299 @@
 # Kaloscope Android TV Agent Guide
 
-## 1. Project identity
+Native Android TV client for [kaloscope/kaloscope](https://github.com/kaloscope/kaloscope).
+The server is user-managed and is not part of this repository.
 
-This repository contains the native Android TV client for
-[kaloscope/kaloscope](https://github.com/kaloscope/kaloscope).
+## Working rules
 
-The client connects to a user-managed Kaloscope server. Keep the repository
-portable and safe to publish:
+1. Run `git status --short` before editing; preserve unrelated user changes.
+2. Use `rg` to inspect the affected implementation, callers, resources, and
+   tests. Start with the code map below rather than scanning the entire project.
+3. For client behavior, follow the user's requirements, then current production
+   code and tests. For build assumptions, read the Gradle files. For API changes,
+   verify routes, encoding, DTOs, and behavior against public upstream source or
+   documentation; local fixtures alone do not prove the server contract.
+4. Implement the smallest complete change. Avoid unrelated refactors,
+   speculative abstractions, empty screens, and placeholder repositories.
+5. Run relevant targeted checks, inspect the final diff, and report what changed,
+   what was verified, and any remaining uncertainty. Never invent API contracts.
 
-- Do not depend on sibling repositories, absolute filesystem paths, local
-  accounts, saved browser sessions, private servers, or machine-specific tools.
-- Do not assume that a Kaloscope server, Android device, emulator, or signing
-  key is available.
-- Never add credentials, tokens, cookies, server addresses, media paths,
-  keystores, or local configuration to source control.
-- When server behavior must be verified, use the public upstream repository,
-  published documentation, fixtures, or information supplied by the user. If
-  the contract still cannot be verified, report the uncertainty instead of
-  inventing fields or endpoints.
+Keep the project portable: do not make it depend on sibling repositories,
+absolute paths, local accounts, browser sessions, private servers, or
+machine-specific tools. Do not assume a server, device, emulator, or signing key
+is available. Prototype content is visual reference only; production uses real
+repositories. Fixtures and sample data belong only in tests or previews.
 
-For the current client implementation, prefer evidence in this order:
+Never commit or log credentials, tokens, cookies, private server URLs, media
+paths, keystores, or local configuration. Use synthetic data in tests and
+examples. Do not log authorization headers or response bodies containing private
+data, or inspect private configuration to obtain test credentials.
 
-1. The user's explicit requirements for the task.
-2. Tests and production code in this repository.
-3. Gradle configuration and the version catalog.
-4. The public Kaloscope server source and documentation.
-5. Prototype or example content, for visual reference only.
+## Code map and architecture
 
-## 2. Working in the repository
+Kotlin paths below are relative to `app/src/main/java/org/kaloscope/tv/`;
+resource paths are relative to the repository root.
 
-Before changing code:
+| Area | Start here |
+| --- | --- |
+| Startup and authentication | `app/KaloscopeApp.kt`, `app/KaloscopeViewModel.kt`, `app/bootstrap/`, `app/RootStateInspection.kt` |
+| Shell and navigation | `app/MainShell.kt`, `app/MainShellActions.kt`, `app/navigation/MainNavigation.kt` |
+| Server accounts and tokens | `feature/server/`, `data/server/`, `data/auth/`, `core/storage/` |
+| Browsing and resource resolution | `feature/home/`, `feature/search/`, `feature/library/`, `feature/detail/`; `data/history/`, `data/media/`, `data/search/` |
+| Playback | `core/player/`, `feature/player/` |
+| Image and text reading | `core/reader/`, `feature/reader/`, `data/reader/` |
+| Settings | `core/model/TvSettings.kt`, `feature/settings/`, `data/settings/` |
+| HTTP and dependency injection | `core/network/KaloscopeApi.kt`, `core/network/ApiClientFactory.kt`, `core/network/NetworkCall.kt`, `app/di/AppModule.kt` |
+| Shared UI | `core/designsystem/`, `app/KaloscopeTheme.kt`, `app/src/main/res/` |
 
-1. Run `git status --short` and preserve all existing user changes.
-2. Use `rg` to inspect the implementation, tests, callers, and related
-   resources.
-3. Check the relevant Gradle configuration before changing dependencies or
-   platform assumptions.
-4. For API work, verify routes, request models, response models, and the
-   server's actual behavior against public upstream sources.
-5. Reduce the task to the smallest complete vertical slice.
+Keep the package boundaries: `app` wires the shell, bootstrap, navigation, and
+DI; `core` holds shared models, storage, networking, design system, and playback
+and reading policies; `data` implements repositories, mapping, and persistence;
+`feature` owns screen UI, ViewModels, and coordinators. Add feature DTOs under
+`data/<area>/remote/`; shared envelopes and some existing API DTOs live in
+`KaloscopeApi.kt`. Do not move those merely to satisfy a layering preference.
+UI must not call Retrofit or DataStore directly. Communicate between features
+through models, callbacks, routes, and IDs, not another screen's internals.
 
-Avoid speculative abstractions, batches of empty screens or repositories, and
-unrelated refactors. Follow established patterns unless the task explicitly
-requires a deliberate architectural change.
+Established stack:
 
-## 3. Current architecture and stack
+- One `app` module, one Activity, Kotlin, Java 17, minimum API 23, and
+  application ID/namespace/root package `org.kaloscope.tv`.
+- Jetpack Compose and TV Material, Navigation 3 with serializable route keys,
+  Hilt, StateFlow, and testable coordinators for complex state transitions.
+- Retrofit, OkHttp, Kotlinx Serialization, Preferences DataStore, Android
+  Keystore token encryption, Coil, Media3 (ExoPlayer, MediaSession, HLS, DASH,
+  Compose UI), and AkDanmaku.
 
-Treat these as established project constraints unless the user explicitly asks
-to change them:
+Read `app/build.gradle.kts`, `gradle/libs.versions.toml`, `gradle.properties`, and
+`gradle/wrapper/gradle-wrapper.properties` for current SDK, plugin, and dependency
+versions. Use the wrapper and version catalog. The build uses AGP's built-in
+Kotlin and `com.android.legacy-kapt`; preserve the documented `BuildConfig`,
+`kotlin-metadata-jvm` kapt dependency, and in-process compiler workarounds unless
+replacing them is in scope and the replacement is verified.
 
-- One Android application module: `app`.
-- Kotlin with a Java 17 toolchain.
-- Application ID, namespace, and root package: `org.kaloscope.tv`.
-- Minimum Android version: API 23.
-- Single-activity Jetpack Compose UI using Compose for TV and TV Material.
-- Navigation 3 with serializable route keys.
-- Hilt for dependency injection.
-- StateFlow and immutable UI state exposed by ViewModels.
-- Testable coordinator classes for non-trivial feature state transitions.
-- Retrofit, OkHttp, and Kotlinx Serialization for server communication.
-- Preferences DataStore and Android Keystore-backed token storage.
-- Coil for images.
-- Media3 ExoPlayer, MediaSession, HLS, DASH, and Compose player UI.
-- AkDanmaku for on-screen comment rendering and playback synchronization.
-- JUnit, coroutines-test, MockWebServer, Compose UI tests, screenshot tests, and
-  targeted device tests.
+Do not introduce Leanback UI, Fragment/XML primary UI, Room, another HTTP or DI
+framework, a service locator, multiple modules, an event bus, or WebView product
+flows without explicit approval and a clear migration need. The manifest's
+Leanback TV feature and launcher declarations are not the Leanback UI toolkit.
 
-Keep the existing package boundaries:
+## Product and navigation invariants
 
-- `app`: application shell, bootstrap, dependency injection, and navigation.
-- `core`: shared models, networking, storage, design system, and playback
+- Server setup/login and the authenticated shell are mutually exclusive root
+  states. Saved servers retain separate tokens. Authentication failure clears
+  the affected session; ordinary network failures and forbidden access do not.
+  Keep nested feature errors covered by `app/RootStateInspection.kt`.
+- Home shows only `video` watch history. Network video and reader content must
+  not create local `MediaItem` history.
+- Search selects the first available real indexer and automatically searches
+  when a keyword is not required. Indexer configuration determines available
+  filters and request fields; preserve `IndexerSearchRequestFactory` mapping.
+- `SearchCoordinator` resolves a result through `NetworkResourceRepository`:
+  video opens Player; image/text opens Reader. Do not insert a network detail
+  screen or assume every search result is video.
+- Library selects the first real library on initial load. Library media cards
+  open media detail before playback.
+- Settings is available from the main shell and Back returns to its caller.
+  Preserve the saved start-page selection in `MainNavigation.kt`.
+- `PlayerRoute` and `ReaderRoute` carry only `requestId`. Their in-memory request
+  stores hold payloads scoped to a server; never put tokens, DTOs, media URLs, or
+  manifests in routes or saved navigation state. Handle missing or wrong-server
+  requests explicitly, remove requests on close, and clear them on server exit.
+
+## State, concurrency, and settings
+
+- Each screen ViewModel exposes one primary immutable `uiState`; keep it thin
+  when a coordinator owns transitions. Represent loading, empty, content, error,
+  and retry behavior explicitly. Retain existing content on refresh, pagination,
+  or reader chapter failure, with a separate operation error.
+- ViewModels must not retain Activity, navigation/focus controllers, ExoPlayer,
+  MediaSession, Surface, or other UI/runtime objects.
+- Cancel jobs when the server, indexer, request, or chapter changes. Preserve
+  generation checks where cancellation alone cannot prevent stale completions.
+  Always rethrow `CancellationException` after required cleanup.
+- Preserve focused business-object IDs and `GridViewportSnapshot` when returning
+  from detail, Player, or Reader. Reset them when the query or data source
+  changes, not on ordinary recomposition. Use stable IDs for lazy layout keys.
+- Keep pending navigation in state and consume it by request ID, as Search does;
+  do not add one-shot event wrappers or a global navigation event bus.
+- `SettingsCoordinator` serializes/coalesces writes and restores the last saved
+  settings on failure. Preserve existing preference keys, defaults, validation,
+  and migrations in `PreferencesSettingsRepository`.
+- Player subtitle/danmaku appearance changes use the dedicated preference
+  setters; temporary enable toggles, subtitle selection/offset, and playback
+  speed must not overwrite global defaults. Reader image/text setting callbacks
+  update both current reader state and the settings repository.
+
+## TV UI and Kotlin conventions
+
+- All primary flows work with D-pad directions, Center, and Back. Prefer natural
+  two-dimensional focus traversal; add `focusProperties` only for a reproduced
+  navigation problem. Reserve `FocusRequester` for initial/restored focus and
+  modal traps.
+- Reuse `core/designsystem` controls, side panels, dialogs, loading layouts,
+  colors, motion, and layout tokens. Custom focusable controls need semantics,
+  a visible focused state, and a disabled state. Allow space for focus scaling
+  so cards and indicators are not clipped.
+- Loading overlays block covered controls. Dialogs and drawers contain focus
+  and restore it to their trigger. After data removal or replacement, focus a
+  stable nearby item. Verify initial focus, all four directions, modal behavior,
+  and Back restoration for focus changes.
+- Keep reader Back handling layered: choice dialog, drawer, controls, then
+  reader exit. Preserve equivalent player overlay/exit policies instead of
+  adding competing Back handlers.
+- Use four-space Kotlin formatting, immutable data classes, and sealed state
+  and policy models. Avoid `!!`; explain an unavoidable invariant in English.
+  Do not swallow exceptions or leave empty catches; use `AppResult`/`AppError`.
+- Collect state with lifecycle-aware APIs. Launch Composable work through
+  lifecycle/effect APIs. Reusable Composables take data and callbacks rather
+  than obtaining screen ViewModels.
+- Put user-facing text in `app/src/main/res/values/strings.xml` (preview examples
+  may be local). Keep comments and KDoc in English and explain intent or
+  constraints. Avoid vague `Utils`/`Helpers`/`Manager` containers; introduce an
+  interface only for a substitutable boundary or multiple implementations.
+
+## Networking and security
+
+- `ServerUrlNormalizer` accepts HTTP(S) origins, rejects credentials, paths,
+  queries, and fragments, and normalizes host/scheme/trailing slashes.
+  `ApiClientFactory` builds `<origin>/_api/`. Connection redirects must follow
+  `ServerConnectionOriginPolicy`: only a same-host HTTP-to-HTTPS upgrade may
+  change the chosen origin.
+- Authorization uses `Token <token>`. Bind API calls to the selected origin;
+  use `OriginAuthPolicy` for absolute resource URLs (scheme, host, effective
+  port). Never send a Kaloscope token to third-party URLs, including redirect
+  targets.
+- Preserve authorization for same-origin images, media, subtitles, manifests,
+  and segments. Reuse `ServerImageResolver`/`ServerImage` and
+  `ReaderImageRequestFactory`; do not attach a global token to Coil requests.
+- Login is form-encoded. Ordinary JSON uses `ApiEnvelope`/`NullableApiEnvelope`
+  and the existing `dataOrThrow` boundary. Do not envelope-decode redirects,
+  empty responses, streams, HLS, DASH, VTT, or images. Preserve unknown-field
+  tolerance and nullable workflow resource fields.
+- Tokens reach DataStore only through `SecureSessionStore` encryption and stay
+  keyed by server ID. Preserve disabled backups and the backup-rule resources.
+  Debug form defaults may come from ignored `local.properties`; release defaults
+  remain empty. Never copy these values into source, output, or test fixtures.
+- Local HTTP support currently comes from `android:usesCleartextTraffic="true"`
+  in `app/src/main/AndroidManifest.xml`. Preserve support for user-managed local
+  servers; never disable certificate/hostname validation or weaken HTTPS.
+
+## Playback and reading
+
+- Local Auto starts direct and may fall back once to HLS only for classified
+  source/decoder failures. Direct never silently transcodes; Transcode requests
+  HLS immediately. Keep this in `PlaybackSourcePolicy` and its failure/fallback
   policies.
-- `data`: repositories, remote DTOs, mapping, and persistence adapters.
-- `feature`: screen UI, ViewModels, and feature coordinators.
+- Network video uses resolved indexer sources, definitions, and chapters; it
+  must not call local-media transcoding APIs. Preserve codec-aware definition
+  selection and matching Media3 source types. Resolve inline DASH API base URLs
+  before encoding the manifest as a data URI in `PlaybackSourceResolver`.
+- `PlayerScreen` owns the screen-scoped `PlaybackController`, which owns and
+  releases ExoPlayer and MediaSession with the screen lifecycle. Record final
+  progress before controller release. Local progress is periodic and also
+  recorded at pause, seek, item change, exit, and error boundaries; network
+  playback is excluded. Danmaku uses milliseconds and resynchronizes after seek
+  and episode changes.
+- Keep source, buffering, timeout/stall, subtitle, chapter, progress, settings,
+  key, and overlay decisions in existing policy/coordinator classes where
+  practical. Device behavior still needs device verification.
+- Reader loads image/text requests through `ReaderCoordinator` and
+  `ReaderContentLoader`; network chapter and image-page resolution belongs in
+  `DefaultNetworkResourceRepository`. Preserve content and position on chapter
+  failure, deduplicate appended images, and discard stale chapter/page results.
+- Reuse reader chapter/key/scroll/preload policies. Image preloading is bounded
+  to the next image and uses the same authenticated request factory as display.
+  Keep text-setting bounds and units consistent with `ReaderSettingsPolicy`,
+  `TextReaderDimensions`, and persisted preference migrations.
 
-DTOs belong in the remote data layer. UI code must not call Retrofit or
-DataStore directly. Feature packages communicate through stable models, route
-keys, and IDs rather than by sharing screen internals.
+## Verification
 
-Do not introduce the Leanback UI toolkit, Fragment/XML-based primary UI, Room,
-another HTTP client, another dependency injection framework, a service locator,
-multiple Gradle modules, an event bus, WebView-based product flows, or disabled
-TLS validation without explicit approval and a clear migration need.
+Add or update tests at the layer matching changed behavior and run the smallest
+relevant checks. JVM tests use JUnit, coroutines-test, and MockWebServer; Compose
+UI and golden tests run on Android. Full regression is not the default.
 
-## 4. Established product behavior
+| Change | Verification entry point |
+| --- | --- |
+| Policies, mapping, coordinator transitions, persistence | Matching classes under `app/src/test/java/org/kaloscope/tv/` with lightweight fakes |
+| HTTP routes, encoding, envelopes, headers, errors | `core/network/KaloscopeApiContractTest.kt` and repository tests under the JVM test root; fixtures in `app/src/test/resources/fixtures/api/` |
+| Navigation, clicks, remote keys, focus, modals | Matching Compose UI tests under `app/src/androidTest/java/org/kaloscope/tv/` |
+| Visual changes | `app/src/androidTest/java/org/kaloscope/tv/test/golden/` and `app/src/androidTest/assets/goldens/`; reuse `test/DeviceScreenshot.kt` capture helpers |
+| Media3, image loading, performance | Relevant device tests and an available Android TV smoke test |
 
-Preserve these client behaviors unless the task explicitly changes the product:
-
-- Production code displays real server data. Fixtures, previews, and sample data
-  are limited to tests and previews.
-- Search selects the first available real indexer. If it does not require a
-  keyword, the initial search runs automatically.
-- Selecting a network search result resolves its details and opens the player;
-  it does not create a separate network detail screen.
-- Library selection uses real server libraries and selects the first available
-  library on initial load.
-- Selecting a library media card opens the media detail screen before playback.
-- Recent watching uses only `video` media history.
-- Network search playback must not be recorded as local `MediaItem` history.
-- Settings remain a root-level destination available from the main shell.
-- Login/server setup and the authenticated main shell are mutually exclusive
-  root states.
-- Player navigation passes only a playback `requestId`, never a token, DTO,
-  media URL, or manifest.
-
-Do not add unrelated product features while completing a focused task.
-
-## 5. State, navigation, and concurrency
-
-- Each screen-level ViewModel exposes one primary `uiState`.
-- Model loading, content, empty, and error states explicitly.
-- Preserve existing content when a refresh or pagination request fails.
-- Keep ViewModels thin when a coordinator already owns feature transitions.
-- ViewModels must not retain an Activity, NavController, FocusRequester,
-  ExoPlayer, MediaSession, Surface, or other UI/runtime object.
-- Cancel origin-scoped or source-scoped work when the active server or data
-  source changes, so stale results cannot replace current state.
-- Always rethrow `CancellationException` after any necessary state cleanup.
-- Use stable IDs in routes and lazy layout keys.
-- Preserve list/grid viewport and focused business-object IDs when returning
-  from detail or player screens.
-- Do not introduce one-shot event wrappers or a global navigation event bus.
-
-## 6. TV interaction and focus
-
-Every primary flow must work with D-pad directions, Center, and Back only.
-
-- Prefer natural two-dimensional focus traversal.
-- Add `focusProperties` only after a real navigation problem is reproduced.
-- Use `FocusRequester` only for initial focus, focus restoration, and modal
-  focus traps.
-- Focusable custom components require semantics, visible focused state, and a
-  disabled state.
-- Loading overlays must prevent interaction with covered controls.
-- Drawers and dialogs must contain focus and restore it to the triggering
-  control when dismissed.
-- After deleting, filtering, paging, or refreshing content, move focus to a
-  stable nearby item instead of the screen root.
-- For focus changes, verify initial focus, all four directions, modal behavior,
-  and Back restoration.
-
-Use Compose UI tests for route, click, key handling, and focus behavior. Use a
-connected TV device or emulator for behavior that cannot be validated reliably
-on the JVM.
-
-## 7. Networking and security
-
-- Normalize a user-provided server to its origin and build the API base URL as
-  `<origin>/_api/`.
-- Send the Kaloscope authorization token only to the matching server origin.
-- Never attach that token to third-party absolute image or playback URLs.
-- Attach authorization to same-origin API media, proxied images, subtitles,
-  manifests, and segments when required by the server contract.
-- Login uses form encoding; do not silently change it to JSON.
-- Parse ordinary JSON responses through the server envelope.
-- Do not envelope-decode redirects, empty responses, media streams, HLS, DASH,
-  VTT, or image payloads.
-- Keep Kotlinx Serialization tolerant of unknown fields.
-- Treat optional workflow resource fields as nullable.
-- Clear the active session on authentication failure, not on ordinary network
-  failure.
-- Never log authorization headers, cookies, passwords, tokens, full sensitive
-  URLs, or response bodies containing private data.
-- Support permitted local-network HTTP through the declared Android network
-  security policy. Never implement `trustAllCerts`, disable hostname
-  verification, or weaken HTTPS validation.
-
-Tests and examples must use obviously synthetic origins, credentials, IDs, and
-media paths.
-
-## 8. Playback
-
-- Local Auto mode prefers direct playback and falls back to HLS only for
-  classified, recoverable source or decoder failures.
-- Direct mode must not silently transcode.
-- Transcode mode requests HLS directly.
-- Network playback uses the source returned by indexer details and does not call
-  local-media transcoding APIs.
-- Use the matching Media3 source module for HLS, DASH, and progressive media.
-- Resolve an inline DASH manifest against its same-origin base URL before
-  converting it to a data URI.
-- Keep playback source selection, failure classification, fallback, buffering,
-  subtitles, chapters, settings, and progress rules in testable Kotlin policy
-  classes where practical.
-- The player owns ExoPlayer and MediaSession through its screen-scoped playback
-  controller and releases both with the screen lifecycle.
-- Record local playback progress periodically and at important lifecycle
-  boundaries, including immediately before the playback controller is released.
-- Danmaku timing uses milliseconds and must be resynchronized after seek or
-  episode changes.
-
-Player controls must remain fully operable by remote. Verify key handling,
-overlays, focus traps, error recovery, and state restoration.
-
-## 9. Kotlin and Compose conventions
-
-- Follow official Kotlin formatting with four-space indentation.
-- Use immutable data classes and sealed interfaces for state and policy models.
-- Avoid `!!`. If a compiler-unprovable invariant makes it unavoidable, explain
-  that invariant with a short English comment.
-- Do not swallow exceptions or leave empty `catch` blocks.
-- Map failures through the project's `AppResult` and `AppError` boundary.
-- Do not launch uncontrolled work from a Composable body.
-- Collect screen state with lifecycle-aware APIs.
-- Reusable Composables receive data and callbacks; they do not obtain a screen
-  ViewModel directly.
-- Put user-facing text in string resources. Preview-only examples may remain
-  local to previews.
-- Keep comments and KDoc in English. Explain intent, constraints, trade-offs, or
-  non-obvious behavior, not syntax.
-- Update or remove comments when behavior changes.
-- Do not create vague `Utils`, `Helpers`, or `Manager` containers.
-- Add interfaces only at boundaries that need substitution in tests or have
-  more than one meaningful implementation.
-
-## 10. Testing strategy
-
-Match tests to the changed behavior:
-
-- Pure policies, mappers, URL rules, and coordinator transitions: JVM unit
-  tests.
-- Repository behavior and DTO mapping: JVM tests with fakes and canonical
-  fixtures.
-- HTTP paths, encoding, envelopes, headers, and error mapping: MockWebServer
-  contract tests.
-- Navigation, clicks, TV keys, focus, drawers, and dialogs: Compose UI tests.
-- Visual regressions: existing golden screenshot infrastructure.
-- Media3 integration and device-specific focus/performance: emulator or real TV
-  smoke tests when such a target is available.
-
-Prefer lightweight fakes over heavyweight mocking for state tests. Fixtures may
-exist only under test, androidTest, or preview source paths. When a DTO changes,
-update the corresponding fixture and parsing/contract tests.
-
-For code changes, run only the relevant targeted tests by default. Do not
-automatically run full regression commands such as:
+Run a JVM class or a small set of classes from the repository root, for example:
 
 ```bash
-./gradlew testDebugUnitTest
-./gradlew lintDebug
-./gradlew assembleDebug
-./gradlew connectedDebugAndroidTest
+./gradlew :app:testDebugUnitTest \
+  --tests 'org.kaloscope.tv.feature.search.SearchCoordinatorTest' \
+  --tests 'org.kaloscope.tv.feature.reader.ReaderCoordinatorTest'
 ```
 
-When a change is large or cross-cutting enough to justify full regression
-testing, explain which full checks are recommended and why, then obtain the
-user's explicit permission before running them.
+For already installed matching app/test APKs, run only the relevant device test:
 
-### Persistent device and emulator state
-
-When an emulator or real Android TV device is available, treat its existing
-logged-in app installation as a persistent test environment:
-
-- Preserve application data, the authenticated session, and device or AVD state
-  by default. Reuse the existing installation instead of setting up and logging
-  in again for every test run.
-- Never run `adb uninstall`, `adb shell pm clear`, Gradle uninstall tasks,
-  emulator `-wipe-data`, an AVD factory reset, or an AVD delete/recreate as part
-  of the ordinary test workflow. Do not replace the logged-in state with a
-  clean snapshot.
-- When changed code requires a new APK, update the installed app in place with
-  a data-preserving operation such as `adb install -r`, then relaunch it. Do not
-  uninstall the old APK first. If the required build is already installed,
-  relaunch the app without reinstalling it.
-- Changes outside server setup, login, authentication, token or session
-  storage, authenticated bootstrap, and logout must be tested from the existing
-  authenticated state. Do not log out, clear app data, or repeat the login flow
-  for unrelated business logic changes.
-- A fresh unauthenticated state and a repeated login flow are needed only when
-  the changed behavior directly concerns login or session handling, or when the
-  task explicitly requires clean-state coverage. Prefer a separate clean AVD,
-  device, or snapshot for those tests so the persistent logged-in environment
-  remains intact.
-- Do not reproduce an unrelated login manually through a long sequence of
-  individual ADB commands and screenshots. Batch deterministic remote-control
-  input where safe, and capture screenshots only at meaningful validation
-  checkpoints.
-- Preserving a session does not permit extracting, displaying, logging, or
-  copying its token, credentials, server address, or other private data.
-
-If a command or required device is unavailable, state that clearly. Never claim
-that a check passed unless it was actually executed successfully.
-
-Documentation-only changes do not require an Android build unless they change
-build instructions or make claims that need build verification.
-
-## 11. Release and signing
-
-- Local `release` builds remain unsigned when none of the four Gradle signing
-  environment variables are configured. Supplying only a subset must continue
-  to fail fast; signing is enabled only when `ANDROID_KEYSTORE_PATH`,
-  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`
-  are all present.
-- Store `ANDROID_KEYSTORE_BASE64` only as a secret in the GitHub `release`
-  Environment. Restore it under `${{ runner.temp }}` at runtime and delete it
-  with an `always()` cleanup step. Never commit, cache, upload, print, or
-  otherwise expose signing material.
-- GitHub Releases are created only from pushed `v*` tags. Before a release,
-  increment `versionCode` and keep `versionName` equal to the tag without the
-  leading `v`.
-- Preserve release gates: JVM unit tests, release lint, signed APK assembly, and
-  `apksigner` verification must succeed before publishing.
-- Publish the versioned APK and its SHA-256 checksum. Preserve the R8 mapping as
-  a workflow artifact for diagnosing obfuscated crashes.
-- Keep third-party GitHub Actions pinned to full commit SHAs and grant only the
-  workflow permissions required to publish release assets.
-- Do not create or push a release tag or publish a GitHub Release without the
-  user's explicit approval.
-
-## 12. Completion criteria
-
-A change is complete only when:
-
-- It follows the established product behavior or documents the approved change.
-- Production paths use real repositories and contain no test data.
-- API behavior is verified rather than guessed.
-- Loading, empty, error, retry, and retained-content behavior are handled where
-  applicable.
-- Remote-control-only interaction and focus restoration remain correct.
-- Tokens and private server data cannot cross origins or enter logs/source
-  control.
-- New or changed behavior has tests at the appropriate layer.
-- Relevant verification commands were run and their results were reviewed.
-- There are no unexplained TODOs, placeholders, skipped tests, or empty catches.
-- The final diff contains no generated artifacts or unrelated user changes.
-
-## 13. Git workflow
-
-- Never discard, overwrite, or reformat unrelated user changes.
-- Do not run `git commit`, push, create a branch, or open a pull request unless
-  the user explicitly asks.
-- Stage only files within the requested scope.
-- Do not commit build output, local configuration, credentials, private server
-  details, or media data.
-- After each feature or bug fix, suggest an English Conventional Commit message:
-
-```text
-<type>[scope]: <description>
+```bash
+adb -s "$tv_serial" shell am instrument -w \
+  -e class org.kaloscope.tv.feature.reader.ReaderScreenTest \
+  org.kaloscope.tv.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-Use one of `feat`, `fix`, `build`, `bump`, `chore`, `ci`, `docs`, `perf`,
-`refactor`, `revert`, `style`, or `test`. Keep the description within 50
-characters and omit the trailing period. Add a body only for substantial
-changes.
+Select `tv_serial` from `adb devices`; do not hardcode a developer's device.
+Use `ClassName#methodName` to narrow instrumentation further. Inspect test
+results for failures and confirm tests actually ran; command exit alone is not
+proof. DTO changes require corresponding fixture and parsing/contract coverage.
+
+Full unit suites, lint, APK builds, and unfiltered connected tests require the
+user's explicit permission after explaining which checks are needed and why.
+This includes `:app:testDebugUnitTest` without `--tests`, `:app:lintDebug`,
+`:app:lintRelease`, `:app:assembleDebug`, `:app:assembleRelease`, and unfiltered
+`:app:connectedDebugAndroidTest`. Existing authorization for named checks need
+not be repeated. Documentation-only edits need no Android build unless they
+change build instructions or make claims requiring build verification.
+
+### Preserve device state and golden baselines
+
+- Treat the existing authenticated installation and device/AVD state as
+  persistent. Reuse it for changes unrelated to setup, login, session handling,
+  bootstrap, or logout. Do not log out or repeat login for unrelated work.
+- Never use `adb uninstall`, `adb shell pm clear`, Gradle uninstall tasks,
+  emulator `-wipe-data`, factory reset, AVD delete/recreate, or a clean snapshot
+  as an ordinary test step. If a rebuilt APK is needed, update with
+  `adb install -r`; otherwise relaunch the installed build.
+- For required clean-state auth coverage, prefer a separate device/AVD/snapshot.
+  Do not extract or copy credentials, tokens, server addresses, or other private
+  app data to preserve a session. Batch deterministic remote input where safe;
+  capture meaningful checkpoints instead of recreating unrelated login flows.
+- `scripts/verify-tv-goldens.sh` builds/installs APKs and checks 720p, 1080p, and
+  4K at density 320/font scale 1.0. `scripts/update-tv-goldens.sh` additionally
+  requires API 28 and replaces baseline assets. Both require exactly one
+  connected device and fall under the build permission rule above.
+- Both scripts reset size/density overrides on exit rather than restoring prior
+  overrides. Record and restore existing display overrides when reusing a
+  persistent device. Regenerate baselines only for an intended visual change;
+  inspect actual/diff images instead of updating goldens to hide a failure.
+
+## Release and handoff
+
+- `app/build.gradle.kts` leaves release unsigned if all four signing variables
+  are absent, fails fast for partial configuration, and signs only when
+  `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
+  `ANDROID_KEY_PASSWORD` are all supplied.
+- `.github/workflows/release.yml` publishes only from pushed version tags
+  matching its trigger. Before release, increment `versionCode` and match
+  `versionName` to the tag without `v`. Preserve unit tests, release lint, signed
+  assembly, and `apksigner` verification as publication gates.
+- Keep `ANDROID_KEYSTORE_BASE64` only in the GitHub `release` Environment's
+  secrets; restore under `${{ runner.temp }}` and delete with `always()` cleanup.
+  Never print, cache, commit, or upload signing material. Publish the versioned
+  APK and SHA-256 checksum; retain the R8 mapping as a workflow artifact.
+- Pin third-party Actions to full commit SHAs and use minimum permissions.
+  Do not create/push release tags or publish a release without explicit approval.
+- Do not commit, push, create a branch, or open a PR unless explicitly asked.
+  Stage only requested files. Review `git diff --check` and the final diff;
+  exclude unrelated edits, generated output (except intended golden assets),
+  local configuration, unexplained TODOs, placeholders, and skipped tests.
+- Report checks actually executed and any unavailable command/device or
+  unverified behavior. Never claim a check passed unless it ran successfully.
+- After each feature or fix, suggest an English Conventional Commit message:
+  `<type>[scope]: <description>`. Allowed types: `feat`, `fix`, `build`, `bump`,
+  `chore`, `ci`, `docs`, `perf`, `refactor`, `revert`, `style`, `test`. Keep the
+  description within 50 characters, no trailing period; add a body only for
+  substantial changes. Do not run `git commit` unless asked.
