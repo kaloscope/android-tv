@@ -1,9 +1,13 @@
 package org.kaloscope.tv.feature.home
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -38,6 +43,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -63,20 +69,20 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
+import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.LocalAccentPalette
+import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
-import org.kaloscope.tv.core.designsystem.Subtle
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.RatingDisplayPolicy
 import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.core.network.ServerImagePolicy
-
-private val HomeDivider = Color(0xFF252D40)
 
 internal data class HomeBackdropPresentation(
     val path: String,
@@ -119,8 +125,8 @@ internal fun HomeScreen(
                 Text(
                     text = stringResource(R.string.continue_watching),
                     color = Muted,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
                 )
                 Spacer(Modifier.width(8.dp))
                 KaloscopeIconButton(
@@ -142,7 +148,7 @@ internal fun HomeScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
             when (state) {
                 HomeUiState.Loading -> Unit
 
@@ -239,15 +245,17 @@ private fun HistoryContent(
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .testTag("home-content"),
     ) {
+        // Keep full-size actions and cards visible when the shell leaves little vertical space.
+        val compactLayout = maxHeight < 320.dp
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 12.dp),
+                .padding(vertical = if (compactLayout) 4.dp else 12.dp),
         ) {
             SelectedHistoryDetails(
                 item = selectedItem,
@@ -256,12 +264,13 @@ private fun HistoryContent(
                 actionFocusRequester = actionFocusRequester,
                 selectedCardFocusRequester = selectedCardFocusRequester,
                 refreshFocusRequester = refreshFocusRequester,
+                compactLayout = compactLayout,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 16.dp)
-                    .fillMaxWidth(0.58f),
+                    .fillMaxWidth(if (compactLayout) 1f else 0.58f),
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(if (compactLayout) 6.dp else 10.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -333,39 +342,92 @@ private fun SelectedHistoryDetails(
     actionFocusRequester: FocusRequester,
     selectedCardFocusRequester: FocusRequester,
     refreshFocusRequester: FocusRequester,
+    compactLayout: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = item.parentTitle ?: item.title,
-            color = OnBackground,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
-            lineHeight = 38.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.testTag("history-selected-title"),
+    val episodeText = historyEpisodeText(item)
+    val playbackActions = @Composable {
+        HistoryPlaybackActions(
+            item = item,
+            onOpenMedia = onOpenMedia,
+            onPlayHistory = onPlayHistory,
+            actionFocusRequester = actionFocusRequester,
+            selectedCardFocusRequester = selectedCardFocusRequester,
+            refreshFocusRequester = refreshFocusRequester,
         )
-        historyEpisodeText(item)?.let { episodeText ->
-            Spacer(Modifier.height(4.dp))
+    }
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
             Text(
-                text = episodeText,
-                color = Muted,
-                fontSize = 16.sp,
-                maxLines = 1,
+                text = item.parentTitle ?: item.title,
+                color = OnBackground,
+                fontSize = if (compactLayout) 24.sp else 32.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = if (compactLayout) 28.sp else 40.sp,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("history-selected-title"),
             )
+            Spacer(Modifier.height(if (compactLayout) 4.dp else 8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HistoryMetadata(item)
+                if (compactLayout && episodeText != null) {
+                    Spacer(Modifier.width(8.dp))
+                    HistoryEpisodeLabel(episodeText, Modifier.weight(1f))
+                }
+            }
+            if (!compactLayout) {
+                if (episodeText != null) {
+                    Spacer(Modifier.height(8.dp))
+                    HistoryEpisodeLabel(episodeText)
+                }
+                Spacer(Modifier.height(12.dp))
+                playbackActions()
+            }
         }
-        HistoryMetadata(item)
-        Spacer(Modifier.height(10.dp))
+        if (compactLayout) {
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.width(220.dp)) {
+                playbackActions()
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryEpisodeLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        color = LocalAccentPalette.current.primary,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier.testTag("history-selected-episode"),
+    )
+}
+
+@Composable
+private fun HistoryPlaybackActions(
+    item: WatchHistoryItem,
+    onOpenMedia: (Long) -> Unit,
+    onPlayHistory: (WatchHistoryItem) -> Unit,
+    actionFocusRequester: FocusRequester,
+    selectedCardFocusRequester: FocusRequester,
+    refreshFocusRequester: FocusRequester,
+) {
+    Column {
         ProgressBar(
             percentage = item.percentage,
-            modifier = Modifier.testTag("history-progress"),
+            modifier = Modifier
+                .widthIn(max = 320.dp)
+                .testTag("history-progress"),
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(18.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KaloscopeButton(
                 onClick = { onPlayHistory(item) },
@@ -378,6 +440,7 @@ private fun SelectedHistoryDetails(
                     },
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
+                selected = true,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Icon(
@@ -419,7 +482,29 @@ private fun HistoryCarouselCard(
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(14.dp)
-    val restingColor = PanelElevated
+    val accentPalette = LocalAccentPalette.current
+    val restingColor = if (selected) {
+        accentPalette.panelSelected.copy(alpha = 0.42f).compositeOver(Panel)
+    } else {
+        Panel
+    }
+    var isFocused by remember(item.historyId) { mutableStateOf(false) }
+    val restingBorderColor by animateColorAsState(
+        targetValue = if (selected) accentPalette.primary.copy(alpha = 0.28f) else Outline,
+        animationSpec = tween(
+            durationMillis = KaloscopeMotion.FocusMillis,
+            easing = KaloscopeMotion.ControlEasing,
+        ),
+        label = "history-card-border-color",
+    )
+    val titleColor by animateColorAsState(
+        targetValue = if (isFocused) accentPalette.primary else OnBackground,
+        animationSpec = tween(
+            durationMillis = KaloscopeMotion.FocusMillis,
+            easing = KaloscopeMotion.ControlEasing,
+        ),
+        label = "history-card-title-color",
+    )
     Surface(
         onClick = { onPlayHistory(item) },
         modifier = modifier
@@ -427,6 +512,7 @@ private fun HistoryCarouselCard(
             .height(86.dp)
             .focusProperties { up = actionFocusRequester }
             .onFocusChanged { focusState ->
+                isFocused = focusState.isFocused
                 if (focusState.isFocused) {
                     onFocused()
                 }
@@ -456,7 +542,7 @@ private fun HistoryCarouselCard(
         ),
         border = ClickableSurfaceDefaults.border(
             border = Border(
-                border = BorderStroke(1.dp, Outline),
+                border = BorderStroke(1.dp, restingBorderColor),
                 shape = shape,
             ),
             focusedBorder = Border(
@@ -468,7 +554,7 @@ private fun HistoryCarouselCard(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(7.dp),
+                .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ServerImage(
@@ -480,10 +566,10 @@ private fun HistoryCarouselCard(
                     .width(48.dp)
                     .fillMaxHeight()
                     .testTag("history-card-poster-${item.mediaId}")
-                    .clip(RoundedCornerShape(9.dp)),
+                    .clip(RoundedCornerShape(10.dp)),
                 contentScale = ContentScale.Crop,
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -492,8 +578,9 @@ private fun HistoryCarouselCard(
             ) {
                 Text(
                     text = item.parentTitle ?: item.title,
-                    color = OnBackground,
+                    color = titleColor,
                     fontSize = 15.sp,
+                    lineHeight = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -504,6 +591,7 @@ private fun HistoryCarouselCard(
                         text = episodeText,
                         color = Muted,
                         fontSize = 12.sp,
+                        lineHeight = 16.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -515,13 +603,10 @@ private fun HistoryCarouselCard(
                 )?.let { updatedAt ->
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = stringResource(
-                            R.string.history_card_progress,
-                            updatedAt,
-                            item.percentage.coerceIn(0, 100),
-                        ),
-                        color = Subtle,
+                        text = updatedAt,
+                        color = Muted,
                         fontSize = 12.sp,
+                        lineHeight = 16.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -594,20 +679,36 @@ private fun HomeEmpty(
 
 @Composable
 private fun HistoryMetadata(item: WatchHistoryItem) {
-    val metadata = listOfNotNull(
-        item.year?.toString(),
-        item.rating?.let { stringResource(R.string.rating, it) },
-        stringResource(
-            R.string.history_watched_percentage,
-            item.percentage.coerceIn(0, 100),
-        ),
-    ).joinToString("  ·  ")
-    if (metadata.isNotEmpty()) {
-        Spacer(Modifier.height(4.dp))
+    val rating = RatingDisplayPolicy.format(item.rating)
+    val badgeShape = RoundedCornerShape(6.dp)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        item.year?.let { year ->
+            Text(
+                text = year.toString(),
+                color = OnBackground,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                modifier = Modifier
+                    .background(Panel.copy(alpha = 0.72f), badgeShape)
+                    .border(1.dp, Outline, badgeShape)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
+        rating?.let { value ->
+            RatingBadge(rating = value, testTag = "history-rating-badge")
+        }
         Text(
-            text = metadata,
+            text = stringResource(
+                R.string.history_watched_percentage,
+                item.percentage.coerceIn(0, 100),
+            ),
             color = Muted,
-            fontSize = 15.sp,
+            fontSize = 13.sp,
+            maxLines = 1,
         )
     }
 }
@@ -635,8 +736,8 @@ private fun ProgressBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(4.dp)
-            .background(HomeDivider, RoundedCornerShape(4.dp)),
+            .height(3.dp)
+            .background(Outline, RoundedCornerShape(4.dp)),
     ) {
         Box(
             modifier = Modifier

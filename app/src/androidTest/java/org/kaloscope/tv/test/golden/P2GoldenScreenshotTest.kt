@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -30,14 +33,17 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.app.RootFullscreenBackdropFrame
 import org.kaloscope.tv.app.ServerSetupScreen
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.ServerImagePlaceholder
 import org.kaloscope.tv.core.designsystem.ServerImageVisualState
 import org.kaloscope.tv.core.designsystem.TvSearchField
@@ -56,8 +62,11 @@ import org.kaloscope.tv.core.model.SearchFilterType
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.core.model.WatchHistoryItem
 import org.kaloscope.tv.feature.detail.MediaDetailScreen
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
+import org.kaloscope.tv.feature.home.HomeScreen
+import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryScreen
 import org.kaloscope.tv.feature.library.LibraryUiState
@@ -73,6 +82,95 @@ import org.kaloscope.tv.test.captureToImage
 class P2GoldenScreenshotTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun homeHistoryMatchesCurrentResolution() {
+        captureHomeHistory(longTitle = false)
+    }
+
+    @Test
+    fun homeHistoryLongTitleMatchesCurrentResolution() {
+        captureHomeHistory(longTitle = true)
+    }
+
+    @Test
+    fun homeSelectedHistoryMatches1080p() {
+        if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
+        captureHomeHistory(longTitle = false, focusOnActions = true)
+    }
+
+    private fun captureHomeHistory(longTitle: Boolean, focusOnActions: Boolean = false) {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeBackground {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(
+                                start = BrowseLayoutTokens.ScreenHorizontalPadding,
+                                top = BrowseLayoutTokens.ScreenContentTopPadding,
+                                end = BrowseLayoutTokens.ScreenHorizontalPadding,
+                                bottom = BrowseLayoutTokens.ScreenContentBottomPadding,
+                            ),
+                    ) {
+                        Box(Modifier.fillMaxSize().testTag("golden-home-region")) {
+                            HomeScreen(
+                                session = session(),
+                                state = HomeUiState.Content(goldenHistory(longTitle)),
+                                onRefresh = {},
+                                restoreMediaId = null,
+                                onOpenLibrary = {},
+                                onOpenSearch = {},
+                                onOpenMedia = {},
+                                onPlayHistory = {},
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.onNodeWithTag("history-card-301")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.onNodeWithTag("history-card-301").assertIsFocused()
+        if (focusOnActions) {
+            composeRule.onNodeWithTag("history-card-301")
+                .performKeyInput { pressKey(Key.DirectionUp) }
+            composeRule.mainClock.advanceTimeBy(1_000)
+            composeRule.onNodeWithText("继续播放").assertIsFocused()
+            composeRule.onNodeWithTag("history-card-301").assertIsSelected()
+        }
+        val width = Resources.getSystem().displayMetrics.widthPixels
+        val titleVariant = when {
+            focusOnActions -> "selected"
+            longTitle -> "long-title"
+            else -> "short-title"
+        }
+        assertGolden(
+            "home-history-$titleVariant-$width",
+            composeRule.onNodeWithTag("golden-home-region").captureToImage().asAndroidBitmap(),
+        )
+
+        val carouselBounds = composeRule.onNodeWithTag("history-carousel")
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val episodeBounds = composeRule.onNodeWithTag("history-selected-episode")
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val minimumEpisodeHeight = with(composeRule.density) { 20.dp.toPx() }
+        assertTrue("Episode text must keep its full line height", episodeBounds.height >= minimumEpisodeHeight)
+        assertTrue("Episode text must stay above the carousel", episodeBounds.bottom <= carouselBounds.top)
+        val minimumActionHeight = with(composeRule.density) { 42.dp.toPx() }
+        listOf("继续播放", "查看详情").forEach { label ->
+            val bounds = composeRule.onNodeWithText(label)
+                .assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
+            assertTrue("$label must keep its full height", bounds.height >= minimumActionHeight)
+            assertTrue("$label must stay above the carousel", bounds.bottom <= carouselBounds.top)
+        }
+    }
 
     @Test
     fun libraryGridMatchesCurrentResolution() {
@@ -480,6 +578,33 @@ class P2GoldenScreenshotTest {
         assertGolden(
             "server-deletion-dialog-1920",
             InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot(),
+        )
+    }
+}
+
+private fun goldenHistory(longTitle: Boolean): List<WatchHistoryItem> {
+    val titles = listOf(
+        if (longTitle) "星海纪行～穿越漫长星夜寻找归途～ 第二季" else "星海纪行",
+        "森林来信",
+        "北境纪行",
+    )
+    return titles.mapIndexed { index, title ->
+        WatchHistoryItem(
+            historyId = 401L + index,
+            mediaId = 301L + index,
+            title = listOf("抵达", "微风", "雪夜")[index],
+            fileName = "episode-${index + 3}.mkv",
+            path = "/fixture/episode-${index + 3}.mkv",
+            positionSeconds = 900,
+            percentage = listOf(45, 28, 72)[index],
+            year = 2026,
+            season = 1,
+            episode = index + 3,
+            posterPath = null,
+            backdropPath = null,
+            rating = 8.6,
+            updatedAt = "2026-01-10T08:00:00Z",
+            parentTitle = title,
         )
     }
 }

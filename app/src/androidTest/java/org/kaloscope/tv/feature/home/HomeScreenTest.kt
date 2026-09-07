@@ -213,7 +213,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun cardShowsRelativeDateAndWatchPercentage() {
+    fun cardShowsRelativeDateWithoutWatchPercentage() {
         val originalTimeZone = TimeZone.getDefault()
         try {
             TimeZone.setDefault(TimeZone.getTimeZone("GMT+08:00"))
@@ -222,8 +222,10 @@ class HomeScreenTest {
             }
             showContentHome(items = items)
 
-            composeRule.onAllNodesWithText("昨天 · 45%")
+            composeRule.onAllNodesWithText("昨天")
                 .assertCountEquals(2)
+            composeRule.onAllNodesWithText("%", substring = true).assertCountEquals(1)
+            composeRule.onNodeWithText("已看 45%").assertExists()
             composeRule.onAllNodesWithTag("history-progress")
                 .assertCountEquals(1)
         } finally {
@@ -235,8 +237,18 @@ class HomeScreenTest {
     fun selectedMetadataShowsWatchPercentageAfterRating() {
         showContentHome()
 
-        composeRule.onNodeWithText("2026  ·  评分 8.6  ·  已看 45%")
+        composeRule.onNodeWithText("2026").assertExists()
+        composeRule.onNodeWithTag("history-rating-badge").assertExists()
+        val ratingBounds = composeRule.onNodeWithText("★ 8.6")
             .assertExists()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val percentageBounds = composeRule.onNodeWithText("已看 45%")
+            .assertExists()
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(ratingBounds.right <= percentageBounds.left)
     }
 
     @Test
@@ -399,9 +411,12 @@ class HomeScreenTest {
     @Test
     fun restingCardUsesFaintNeutralBorderBeforeBrightWhiteFocusBorder() {
         showContentHome()
+        composeRule.onNodeWithTag("history-card-302")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithTag("home-refresh")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         val resting = composeRule.onNodeWithTag("history-card-301")
+            .assertIsNotSelected()
             .captureToImage()
             .asAndroidBitmap()
 
@@ -413,6 +428,7 @@ class HomeScreenTest {
             .asAndroidBitmap()
 
         val restingBorder = averageTopCenterColor(resting)
+        val restingFill = averageInteriorTopCenterColor(resting)
         val focusedBorder = averageTopCenterColor(focused)
 
         assertTrue(
@@ -420,8 +436,9 @@ class HomeScreenTest {
             restingBorder.channelSpread <= 45.0,
         )
         assertTrue(
-            "Resting border must remain faintly visible: $restingBorder",
-            restingBorder.luminance >= 35.0,
+            "Resting border must remain visible against the card fill: " +
+                "border=$restingBorder, fill=$restingFill",
+            restingBorder.luminance >= restingFill.luminance * 1.15,
         )
         assertTrue(
             "Focused white border must be clearly brighter: " +
