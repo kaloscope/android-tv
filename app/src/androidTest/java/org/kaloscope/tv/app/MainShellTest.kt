@@ -211,6 +211,92 @@ class MainShellTest {
     }
 
     @Test
+    fun singleHistoryCardOnlyLeavesCarouselThroughResumeAction() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Content(listOf(history())),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("history-card-201")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        listOf(Key.DirectionRight, Key.DirectionLeft, Key.DirectionDown).forEach { key ->
+            repeat(3) {
+                composeRule.onNodeWithTag("history-card-201")
+                    .performKeyInput { pressKey(key) }
+                    .assertIsFocused()
+            }
+        }
+        composeRule.onNode(hasText("首页") and hasClickAction()).assertIsSelected()
+        composeRule.onNodeWithContentDescription("设置").assertIsNotSelected()
+
+        composeRule.onNodeWithTag("history-card-201")
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithText("继续播放")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag("history-card-201").assertIsFocused()
+    }
+
+    @Test
+    fun historyCarouselStopsAtBothEndsWithoutChangingDestination() {
+        val mediaIds = listOf(201L, 202L, 203L, 204L, 205L, 206L)
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Content(
+                        mediaIds.map { mediaId ->
+                            history(historyId = mediaId, mediaId = mediaId)
+                        },
+                    ),
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("history-card-201")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+            .assertIsFocused()
+        mediaIds.zipWithNext().forEach { (current, next) ->
+            composeRule.onNodeWithTag("history-card-$current")
+                .performKeyInput { pressKey(Key.DirectionRight) }
+            composeRule.onNodeWithTag("history-card-$next").assertIsFocused()
+        }
+        repeat(3) {
+            composeRule.onNodeWithTag("history-card-206")
+                .performKeyInput { pressKey(Key.DirectionRight) }
+                .assertIsFocused()
+        }
+        composeRule.onNodeWithTag("history-card-206")
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithText("继续播放")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag("history-card-206").assertIsFocused()
+        mediaIds.reversed().zipWithNext().forEach { (current, next) ->
+            composeRule.onNodeWithTag("history-card-$current")
+                .performKeyInput { pressKey(Key.DirectionLeft) }
+            composeRule.onNodeWithTag("history-card-$next").assertIsFocused()
+        }
+        repeat(3) {
+            composeRule.onNodeWithTag("history-card-201")
+                .performKeyInput { pressKey(Key.DirectionLeft) }
+                .assertIsFocused()
+        }
+        composeRule.onNode(hasText("首页") and hasClickAction()).assertIsSelected()
+        composeRule.onNodeWithContentDescription("设置").assertIsNotSelected()
+    }
+
+    @Test
     fun directionUpThroughHomeContentFocusesActiveHomeNavigation() {
         composeRule.setContent {
             KaloscopeTheme {

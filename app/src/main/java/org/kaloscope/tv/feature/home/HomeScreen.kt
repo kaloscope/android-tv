@@ -284,7 +284,7 @@ private fun HistoryContent(
                         itemsIndexed(
                             items = items,
                             key = { _, item -> item.historyId },
-                        ) { _, item ->
+                        ) { index, item ->
                             HistoryCarouselCard(
                                 session = session,
                                 item = item,
@@ -293,6 +293,16 @@ private fun HistoryContent(
                                 selectedCardFocusRequester = selectedCardFocusRequester,
                                 onFocused = { selectedMediaId = item.mediaId },
                                 onPlayHistory = onPlayHistory,
+                                modifier = Modifier.focusProperties {
+                                    // The top bar activates on focus, so card edges must not escape to it.
+                                    if (index == 0) {
+                                        left = FocusRequester.Cancel
+                                    }
+                                    if (index == items.lastIndex) {
+                                        right = FocusRequester.Cancel
+                                    }
+                                    down = FocusRequester.Cancel
+                                },
                             )
                         }
                     }
@@ -406,12 +416,13 @@ private fun HistoryCarouselCard(
     selectedCardFocusRequester: FocusRequester,
     onFocused: () -> Unit,
     onPlayHistory: (WatchHistoryItem) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(14.dp)
     val restingColor = PanelElevated
     Surface(
         onClick = { onPlayHistory(item) },
-        modifier = Modifier
+        modifier = modifier
             .width(284.dp)
             .height(86.dp)
             .focusProperties { up = actionFocusRequester }
