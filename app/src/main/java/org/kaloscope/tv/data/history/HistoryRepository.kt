@@ -5,6 +5,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.WatchHistoryItem
 
 interface HistoryRepository {
+    /** Returns video history ordered by most recently updated first. */
     suspend fun getRecentVideos(
         session: Session,
     ): AppResult<List<WatchHistoryItem>>

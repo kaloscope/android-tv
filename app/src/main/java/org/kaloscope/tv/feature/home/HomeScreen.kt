@@ -160,8 +160,8 @@ internal fun HomeScreen(
 
                 is HomeUiState.Content -> HistoryContent(
                     session = session,
-                    items = state.items,
-                    restoreMediaId = restoreMediaId,
+                    items = state.carouselItems,
+                    restoreMediaId = state.carouselMediaIdFor(restoreMediaId),
                     refreshFocusRequester = refreshFocusRequester,
                     onOpenMedia = onOpenMedia,
                     onPlayHistory = onPlayHistory,

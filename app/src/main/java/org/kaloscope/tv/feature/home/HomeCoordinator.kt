@@ -15,7 +15,17 @@ sealed interface HomeUiState {
     data class Content(
         val items: List<WatchHistoryItem>,
         val refreshError: AppError? = null,
-    ) : HomeUiState
+    ) : HomeUiState {
+        // History is newest first; keep all items available for per-episode resume.
+        val carouselItems: List<WatchHistoryItem> =
+            items.distinctBy(WatchHistoryItem::detailMediaId)
+
+        fun carouselMediaIdFor(mediaId: Long?): Long? {
+            val detailMediaId = items.firstOrNull { it.mediaId == mediaId }
+                ?.detailMediaId ?: return null
+            return carouselItems.firstOrNull { it.detailMediaId == detailMediaId }?.mediaId
+        }
+    }
 
     data object Empty : HomeUiState
 

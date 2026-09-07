@@ -431,6 +431,32 @@ class HomeScreenTest {
     }
 
     @Test
+    fun sameParentShowsOnlyLatestEpisodeAndResumesItsProgress() {
+        val latest = historyItems().first().copy(
+            detailMediaId = 201,
+            updatedAt = "2026-07-27T09:00:00Z",
+        )
+        val older = historyItems().last().copy(
+            detailMediaId = 201,
+            updatedAt = "2026-07-27T08:00:00Z",
+        )
+        var playedItem: WatchHistoryItem? = null
+        showContentHome(
+            items = listOf(latest, older),
+            onPlayHistory = { playedItem = it },
+        )
+
+        composeRule.onNodeWithTag("history-card-302").assertDoesNotExist()
+        composeRule.onNodeWithTag("history-card-301")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+
+        composeRule.runOnIdle {
+            assertEquals(latest, playedItem)
+        }
+    }
+
+    @Test
     fun centerOnCarouselCardResumesFocusedEpisode() {
         var playedMediaId: Long? = null
         showContentHome(
@@ -469,6 +495,27 @@ class HomeScreenTest {
         showContentHome(restoreMediaId = 302L)
 
         composeRule.onNodeWithTag("history-card-302").assertIsFocused()
+        composeRule.onNodeWithTag("history-selected-title").assertTextEquals("森林来信")
+    }
+
+    @Test
+    fun returningToGroupedEpisodeFocusesLatestCardFromSameParent() {
+        val otherParent = historyItems().first().copy(
+            updatedAt = "2026-07-27T10:00:00Z",
+        )
+        val older = historyItems().last().copy(detailMediaId = 202)
+        val latest = older.copy(
+            historyId = 403,
+            mediaId = 303,
+            updatedAt = "2026-07-27T09:00:00Z",
+        )
+        showContentHome(
+            items = listOf(otherParent, latest, older),
+            restoreMediaId = older.mediaId,
+        )
+
+        composeRule.onNodeWithTag("history-card-302").assertDoesNotExist()
+        composeRule.onNodeWithTag("history-card-303").assertIsFocused()
         composeRule.onNodeWithTag("history-selected-title").assertTextEquals("森林来信")
     }
 
