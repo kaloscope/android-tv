@@ -300,14 +300,82 @@ class PlayerCoordinatorTest {
         assertEquals(2, repository.danmakuCalls)
         assertEquals(1, repository.probeCalls)
     }
+
+    @Test
+    fun `concurrent extra retries retain each result and newer progress errors`() = runTest {
+        val request = request()
+        val store = PlaybackRequestStore().apply { put(request) }
+        val repository = FakeMediaRepository(
+            subtitles = AppResult.Failure(AppError.Offline),
+            danmakus = AppResult.Failure(AppError.Timeout),
+        )
+        val coordinator = PlayerCoordinator(store, repository)
+        coordinator.load(session(), request.requestId)
+        val subtitles = CompletableDeferred<AppResult<List<SubtitleTrack>>>()
+        val danmakus = CompletableDeferred<AppResult<List<DanmakuComment>>>()
+        repository.deferredSubtitles = subtitles
+        repository.deferredDanmakus = danmakus
+
+        val subtitleRetry = launch { coordinator.retryExtra(session(), PlayerExtra.Subtitles) }
+        val danmakuRetry = launch { coordinator.retryExtra(session(), PlayerExtra.Danmakus) }
+        runCurrent()
+        coordinator.reportProgressFailure(AppError.Offline)
+        subtitles.complete(AppResult.Success(listOf(subtitle())))
+        subtitleRetry.join()
+
+        val partiallyRecovered = coordinator.state.value as PlayerUiState.Content
+        assertEquals(
+            mapOf(PlayerExtra.Danmakus to AppError.Timeout),
+            partiallyRecovered.extraFailures,
+        )
+
+        danmakus.complete(AppResult.Success(listOf(danmaku())))
+        danmakuRetry.join()
+
+        val content = coordinator.state.value as PlayerUiState.Content
+        assertEquals("subtitle-1", content.subtitles.single().id)
+        assertEquals("danmaku-1", content.danmakus.single().id)
+        assertEquals(AppError.Offline, content.progressError)
+        assertTrue(content.extraFailures.isEmpty())
+    }
+
+    @Test
+    fun `late extra retries cannot overwrite a new episode with the same request id`() = runTest {
+        for (extra in listOf(PlayerExtra.Subtitles, PlayerExtra.Danmakus)) {
+            val request = request()
+            val store = PlaybackRequestStore().apply { put(request) }
+            val repository = FakeMediaRepository()
+            val coordinator = PlayerCoordinator(store, repository)
+            coordinator.load(session(), request.requestId)
+            val subtitles = CompletableDeferred<AppResult<List<SubtitleTrack>>>()
+            val danmakus = CompletableDeferred<AppResult<List<DanmakuComment>>>()
+            repository.deferredSubtitles = subtitles
+            repository.deferredDanmakus = danmakus
+            val retry = launch { coordinator.retryExtra(session(), extra) }
+            runCurrent()
+
+            repository.deferredSubtitles = null
+            repository.deferredDanmakus = null
+            coordinator.replaceRequest(
+                session(),
+                request.copy(mediaId = 302, path = "/media/video-2.mkv"),
+            )
+            val replacement = coordinator.state.value
+            subtitles.complete(AppResult.Success(listOf(subtitle())))
+            danmakus.complete(AppResult.Failure(AppError.Offline))
+            retry.join()
+
+            assertEquals(replacement, coordinator.state.value)
+        }
+    }
 }
 
 private class FakeMediaRepository(
     var subtitles: AppResult<List<SubtitleTrack>> = AppResult.Success(emptyList()),
     var danmakus: AppResult<List<DanmakuComment>> = AppResult.Success(emptyList()),
     var probe: AppResult<MediaProbe> = AppResult.Success(MediaProbe(0, emptyList())),
-    private val deferredSubtitles: CompletableDeferred<AppResult<List<SubtitleTrack>>>? = null,
-    private val deferredDanmakus: CompletableDeferred<AppResult<List<DanmakuComment>>>? = null,
+    var deferredSubtitles: CompletableDeferred<AppResult<List<SubtitleTrack>>>? = null,
+    var deferredDanmakus: CompletableDeferred<AppResult<List<DanmakuComment>>>? = null,
     private val deferredProbe: CompletableDeferred<AppResult<MediaProbe>>? = null,
 ) : StubMediaRepository() {
     var subtitleCalls = 0

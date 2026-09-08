@@ -237,24 +237,22 @@ class DefaultNetworkResourceRepository @Inject constructor(
     ): ReaderImageContent {
         val chapters = resource.toReaderChapters()
         val selectedChapterIndex = chapters.indices.firstOrNull()
-        val activeChapter = selectedChapterIndex?.let(chapters::get)
+        val activeChapter = chapters.firstOrNull()
         val source = ReaderSource.Network(indexerId, resourceId, activeChapter?.id)
-        if (resource.images != null) {
-            return resource.toImageContent(
-                source = source,
-                readerTitle = readerTitle,
-                chapters = chapters,
-                selectedChapterIndex = selectedChapterIndex,
+        // An empty inline image list is valid and must not trigger another details request.
+        val contentResource = if (resource.images != null) {
+            resource
+        } else {
+            val chapter = activeChapter
+                ?: throw SerializationException("Missing image reader content")
+            details(
+                session = session,
+                indexerId = indexerId,
+                resourceId = resourceId,
+                chapterId = chapter.id,
             )
         }
-        val chapter = activeChapter
-            ?: throw SerializationException("Missing image reader content")
-        return details(
-            session = session,
-            indexerId = indexerId,
-            resourceId = resourceId,
-            chapterId = chapter.id,
-        ).toImageContent(
+        return contentResource.toImageContent(
             source = source,
             readerTitle = readerTitle,
             chapters = chapters,
@@ -271,24 +269,22 @@ class DefaultNetworkResourceRepository @Inject constructor(
     ): ReaderTextContent {
         val chapters = resource.toReaderChapters()
         val selectedChapterIndex = chapters.indices.firstOrNull()
-        val activeChapter = selectedChapterIndex?.let(chapters::get)
+        val activeChapter = chapters.firstOrNull()
         val source = ReaderSource.Network(indexerId, resourceId, activeChapter?.id)
-        if (resource.text != null) {
-            return resource.toTextContent(
-                source = source,
-                readerTitle = readerTitle,
-                chapters = chapters,
-                selectedChapterIndex = selectedChapterIndex,
+        // Only missing text triggers chapter lookup; present text still goes through validation.
+        val contentResource = if (resource.text != null) {
+            resource
+        } else {
+            val chapter = activeChapter
+                ?: throw SerializationException("Missing text reader content")
+            details(
+                session = session,
+                indexerId = indexerId,
+                resourceId = resourceId,
+                chapterId = chapter.id,
             )
         }
-        val chapter = activeChapter
-            ?: throw SerializationException("Missing text reader content")
-        return details(
-            session = session,
-            indexerId = indexerId,
-            resourceId = resourceId,
-            chapterId = chapter.id,
-        ).toTextContent(
+        return contentResource.toTextContent(
             source = source,
             readerTitle = readerTitle,
             chapters = chapters,

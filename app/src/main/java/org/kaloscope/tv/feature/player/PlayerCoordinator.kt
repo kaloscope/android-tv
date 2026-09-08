@@ -104,33 +104,25 @@ class PlayerCoordinator(
                 progressError = progressError,
             )
 
-            is PlaybackRequest.LocalMedia -> {
-                val extras = loadLocalExtras(
-                    session = session,
-                    path = request.path,
-                    onPreparationStage = onPreparationStage,
-                )
-                PlayerUiState.Content(
-                    request = request,
-                    subtitles = extras.subtitles,
-                    danmakus = extras.danmakus,
-                    mediaProbe = extras.mediaProbe,
-                    extraFailures = extras.failures,
-                    progressError = progressError,
-                )
-            }
+            is PlaybackRequest.LocalMedia -> loadLocalContent(
+                session = session,
+                request = request,
+                progressError = progressError,
+                onPreparationStage = onPreparationStage,
+            )
         }
 
-    private suspend fun loadLocalExtras(
+    private suspend fun loadLocalContent(
         session: Session,
-        path: String,
+        request: PlaybackRequest.LocalMedia,
+        progressError: AppError?,
         onPreparationStage: (PlaybackPreparationStage) -> Unit,
-    ): LocalExtras {
+    ): PlayerUiState.Content {
         // Independent supplementary requests share startup latency and degrade separately.
         val (subtitleResult, danmakuResult, probeResult) = coroutineScope {
-            val subtitles = async { mediaRepository.getSubtitleTracks(session, path) }
-            val danmakus = async { mediaRepository.getDanmakus(session, path) }
-            val probe = async { mediaRepository.getMediaProbe(session, path) }
+            val subtitles = async { mediaRepository.getSubtitleTracks(session, request.path) }
+            val danmakus = async { mediaRepository.getDanmakus(session, request.path) }
+            val probe = async { mediaRepository.getMediaProbe(session, request.path) }
             val subtitleResult = subtitles.await()
             val probeResult = probe.await()
             if (!danmakus.isCompleted) {
@@ -138,11 +130,12 @@ class PlayerCoordinator(
             }
             Triple(subtitleResult, danmakus.await(), probeResult)
         }
-        return LocalExtras(
+        return PlayerUiState.Content(
+            request = request,
             subtitles = (subtitleResult as? AppResult.Success)?.value.orEmpty(),
             danmakus = (danmakuResult as? AppResult.Success)?.value.orEmpty(),
             mediaProbe = (probeResult as? AppResult.Success)?.value,
-            failures = buildMap {
+            extraFailures = buildMap {
                 if (subtitleResult is AppResult.Failure) {
                     put(PlayerExtra.Subtitles, subtitleResult.error)
                 }
@@ -153,6 +146,7 @@ class PlayerCoordinator(
                     put(PlayerExtra.MediaProbe, probeResult.error)
                 }
             },
+            progressError = progressError,
         )
     }
 
@@ -163,45 +157,41 @@ class PlayerCoordinator(
         val original = mutableState.value as? PlayerUiState.Content ?: return
         val request = original.request as? PlaybackRequest.LocalMedia ?: return
         when (extra) {
-            PlayerExtra.Subtitles -> {
-                val result = mediaRepository.getSubtitleTracks(session, request.path)
-                val latest = mutableState.value as? PlayerUiState.Content ?: return
-                if (latest.request != request) {
-                    return
-                }
-                mutableState.value = when (result) {
-                    is AppResult.Success -> latest.copy(
-                        subtitles = result.value,
-                        extraFailures = latest.extraFailures - PlayerExtra.Subtitles,
-                    )
-
-                    is AppResult.Failure -> latest.copy(
-                        extraFailures = latest.extraFailures +
-                            (PlayerExtra.Subtitles to result.error),
-                    )
-                }
+            PlayerExtra.Subtitles -> applyExtraResult(
+                request,
+                extra,
+                mediaRepository.getSubtitleTracks(session, request.path),
+            ) { subtitles ->
+                copy(subtitles = subtitles, extraFailures = extraFailures - extra)
             }
 
-            PlayerExtra.Danmakus -> {
-                val result = mediaRepository.getDanmakus(session, request.path)
-                val latest = mutableState.value as? PlayerUiState.Content ?: return
-                if (latest.request != request) {
-                    return
-                }
-                mutableState.value = when (result) {
-                    is AppResult.Success -> latest.copy(
-                        danmakus = result.value,
-                        extraFailures = latest.extraFailures - PlayerExtra.Danmakus,
-                    )
-
-                    is AppResult.Failure -> latest.copy(
-                        extraFailures = latest.extraFailures +
-                            (PlayerExtra.Danmakus to result.error),
-                    )
-                }
+            PlayerExtra.Danmakus -> applyExtraResult(
+                request,
+                extra,
+                mediaRepository.getDanmakus(session, request.path),
+            ) { danmakus ->
+                copy(danmakus = danmakus, extraFailures = extraFailures - extra)
             }
 
             PlayerExtra.MediaProbe -> Unit
+        }
+    }
+
+    private fun <T> applyExtraResult(
+        request: PlaybackRequest.LocalMedia,
+        extra: PlayerExtra,
+        result: AppResult<T>,
+        onSuccess: PlayerUiState.Content.(T) -> PlayerUiState.Content,
+    ) {
+        // Merge into the state after the request completes, preserving other in-flight updates.
+        val latest = mutableState.value as? PlayerUiState.Content ?: return
+        // Episode switches reuse request IDs, so compare the full playback request.
+        if (latest.request != request) return
+        mutableState.value = when (result) {
+            is AppResult.Success -> latest.onSuccess(result.value)
+            is AppResult.Failure -> latest.copy(
+                extraFailures = latest.extraFailures + (extra to result.error),
+            )
         }
     }
 
@@ -215,10 +205,3 @@ class PlayerCoordinator(
         mutableState.value = content.copy(progressError = error)
     }
 }
-
-private data class LocalExtras(
-    val subtitles: List<SubtitleTrack>,
-    val danmakus: List<DanmakuComment>,
-    val mediaProbe: MediaProbe?,
-    val failures: Map<PlayerExtra, AppError>,
-)

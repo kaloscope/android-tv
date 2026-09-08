@@ -30,6 +30,7 @@ sealed interface ReaderUiState {
     sealed interface Active : ReaderUiState {
         val requestId: String
         val serverId: String
+        val content: ReaderContent
         val chapterOrder: ReaderChapterOrder
         val contentRevision: Long
         val isChapterLoading: Boolean
@@ -39,7 +40,7 @@ sealed interface ReaderUiState {
     data class Image(
         override val requestId: String,
         override val serverId: String,
-        val content: ReaderImageContent,
+        override val content: ReaderImageContent,
         val settings: ImageReaderSettings,
         override val chapterOrder: ReaderChapterOrder,
         override val contentRevision: Long = 0,
@@ -53,7 +54,7 @@ sealed interface ReaderUiState {
     data class Text(
         override val requestId: String,
         override val serverId: String,
-        val content: ReaderTextContent,
+        override val content: ReaderTextContent,
         val settings: TextReaderSettings,
         override val chapterOrder: ReaderChapterOrder,
         override val contentRevision: Long = 0,
@@ -99,27 +100,28 @@ class ReaderCoordinator(
         chapterIndex: Int,
     ) {
         val current = mutableState.value as? ReaderUiState.Active ?: return
-        val currentContent = current.readerContent()
+        val currentContent = current.content
         if (
             chapterIndex !in currentContent.chapters.indices ||
             currentContent.selectedChapterIndex == chapterIndex
         ) {
             return
         }
+        // A chapter change invalidates pending image pages as well as older chapter loads.
         val requestGeneration = generation.incrementAndGet()
         mutableState.value = current.startChapterLoading()
         val result = try {
             contentLoader.resolveChapter(session, currentContent, chapterIndex)
         } catch (error: CancellationException) {
             if (generation.get() == requestGeneration) {
-                updateActive { withChapterStatus(loading = false, error = null) }
+                updateActive { finishChapterLoading() }
             }
             throw error
         }
         if (generation.get() != requestGeneration) return
         when (result) {
             is AppResult.Failure -> updateActive {
-                withChapterStatus(loading = false, error = result.error)
+                finishChapterLoading(error = result.error)
             }
 
             is AppResult.Success -> replaceChapterContent(result.value)
@@ -181,7 +183,7 @@ class ReaderCoordinator(
     }
 
     fun dismissChapterError() {
-        updateActive { withChapterStatus(loading = false, error = null) }
+        updateActive { finishChapterLoading() }
     }
 
     fun dismissPageError() {
@@ -242,31 +244,23 @@ class ReaderCoordinator(
                 chapterError = null,
             )
 
-            else -> current.withChapterStatus(
-                loading = false,
+            else -> current.finishChapterLoading(
                 error = AppError.InvalidData("reader_content_type"),
             )
         }
     }
 
-    private fun ReaderUiState.Active.readerContent(): ReaderContent =
-        when (this) {
-            is ReaderUiState.Image -> content
-            is ReaderUiState.Text -> content
-        }
-
-    private fun ReaderUiState.Active.withChapterStatus(
-        loading: Boolean,
-        error: AppError?,
+    private fun ReaderUiState.Active.finishChapterLoading(
+        error: AppError? = null,
     ): ReaderUiState.Active =
         when (this) {
             is ReaderUiState.Image -> copy(
-                isChapterLoading = loading,
+                isChapterLoading = false,
                 chapterError = error,
             )
 
             is ReaderUiState.Text -> copy(
-                isChapterLoading = loading,
+                isChapterLoading = false,
                 chapterError = error,
             )
         }

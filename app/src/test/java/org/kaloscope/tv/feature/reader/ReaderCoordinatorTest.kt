@@ -19,9 +19,11 @@ import org.kaloscope.tv.core.model.ReaderChapterOrder
 import org.kaloscope.tv.core.model.ReaderContent
 import org.kaloscope.tv.core.model.ReaderImageContent
 import org.kaloscope.tv.core.model.ReaderImagePage
+import org.kaloscope.tv.core.model.ReaderTextContent
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
+import org.kaloscope.tv.core.model.TextReaderSettings
 import org.kaloscope.tv.core.reader.ReaderRequest
 import org.kaloscope.tv.core.reader.ReaderRequestStore
 import org.kaloscope.tv.data.reader.ReaderContentLoader
@@ -60,6 +62,54 @@ class ReaderCoordinatorTest {
         assertEquals(ImageReadMode.Paged, after.settings.readMode)
         assertEquals(AppError.Offline, after.chapterError)
         assertFalse(after.isChapterLoading)
+    }
+
+    @Test
+    fun `text chapter replacement retains reader settings and advances content revision`() = runTest {
+        val content = ReaderTextContent.network(
+            indexerId = 11,
+            resourceId = "book-1",
+            title = "Book",
+            text = "First chapter",
+            chapters = listOf(
+                ReaderChapter("c0", "Chapter 0"),
+                ReaderChapter("c1", "Chapter 1"),
+            ),
+            selectedChapterIndex = 0,
+        )
+        val request = ReaderRequest.Text(
+            requestId = "text-reader",
+            serverId = "server-id",
+            content = content,
+            settings = TextReaderSettings(),
+            chapterOrder = ReaderChapterOrder.Descending,
+        )
+        val pending = CompletableDeferred<AppResult<ReaderContent>>()
+        val coordinator = ReaderCoordinator(
+            ReaderRequestStore().apply { put(request) },
+            FakeReaderContentLoader(chapterResults = mutableMapOf(1 to pending)),
+        )
+        coordinator.load(request.requestId, session())
+        val chapterJob = launch { coordinator.selectChapter(session(), 1) }
+        runCurrent()
+        val loading = coordinator.state.value as ReaderUiState.Text
+        assertEquals("First chapter", loading.content.text)
+        assertTrue(loading.isChapterLoading)
+        coordinator.updateTextSettings(TextReaderSettings(fontSizeSp = 32))
+
+        pending.complete(
+            AppResult.Success(content.copy(text = "Second chapter", selectedChapterIndex = 1)),
+        )
+        chapterJob.join()
+
+        val updated = coordinator.state.value as ReaderUiState.Text
+        assertEquals("Second chapter", updated.content.text)
+        assertEquals(1, updated.content.selectedChapterIndex)
+        assertEquals(1L, updated.contentRevision)
+        assertEquals(32, updated.settings.fontSizeSp)
+        assertEquals(ReaderChapterOrder.Descending, updated.chapterOrder)
+        assertFalse(updated.isChapterLoading)
+        assertNull(updated.chapterError)
     }
 
     @Test

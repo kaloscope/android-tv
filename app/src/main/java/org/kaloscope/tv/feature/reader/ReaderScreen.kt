@@ -170,10 +170,7 @@ private fun ActiveReader(
     var imageRetryRevision by remember(state.requestId, state.contentRevision) {
         mutableIntStateOf(0)
     }
-    val content = when (state) {
-        is ReaderUiState.Image -> state.content
-        is ReaderUiState.Text -> state.content
-    }
+    val content = state.content
     val previousChapter = ReaderChapterPolicy.previousIndex(
         content.chapters,
         content.selectedChapterIndex,
