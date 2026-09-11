@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
@@ -26,6 +27,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
@@ -266,7 +268,7 @@ class MediaDetailScreenTest {
         }
 
         composeRule.onNodeWithTag("media-child-card-301").assertIsFocused()
-        composeRule.onNodeWithText("S1E1 - 启程").assertExists()
+        composeRule.onAllNodesWithText("S1E1 · 启程").assertCountEquals(2)
         composeRule.onNodeWithText("第 1 集").assertDoesNotExist()
         composeRule.onNodeWithText("2026-01-02").assertExists()
     }
@@ -1321,8 +1323,8 @@ class MediaDetailScreenTest {
         composeRule.runOnIdle {
             assertEquals(0, plays)
         }
-        composeRule.onNodeWithText("S1E2 · 返程").assertExists()
-        composeRule.onNodeWithText("S1E1 · 启程").assertDoesNotExist()
+        composeRule.onAllNodesWithText("S1E2 · 返程").assertCountEquals(2)
+        composeRule.onAllNodesWithText("S1E1 · 启程").assertCountEquals(1)
         composeRule.onNodeWithTag("detail-parent-poster-201").assertExists()
     }
 
@@ -1406,7 +1408,7 @@ class MediaDetailScreenTest {
             .assertTextContains("整部剧的父级简介")
             .fetchSemanticsNode().boundsInRoot.top
         val episodeTitleTop = composeRule
-            .onNode(hasText("S1E1 - 启程") and insideMoreInfoPanel)
+            .onNode(hasText("S1E1 · 启程") and insideMoreInfoPanel)
             .fetchSemanticsNode().boundsInRoot.top
         val episodePlotTop = composeRule.onNodeWithTag("detail-more-info-episode-plot")
             .assertTextContains("第一集独有的分集简介")
@@ -1861,14 +1863,14 @@ class MediaDetailScreenTest {
         }
 
         composeRule.onNodeWithText("分集").assertExists()
-        composeRule.onNodeWithText("S1E1 - 启程").assertExists()
+        composeRule.onAllNodesWithText("S1E1 · 启程").assertCountEquals(2)
 
         composeRule.runOnIdle {
             state = MediaDetailUiState.Content(parent = movieCollection())
         }
         composeRule.onNodeWithText("分段").assertExists()
         composeRule.onNodeWithTag("media-child-card-602").assertTextContains("第一部")
-        composeRule.onNodeWithText("S1E1 - 启程").assertDoesNotExist()
+        composeRule.onNodeWithText("S1E1 · 启程").assertDoesNotExist()
     }
 
     private fun setStatefulDetailContent(

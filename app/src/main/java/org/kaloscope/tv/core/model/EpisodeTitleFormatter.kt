@@ -13,7 +13,7 @@ internal fun formatEpisodeDisplayTitle(
     return if (deduplicatedTitle.isBlank()) {
         prefix
     } else {
-        "$prefix - $deduplicatedTitle"
+        "$prefix · $deduplicatedTitle"
     }
 }
 

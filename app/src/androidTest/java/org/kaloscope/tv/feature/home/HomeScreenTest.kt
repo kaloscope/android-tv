@@ -219,6 +219,8 @@ class HomeScreenTest {
             }
             showContentHome(items = items)
 
+            composeRule.onAllNodesWithText("S1E3 · 抵达").assertCountEquals(2)
+            composeRule.onAllNodesWithText("S1E4 · 微风").assertCountEquals(1)
             composeRule.onAllNodesWithText("2026/07/27 16:05:09")
                 .assertCountEquals(2)
             composeRule.onAllNodesWithText("%", substring = true).assertCountEquals(1)

@@ -62,9 +62,9 @@ class MediaDetailPresentationTest {
     }
 
     @Test
-    fun `child title follows WebUI season episode prefix`() {
+    fun `child title separates season episode prefix with a middle dot`() {
         assertEquals(
-            "S2E3 - Pilot",
+            "S2E3 · Pilot",
             mediaChildDisplayTitle(child(id = 301, title = "Pilot", season = 2, episode = 3)),
         )
     }
@@ -92,7 +92,7 @@ class MediaDetailPresentationTest {
 
         titles.forEach { title ->
             assertEquals(
-                "S2E3 - Pilot",
+                "S2E3 · Pilot",
                 mediaChildDisplayTitle(child(id = 301, title = title, season = 2, episode = 3)),
             )
         }
@@ -105,7 +105,7 @@ class MediaDetailPresentationTest {
     @Test
     fun `child title preserves mismatched episode markers`() {
         assertEquals(
-            "S2E3 - S2E4 - Other",
+            "S2E3 · S2E4 - Other",
             mediaChildDisplayTitle(
                 child(id = 301, title = "S2E4 - Other", season = 2, episode = 3),
             ),

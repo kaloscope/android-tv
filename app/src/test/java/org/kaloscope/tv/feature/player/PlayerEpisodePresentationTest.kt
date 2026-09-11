@@ -49,7 +49,7 @@ class PlayerEpisodePresentationTest {
         assertEquals(listOf(0, 1), entries.map { it.sourceIndex })
         assertEquals(listOf("local:301", "local:302"), entries.map { it.stableId })
         assertEquals(
-            listOf("S3E4 - 水王级魔术师", "S3E5 - 庆祝"),
+            listOf("S3E4 · 水王级魔术师", "S3E5 · 庆祝"),
             entries.map { it.title },
         )
         assertEquals(
