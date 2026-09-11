@@ -34,9 +34,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
@@ -213,16 +210,16 @@ class HomeScreenTest {
     }
 
     @Test
-    fun cardShowsRelativeDateWithoutWatchPercentage() {
+    fun cardShowsFullPlaybackTimestampWithoutWatchPercentage() {
         val originalTimeZone = TimeZone.getDefault()
         try {
             TimeZone.setDefault(TimeZone.getTimeZone("GMT+08:00"))
             val items = historyItems().map { item ->
-                item.copy(updatedAt = timestampForLocalDayOffset(-1))
+                item.copy(updatedAt = "2026-07-27T08:05:09.123456Z")
             }
             showContentHome(items = items)
 
-            composeRule.onAllNodesWithText("昨天")
+            composeRule.onAllNodesWithText("2026/07/27 16:05:09")
                 .assertCountEquals(2)
             composeRule.onAllNodesWithText("%", substring = true).assertCountEquals(1)
             composeRule.onNodeWithText("已看 45%").assertExists()
@@ -877,20 +874,6 @@ class HomeScreenTest {
                 it(results)
             }
         return results.single()
-    }
-
-    private fun timestampForLocalDayOffset(offset: Int): String {
-        val timeZone = TimeZone.getDefault()
-        val calendar = Calendar.getInstance(timeZone).apply {
-            add(Calendar.DAY_OF_YEAR, offset)
-            set(Calendar.HOUR_OF_DAY, 12)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply {
-            this.timeZone = timeZone
-        }.format(calendar.time)
     }
 
     private fun averagePosterLuminance(bitmap: Bitmap): Double {

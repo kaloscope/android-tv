@@ -598,8 +598,6 @@ private fun HistoryCarouselCard(
                 }
                 formatHistoryUpdatedAt(
                     value = item.updatedAt,
-                    todayLabel = stringResource(R.string.history_today),
-                    yesterdayLabel = stringResource(R.string.history_yesterday),
                 )?.let { updatedAt ->
                     Spacer(Modifier.height(3.dp))
                     Text(

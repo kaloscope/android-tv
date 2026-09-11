@@ -12,13 +12,12 @@ class HistoryTimestampFormatterTest {
     private val shanghai = TimeZone.getTimeZone("GMT+08:00")
 
     @Test
-    fun previousLocalDayUsesYesterdayLabel() {
+    fun previousLocalDayIncludesFullDateAndClockTime() {
+        val timestamp = timestampForLocalDayOffset(-1)
         assertEquals(
-            "昨天",
+            "${timestamp.take(10).replace('-', '/')} 12:34:56",
             formatHistoryUpdatedAt(
-                value = timestampForLocalDayOffset(-1),
-                todayLabel = "今天",
-                yesterdayLabel = "昨天",
+                value = timestamp,
                 timeZone = shanghai,
                 locale = Locale.US,
             ),
@@ -26,13 +25,12 @@ class HistoryTimestampFormatterTest {
     }
 
     @Test
-    fun currentLocalDayUsesTodayLabel() {
+    fun currentLocalDayIncludesFullDateAndClockTime() {
+        val timestamp = timestampForLocalDayOffset(0)
         assertEquals(
-            "今天",
+            "${timestamp.take(10).replace('-', '/')} 12:34:56",
             formatHistoryUpdatedAt(
-                value = timestampForLocalDayOffset(0),
-                todayLabel = "今天",
-                yesterdayLabel = "昨天",
+                value = timestamp,
                 timeZone = shanghai,
                 locale = Locale.US,
             ),
@@ -40,13 +38,23 @@ class HistoryTimestampFormatterTest {
     }
 
     @Test
-    fun olderTimestampOmitsClockTime() {
+    fun olderTimestampIncludesClockTimeInLocalTimeZone() {
         assertEquals(
-            "2026/07/27",
+            "2026/07/27 13:35:09",
             formatHistoryUpdatedAt(
-                value = "2026-07-27T08:00:00.123456+02:30",
-                todayLabel = "今天",
-                yesterdayLabel = "昨天",
+                value = "2026-07-27T08:05:09.123456+02:30",
+                timeZone = shanghai,
+                locale = Locale.US,
+            ),
+        )
+    }
+
+    @Test
+    fun utcTimestampRollsOverToNextLocalYear() {
+        assertEquals(
+            "2027/01/01 00:05:09",
+            formatHistoryUpdatedAt(
+                value = "2026-12-31T16:05:09Z",
                 timeZone = shanghai,
                 locale = Locale.US,
             ),
@@ -55,13 +63,11 @@ class HistoryTimestampFormatterTest {
 
     @Test
     fun absentOrInvalidTimestampIsOmitted() {
-        assertNull(formatHistoryUpdatedAt(null, "今天", "昨天", shanghai, Locale.US))
-        assertNull(formatHistoryUpdatedAt(" ", "今天", "昨天", shanghai, Locale.US))
+        assertNull(formatHistoryUpdatedAt(null, shanghai, Locale.US))
+        assertNull(formatHistoryUpdatedAt(" ", shanghai, Locale.US))
         assertNull(
             formatHistoryUpdatedAt(
                 "not-a-date",
-                "今天",
-                "昨天",
                 shanghai,
                 Locale.US,
             ),
@@ -69,8 +75,6 @@ class HistoryTimestampFormatterTest {
         assertNull(
             formatHistoryUpdatedAt(
                 "2026-02-30T08:00:00Z",
-                "今天",
-                "昨天",
                 shanghai,
                 Locale.US,
             ),
@@ -81,8 +85,8 @@ class HistoryTimestampFormatterTest {
         val calendar = Calendar.getInstance(shanghai).apply {
             add(Calendar.DAY_OF_YEAR, offset)
             set(Calendar.HOUR_OF_DAY, 12)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
+            set(Calendar.MINUTE, 34)
+            set(Calendar.SECOND, 56)
             set(Calendar.MILLISECOND, 0)
         }
         return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply {
