@@ -875,7 +875,7 @@ private fun SearchResults(
                                 vertical = 8.dp,
                             )
                             .testTag("search-load-more-loading"),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         KaloscopeBusyIndicator(
