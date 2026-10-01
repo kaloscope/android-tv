@@ -375,7 +375,7 @@ class MainShellTest {
                 .fetchSemanticsNodes().isEmpty()
         }
 
-        composeRule.onNode(hasText("网络搜索") and hasClickAction())
+        composeRule.onNode(hasText("网络") and hasClickAction())
             .assertIsSelected()
         composeRule.onNode(hasText("首页") and hasClickAction())
             .assertIsNotSelected()
@@ -1438,7 +1438,7 @@ class MainShellTest {
 
         composeRule.runOnIdle { assertEquals(1, cancellations) }
         composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertDoesNotExist()
-        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("网络").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
 
         InstrumentationRegistry.getInstrumentation()
@@ -1447,7 +1447,7 @@ class MainShellTest {
 
         composeRule.runOnIdle { assertEquals(1, cancellations) }
         composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertExists()
-        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("网络").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
     }
 
@@ -1613,7 +1613,7 @@ class MainShellTest {
         composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
         composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertDoesNotExist()
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
-        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("网络").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
     }
 
@@ -1673,7 +1673,7 @@ class MainShellTest {
             assertEquals(1, applications)
         }
         composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
-        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("网络").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
     }
@@ -1737,7 +1737,7 @@ class MainShellTest {
             assertEquals(1, clearings)
         }
         composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
-        composeRule.onNodeWithText("网络搜索").assertIsSelected()
+        composeRule.onNodeWithText("网络").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
     }
@@ -1759,7 +1759,7 @@ class MainShellTest {
         composeRule.onNodeWithText("首页")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithText("网络搜索")
+        composeRule.onNodeWithText("网络")
             .assertIsFocused()
             .assertIsSelected()
             .performKeyInput { pressKey(Key.DirectionRight) }

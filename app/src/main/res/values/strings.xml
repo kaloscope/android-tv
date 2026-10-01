@@ -46,7 +46,7 @@
     <string name="exit_confirmation_message">确定要关闭当前应用吗？</string>
 
     <string name="home">首页</string>
-    <string name="search">网络搜索</string>
+    <string name="search">网络</string>
     <string name="library">媒体库</string>
     <string name="settings">设置</string>
     <string name="refresh">刷新</string>
