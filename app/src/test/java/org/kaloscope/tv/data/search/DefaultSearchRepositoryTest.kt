@@ -2,12 +2,15 @@ package org.kaloscope.tv.data.search
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -234,6 +237,55 @@ class DefaultSearchRepositoryTest {
     }
 
     @Test
+    fun `catalog keeps declared page sizes and defaults missing or invalid values`() = runTest {
+        server.dispatcher = catalogDispatcher(
+            mapOf(
+                11L to CatalogSite(loginRequired = false, pageSize = 101),
+                12L to CatalogSite(loginRequired = false, pageSize = 200),
+                13L to CatalogSite(loginRequired = false, pageSize = Int.MAX_VALUE),
+                14L to CatalogSite(loginRequired = false, pageSize = 0),
+                15L to CatalogSite(loginRequired = false, pageSize = -1),
+                16L to CatalogSite(loginRequired = false, pageSize = null),
+            ),
+        )
+
+        val profiles = (repository.getAvailableProfiles(session()) as AppResult.Success).value
+
+        assertEquals(listOf(101, 200, Int.MAX_VALUE, 20, 20, 20), profiles.map { it.pageSize })
+    }
+
+    @Test
+    fun `one shot ranking search stops after one hundred results`() = runTest {
+        val catalog = catalogDispatcher(
+            mapOf(11L to CatalogSite(loginRequired = false, pageSize = 101)),
+        )
+        val items = (1..100).joinToString(",") { id ->
+            """{"id":"v$id","title":"Video $id","media_type":"video"}"""
+        }
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                if (request.requestUrl?.encodedPath == "/_api/flow/graph/11/execute") {
+                    jsonResponse("""{"status":200,"message":"","data":{"items":[$items]}}""")
+                } else {
+                    catalog.dispatch(request)
+                }
+        }
+        val profile = (repository.getAvailableProfiles(session()) as AppResult.Success)
+            .value.single()
+
+        val page = (repository.search(session(), profile, "", emptyMap(), 1) as AppResult.Success)
+            .value
+
+        assertEquals(100, page.items.size)
+        assertEquals(101, page.pageSize)
+        assertFalse(page.hasNext)
+        repeat(2) { server.takeRequest() }
+        val request = json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertEquals(JsonPrimitive(101), request["page_size"])
+        assertEquals(JsonPrimitive(1), request["page_num"])
+    }
+
+    @Test
     fun `search decodes web grid metadata`() = runTest {
         server.enqueue(jsonResponse(fixture("indexer-search-success.json")))
         val profile = org.kaloscope.tv.core.model.IndexerSourceProfile(
@@ -403,7 +455,7 @@ class DefaultSearchRepositoryTest {
                       "data": {
                         "auth": {"login": {"required": ${site.loginRequired}}},
                         "search": {
-                          "display": {"page_size": 20, "cover_ratio": "2/3"},
+                          "display": {"page_size": ${site.pageSize}, "cover_ratio": "2/3"},
                           "keyword": {"required": true},
                           "filters": {
                             "region": {
@@ -440,6 +492,7 @@ class DefaultSearchRepositoryTest {
 
 private data class CatalogSite(
     val loginRequired: Boolean,
+    val pageSize: Int? = 20,
     val authName: String? = null,
     val configFailureCode: Int? = null,
     val authFailureCode: Int? = null,

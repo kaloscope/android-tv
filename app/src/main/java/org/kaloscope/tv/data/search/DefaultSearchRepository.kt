@@ -87,7 +87,7 @@ class DefaultSearchRepository @Inject constructor(
             IndexerSourceProfile(
                 indexer = indexer,
                 pageSize = config.search?.display?.pageSize
-                    ?.takeIf { it in 1..100 }
+                    ?.takeIf { it > 0 }
                     ?: DEFAULT_PAGE_SIZE,
                 keywordRequired = config.search?.keyword?.required ?: true,
                 coverRatio = config.search?.display?.coverRatio.toCoverAspectRatio(),

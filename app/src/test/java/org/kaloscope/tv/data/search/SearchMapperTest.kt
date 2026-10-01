@@ -330,6 +330,58 @@ class SearchMapperTest {
     }
 
     @Test
+    fun `search total takes precedence and stops at the final full page`() {
+        val page = IndexerResourcePageData(
+            total = 100,
+            totalPages = 10,
+            items = (1..20).map { resource("v$it", "Video $it", "video") },
+        )
+
+        assertTrue(page.toModel(pageNumber = 4, pageSize = 20).hasNext)
+        assertFalse(page.toModel(pageNumber = 5, pageSize = 20).hasNext)
+        assertFalse(page.copy(total = 0).toModel(pageNumber = 1, pageSize = 20).hasNext)
+    }
+
+    @Test
+    fun `search uses total pages when the total is absent`() {
+        val page = IndexerResourcePageData(totalPages = 5)
+
+        assertTrue(page.toModel(pageNumber = 4, pageSize = 20).hasNext)
+        assertFalse(page.toModel(pageNumber = 5, pageSize = 20).hasNext)
+    }
+
+    @Test
+    fun `simple search pagination uses raw result count before filtering`() {
+        val page = IndexerResourcePageData(
+            items = (1..20).map {
+                resource("v$it", "Video $it", if (it == 20) "audio" else "video")
+            },
+        )
+
+        val model = page.toModel(pageNumber = 2, pageSize = 20)
+
+        assertEquals(19, model.items.size)
+        assertTrue(model.hasNext)
+    }
+
+    @Test
+    fun `zero total pages uses simple pagination like the web client`() {
+        val page = IndexerResourcePageData(
+            totalPages = 0,
+            items = (1..20).map { resource("v$it", "Video $it", "video") },
+        )
+
+        assertTrue(page.toModel(pageNumber = 1, pageSize = 20).hasNext)
+    }
+
+    @Test
+    fun `large configured page size cannot overflow total comparison`() {
+        val page = IndexerResourcePageData(total = Int.MAX_VALUE)
+
+        assertFalse(page.toModel(pageNumber = 2, pageSize = Int.MAX_VALUE).hasNext)
+    }
+
+    @Test
     fun `details map top level source and valid danmakus`() {
         val source = IndexerResourceData(
             id = "v1",

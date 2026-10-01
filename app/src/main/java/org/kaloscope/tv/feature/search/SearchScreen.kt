@@ -835,30 +835,6 @@ private fun SearchResults(
                             onClick = { onOpenResult(result.id) },
                         )
                     }
-                    if (results.hasNext && results.isLoadingMore) {
-                        item(
-                            key = "search-load-more-loading",
-                            span = { GridItemSpan(maxLineSpan) },
-                        ) {
-                            Row(
-                                modifier = Modifier.testTag("search-load-more-loading"),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                KaloscopeBusyIndicator(
-                                    modifier = Modifier.testTag(
-                                        "search-load-more-loading-indicator",
-                                    ),
-                                    color = Muted,
-                                )
-                                Text(
-                                    text = stringResource(R.string.loading_more),
-                                    color = Muted,
-                                    fontSize = 14.sp,
-                                )
-                            }
-                        }
-                    }
                     if (
                         results.hasNext &&
                         !results.isLoadingMore &&
@@ -887,6 +863,30 @@ private fun SearchResults(
                                 }
                             }
                         }
+                    }
+                }
+                if (results.hasNext && results.isLoadingMore) {
+                    // A non-focusable status needs its own space outside the clipped grid.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = BrowseLayoutTokens.GridHorizontalContentPadding,
+                                vertical = 8.dp,
+                            )
+                            .testTag("search-load-more-loading"),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        KaloscopeBusyIndicator(
+                            modifier = Modifier.testTag("search-load-more-loading-indicator"),
+                            color = Muted,
+                        )
+                        Text(
+                            text = stringResource(R.string.loading_more),
+                            color = Muted,
+                            fontSize = 14.sp,
+                        )
                     }
                 }
             }

@@ -87,8 +87,8 @@ internal fun IndexerResourcePageData.toModel(
         it.toSearchResult(mediaTypeHint, videoTypeHint)
     }
     val hasNext = when {
-        total != null -> pageNumber * pageSize < total
-        totalPages != null -> pageNumber < totalPages
+        total != null -> pageNumber.toLong() * pageSize < total
+        totalPages != null && totalPages != 0 -> pageNumber < totalPages
         else -> items.size >= pageSize
     }
     return NetworkSearchPage(

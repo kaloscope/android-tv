@@ -26,6 +26,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.hasAnyDescendant
@@ -3104,42 +3105,73 @@ class SearchScreenTest {
     }
 
     @Test
-    fun loadingNextPageShowsInlineIndicatorAndMessage() {
+    fun loadingNextPageMessageRemainsFullyVisibleWithLastResultFocused() {
+        var currentState by mutableStateOf(
+            state(
+                coverRatio = 4f / 3f,
+                results = (1..100).map { result("v$it") },
+                hasNext = true,
+            ),
+        )
         composeRule.setContent {
             KaloscopeTheme {
-                SearchScreen(
-                    session = session(),
-                    state = state(
-                        results = (1..20).map { result("v$it") },
-                        hasNext = true,
-                        isLoadingMore = true,
-                    ),
-                    onRefreshIndexers = {},
-                    onSelectIndexer = {},
-                    onQueryChange = {},
-                    onSearch = {},
-                    onRetry = {},
-                    onLoadMore = {},
-                    onResultFocused = {},
-                    onGridViewportChanged = {},
-                    onOpenResult = {},
-                    onOpenFilters = {},
-                    onDismissFilters = {},
-                    onApplyFilters = {},
-                    onClearFilters = {},
-                )
+                Box(
+                    Modifier.fillMaxSize()
+                        .padding(start = 36.dp, top = 74.dp, end = 36.dp, bottom = 16.dp),
+                ) {
+                    SearchScreen(
+                        session = session(),
+                        state = currentState,
+                        requestInitialFocus = false,
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = {},
+                        onGridViewportChanged = {},
+                        onOpenResult = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
             }
         }
 
-        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(20)
-        composeRule.onNodeWithTag("search-load-more-loading-indicator").assertExists()
-        composeRule.onNodeWithText("正在加载…").assertExists()
+        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(99)
+        composeRule.onNodeWithTag("network-result-v100")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.runOnIdle {
+            currentState = currentState.copy(
+                results = (currentState.results as SearchResultsState.Content)
+                    .copy(isLoadingMore = true),
+            )
+        }
+
+        val message = composeRule.onNodeWithText("正在加载…").assertIsDisplayed()
+        val layouts = mutableListOf<TextLayoutResult>()
+        message.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val messageBounds = message.fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Loading text must be fully visible below the last focused result",
+            messageBounds.height >= layouts.single().size.height - 1f,
+        )
+        val indicatorBounds = composeRule.onNodeWithTag("search-load-more-loading-indicator")
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        assertTrue("Loading indicator must be fully visible", indicatorBounds.height >= 18f * density)
+        composeRule.onNodeWithTag("network-result-v100").assertIsFocused()
     }
 
     @Test
     fun finalPageDoesNotPrefetchOrRenderPagingFooter() {
         var loads = 0
-        val results = (1..20).map { result("v$it") }
+        val results = (1..100).map { result("v$it") }
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -3162,8 +3194,8 @@ class SearchScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(19)
-        composeRule.onNodeWithTag("network-result-v20")
+        composeRule.onNodeWithTag("search-results-grid").performScrollToIndex(99)
+        composeRule.onNodeWithTag("network-result-v100")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithTag("search-load-more-loading").assertDoesNotExist()
         composeRule.onNodeWithTag("search-load-more-retry").assertDoesNotExist()

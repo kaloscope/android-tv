@@ -532,16 +532,30 @@ class SearchCoordinatorTest {
     @Test
     fun `final search page ignores load more`() = runTest {
         val repository = FakeSearchRepository(
-            pages = mutableListOf(AppResult.Success(page("v1", hasNext = false))),
+            profile = AppResult.Success(profile().copy(pageSize = 101)),
+            pages = mutableListOf(
+                AppResult.Success(
+                    NetworkSearchPage(
+                        items = (1..100).map { result("v$it") },
+                        total = null,
+                        pageNumber = 1,
+                        pageSize = 101,
+                        hasNext = false,
+                    ),
+                ),
+            ),
         )
         val coordinator = coordinator(repository)
         coordinator.load(session())
         coordinator.updateQuery("星际")
         coordinator.search(session())
 
-        coordinator.loadNext(session())
+        repeat(3) { coordinator.loadNext(session()) }
 
         assertEquals(listOf(1), repository.searchCalls.map { it.pageNumber })
+        val state = coordinator.state.value as SearchUiState.Content
+        assertEquals(100, state.results.items.size)
+        assertFalse(state.results.hasNext)
     }
 
     @Test
