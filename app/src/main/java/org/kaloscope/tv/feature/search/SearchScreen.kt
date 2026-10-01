@@ -5,7 +5,6 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -56,6 +54,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -1064,16 +1063,12 @@ private fun BoxScope.SearchResultCoverMetadata(result: NetworkSearchResult) {
                 fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
             )
         }
         if (result.category != null && result.misc != null) {
             Spacer(Modifier.width(8.dp))
         }
         result.misc?.let { misc ->
-            if (result.category == null) {
-                Spacer(Modifier.weight(1f))
-            }
             Text(
                 text = misc,
                 color = Color.White,
@@ -1097,14 +1092,13 @@ private fun SearchResultFooter(
     val source = listOfNotNull(uploader, result.uploadedAt)
         .joinToString(" · ")
         .takeIf(String::isNotEmpty)
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(32.dp)
             .testTag("search-result-footer-${result.id}"),
         contentAlignment = Alignment.CenterStart,
     ) {
-        val sizeMaxWidth = maxWidth / 2
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.Bottom,
@@ -1134,8 +1128,20 @@ private fun SearchResultFooter(
                     fontStyle = FontStyle.Italic,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.widthIn(max = sizeMaxWidth),
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.layout { measurable, constraints ->
+                        // Reserve space inside the paragraph for synthetic italic overhang.
+                        val overhang = 3.sp.roundToPx()
+                        val textWidth = measurable.maxIntrinsicWidth(constraints.maxHeight)
+                        val width = (textWidth + overhang).coerceIn(
+                            constraints.minWidth,
+                            constraints.maxWidth,
+                        )
+                        val placeable = measurable.measure(constraints.copy(minWidth = width))
+                        layout(placeable.width, placeable.height) {
+                            placeable.placeRelative(0, 0)
+                        }
+                    },
                 )
             }
         }

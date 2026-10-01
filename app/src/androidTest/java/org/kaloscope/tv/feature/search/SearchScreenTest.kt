@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -35,8 +36,10 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -1254,6 +1257,101 @@ class SearchScreenTest {
             text = "科幻",
             useUnmergedTree = true,
         ).assertExists()
+    }
+
+    @Test
+    fun coverMetadataSharesAvailableWidthWithoutFixedFractions() {
+        val author = "作者: 测试作者完整姓名"
+        val publisher = "用于验证的完整出版社名称"
+        val authorWithoutPublisher = "作者: 没有出版社的完整作者姓名"
+        val oversizedAuthor = author.repeat(8)
+        setResultMetadataContent(
+            result("v1").copy(category = "出版社", misc = author),
+            result("v2").copy(category = publisher, misc = "完结"),
+            result("v3").copy(category = null, misc = authorWithoutPublisher),
+            result("v4").copy(category = "分类", misc = oversizedAuthor),
+        )
+
+        listOf(author, publisher, authorWithoutPublisher).forEach { text ->
+            val layout = metadataTextLayout(text)
+            assertEquals(1, layout.lineCount)
+            assertTrue("Metadata that fits the row should remain complete", !layout.isLineEllipsized(0))
+        }
+        val categoryBounds = composeRule.onNodeWithText("出版社", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        val authorBounds = composeRule.onNodeWithText(author, useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        val spacing = with(composeRule.density) { 8.dp.toPx() }
+        assertEquals(spacing, authorBounds.left - categoryBounds.right, 1f)
+        assertTrue(
+            "Authors exceeding the entire available row should still ellipsize",
+            metadataTextLayout(oversizedAuthor).isLineEllipsized(0),
+        )
+    }
+
+    @Test
+    fun footerStatusKeepsItalicOverhangInsideItsLayout() {
+        val completed = "已完结"
+        val longStatus = "长期连载的示例状态"
+        setResultMetadataContent(
+            result("v1").copy(uploadedAt = "最新", size = completed),
+            result("v2").copy(uploadedAt = "更新", size = longStatus),
+        )
+
+        val minimumOverhang = with(composeRule.density) { 2.sp.toPx() }
+        listOf(completed, longStatus).forEach { text ->
+            val layout = metadataTextLayout(text)
+            assertEquals(FontStyle.Italic, layout.layoutInput.style.fontStyle)
+            assertTrue("Status that fits the footer should remain complete", !layout.isLineEllipsized(0))
+            assertTrue(
+                "Italic ink should have room beyond the last character advance",
+                layout.size.width - layout.getLineRight(0) >= minimumOverhang,
+            )
+        }
+        val sourceBounds = composeRule.onNodeWithText("更新", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        val statusBounds = composeRule.onNodeWithText(longStatus, useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        val footerBounds = composeRule.onNodeWithTag(
+            "search-result-footer-v2",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val spacing = with(composeRule.density) { 8.dp.toPx() }
+        assertEquals(spacing, statusBounds.left - sourceBounds.right, 1f)
+        assertEquals(footerBounds.right, statusBounds.right, 1f)
+    }
+
+    private fun setResultMetadataContent(vararg results: NetworkSearchResult) {
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(Modifier.requiredSize(width = 840.dp, height = 540.dp)) {
+                    SearchScreen(
+                        session = session(),
+                        state = state(results = results.toList()),
+                        requestInitialFocus = false,
+                        onRefreshIndexers = {},
+                        onSelectIndexer = {},
+                        onQueryChange = {},
+                        onSearch = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onResultFocused = {},
+                        onOpenResult = {},
+                        onOpenFilters = {},
+                        onDismissFilters = {},
+                        onApplyFilters = {},
+                        onClearFilters = {},
+                    )
+                }
+            }
+        }
+    }
+
+    private fun metadataTextLayout(text: String): TextLayoutResult {
+        val layouts = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithText(text, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        return layouts.single()
     }
 
     @Test
