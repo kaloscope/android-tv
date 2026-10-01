@@ -231,6 +231,15 @@ private fun SearchContent(
     Row(
         modifier = Modifier
             .fillMaxSize()
+            .focusProperties {
+                onExit = {
+                    // Scrolling can make a different top destination geometrically closer.
+                    if (requestedFocusDirection == FocusDirection.Up) {
+                        topNavigationFocusRequester?.requestFocus()
+                    }
+                }
+            }
+            .focusGroup()
             // Let result-card preview handling cancel pending grid focus before this shortcut.
             .onKeyEvent { event ->
                 if (event.key != Key.Menu) return@onKeyEvent false

@@ -1931,6 +1931,26 @@ class MainShellTest {
     }
 
     @Test
+    fun rapidUpFromUnfilteredPortraitSearchResultsKeepsSearchNavigation() {
+        assertHeldUpFromSearchResults(
+            coverRatio = 2f / 3f,
+            columns = 4,
+            burstSize = 8,
+            hasFilters = false,
+        )
+    }
+
+    @Test
+    fun rapidUpFromUnfilteredLandscapeSearchResultsKeepsSearchNavigation() {
+        assertHeldUpFromSearchResults(
+            coverRatio = 16f / 9f,
+            columns = 3,
+            burstSize = 8,
+            hasFilters = false,
+        )
+    }
+
+    @Test
     fun rapidUpFromTallSearchResultsKeepsSearchNavigation() {
         assertHeldUpFromSearchResults(coverRatio = 0.5f, columns = 4, burstSize = 3)
     }
@@ -1950,6 +1970,7 @@ class MainShellTest {
         columns: Int,
         burstSize: Int = 1,
         resolutionError: AppError? = null,
+        hasFilters: Boolean = true,
     ) {
         val baseState = deepSearchState()
         var searchState by mutableStateOf(
@@ -1959,9 +1980,9 @@ class MainShellTest {
                     profile.copy(
                         indexer = NetworkIndexer(indexerId, "站点$indexerId", null),
                         coverRatio = coverRatio,
-                        filters = listOf(
+                        filters = if (hasFilters) listOf(
                             SearchFilterDefinition("title", "标题", SearchFilterType.Text),
-                        ),
+                        ) else emptyList(),
                     )
                 },
                 focusedResultId = null,

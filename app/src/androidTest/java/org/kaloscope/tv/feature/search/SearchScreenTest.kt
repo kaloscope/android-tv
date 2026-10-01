@@ -3,14 +3,21 @@ package org.kaloscope.tv.feature.search
 import android.os.SystemClock
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
@@ -593,6 +600,77 @@ class SearchScreenTest {
             expectedIds = listOf(4, 8, 12, 16, 20),
             rapidNavigation = true,
         )
+    }
+
+    @Test
+    fun upwardExitFromLastColumnBypassesCloserSettingsCandidate() {
+        val navigationFocus = FocusRequester()
+        var settingsTop by mutableStateOf(0.dp)
+        var settingsFocusCount = 0
+        composeRule.setContent {
+            KaloscopeTheme {
+                Box(Modifier.fillMaxSize()) {
+                    Box(
+                        Modifier.fillMaxSize()
+                            .padding(start = 36.dp, top = 74.dp, end = 36.dp, bottom = 16.dp),
+                    ) {
+                        SearchScreen(
+                            session = session(),
+                            state = state(
+                                coverRatio = 2f / 3f,
+                                results = (1..8).map { result("v$it") },
+                            ),
+                            requestInitialFocus = false,
+                            topNavigationFocusRequester = navigationFocus,
+                            onRefreshIndexers = {},
+                            onSelectIndexer = {},
+                            onQueryChange = {},
+                            onSearch = {},
+                            onRetry = {},
+                            onLoadMore = {},
+                            onResultFocused = {},
+                            onOpenResult = {},
+                            onOpenFilters = {},
+                            onDismissFilters = {},
+                            onApplyFilters = {},
+                            onClearFilters = {},
+                        )
+                    }
+                    Box(
+                        Modifier.size(48.dp)
+                            .focusRequester(navigationFocus)
+                            .testTag("active-search-navigation")
+                            .focusable(),
+                    )
+                    Box(
+                        Modifier.align(Alignment.TopEnd)
+                            .padding(end = 36.dp)
+                            .offset(y = settingsTop)
+                            .size(32.dp)
+                            .testTag("external-settings")
+                            .onFocusChanged { if (it.isFocused) settingsFocusCount += 1 }
+                            .focusable(),
+                    )
+                }
+            }
+        }
+
+        val lastColumnBounds = composeRule.onNodeWithTag("network-result-v4")
+            .fetchSemanticsNode().boundsInRoot
+        val density = InstrumentationRegistry.getInstrumentation()
+            .targetContext.resources.displayMetrics.density
+        composeRule.runOnIdle {
+            // Reproduce the geometric shortcut that scrolling can expose near the grid edge.
+            settingsTop = (lastColumnBounds.top / density).dp - 36.dp
+        }
+        composeRule.onNodeWithTag("network-result-v4")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        composeRule.onRoot().performKeyInput { repeat(3) { pressKey(Key.DirectionUp) } }
+
+        composeRule.onNodeWithTag("active-search-navigation").assertIsFocused()
+        composeRule.onNodeWithTag("external-settings").assertIsNotFocused()
+        composeRule.runOnIdle { assertEquals(0, settingsFocusCount) }
     }
 
     private fun assertVerticalResultNavigation(
