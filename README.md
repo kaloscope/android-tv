@@ -22,10 +22,11 @@
 
 - 管理多个服务器，并分别保存登录状态
 - 浏览最近观看、媒体库、媒体详情及分季分集内容
-- 通过服务端索引器搜索和筛选网络资源
-- 播放本地与网络视频，支持 HLS、DASH、转码回退和续播
+- 通过服务端索引器（工作流）搜索、筛选网络资源，支持自动分页和失败重试
+- 播放本地与网络视频，支持 HLS 和 DASH；媒体库视频支持转码回退和续播
 - 阅读图片与文本资源，支持翻页、缩放和排版设置
 - 播放器支持章节、选集、字幕、倍速、自动连播和弹幕
+- 自定义启动页、播放模式、字幕、弹幕和阅读设置
 
 ## 安装与使用
 
@@ -39,11 +40,16 @@
 
 ### 安装 APK
 
-1. 前往 [GitHub Releases](https://github.com/kaloscope/android-tv/releases) 下载最新版本的 APK。
+1. 前往 [GitHub Releases](https://github.com/kaloscope/android-tv/releases) 下载最新 APK 和对应的 SHA-256 校验文件。
 2. 将 APK 传输并安装到 Android TV 设备，按系统提示允许安装即可。
 3. 打开应用，添加服务器地址并登录账号。
 
+服务器地址填写 HTTP(S) 根地址（协议、主机和可选端口），不要附加 API 或 Web 页面路径。
+
 安装新版本时直接覆盖安装即可。不要先卸载旧版本，以免丢失本机保存的服务器和登录状态。
+
+网络搜索使用服务端配置的工作流，不要求关键词时自动加载结果。
+首页观看记录与进度续播仅适用于媒体库视频，可选择自动、直连或转码播放。
 
 ## 项目结构
 
@@ -112,18 +118,27 @@ app/build/outputs/apk/debug/app-debug.apk
 常用验证命令：
 
 ```bash
+# 按测试类验证局部改动
+./gradlew :app:testDebugUnitTest --tests 'org.kaloscope.tv.feature.search.SearchCoordinatorTest'
+
 # JVM 单元测试与网络契约测试
 ./gradlew :app:testDebugUnitTest
 
 # Release 变体静态检查
 ./gradlew :app:lintRelease
 
-# 本地 Release 构建；未配置签名变量时生成未签名 APK，配置签名时必须同时提供全部四项变量
+# 本地 Release 构建（默认未签名，签名配置见 app/build.gradle.kts）
 ./gradlew :app:assembleRelease
 ```
 
 涉及遥控器焦点、按键、播放器、阅读器或设备性能的改动，还应在 Android TV 模拟器或实体设备上验证。
 更新模拟器或实体设备上的现有安装时应保留应用数据，避免通过卸载或清空数据破坏登录状态。
+
+### 版本发布
+
+递增 `versionCode`、更新 `versionName`，再推送匹配的 `vX.Y.Z` 标签，即可触发 [Release APK 工作流](.github/workflows/release.yml)。
+工作流通过单元测试、Release lint、签名构建与校验后，发布 APK 和 SHA-256 校验文件。
+签名配置存放在 GitHub `release` Environment Secrets，具体变量见工作流。
 
 ## 参与贡献
 
