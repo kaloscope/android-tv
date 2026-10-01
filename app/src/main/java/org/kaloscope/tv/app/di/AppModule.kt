@@ -16,6 +16,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import org.kaloscope.tv.BuildConfig
 import org.kaloscope.tv.app.AppFormDefaults
+import org.kaloscope.tv.core.network.ImageUserAgentInterceptor
 import org.kaloscope.tv.core.player.AndroidNetworkVideoCodecSupport
 import org.kaloscope.tv.core.player.NetworkVideoCodecSupport
 import org.kaloscope.tv.core.storage.AndroidKeystoreTokenCipher
@@ -128,7 +129,11 @@ object AppProvides {
     ): ImageLoader = ImageLoader.Builder(context)
         .components {
             // Authentication is attached per request after validating its origin.
-            add(OkHttpNetworkFetcherFactory(callFactory = { OkHttpClient() }))
+            add(OkHttpNetworkFetcherFactory(callFactory = {
+                OkHttpClient.Builder()
+                    .addInterceptor(ImageUserAgentInterceptor)
+                    .build()
+            }))
         }
         .build()
 }
