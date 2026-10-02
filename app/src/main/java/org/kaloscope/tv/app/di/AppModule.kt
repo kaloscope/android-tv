@@ -11,6 +11,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.io.File
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -42,6 +44,8 @@ import org.kaloscope.tv.data.server.DefaultServerRepository
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.data.settings.PreferencesSettingsRepository
 import org.kaloscope.tv.data.settings.SettingsRepository
+import org.kaloscope.tv.data.update.AppUpdateRepository
+import org.kaloscope.tv.data.update.GitHubAppUpdateRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -100,6 +104,23 @@ abstract class AppBindings {
 @Module
 @InstallIn(SingletonComponent::class)
 object AppProvides {
+    @Provides
+    @Singleton
+    fun provideAppUpdateRepository(
+        @ApplicationContext context: Context,
+        json: Json,
+    ): AppUpdateRepository = GitHubAppUpdateRepository(
+        // Public GitHub traffic must never inherit a selected server's authentication.
+        client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(10, TimeUnit.MINUTES)
+            .followSslRedirects(false)
+            .build(),
+        json = json,
+        downloadDirectory = File(context.cacheDir, "updates"),
+    )
+
     @Provides
     @Singleton
     fun provideAppFormDefaults(): AppFormDefaults = AppFormDefaults(

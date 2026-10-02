@@ -25,4 +25,21 @@ sealed interface AppError {
     ) : AppError
 
     data class InvalidData(val context: String) : AppError
+
+    data class Update(val reason: UpdateFailure) : AppError
+}
+
+enum class UpdateFailure {
+    NoRelease,
+    InvalidRelease,
+    RateLimited,
+    ServiceUnavailable,
+    Storage,
+    Integrity,
+    IncompatiblePackage,
+    SignatureMismatch,
+    InstallPermission,
+    InstallerUnavailable,
+    InstallFailed,
+    FileMissing,
 }

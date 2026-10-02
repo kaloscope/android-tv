@@ -23,6 +23,8 @@ import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.search.SearchViewModel
 import org.kaloscope.tv.feature.settings.SettingsUiState
 import org.kaloscope.tv.feature.settings.SettingsViewModel
+import org.kaloscope.tv.feature.settings.AppUpdateActions
+import org.kaloscope.tv.feature.settings.AppUpdateViewModel
 
 @Composable
 fun KaloscopeApp(
@@ -33,6 +35,7 @@ fun KaloscopeApp(
     detailViewModel: MediaDetailViewModel,
     playerViewModel: PlayerViewModel,
     settingsViewModel: SettingsViewModel,
+    appUpdateViewModel: AppUpdateViewModel,
     readerViewModel: ReaderViewModel,
     playbackControllerFactory: PlaybackControllerFactory,
     onExit: () -> Unit,
@@ -44,6 +47,7 @@ fun KaloscopeApp(
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val updateState by appUpdateViewModel.uiState.collectAsStateWithLifecycle()
     val readerState by readerViewModel.uiState.collectAsStateWithLifecycle()
     val accentColor = (settingsState as? SettingsUiState.Content)
         ?.settings
@@ -150,6 +154,18 @@ fun KaloscopeApp(
                     libraryState = libraryState,
                     detailState = detailState,
                     settingsState = settingsState,
+                    updateState = updateState,
+                    updateActions = AppUpdateActions(
+                        check = appUpdateViewModel::check,
+                        promptDownload = appUpdateViewModel::promptDownload,
+                        dismissConfirmation = appUpdateViewModel::dismissConfirmation,
+                        confirmDownload = appUpdateViewModel::download,
+                        cancel = appUpdateViewModel::cancel,
+                        install = appUpdateViewModel::install,
+                        consumeInstall = appUpdateViewModel::consumeInstall,
+                        installError = appUpdateViewModel::installError,
+                        leave = appUpdateViewModel::cancel,
+                    ),
                     initialRoute = currentSettings.startPage.toRootRoute(),
                     homeActions = HomeActions(
                         refresh = { mainViewModel.loadHome(state.session, force = true) },

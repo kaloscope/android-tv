@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -89,6 +91,8 @@ import org.kaloscope.tv.core.player.TranscodeQuality
 fun SettingsScreen(
     session: Session,
     state: SettingsUiState,
+    updateState: AppUpdateUiState = AppUpdateUiState(),
+    updateActions: AppUpdateActions = AppUpdateActions(),
     requestInitialFocus: Boolean = true,
     selectedSectionFocusRequester: FocusRequester? = null,
     topNavigationFocusRequester: FocusRequester? = null,
@@ -120,6 +124,8 @@ fun SettingsScreen(
         is SettingsUiState.Content -> SettingsContent(
             session = session,
             state = state,
+            updateState = updateState,
+            updateActions = updateActions,
             requestInitialFocus = requestInitialFocus,
             selectedSectionFocusRequester = selectedSectionFocusRequester,
             topNavigationFocusRequester = topNavigationFocusRequester,
@@ -145,6 +151,8 @@ fun SettingsScreen(
 private fun SettingsContent(
     session: Session,
     state: SettingsUiState.Content,
+    updateState: AppUpdateUiState,
+    updateActions: AppUpdateActions,
     requestInitialFocus: Boolean,
     selectedSectionFocusRequester: FocusRequester?,
     topNavigationFocusRequester: FocusRequester?,
@@ -173,7 +181,8 @@ private fun SettingsContent(
     // A transiently disabled TV control loses focus before its dialog can take over.
     val interactionsEnabled = choice == null &&
         !languageEditorOpen &&
-        !logoutConfirmationOpen
+        !logoutConfirmationOpen &&
+        !updateState.confirmationOpen
 
     LaunchedEffect(requestInitialFocus) {
         if (requestInitialFocus) {
@@ -205,6 +214,8 @@ private fun SettingsContent(
             SettingsPanel(
                 session = session,
                 state = state,
+                updateState = updateState,
+                updateActions = updateActions,
                 interactionsEnabled = interactionsEnabled,
                 modifier = Modifier
                     .weight(1f, fill = false)
@@ -313,6 +324,7 @@ private fun SettingsMenu(
             .width(BrowseLayoutTokens.SidebarWidth)
             .fillMaxHeight()
             .background(Panel.copy(alpha = 0.78f), RoundedCornerShape(18.dp))
+            .verticalScroll(rememberScrollState())
             .padding(BrowseLayoutTokens.SidebarContentPadding),
         verticalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SidebarItemSpacing),
     ) {
@@ -328,6 +340,7 @@ private fun SettingsMenu(
                 size = KaloscopeControlSize.Row,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .testTag("settings-section-${section.name.lowercase()}")
                     .then(
                         if (section == selected) {
                             Modifier.focusRequester(selectedFocus)
@@ -369,6 +382,8 @@ private fun SettingsMenu(
 private fun SettingsPanel(
     session: Session,
     state: SettingsUiState.Content,
+    updateState: AppUpdateUiState,
+    updateActions: AppUpdateActions,
     interactionsEnabled: Boolean,
     modifier: Modifier,
     onOpenChoice: (FocusRequester, SettingsChoice) -> Unit,
@@ -398,18 +413,20 @@ private fun SettingsPanel(
         ) {
             item {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(presentation.titleRes),
-                        color = OnBackground,
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = stringResource(presentation.descriptionRes),
-                        color = Muted,
-                        fontSize = 15.sp,
-                    )
-                    Spacer(Modifier.height(20.dp))
+                    if (state.section != SettingsSection.About) {
+                        Text(
+                            text = stringResource(presentation.titleRes),
+                            color = OnBackground,
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = stringResource(presentation.descriptionRes),
+                            color = Muted,
+                            fontSize = 15.sp,
+                        )
+                        Spacer(Modifier.height(20.dp))
+                    }
                     when (state.section) {
                         SettingsSection.Playback -> PlaybackSettings(
                             state = state,
@@ -459,6 +476,12 @@ private fun SettingsPanel(
                             onTestConnection = onTestConnection,
                             onManageServers = onManageServers,
                             onRequestLogout = onRequestLogout,
+                        )
+
+                        SettingsSection.About -> AboutSettings(
+                            state = updateState,
+                            actions = updateActions,
+                            interactionsEnabled = interactionsEnabled,
                         )
                     }
                     state.saveError?.let {
@@ -823,6 +846,14 @@ private val settingsSectionPresentations = SettingsSection.entries.associateWith
             labelRes = R.string.server_and_account,
             titleRes = R.string.server_and_account,
             descriptionRes = R.string.server_account_description,
+        )
+
+        SettingsSection.About -> SettingsSectionPresentation(
+            iconRes = R.drawable.ic_settings_about,
+            iconTestTag = "settings-section-icon-about",
+            labelRes = R.string.about,
+            titleRes = R.string.about,
+            descriptionRes = R.string.about_description,
         )
     }
 }

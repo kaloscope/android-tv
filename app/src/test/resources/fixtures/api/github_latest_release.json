@@ -1,0 +1,22 @@
+{
+  "tag_name": "v0.3.23",
+  "draft": false,
+  "prerelease": false,
+  "name": "v0.3.23",
+  "body": "Synthetic release fixture",
+  "assets": [
+    {
+      "name": "kaloscope-tv-0.3.23.apk",
+      "state": "uploaded",
+      "size": 3,
+      "digest": "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "browser_download_url": "https://github.com/kaloscope/android-tv/releases/download/v0.3.23/kaloscope-tv-0.3.23.apk"
+    },
+    {
+      "name": "kaloscope-tv-0.3.23.apk.sha256",
+      "state": "uploaded",
+      "size": 90,
+      "browser_download_url": "https://github.com/kaloscope/android-tv/releases/download/v0.3.23/kaloscope-tv-0.3.23.apk.sha256"
+    }
+  ]
+}

@@ -76,6 +76,8 @@ import org.kaloscope.tv.feature.search.SearchScreen
 import org.kaloscope.tv.feature.search.SearchPendingDestination
 import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.settings.SettingsScreen
+import org.kaloscope.tv.feature.settings.AppUpdateActions
+import org.kaloscope.tv.feature.settings.AppUpdateUiState
 import org.kaloscope.tv.feature.settings.SettingsUiState
 
 @Composable
@@ -90,6 +92,8 @@ internal fun MainShell(
     libraryActions: LibraryActions,
     detailActions: DetailActions,
     settingsState: SettingsUiState = SettingsUiState.Content(TvSettings()),
+    updateState: AppUpdateUiState = AppUpdateUiState(),
+    updateActions: AppUpdateActions = AppUpdateActions(),
     initialRoute: NavKey = HomeRoute,
     settingsActions: SettingsActions,
     playerState: PlayerUiState = PlayerUiState.Loading(),
@@ -422,6 +426,8 @@ internal fun MainShell(
                             SettingsScreen(
                                 session = session,
                                 state = settingsState,
+                                updateState = updateState,
+                                updateActions = updateActions,
                                 requestInitialFocus = !destinationEntryKeepsTopFocus,
                                 selectedSectionFocusRequester =
                                     selectedSettingsSectionFocus,

@@ -44,6 +44,7 @@ enum class SettingsSection {
     Reading,
     Behavior,
     ServerAccount,
+    About,
 }
 
 sealed interface SettingsConnection {

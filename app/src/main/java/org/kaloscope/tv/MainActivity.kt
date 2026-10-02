@@ -15,6 +15,7 @@ import org.kaloscope.tv.feature.player.PlayerViewModel
 import org.kaloscope.tv.feature.reader.ReaderViewModel
 import org.kaloscope.tv.feature.search.SearchViewModel
 import org.kaloscope.tv.feature.settings.SettingsViewModel
+import org.kaloscope.tv.feature.settings.AppUpdateViewModel
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 
 @AndroidEntryPoint
@@ -26,6 +27,7 @@ class MainActivity : ComponentActivity() {
     private val detailViewModel: MediaDetailViewModel by viewModels()
     private val playerViewModel: PlayerViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
+    private val appUpdateViewModel: AppUpdateViewModel by viewModels()
     private val readerViewModel: ReaderViewModel by viewModels()
 
     @Inject
@@ -42,6 +44,7 @@ class MainActivity : ComponentActivity() {
                 detailViewModel = detailViewModel,
                 playerViewModel = playerViewModel,
                 settingsViewModel = settingsViewModel,
+                appUpdateViewModel = appUpdateViewModel,
                 readerViewModel = readerViewModel,
                 playbackControllerFactory = playbackControllerFactory,
                 onExit = ::finish,
