@@ -50,6 +50,7 @@ import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.model.ImagePageDirection
 import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ReaderChapter
@@ -1561,7 +1562,11 @@ class ReaderScreenTest {
 
     @Test
     fun imageSettingChangePublishesTheGlobalPreference() {
-        var state by mutableStateOf(imageState())
+        var state by mutableStateOf(
+            imageState().copy(
+                settings = ImageReaderSettings(pageDirection = ImagePageDirection.Left),
+            ),
+        )
         var persisted: ImageReaderSettings? = null
         composeRule.setContent {
             KaloscopeTheme {
@@ -1585,9 +1590,22 @@ class ReaderScreenTest {
             .performKeyInput { pressKey(Key.DirectionCenter) }
         control("章节").performKeyInput { pressKey(Key.DirectionRight) }
         control("阅读设置").performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithTag("reader-image-read-mode-setting")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("reader-chapter-order-setting")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag("reader-image-zoom-setting")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        val modeRow = composeRule.onNodeWithTag("reader-image-read-mode-setting")
+            .assertIsFocused()
+        val directionRow = composeRule.onNodeWithTag("reader-page-direction-setting")
+            .assertIsNotEnabled()
+        modeRow.performKeyInput {
+            pressKey(Key.DirectionDown)
+            pressKey(Key.DirectionLeft)
+            pressKey(Key.DirectionRight)
+        }.assertIsFocused()
+        modeRow.performKeyInput { pressKey(Key.Enter) }
         composeRule.onNode(
             hasClickAction() and hasTextExactly("滚动") and isFocused(),
         )
@@ -1600,7 +1618,35 @@ class ReaderScreenTest {
         composeRule.runOnIdle {
             assertEquals(ImageReadMode.Paged, state.settings.readMode)
             assertEquals(ImageReadMode.Paged, persisted?.readMode)
+            assertEquals(ImagePageDirection.Left, persisted?.pageDirection)
         }
+        modeRow.assertIsFocused().performKeyInput { pressKey(Key.DirectionDown) }
+        directionRow.assertIsEnabled()
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNode(hasClickAction() and hasTextExactly("向左") and isFocused())
+            .assertExists()
+        pressBack()
+        directionRow.assertIsFocused().performKeyInput { pressKey(Key.DirectionUp) }
+        modeRow.assertIsFocused().performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNode(hasClickAction() and hasTextExactly("翻页") and isFocused())
+            .performKeyInput {
+                pressKey(Key.DirectionUp)
+                pressKey(Key.Enter)
+            }
+
+        directionRow.assertIsNotEnabled()
+        modeRow.assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+            .assertIsFocused()
+        composeRule.runOnIdle {
+            assertEquals(ImageReadMode.Scroll, state.settings.readMode)
+            assertEquals(ImageReadMode.Scroll, persisted?.readMode)
+            assertEquals(ImagePageDirection.Left, state.settings.pageDirection)
+            assertEquals(ImagePageDirection.Left, persisted?.pageDirection)
+        }
+        pressBack()
+        control("阅读设置").assertIsFocused()
     }
 
     @Test

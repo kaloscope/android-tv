@@ -822,15 +822,6 @@ private fun ImageReaderSettingsDrawer(
             onOpenChoice = onOpenChoice,
         )
         ReaderChoiceSettingRow(
-            title = stringResource(R.string.reader_image_read_mode),
-            values = ImageReadMode.entries,
-            selected = settings.readMode,
-            label = ::imageReadModeLabel,
-            onSelect = { onSettings(settings.copy(readMode = it)) },
-            onOpenChoice = onOpenChoice,
-            testTag = "reader-image-read-mode-setting",
-        )
-        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_image_zoom),
             values = ImageZoomMode.entries,
             selected = settings.zoomMode,
@@ -840,12 +831,22 @@ private fun ImageReaderSettingsDrawer(
             testTag = "reader-image-zoom-setting",
         )
         ReaderChoiceSettingRow(
+            title = stringResource(R.string.reader_image_read_mode),
+            values = ImageReadMode.entries,
+            selected = settings.readMode,
+            label = ::imageReadModeLabel,
+            onSelect = { onSettings(settings.copy(readMode = it)) },
+            onOpenChoice = onOpenChoice,
+            testTag = "reader-image-read-mode-setting",
+        )
+        ReaderChoiceSettingRow(
             title = stringResource(R.string.reader_page_direction),
             values = ImagePageDirection.entries,
             selected = settings.pageDirection,
             label = ::imagePageDirectionLabel,
             onSelect = { onSettings(settings.copy(pageDirection = it)) },
             onOpenChoice = onOpenChoice,
+            enabled = settings.readMode == ImageReadMode.Paged,
             testTag = "reader-page-direction-setting",
         )
     }
@@ -1070,6 +1071,7 @@ private fun <T> ReaderChoiceSettingRow(
     label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
     onOpenChoice: (FocusRequester, ReaderSettingsChoice) -> Unit,
+    enabled: Boolean = true,
     requestInitialFocus: Boolean = false,
     swatchColor: ((T) -> Color)? = null,
     optionTestTag: ((T) -> String)? = null,
@@ -1100,6 +1102,7 @@ private fun <T> ReaderChoiceSettingRow(
         title = title,
         value = label(selected),
         onClick = { onOpenChoice(focus, choice) },
+        enabled = enabled,
         modifier = Modifier
             .focusRequester(focus)
             .testTag(testTag),

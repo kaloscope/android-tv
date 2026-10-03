@@ -122,9 +122,11 @@ fun KaloscopeSidePanelChoiceRow(
     modifier: Modifier = Modifier,
     valueSwatchColor: Color? = null,
     swatchTestTag: String? = null,
+    enabled: Boolean = true,
 ) {
     KaloscopeButton(
         onClick = onClick,
+        enabled = enabled,
         size = KaloscopeControlSize.Row,
         modifier = modifier
             .fillMaxWidth()
