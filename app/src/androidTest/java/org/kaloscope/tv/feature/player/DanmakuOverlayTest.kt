@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
@@ -32,11 +33,11 @@ class DanmakuOverlayTest {
     }
 
     @Test
-    fun akDanmakuRuntimeInitializesAndHostStartsAtPlayerTop() {
+    fun akDanmakuRuntimeInitializesAndHostFillsPlayerBounds() {
         val runtimeAvailable = AtomicBoolean(false)
 
         composeRule.setContent {
-            Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().testTag("player-viewport")) {
                 val context = LocalContext.current
                 val exoPlayer = remember {
                     ExoPlayer.Builder(context).build().also {
@@ -69,6 +70,11 @@ class DanmakuOverlayTest {
             .assertIsDisplayed()
             .fetchSemanticsNode()
 
-        assertEquals(0f, host.boundsInRoot.top, 0.5f)
+        val viewport = composeRule
+            .onNodeWithTag("player-viewport")
+            .fetchSemanticsNode()
+
+        assertEquals(viewport.boundsInRoot.top, host.boundsInRoot.top, 0.5f)
+        assertEquals(viewport.boundsInRoot.bottom, host.boundsInRoot.bottom, 0.5f)
     }
 }
