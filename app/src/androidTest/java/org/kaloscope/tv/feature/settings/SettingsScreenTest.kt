@@ -1668,9 +1668,10 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun danmakuDuplicateMergeDefaultsOffAndUpdatesTheWholeModel() {
+    fun danmakuDuplicateMergeDefaultsOnAndUpdatesTheWholeModel() {
         var settings by mutableStateOf(TvSettings())
         var updatedSettings: DanmakuSettings? = null
+        var updateCount = 0
         composeRule.setContent {
             KaloscopeTheme {
                 SettingsScreen(
@@ -1685,6 +1686,7 @@ class SettingsScreenTest {
                     onTranscodeQuality = {},
                     onAutoplayNext = {},
                     onDanmakuSettings = {
+                        updateCount += 1
                         updatedSettings = it
                         settings = settings.copy(danmaku = it)
                     },
@@ -1702,22 +1704,25 @@ class SettingsScreenTest {
             .assert(
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.ToggleableState,
-                    ToggleableState.Off,
+                    ToggleableState.On,
                 ),
             )
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
-            .assertIsFocused()
+        listOf(false, true).forEachIndexed { index, enabled ->
+            row.performSemanticsAction(SemanticsActions.RequestFocus)
+                .performKeyInput { pressKey(Key.Enter) }
+                .assertIsFocused()
 
-        composeRule.runOnIdle {
-            assertEquals(true, updatedSettings?.mergeDuplicates)
+            composeRule.runOnIdle {
+                assertEquals(DanmakuSettings(mergeDuplicates = enabled), updatedSettings)
+                assertEquals(index + 1, updateCount)
+            }
+            row.assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ToggleableState,
+                    if (enabled) ToggleableState.On else ToggleableState.Off,
+                ),
+            )
         }
-        row.assert(
-            SemanticsMatcher.expectValue(
-                SemanticsProperties.ToggleableState,
-                ToggleableState.On,
-            ),
-        )
     }
 
     @Test

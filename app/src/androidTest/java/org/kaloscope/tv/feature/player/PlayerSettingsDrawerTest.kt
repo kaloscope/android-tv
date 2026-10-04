@@ -346,25 +346,28 @@ class PlayerSettingsDrawerTest {
         row.assert(
             SemanticsMatcher.expectValue(
                 SemanticsProperties.ToggleableState,
-                ToggleableState.Off,
-            ),
-        )
-        row.performSemanticsAction(SemanticsActions.RequestFocus)
-            .performKeyInput { pressKey(Key.Enter) }
-            .assertIsFocused()
-
-        composeRule.runOnIdle {
-            assertEquals(true, harness.danmakuSettings.mergeDuplicates)
-            assertEquals(1, harness.danmakuUpdateCount)
-            assertEquals(1, harness.danmakuPersistenceCount)
-            assertEquals(true, harness.persistedDanmakuSettings?.mergeDuplicates)
-        }
-        row.assert(
-            SemanticsMatcher.expectValue(
-                SemanticsProperties.ToggleableState,
                 ToggleableState.On,
             ),
         )
+        listOf(false, true).forEachIndexed { index, enabled ->
+            row.performSemanticsAction(SemanticsActions.RequestFocus)
+                .performKeyInput { pressKey(Key.Enter) }
+                .assertIsFocused()
+
+            composeRule.runOnIdle {
+                val expected = DanmakuSettings(mergeDuplicates = enabled)
+                assertEquals(expected, harness.danmakuSettings)
+                assertEquals(index + 1, harness.danmakuUpdateCount)
+                assertEquals(index + 1, harness.danmakuPersistenceCount)
+                assertEquals(expected, harness.persistedDanmakuSettings)
+            }
+            row.assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ToggleableState,
+                    if (enabled) ToggleableState.On else ToggleableState.Off,
+                ),
+            )
+        }
     }
 
     @Test
