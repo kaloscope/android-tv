@@ -26,9 +26,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import coil3.compose.AsyncImagePainter
 import coil3.compose.AsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.network.ServerImagePolicy
 import org.kaloscope.tv.core.network.ServerImageResolver
@@ -148,18 +145,7 @@ fun ServerImage(
             }
             val context = LocalContext.current
             val imageRequest = remember(context, request.url, request.authorization) {
-                ImageRequest.Builder(context)
-                    .data(request.url)
-                    .apply {
-                        request.authorization?.let { authorization ->
-                            httpHeaders(
-                                NetworkHeaders.Builder()
-                                    .set("Authorization", authorization)
-                                    .build(),
-                            )
-                        }
-                    }
-                    .build()
+                request.toCoilRequest(context)
             }
             AsyncImage(
                 model = imageRequest,
