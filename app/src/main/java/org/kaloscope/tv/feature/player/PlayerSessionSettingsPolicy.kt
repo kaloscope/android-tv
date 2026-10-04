@@ -60,10 +60,7 @@ internal object PlayerSessionSettingsPolicy {
         )
         return PlayerSessionSettingsState(
             subtitleSettings = subtitleSettings,
-            selectedSubtitleTrackId = SubtitleSelectionPolicy.preferredTrackId(
-                tracks = tracks,
-                settings = subtitleSettings,
-            ),
+            selectedSubtitleTrackId = remembered.takeIf { subtitleSettings.enabled },
             rememberedSubtitleTrackId = remembered,
             danmakuSettings = danmakuSettings,
         )

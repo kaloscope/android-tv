@@ -11,6 +11,56 @@ import org.kaloscope.tv.core.model.SubtitleTrack
 
 class PlayerSessionSettingsPolicyTest {
     @Test
+    fun `initial selection and memory follow preference or first track fallback`() {
+        val preferences = listOf(
+            "zh-cn" to "zh",
+            "" to "first",
+            "[" to "first",
+            "French" to "first",
+        )
+        for ((preference, expectedTrackId) in preferences) {
+            val initial = PlayerSessionSettingsPolicy.initial(
+                tracks = tracks(),
+                subtitleSettings = SubtitleSettings(languagePreference = preference),
+                danmakuSettings = DanmakuSettings(),
+            )
+
+            assertEquals(expectedTrackId, initial.selectedSubtitleTrackId)
+            assertEquals(expectedTrackId, initial.rememberedSubtitleTrackId)
+        }
+    }
+
+    @Test
+    fun `initially disabled subtitles remember preference without selecting it`() {
+        val settings = SubtitleSettings(enabled = false, languagePreference = "zh-cn")
+        val initial = PlayerSessionSettingsPolicy.initial(
+            tracks = tracks(),
+            subtitleSettings = settings,
+            danmakuSettings = DanmakuSettings(),
+        )
+
+        assertNull(initial.selectedSubtitleTrackId)
+        assertEquals("zh", initial.rememberedSubtitleTrackId)
+        assertEquals(settings, initial.subtitleSettings)
+    }
+
+    @Test
+    fun `empty initial tracks have no selection or memory and keep subtitle settings`() {
+        for (enabled in listOf(false, true)) {
+            val settings = SubtitleSettings(enabled = enabled, languagePreference = "zh-cn")
+            val initial = PlayerSessionSettingsPolicy.initial(
+                tracks = emptyList(),
+                subtitleSettings = settings,
+                danmakuSettings = DanmakuSettings(),
+            )
+
+            assertNull(initial.selectedSubtitleTrackId)
+            assertNull(initial.rememberedSubtitleTrackId)
+            assertEquals(settings, initial.subtitleSettings)
+        }
+    }
+
+    @Test
     fun `subtitle toggle remembers and restores the active track`() {
         val initial = PlayerSessionSettingsPolicy.initial(
             tracks = tracks(),
