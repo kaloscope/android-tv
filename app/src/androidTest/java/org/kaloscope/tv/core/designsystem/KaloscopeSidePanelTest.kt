@@ -3,6 +3,8 @@ package org.kaloscope.tv.core.designsystem
 import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.BackHandler
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -108,7 +110,9 @@ class KaloscopeSidePanelTest {
         composeRule.mainClock.autoAdvance = false
         val open = mutableStateOf(true)
         var dismissCount = 0
+        lateinit var backDispatcher: OnBackPressedDispatcher
         composeRule.setContent {
+            backDispatcher = checkNotNull(LocalOnBackPressedDispatcherOwner.current).onBackPressedDispatcher
             KaloscopeTheme {
                 val triggerFocus = remember { FocusRequester() }
                 val rowFocus = remember { FocusRequester() }
@@ -150,14 +154,15 @@ class KaloscopeSidePanelTest {
         composeRule.onNodeWithTag("panel-option")
             .assertIsFocused()
             .performKeyInput {
-                pressKey(Key.DirectionUp)
-                pressKey(Key.DirectionDown)
-                pressKey(Key.DirectionLeft)
-                pressKey(Key.DirectionRight)
+                listOf(Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight).forEach {
+                    keyDown(it)
+                    keyUp(it)
+                }
             }
             .assertIsFocused()
 
-        pressBack()
+        // Keep animation time frozen while delivering Back synchronously to the same dispatcher.
+        composeRule.runOnUiThread { backDispatcher.onBackPressed() }
         composeRule.runOnIdle { assertEquals(1, dismissCount) }
         composeRule.mainClock.advanceTimeBy(32)
         composeRule.onNodeWithTag("side-panel").assertDoesNotExist()
@@ -169,7 +174,7 @@ class KaloscopeSidePanelTest {
             .performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.mainClock.advanceTimeBy(48)
         composeRule.onNodeWithTag("panel-option").assertIsFocused()
-        pressBack()
+        composeRule.runOnUiThread { backDispatcher.onBackPressed() }
         composeRule.mainClock.advanceTimeBy(32)
         composeRule.onNodeWithTag("side-panel").assertDoesNotExist()
         composeRule.onNodeWithTag("panel-trigger").assertIsFocused()
