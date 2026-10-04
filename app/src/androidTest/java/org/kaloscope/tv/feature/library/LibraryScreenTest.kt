@@ -42,7 +42,6 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.test.assertFocusedContentCardBottomInsideViewport
 import org.kaloscope.tv.test.assertContentCardFocusOutline
-import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
 import org.kaloscope.tv.test.assertFocusedContentCardTopClearance
 import org.kaloscope.tv.test.assertGridRowReservesFocusedScaleHeight
@@ -218,48 +217,6 @@ class LibraryScreenTest {
             label = "Library media card",
             bitmap = focused,
             density = composeRule.density.density,
-        )
-    }
-
-    @Test
-    fun focusedMediaCardUsesTwoPercentScale() {
-        composeRule.mainClock.autoAdvance = false
-        composeRule.setContent {
-            KaloscopeTheme {
-                LibraryScreen(
-                    session = session(),
-                    state = state(),
-                    restoreMediaId = null,
-                    requestInitialFocus = false,
-                    onSelectLibrary = {},
-                    onQueryChange = {},
-                    onSearch = {},
-                    onRetry = {},
-                    onLoadMore = {},
-                    onMediaFocused = {},
-                    onOpenMedia = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag("library-search-action-button")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-        composeRule.mainClock.advanceTimeBy(1_000)
-        val resting = composeRule.onNodeWithTag("media-card-1")
-            .captureToImage()
-            .asAndroidBitmap()
-        composeRule.onNodeWithTag("media-card-1")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-        composeRule.mainClock.advanceTimeBy(1_000)
-        val focused = composeRule.onNodeWithTag("media-card-1")
-            .captureToImage()
-            .asAndroidBitmap()
-
-        assertFocusedContentCardScale(
-            label = "Library media card",
-            resting = resting,
-            focused = focused,
-            expectedScale = 1.02f,
         )
     }
 
@@ -1076,6 +1033,7 @@ class LibraryScreenTest {
         ).fetchSemanticsNode().boundsInRoot
         val posterWidthRatio = posterBounds.width / cardBounds.width
         val posterTitleGap = titleBounds.top - posterBounds.bottom
+        val topPadding = posterBounds.top - cardBounds.top
         val bottomPadding = cardBounds.bottom - yearBounds.bottom
 
         assertTrue(
@@ -1086,7 +1044,8 @@ class LibraryScreenTest {
         assertEquals(4f * density, posterBounds.left - cardBounds.left, 1f)
         assertEquals(4f * density, cardBounds.right - posterBounds.right, 1f)
         assertEquals(6f * density, posterTitleGap, 1f)
-        assertEquals(4f * density, bottomPadding, 1f)
+        // The card's focus bounds include symmetric clearance around the visible surface.
+        assertEquals(topPadding, bottomPadding, 1f)
     }
 
     @Test

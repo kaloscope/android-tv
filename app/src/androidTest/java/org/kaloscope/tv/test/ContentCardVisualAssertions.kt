@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.compose.ui.geometry.Rect
 import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
@@ -52,27 +51,6 @@ internal fun assertFocusedContentCardSurface(
         "$label focused surface expected #25324A but was " +
             "#${String.format("%06X", actual and 0xFFFFFF)}",
         distance <= 9,
-    )
-}
-
-internal fun assertFocusedContentCardScale(
-    label: String,
-    resting: Bitmap,
-    focused: Bitmap,
-    expectedScale: Float,
-    searchBounds: Rect? = null,
-    searchPadding: Int = 0,
-) {
-    val target = Color.rgb(0x25, 0x33, 0x4D)
-    val restingBounds = resting.findColorBounds(target, searchBounds, searchPadding)
-    val focusedBounds = focused.findColorBounds(target, searchBounds, searchPadding)
-    val widthScale = focusedBounds.width.toFloat() / restingBounds.width
-    val heightScale = focusedBounds.height.toFloat() / restingBounds.height
-    // Width is less sensitive than height to pixel rounding on short cards.
-    assertTrue(
-        "$label focused scale expected $expectedScale but was " +
-            "width=$widthScale height=$heightScale",
-        abs(widthScale - expectedScale) <= 0.004f,
     )
 }
 
@@ -138,45 +116,6 @@ internal fun assertFocusedContentCardBottomInsideViewport(
         "$label focused card must stay at least 1dp above the grid clip boundary, " +
             "but clearance was ${actualClearance}px",
         actualClearance >= minimumClearance,
-    )
-}
-
-private data class PixelBounds(
-    val width: Int,
-    val height: Int,
-)
-
-private fun Bitmap.findColorBounds(
-    target: Int,
-    searchBounds: Rect?,
-    searchPadding: Int,
-): PixelBounds {
-    val startX = searchBounds?.let { floor(it.left).toInt() - searchPadding }
-        ?.coerceIn(0, width - 1) ?: 0
-    val endX = searchBounds?.let { ceil(it.right).toInt() + searchPadding - 1 }
-        ?.coerceIn(startX, width - 1) ?: width - 1
-    val startY = searchBounds?.let { floor(it.top).toInt() - searchPadding }
-        ?.coerceIn(0, height - 1) ?: 0
-    val endY = searchBounds?.let { ceil(it.bottom).toInt() + searchPadding - 1 }
-        ?.coerceIn(startY, height - 1) ?: height - 1
-    var minX = width
-    var minY = height
-    var maxX = -1
-    var maxY = -1
-    for (y in startY..endY) {
-        for (x in startX..endX) {
-            if (getPixel(x, y) == target) {
-                minX = minOf(minX, x)
-                minY = minOf(minY, y)
-                maxX = maxOf(maxX, x)
-                maxY = maxOf(maxY, y)
-            }
-        }
-    }
-    assertTrue("Expected color #25334D in captured card", maxX >= minX && maxY >= minY)
-    return PixelBounds(
-        width = maxX - minX + 1,
-        height = maxY - minY + 1,
     )
 }
 

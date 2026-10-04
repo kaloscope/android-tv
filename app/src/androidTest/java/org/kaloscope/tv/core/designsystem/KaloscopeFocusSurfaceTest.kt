@@ -56,7 +56,7 @@ class KaloscopeFocusSurfaceTest {
                         variant = KaloscopeFocusSurfaceVariant.GridCard,
                         modifier = Modifier.width(160.dp).testTag("grid-card"),
                     ) {
-                        Box(Modifier.fillMaxWidth().height(100.dp))
+                        Box(Modifier.fillMaxWidth().height(100.dp).testTag("grid-card-content"))
                     }
                     KaloscopeFocusSurface(
                         onClick = { defaultClicks += 1 },
@@ -72,8 +72,15 @@ class KaloscopeFocusSurfaceTest {
 
         val grid = composeRule.onNodeWithTag("grid-card")
         val defaultSurface = composeRule.onNodeWithTag("default-surface")
+        val content = composeRule.onNodeWithTag("grid-card-content", useUnmergedTree = true)
+        defaultSurface.performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(240)
+        val restingContent = content.fetchSemanticsNode().boundsInRoot
         grid.performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.mainClock.advanceTimeBy(240)
+        val focusedContent = content.fetchSemanticsNode().boundsInRoot
+        assertEquals(restingContent.width * 1.02f, focusedContent.width, 1f)
+        assertEquals(restingContent.height * 1.02f, focusedContent.height, 1f)
         grid.performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.mainClock.advanceTimeBy(48)
         defaultSurface.assertIsFocused().performKeyInput { pressKey(Key.DirectionLeft) }
@@ -94,6 +101,7 @@ class KaloscopeFocusSurfaceTest {
         grid.performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.mainClock.advanceTimeBy(600)
         defaultSurface.assertIsFocused()
+        assertEquals(restingContent, content.fetchSemanticsNode().boundsInRoot)
         assertContentCardFocusOutline(
             label = "Blurred grid card",
             bitmap = grid.captureToImage().asAndroidBitmap(),

@@ -70,7 +70,6 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.test.assertFocusedContentCardBottomInsideViewport
 import org.kaloscope.tv.test.assertContentCardFocusOutline
-import org.kaloscope.tv.test.assertFocusedContentCardScale
 import org.kaloscope.tv.test.assertFocusedContentCardSurface
 import org.kaloscope.tv.test.assertFocusedContentCardTopClearance
 import org.kaloscope.tv.test.assertGridRowReservesFocusedScaleHeight
@@ -249,58 +248,6 @@ class SearchScreenTest {
             label = "Network result card",
             bitmap = focused,
             density = composeRule.density.density,
-        )
-    }
-
-    @Test
-    fun focusedNetworkResultUsesTwoPercentScale() {
-        composeRule.mainClock.autoAdvance = false
-        composeRule.setContent {
-            KaloscopeTheme {
-                SearchScreen(
-                    session = session(),
-                    state = state(),
-                    requestInitialFocus = false,
-                    onRefreshIndexers = {},
-                    onSelectIndexer = {},
-                    onQueryChange = {},
-                    onSearch = {},
-                    onRetry = {},
-                    onLoadMore = {},
-                    onResultFocused = {},
-                    onOpenResult = {},
-                    onOpenFilters = {},
-                    onDismissFilters = {},
-                    onApplyFilters = {},
-                    onClearFilters = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag("search-action-button")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-        composeRule.mainClock.advanceTimeBy(1_000)
-        val cardBounds = composeRule.onNodeWithTag("network-result-v1")
-            .fetchSemanticsNode()
-            .boundsInRoot
-        val scaleSearchPadding = with(composeRule.density) { 5.dp.roundToPx() }
-        val resting = composeRule.onRoot()
-            .captureToImage()
-            .asAndroidBitmap()
-        composeRule.onNodeWithTag("network-result-v1")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-        composeRule.mainClock.advanceTimeBy(1_000)
-        val focused = composeRule.onRoot()
-            .captureToImage()
-            .asAndroidBitmap()
-
-        assertFocusedContentCardScale(
-            label = "Network result card",
-            resting = resting,
-            focused = focused,
-            expectedScale = 1.02f,
-            searchBounds = cardBounds,
-            searchPadding = scaleSearchPadding,
         )
     }
 
