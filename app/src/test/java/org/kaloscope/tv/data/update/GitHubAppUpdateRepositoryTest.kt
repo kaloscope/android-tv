@@ -1,6 +1,7 @@
 package org.kaloscope.tv.data.update
 
 import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.CountDownLatch
 import kotlinx.coroutines.async
@@ -18,6 +19,7 @@ import okio.Buffer
 import okio.ForwardingSource
 import okio.buffer
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -128,6 +130,41 @@ class GitHubAppUpdateRepositoryTest {
         assertEquals(100, progress.last())
         assertEquals(directory.canonicalPath, requireNotNull(file.parentFile).canonicalPath)
         assertNull(server.takeRequest().getHeader("Authorization"))
+    }
+
+    @Test
+    fun `chunked download preserves bytes and reports increasing progress without duplicates`() = runBlocking {
+        val bytes = ByteArray(256 * 1024) { (it % 251).toByte() }
+        val expectedDigest = MessageDigest.getInstance("SHA-256")
+            .digest(bytes).joinToString("") { "%02x".format(it) }
+        server.enqueue(MockResponse().setChunkedBody(Buffer().write(bytes), 1024))
+        val progress = mutableListOf<Int>()
+
+        val file = success(
+            repository.download(
+                release().copy(sizeBytes = bytes.size.toLong(), sha256 = expectedDigest),
+                progress::add,
+            ),
+        )
+
+        assertArrayEquals(bytes, file.readBytes())
+        assertTrue(progress.size > 1)
+        assertTrue(progress.all { it in 0..100 })
+        assertTrue(progress.zipWithNext().all { (previous, next) -> previous < next })
+        assertEquals(100, progress.last())
+    }
+
+    @Test
+    fun `chunked download rejects short or oversized content and removes partial APK`() = runBlocking {
+        for (body in listOf("ab", "abcd")) {
+            server.enqueue(MockResponse().setChunkedBody(body, 1))
+
+            assertEquals(
+                AppError.Update(UpdateFailure.Integrity),
+                failure(repository.download(release()) {}),
+            )
+            assertTrue(directory.listFiles().orEmpty().isEmpty())
+        }
     }
 
     @Test

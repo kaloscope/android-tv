@@ -4,6 +4,7 @@ import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.security.MessageDigest
+import kotlin.coroutines.coroutineContext
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -94,61 +95,75 @@ class GitHubAppUpdateRepository(
             }
             var completed = false
             try {
-                val context = coroutineContext
-                request(release.apkUrl.toHttpUrl(), onCancelledResult = { it.delete() }) { response ->
-                    var verified = false
-                    try {
-                        val body = response.body
-                        val length = body.contentLength()
-                        if (length >= 0 && length != release.sizeBytes) fail(UpdateFailure.Integrity)
-                        val digest = MessageDigest.getInstance("SHA-256")
-                        var downloaded = 0L
-                        var lastProgress = -1
-                        val output = try {
-                            file.outputStream()
-                        } catch (_: IOException) {
-                            fail(UpdateFailure.Storage)
-                        }
-                        output.use { sink ->
-                            body.byteStream().use { source ->
-                                val buffer = ByteArray(64 * 1024)
-                                while (true) {
-                                    context.ensureActive()
-                                    val count = source.read(buffer)
-                                    if (count == -1) break
-                                    downloaded += count
-                                    if (downloaded > release.sizeBytes) fail(UpdateFailure.Integrity)
-                                    try {
-                                        sink.write(buffer, 0, count)
-                                    } catch (_: IOException) {
-                                        fail(UpdateFailure.Storage)
-                                    }
-                                    digest.update(buffer, 0, count)
-                                    val progress = (downloaded * 100 / release.sizeBytes).toInt()
-                                    if (progress != lastProgress) {
-                                        lastProgress = progress
-                                        onProgress(progress)
-                                    }
-                                }
-                            }
-                        }
-                        val actualDigest = digest.digest().joinToString("") { "%02x".format(it) }
-                        if (downloaded != release.sizeBytes ||
-                            !actualDigest.equals(expectedDigest, ignoreCase = true)
-                        ) {
-                            fail(UpdateFailure.Integrity)
-                        }
-                        verified = true
-                        file
-                    } finally {
-                        // Cancellation can finish the caller before this callback opens the file.
-                        if (!verified) file.delete()
-                    }
-                }
+                val verifiedFile = downloadVerifiedApk(
+                    release = release,
+                    expectedDigest = expectedDigest,
+                    file = file,
+                    onProgress = onProgress,
+                )
                 completed = true
-                file
+                verifiedFile
             } finally {
                 if (!completed) file.delete()
+            }
+        }
+    }
+
+    private suspend fun downloadVerifiedApk(
+        release: AppUpdateRelease,
+        expectedDigest: String,
+        file: File,
+        onProgress: (Int) -> Unit,
+    ): File {
+        val context = coroutineContext
+        return request(release.apkUrl.toHttpUrl(), onCancelledResult = { it.delete() }) { response ->
+            var verified = false
+            try {
+                val body = response.body
+                val length = body.contentLength()
+                if (length >= 0 && length != release.sizeBytes) fail(UpdateFailure.Integrity)
+                val digest = MessageDigest.getInstance("SHA-256")
+                var downloaded = 0L
+                var lastProgress = -1
+                val output = try {
+                    file.outputStream()
+                } catch (_: IOException) {
+                    fail(UpdateFailure.Storage)
+                }
+                output.use { sink ->
+                    body.byteStream().use { source ->
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            context.ensureActive()
+                            val count = source.read(buffer)
+                            if (count == -1) break
+                            downloaded += count
+                            if (downloaded > release.sizeBytes) fail(UpdateFailure.Integrity)
+                            try {
+                                sink.write(buffer, 0, count)
+                            } catch (_: IOException) {
+                                fail(UpdateFailure.Storage)
+                            }
+                            digest.update(buffer, 0, count)
+                            val progress = (downloaded * 100 / release.sizeBytes).toInt()
+                            if (progress != lastProgress) {
+                                lastProgress = progress
+                                onProgress(progress)
+                            }
+                        }
+                    }
+                }
+                val actualDigest = digest.digest().joinToString("") { "%02x".format(it) }
+                if (downloaded != release.sizeBytes ||
+                    !actualDigest.equals(expectedDigest, ignoreCase = true)
+                ) {
+                    fail(UpdateFailure.Integrity)
+                }
+                verified = true
+                file
+            } finally {
+                // Cancellation can finish the caller before this callback opens the file.
+                if (!verified) file.delete()
             }
         }
     }
