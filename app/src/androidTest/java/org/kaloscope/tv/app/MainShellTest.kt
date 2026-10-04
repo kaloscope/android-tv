@@ -95,7 +95,6 @@ import org.kaloscope.tv.feature.search.SearchUiState
 import org.kaloscope.tv.feature.settings.SettingsConnection
 import org.kaloscope.tv.feature.settings.SettingsSection
 import org.kaloscope.tv.feature.settings.SettingsUiState
-import org.kaloscope.tv.test.captureDeviceScreen
 import org.kaloscope.tv.test.captureScreenRegion
 import org.kaloscope.tv.test.captureToImage
 
@@ -197,9 +196,14 @@ class MainShellTest {
             }
         }
 
+        composeRule.onNode(hasText("首页") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
-        composeRule.waitForIdle()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(hasTestTag("confirm-dialog-confirm")).fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.runOnIdle { assertEquals(0, exits) }
 
         composeRule.onNodeWithTag("confirm-dialog-confirm")
@@ -749,7 +753,7 @@ class MainShellTest {
         }
 
         composeRule.waitForIdle()
-        val homeBitmap = captureDeviceScreen()
+        val homeBitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
         val sampleX = homeBitmap.width * 3 / 4
         val sampleY = 20
         val homePixel = homeBitmap.getPixel(sampleX, sampleY)
@@ -758,7 +762,7 @@ class MainShellTest {
             route = SearchRoute
         }
         composeRule.waitForIdle()
-        val searchBitmap = captureDeviceScreen()
+        val searchBitmap = composeRule.onRoot().captureToImage().asAndroidBitmap()
         val searchPixel = searchBitmap.getPixel(sampleX, sampleY)
 
         assertEquals(

@@ -3,6 +3,7 @@ package org.kaloscope.tv.app
 import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
@@ -10,6 +11,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
@@ -23,8 +25,8 @@ import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.server.SavedServerDeletionState
 import org.kaloscope.tv.feature.server.ServerSetupState
-import org.kaloscope.tv.test.captureDeviceScreen
 import org.kaloscope.tv.test.captureScreenRegion
+import org.kaloscope.tv.test.captureToImage
 
 class SavedServerDeletionFocusTest {
     @get:Rule
@@ -110,7 +112,7 @@ class SavedServerDeletionFocusTest {
             .assertIsFocused()
             .getUnclippedBoundsInRoot()
         composeRule.waitForIdle()
-        val focusedServerHeight = captureDeviceScreen()
+        val focusedServerHeight = composeRule.onRoot().captureToImage().asAndroidBitmap()
             .visibleSurfaceHeight(
                 bounds = focusedServerBounds,
                 density = density,
@@ -123,7 +125,7 @@ class SavedServerDeletionFocusTest {
             .assertIsFocused()
             .getUnclippedBoundsInRoot()
         composeRule.waitForIdle()
-        val focusedDeleteHeight = captureDeviceScreen()
+        val focusedDeleteHeight = composeRule.onRoot().captureToImage().asAndroidBitmap()
             .visibleSurfaceHeight(
                 bounds = focusedDeleteBounds,
                 density = density,
