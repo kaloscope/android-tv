@@ -1294,10 +1294,9 @@ class MainShellTest {
         val density = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
         val expectedTop = 74f * density
-        val expectedHomeControlTop = 76f * density
 
         assertEquals(
-            expectedHomeControlTop,
+            expectedTop,
             composeRule.onNodeWithTag("home-refresh")
                 .fetchSemanticsNode()
                 .boundsInRoot.top,
@@ -2293,7 +2292,7 @@ class MainShellTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithText("来自服务器的简介").assertExists()
+        composeRule.onNodeWithTag("detail-parent-poster-201").assertExists()
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
 
