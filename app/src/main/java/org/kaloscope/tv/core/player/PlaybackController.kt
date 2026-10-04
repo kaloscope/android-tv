@@ -290,7 +290,7 @@ class PlaybackController internal constructor(
     }
 
     fun setPlaybackSpeed(speed: Float) {
-        val safeSpeed = SUPPORTED_PLAYBACK_SPEEDS.firstOrNull { it == speed } ?: 1f
+        val safeSpeed = PlaybackSettingsPolicy.supportedSpeeds.firstOrNull { it == speed } ?: 1f
         player.setPlaybackSpeed(safeSpeed)
         mutableStatus.value = mutableStatus.value.copy(playbackSpeed = safeSpeed)
     }
@@ -447,7 +447,6 @@ class PlaybackController internal constructor(
     private companion object {
         const val SEEK_INCREMENT_MILLIS = 10_000L
         const val MAX_CAUSE_DEPTH = 8
-        val SUPPORTED_PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
     }
 }
 

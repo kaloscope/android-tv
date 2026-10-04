@@ -23,8 +23,7 @@ import org.kaloscope.tv.core.designsystem.KaloscopeSidePanelSize
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
 import org.kaloscope.tv.core.designsystem.Panel
-
-internal val PlayerPlaybackSpeeds = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+import org.kaloscope.tv.core.player.PlaybackSettingsPolicy
 
 @Composable
 internal fun PlayerSpeedDrawer(
@@ -33,7 +32,7 @@ internal fun PlayerSpeedDrawer(
     onDismiss: () -> Unit,
 ) {
     val initialFocus = remember { FocusRequester() }
-    val initialIndex = PlayerPlaybackSpeeds.indexOf(speed)
+    val initialIndex = PlaybackSettingsPolicy.supportedSpeeds.indexOf(speed)
         .takeIf { it >= 0 }
         ?: 0
     LaunchedEffect(speed) {
@@ -61,7 +60,7 @@ internal fun PlayerSpeedDrawer(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            itemsIndexed(PlayerPlaybackSpeeds) { index, value ->
+            itemsIndexed(PlaybackSettingsPolicy.supportedSpeeds) { index, value ->
                 KaloscopeSidePanelSelectionRow(
                     title = formatPlaybackSpeed(value),
                     selected = value == speed,
