@@ -1,19 +1,22 @@
 package org.kaloscope.tv.feature.settings
 
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -67,7 +70,7 @@ class AboutSettingsTest {
                 )
             }
         }
-        composeRule.onNodeWithTag("update-check").performClick()
+        activate("update-check")
         composeRule.onNodeWithTag("confirm-dialog-cancel").assertIsFocused()
         composeRule.onNodeWithTag("confirm-dialog-cancel").performKeyInput {
             pressKey(Key.DirectionUp)
@@ -75,7 +78,7 @@ class AboutSettingsTest {
             pressKey(Key.DirectionLeft)
         }
         composeRule.onNodeWithTag("confirm-dialog-cancel").assertIsFocused()
-        composeRule.onNodeWithTag("confirm-dialog-cancel").performKeyInput { pressKey(Key.Back) }
+        pressBack()
         composeRule.onNodeWithTag("update-check").assertIsFocused()
         composeRule.runOnIdle { assertEquals(0, downloads) }
     }
@@ -103,7 +106,7 @@ class AboutSettingsTest {
                 )
             }
         }
-        composeRule.onNodeWithTag("update-download").performClick()
+        activate("update-download")
         composeRule.runOnIdle { assertEquals(0, downloads) }
         composeRule.onNodeWithTag("confirm-dialog-cancel").performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithTag("confirm-dialog-confirm").assertIsFocused()
@@ -126,7 +129,9 @@ class AboutSettingsTest {
             state = AppUpdateUiState(AppUpdatePhase.Downloading, release, progress = 10),
             actions = AppUpdateActions(leave = { left++ }),
         )
-        composeRule.onNodeWithTag("settings-section-serveraccount").performClick()
+        composeRule.onNodeWithTag("settings-section-serveraccount")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
         composeRule.runOnIdle { assertEquals(1, left) }
     }
 
@@ -141,7 +146,7 @@ class AboutSettingsTest {
             "feedback" to "https://github.com/kaloscope/android-tv/issues",
             "license" to "https://github.com/kaloscope/android-tv/blob/main/LICENSE",
         ).forEach { (tag, url) ->
-            composeRule.onNodeWithTag("about-link-$tag").performClick()
+            activate("about-link-$tag")
             composeRule.onNodeWithTag("about-link-qr").assertIsDisplayed()
             composeRule.onNodeWithText(url).assertIsDisplayed()
             composeRule.onNodeWithTag("about-link-close").assertIsFocused()
@@ -152,10 +157,22 @@ class AboutSettingsTest {
                 pressKey(Key.DirectionDown)
             }
             composeRule.onNodeWithTag("about-link-close").assertIsFocused()
-            composeRule.onNodeWithTag("about-link-close").performKeyInput { pressKey(Key.Back) }
+            pressBack()
             composeRule.onNodeWithTag("about-link-panel").assertDoesNotExist()
             composeRule.onNodeWithTag("about-link-$tag").assertIsFocused()
         }
+    }
+
+    private fun activate(tag: String) {
+        composeRule.onNodeWithTag(tag)
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+    }
+
+    private fun pressBack() {
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
     }
 
     private fun content(
