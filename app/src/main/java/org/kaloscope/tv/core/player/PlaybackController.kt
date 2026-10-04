@@ -264,12 +264,19 @@ class PlaybackController internal constructor(
                 .build()
             return
         }
+        val subtitleIndex = subtitles.indexOfFirst { it.id == trackId }
         val selection = player.currentTracks.groups.firstNotNullOfOrNull { group ->
             if (group.type != C.TRACK_TYPE_TEXT) {
                 return@firstNotNullOfOrNull null
             }
             val trackIndex = (0 until group.length)
-                .firstOrNull { index -> group.getTrackFormat(index).id == trackId }
+                .firstOrNull { index ->
+                    SubtitleSelectionPolicy.matchesMedia3TrackId(
+                        formatId = group.getTrackFormat(index).id,
+                        trackId = trackId,
+                        subtitleIndex = subtitleIndex,
+                    )
+                }
                 ?: return@firstNotNullOfOrNull null
             TrackSelectionOverride(group.mediaTrackGroup, trackIndex)
         }

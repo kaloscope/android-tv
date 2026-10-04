@@ -2,7 +2,9 @@ package org.kaloscope.tv.core.player
 
 import androidx.media3.common.C
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.SubtitleTrack
@@ -85,6 +87,26 @@ class SubtitleSelectionPolicyTest {
         }
 
         assertEquals(listOf(0, C.SELECTION_FLAG_DEFAULT, 0), flags)
+    }
+
+    @Test
+    fun `matches merged external subtitle ids`() {
+        assertTrue(SubtitleSelectionPolicy.matchesMedia3TrackId("1:en", "en", 0))
+        assertTrue(SubtitleSelectionPolicy.matchesMedia3TrackId("3:zh", "zh", 2))
+        assertTrue(SubtitleSelectionPolicy.matchesMedia3TrackId("2:subtitle:en", "subtitle:en", 1))
+        assertTrue(SubtitleSelectionPolicy.matchesMedia3TrackId("2:1:en", "1:en", 1))
+    }
+
+    @Test
+    fun `does not confuse subtitle ids or merged source indices`() {
+        assertFalse(SubtitleSelectionPolicy.matchesMedia3TrackId("en", "en", 0))
+        assertFalse(SubtitleSelectionPolicy.matchesMedia3TrackId("1:en", "1:en", 1))
+        assertFalse(SubtitleSelectionPolicy.matchesMedia3TrackId("0:en", "en", 0))
+        assertFalse(SubtitleSelectionPolicy.matchesMedia3TrackId("2:en", "en", 0))
+        assertFalse(SubtitleSelectionPolicy.matchesMedia3TrackId("1:subtitle:en", "en", 0))
+        assertFalse(SubtitleSelectionPolicy.matchesMedia3TrackId("1:zh", "en", 0))
+        assertFalse(SubtitleSelectionPolicy.matchesMedia3TrackId(null, "en", 0))
+        assertFalse(SubtitleSelectionPolicy.matchesMedia3TrackId("1:en", "en", -1))
     }
 
     private fun tracks() = listOf(

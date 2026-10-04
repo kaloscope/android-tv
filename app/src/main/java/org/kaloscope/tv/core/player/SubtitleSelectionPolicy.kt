@@ -49,4 +49,9 @@ object SubtitleSelectionPolicy {
         } else {
             0
         }
+
+    fun matchesMedia3TrackId(formatId: String?, trackId: String, subtitleIndex: Int): Boolean =
+        // DefaultMediaSourceFactory merges external subtitles after source 0 (the main media).
+        // Match the full prefixed ID so an ID containing ':' cannot select another subtitle.
+        subtitleIndex >= 0 && formatId == "${subtitleIndex + 1}:$trackId"
 }
