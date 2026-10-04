@@ -199,9 +199,15 @@ class LibraryScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("library-search-action-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(240)
+        val content = composeRule.onNodeWithTag("media-title-1", useUnmergedTree = true)
+        val restingWidth = content.fetchSemanticsNode().boundsInRoot.width
         composeRule.onNodeWithTag("media-card-1")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.mainClock.advanceTimeBy(1_000)
+        assertEquals(restingWidth * 1.02f, content.fetchSemanticsNode().boundsInRoot.width, 1f)
         val focused = composeRule.onNodeWithTag("media-card-1")
             .captureToImage()
             .asAndroidBitmap()

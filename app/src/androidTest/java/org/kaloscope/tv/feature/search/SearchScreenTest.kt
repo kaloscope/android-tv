@@ -230,9 +230,15 @@ class SearchScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("search-action-button")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(240)
+        val content = composeRule.onNodeWithTag("search-result-footer-v1", useUnmergedTree = true)
+        val restingWidth = content.fetchSemanticsNode().boundsInRoot.width
         composeRule.onNodeWithTag("network-result-v1")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.mainClock.advanceTimeBy(1_000)
+        assertEquals(restingWidth * 1.02f, content.fetchSemanticsNode().boundsInRoot.width, 1f)
         val focused = composeRule.onNodeWithTag("network-result-v1")
             .captureToImage()
             .asAndroidBitmap()
