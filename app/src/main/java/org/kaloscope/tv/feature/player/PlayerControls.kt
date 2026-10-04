@@ -436,7 +436,6 @@ internal fun PlayerControls(
                             PlayerCircleButton(
                                 label = stringResource(R.string.previous_episode),
                                 iconRes = R.drawable.ic_action_previous,
-                                action = PlayerActionUiState(enabled = true),
                                 onClick = onPrevious,
                                 modifier = Modifier.testTag("player-previous"),
                                 upFocus = resolvedProgressFocus,
@@ -446,7 +445,6 @@ internal fun PlayerControls(
                             visibleLabel = stringResource(R.string.seek_seconds_short),
                             accessibilityLabel = stringResource(R.string.rewind_seconds),
                             iconRes = R.drawable.ic_action_counterclockwise,
-                            action = PlayerActionUiState(enabled = true),
                             onClick = onRewind,
                             modifier = Modifier.testTag("player-rewind"),
                             upFocus = resolvedProgressFocus,
@@ -464,7 +462,6 @@ internal fun PlayerControls(
                             } else {
                                 R.drawable.ic_action_play
                             },
-                            action = PlayerActionUiState(enabled = true),
                             onClick = onPlayPause,
                             modifier = Modifier
                                 .focusRequester(playFocus)
@@ -478,7 +475,6 @@ internal fun PlayerControls(
                             visibleLabel = stringResource(R.string.seek_seconds_short),
                             accessibilityLabel = stringResource(R.string.forward_seconds),
                             iconRes = R.drawable.ic_action_clockwise,
-                            action = PlayerActionUiState(enabled = true),
                             onClick = onForward,
                             modifier = Modifier
                                 .focusRequester(forwardFocus)
@@ -494,7 +490,6 @@ internal fun PlayerControls(
                             PlayerCircleButton(
                                 label = stringResource(R.string.next_episode),
                                 iconRes = R.drawable.ic_action_next,
-                                action = PlayerActionUiState(enabled = true),
                                 onClick = onNext,
                                 modifier = Modifier
                                     .focusRequester(nextFocus)
@@ -698,7 +693,7 @@ private fun PlayerAuxiliaryButton(
                 .height(42.dp)
                 .onFocusChanged { focused = it.isFocused }
                 .playerFocusProperties(upFocus, downFocus, leftFocus, rightFocus)
-                .playerControlSemantics(accessibilityLabel, action),
+                .playerControlSemantics(accessibilityLabel, hasError = action.error),
         ) {
             Row(
                 modifier = Modifier
@@ -736,7 +731,6 @@ private fun PlayerAuxiliaryButton(
 private fun PlayerCircleButton(
     label: String,
     @DrawableRes iconRes: Int,
-    action: PlayerActionUiState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     upFocus: FocusRequester,
@@ -747,23 +741,20 @@ private fun PlayerCircleButton(
     Box(contentAlignment = Alignment.TopEnd) {
         KaloscopeIconButton(
             onClick = onClick,
-            enabled = action.enabled,
-            selected = action.active,
+            enabled = true,
+            selected = false,
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Compact,
             modifier = modifier
                 .size(42.dp)
                 .playerFocusProperties(upFocus, downFocus, leftFocus, rightFocus)
-                .playerControlSemantics(label, action),
+                .playerControlSemantics(label),
         ) {
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(22.dp),
             )
-        }
-        if (action.error) {
-            PlayerControlErrorBadge()
         }
     }
 }
@@ -773,7 +764,6 @@ private fun PlayerPillButton(
     visibleLabel: String,
     accessibilityLabel: String,
     @DrawableRes iconRes: Int,
-    action: PlayerActionUiState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     height: Dp = 42.dp,
@@ -787,8 +777,8 @@ private fun PlayerPillButton(
     Box(contentAlignment = Alignment.TopEnd) {
         KaloscopeButton(
             onClick = onClick,
-            enabled = action.enabled,
-            selected = action.active,
+            enabled = true,
+            selected = false,
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Compact,
             shape = PlayerControlPillShape,
@@ -797,7 +787,7 @@ private fun PlayerPillButton(
                 .height(height)
                 .widthIn(min = minWidth)
                 .playerFocusProperties(upFocus, downFocus, leftFocus, rightFocus)
-                .playerControlSemantics(accessibilityLabel, action),
+                .playerControlSemantics(accessibilityLabel),
         ) {
             Row(
                 modifier = Modifier
@@ -834,9 +824,6 @@ private fun PlayerPillButton(
                 )
             }
         }
-        if (action.error) {
-            PlayerControlErrorBadge()
-        }
     }
 }
 
@@ -855,12 +842,12 @@ private fun Modifier.playerFocusProperties(
 
 private fun Modifier.playerControlSemantics(
     label: String,
-    action: PlayerActionUiState,
+    hasError: Boolean = false,
 ): Modifier =
     semantics {
         contentDescription = label
         role = Role.Button
-        if (action.error) {
+        if (hasError) {
             error(label)
         }
     }
