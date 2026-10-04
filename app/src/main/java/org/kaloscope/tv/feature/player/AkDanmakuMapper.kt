@@ -104,14 +104,6 @@ private data class DanmakuCandidate(
     val mergedType: Int,
 )
 
-internal fun DanmakuSettings.toAkDanmakuConfig(): DanmakuConfig =
-    toAkDanmakuConfig(
-        typeFilter = TypeFilter(),
-        colorFilter = TextColorFilter(),
-        duplicateFilter = DuplicateMergedFilter(),
-        filterGeneration = 0,
-    )
-
 internal class AkDanmakuRuntimeConfigState {
     private val typeFilter = TypeFilter()
     private val colorFilter = TextColorFilter()

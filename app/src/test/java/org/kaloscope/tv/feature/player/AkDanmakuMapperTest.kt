@@ -75,7 +75,7 @@ class AkDanmakuMapperTest {
 
     @Test
     fun `settings map to non-overlapping Ak config and type filter`() {
-        val config = DanmakuSettings(
+        val settings = DanmakuSettings(
             enabled = false,
             textSize = DanmakuTextSize.Large,
             speed = DanmakuSpeed.Fast,
@@ -83,7 +83,8 @@ class AkDanmakuMapperTest {
             displayAreaPercent = 25,
             visibleModes = setOf(DanmakuDisplayMode.Scroll),
             mergeDuplicates = false,
-        ).toAkDanmakuConfig()
+        )
+        val config = AkDanmakuRuntimeConfigState().update(settings)
 
         assertFalse(config.visibility)
         assertEquals(1.4f, config.textSizeScale, 0f)
@@ -110,10 +111,11 @@ class AkDanmakuMapperTest {
 
     @Test
     fun `colored blocking keeps only white RGB while type filtering stays independent`() {
-        val config = DanmakuSettings(
+        val settings = DanmakuSettings(
             visibleModes = setOf(DanmakuDisplayMode.Scroll),
             blockColored = true,
-        ).toAkDanmakuConfig()
+        )
+        val config = AkDanmakuRuntimeConfigState().update(settings)
 
         val colorFilter = config.dataFilter.filterIsInstance<TextColorFilter>().single()
         assertEquals(setOf(0xFFFFFF), colorFilter.filterColor)
