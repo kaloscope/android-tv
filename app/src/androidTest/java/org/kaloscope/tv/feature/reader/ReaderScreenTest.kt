@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.reader
 
+import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import android.view.View
@@ -23,25 +24,33 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasTextExactly
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.test.platform.app.InstrumentationRegistry
+import java.io.ByteArrayOutputStream
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -1865,29 +1874,41 @@ class ReaderScreenTest {
 
     @Test
     fun scrollingLoadingAppearsInlineAfterTheLastImage() {
-        setReader(
-            imageState(
-                images = listOf("https://cdn.example.test/page-1.jpg"),
-                isLoadingMore = true,
-            ),
-        )
+        MockWebServer().use { server ->
+            val bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+            val bytes = ByteArrayOutputStream().use { output ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+                output.toByteArray()
+            }
+            bitmap.recycle()
+            server.enqueue(MockResponse().setHeader("Content-Type", "image/png").setBody(Buffer().write(bytes)))
+            server.start()
+            setReader(
+                imageState(images = listOf("/page.png"), isLoadingMore = true),
+                readerSession = session().let {
+                    it.copy(server = it.server.copy(origin = server.url("/").toString().removeSuffix("/")))
+                },
+            )
+            composeRule.waitUntil(timeoutMillis = 5_000) {
+                server.requestCount == 1 && composeRule.onAllNodesWithTag("reader-image-0-loading")
+                    .fetchSemanticsNodes().isEmpty()
+            }
+            composeRule.onNodeWithTag("reader-image-failed").assertDoesNotExist()
 
-        val screen = composeRule.onNodeWithTag("reader-screen")
-            .fetchSemanticsNode().boundsInRoot
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            runCatching {
-                val loadingSlot = composeRule.onNodeWithTag(
-                    testTag = "reader-image-loading-more-scroll",
-                    useUnmergedTree = true,
-                ).fetchSemanticsNode().boundsInRoot
-                loadingSlot.center.y > screen.center.y && loadingSlot.bottom <= screen.bottom + 1f
-            }.getOrDefault(false)
+            // Auto mode fills a viewport, so the inline loading item starts below the image.
+            composeRule.onNodeWithTag("image-reader-scroll")
+                .performScrollToNode(hasTestTag("reader-image-loading-more-scroll"))
+            val image = composeRule.onNodeWithTag("reader-image-0")
+                .fetchSemanticsNode().boundsInRoot
+            val loading = composeRule.onNodeWithTag("reader-image-loading-more-scroll")
+                .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            assertEquals(image.bottom, loading.top, 1f)
+            composeRule.onNodeWithTag(
+                testTag = "reader-image-loading-more-scroll-indicator",
+                useUnmergedTree = true,
+            ).assertIsDisplayed()
+            composeRule.onNodeWithText("正在加载后续图片…").assertDoesNotExist()
         }
-        composeRule.onNodeWithTag(
-            testTag = "reader-image-loading-more-scroll-indicator",
-            useUnmergedTree = true,
-        ).assertExists()
-        composeRule.onNodeWithText("正在加载后续图片…").assertDoesNotExist()
     }
 
     private fun assertReaderKeepsScreenOnWhileActive(activeState: ReaderUiState.Active) {
@@ -2382,6 +2403,7 @@ class ReaderScreenTest {
         state: ReaderUiState.Active,
         onBack: () -> Unit = {},
         fontScale: Float? = null,
+        readerSession: Session = session(),
     ) {
         composeRule.setContent {
             val currentDensity = LocalDensity.current
@@ -2393,7 +2415,7 @@ class ReaderScreenTest {
             ) {
                 KaloscopeTheme {
                     ReaderScreen(
-                        session = session(),
+                        session = readerSession,
                         state = state,
                         onBack = onBack,
                         onSelectChapter = {},
