@@ -91,13 +91,7 @@ object ReaderSettingsPolicy {
                 maximum = MAX_FONT_SIZE_SP,
                 step = FONT_SIZE_STEP_SP,
             ),
-            lineHeight = snapTenths(
-                value = settings.lineHeight,
-                default = DEFAULT_LINE_HEIGHT,
-                minimumTenths = MIN_LINE_HEIGHT_TENTHS,
-                maximumTenths = MAX_LINE_HEIGHT_TENTHS,
-                stepTenths = LINE_HEIGHT_STEP_TENTHS,
-            ),
+            lineHeight = snapLineHeight(settings.lineHeight),
             // Preserve exact legacy values even when they are outside the new 4 dp grid.
             paragraphSpacingDp = settings.paragraphSpacingDp.coerceIn(
                 MIN_PARAGRAPH_SPACING_DP,
@@ -129,13 +123,7 @@ object ReaderSettingsPolicy {
         offset: Int,
     ): TextReaderSettings =
         settings.copy(
-            lineHeight = snapTenths(
-                value = settings.lineHeight + offset * LINE_HEIGHT_STEP,
-                default = DEFAULT_LINE_HEIGHT,
-                minimumTenths = MIN_LINE_HEIGHT_TENTHS,
-                maximumTenths = MAX_LINE_HEIGHT_TENTHS,
-                stepTenths = LINE_HEIGHT_STEP_TENTHS,
-            ),
+            lineHeight = snapLineHeight(settings.lineHeight + offset * LINE_HEIGHT_STEP),
         )
 
     fun adjustParagraphSpacing(
@@ -172,20 +160,14 @@ object ReaderSettingsPolicy {
         return (minimum + stepIndex * step).coerceIn(minimum, maximum)
     }
 
-    private fun snapTenths(
-        value: Float,
-        default: Float,
-        minimumTenths: Int,
-        maximumTenths: Int,
-        stepTenths: Int,
-    ): Float {
-        if (!value.isFinite()) return default
+    private fun snapLineHeight(value: Float): Float {
+        if (!value.isFinite()) return DEFAULT_LINE_HEIGHT
         val valueTenths = (value * 10f).roundToInt()
         return snapInt(
             value = valueTenths,
-            minimum = minimumTenths,
-            maximum = maximumTenths,
-            step = stepTenths,
+            minimum = MIN_LINE_HEIGHT_TENTHS,
+            maximum = MAX_LINE_HEIGHT_TENTHS,
+            step = LINE_HEIGHT_STEP_TENTHS,
         ) / 10f
     }
 }
