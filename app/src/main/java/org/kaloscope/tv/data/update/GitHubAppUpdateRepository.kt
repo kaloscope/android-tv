@@ -1,5 +1,6 @@
 package org.kaloscope.tv.data.update
 
+import android.annotation.SuppressLint
 import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -63,6 +64,8 @@ class GitHubAppUpdateRepository(
         AppUpdateRelease(version, apkUrl, apk.size, digest, checksumUrl)
     }
 
+    // Reject insufficient free space without asking Android to reclaim cached app data.
+    @SuppressLint("UsableSpace")
     override suspend fun download(
         release: AppUpdateRelease,
         onProgress: (Int) -> Unit,
