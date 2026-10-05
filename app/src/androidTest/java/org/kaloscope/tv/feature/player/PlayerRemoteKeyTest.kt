@@ -132,6 +132,10 @@ class PlayerRemoteKeyTest {
                     keyCode, 0,
                 ),
             )
+            if (keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT || keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT) {
+                // Submit the preview on the Compose clock before waiting for Media3's seek event.
+                composeRule.mainClock.advanceTimeBy(PlayerSeekCoordinator.SETTLE_DELAY_MILLIS)
+            }
             composeRule.waitForIdle()
         }
     }

@@ -457,10 +457,11 @@ class PlaybackController internal constructor(
     }
 }
 
-class PlaybackControllerFactory @Inject constructor(
+// Device tests override creation to observe a real player without changing its screen lifecycle.
+open class PlaybackControllerFactory @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ) {
-    fun create(
+    open fun create(
         session: Session,
         request: PlaybackRequest,
         subtitles: List<SubtitleTrack>,

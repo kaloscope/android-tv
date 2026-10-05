@@ -1,5 +1,6 @@
 package org.kaloscope.tv.feature.player
 
+import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
 import android.view.KeyEvent as AndroidKeyEvent
@@ -10,9 +11,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
@@ -29,6 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.C
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.nio.ByteBuffer
@@ -50,9 +54,11 @@ import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.model.SubtitleTrack
+import org.kaloscope.tv.core.player.PlaybackController
 import org.kaloscope.tv.core.player.PlaybackControllerFactory
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.core.player.PlaybackRequestNavigator
+import org.kaloscope.tv.core.player.PlaybackResumeState
 import org.kaloscope.tv.core.player.ProgressReason
 
 class PlayerLifecycleTest {
@@ -127,35 +133,78 @@ class PlayerLifecycleTest {
 
     @Test
     fun delayedPositionSamplingDoesNotLeaveSeekPreviewStuck() {
-        var delayNextSeek = true
-        withPlayer(
-            onProgressRecorded = { event ->
-                if (event.reason == ProgressReason.Seeked && delayNextSeek) {
-                    delayNextSeek = false
-                    // Media3 continues on its playback thread while UI sampling is delayed.
-                    SystemClock.sleep(3_000)
-                }
-            },
-        ) { _ ->
-            val startCount = progress.count { it.reason == ProgressReason.Started }
-            pressProgressKey(Key.DirectionRight)
-            awaitStartAfter(startCount)
-            val firstSeek = progress.last { it.reason == ProgressReason.Seeked }.positionMillis
-
-            pressProgressKey(Key.Enter)
-            val pausedPosition = progress.last { it.reason == ProgressReason.Paused }.positionMillis
-            assertTrue(pausedPosition - firstSeek > 1_500)
-            composeRule.mainClock.advanceTimeBy(500)
-
-            pressProgressKey(Key.DirectionRight)
-            composeRule.waitUntil(10_000) {
-                progress.count { it.reason == ProgressReason.Seeked } == 2
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val factory = ObservedPlaybackControllerFactory(instrumentation.targetContext)
+        withPlayer(factory = factory) { _ ->
+            // Use Media3's playback clock without the emulator AudioTrack's output latency.
+            composeRule.runOnUiThread {
+                val player = factory.controller.player
+                player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+                    .build()
             }
+            composeRule.waitForIdle()
+            composeRule.mainClock.autoAdvance = false
+            try {
+                pressProgressKey(Key.DirectionRight)
+                // Stop at submission before another position poll can acknowledge this seek.
+                composeRule.mainClock.advanceTimeBy(
+                    PlayerSeekCoordinator.SETTLE_DELAY_MILLIS,
+                    ignoreFrameDuration = true,
+                )
+                composeRule.waitUntil(10_000) {
+                    progress.any { it.reason == ProgressReason.Seeked }
+                }
+                val firstSeek = progress.last { it.reason == ProgressReason.Seeked }.positionMillis
 
-            assertPositionNear(
-                pausedPosition + 10_000,
-                progress.last { it.reason == ProgressReason.Seeked },
-            )
+                // Observe Media3 directly while Compose's periodic position polling stays frozen.
+                val samplingTime = composeRule.mainClock.currentTime
+                var nativePosition = firstSeek
+                try {
+                    composeRule.waitUntil(10_000) {
+                        SystemClock.sleep(100)
+                        instrumentation.runOnMainSync {
+                            assertTrue(factory.controller.player.playWhenReady)
+                            nativePosition = factory.controller.player.currentPosition
+                        }
+                        nativePosition - firstSeek > 1_500
+                    }
+                } catch (timeout: ComposeTimeoutException) {
+                    throw AssertionError(
+                        "Native playback stalled at $nativePosition after seek to $firstSeek: " +
+                            factory.controller.status.value,
+                        timeout,
+                    )
+                }
+                val pauseCount = progress.count { it.reason == ProgressReason.Paused }
+                instrumentation.sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
+                composeRule.waitUntil(10_000) {
+                    progress.count { it.reason == ProgressReason.Paused } > pauseCount
+                }
+                val pausedPosition = progress.last { it.reason == ProgressReason.Paused }.positionMillis
+                assertTrue(
+                    "Playback did not advance beyond the seek: $progress",
+                    pausedPosition - firstSeek > 1_500,
+                )
+                assertEquals(samplingTime, composeRule.mainClock.currentTime)
+                composeRule.mainClock.advanceTimeBy(500)
+
+                pressProgressKey(Key.DirectionRight)
+                composeRule.mainClock.advanceTimeBy(
+                    PlayerSeekCoordinator.SETTLE_DELAY_MILLIS,
+                    ignoreFrameDuration = true,
+                )
+                composeRule.waitUntil(10_000) {
+                    progress.count { it.reason == ProgressReason.Seeked } == 2
+                }
+
+                assertPositionNear(
+                    pausedPosition + 10_000,
+                    progress.last { it.reason == ProgressReason.Seeked },
+                )
+            } finally {
+                composeRule.mainClock.autoAdvance = true
+            }
         }
     }
 
@@ -181,7 +230,9 @@ class PlayerLifecycleTest {
                 .performKeyInput { pressKey(Key.DirectionCenter) }
             awaitStartAfter(startCount)
 
-            assertPositionNear(0, progress.last { it.reason == ProgressReason.Started })
+            assertEquals(0L, progress.last { it.reason == ProgressReason.Seeked }.positionMillis)
+            composeRule.onNodeWithTag("player-play-pause")
+                .assertContentDescriptionEquals(context.getString(R.string.pause))
             assertTrue(stop(owner) < 10_000)
         }
 
@@ -326,7 +377,7 @@ class PlayerLifecycleTest {
                 .performKeyInput { pressKey(Key.DirectionCenter) }
 
             awaitStartAfter(startCount)
-            assertPositionNear(0, progress.last { it.reason == ProgressReason.Started })
+            assertEquals(0L, progress.last { it.reason == ProgressReason.Seeked }.positionMillis)
             pressProgressKey(Key.DirectionDown)
             composeRule.onNodeWithTag("player-play-pause").assertContentDescriptionEquals(
                 context.getString(R.string.pause),
@@ -347,9 +398,9 @@ class PlayerLifecycleTest {
         val stoppedPosition = stop(owner)
         val startCount = progress.count { it.reason == ProgressReason.Started }
         composeRule.runOnIdle { owner.lifecycle.currentState = Lifecycle.State.RESUMED }
-        awaitStartAfter(startCount)
+        val resumed = awaitStartAfter(startCount)
 
-        assertPositionNear(stoppedPosition, progress.last { it.reason == ProgressReason.Started })
+        assertPositionNear(stoppedPosition, resumed)
         pressProgressKey(Key.DirectionDown)
         composeRule.onNodeWithTag("player-play-pause").assertContentDescriptionEquals(
             InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.play),
@@ -367,9 +418,9 @@ class PlayerLifecycleTest {
         val stoppedPosition = stop(owner)
         val startCount = progress.count { it.reason == ProgressReason.Started }
         composeRule.runOnIdle { owner.lifecycle.currentState = Lifecycle.State.RESUMED }
-        awaitStartAfter(startCount)
+        val resumed = awaitStartAfter(startCount)
 
-        assertPositionNear(stoppedPosition, progress.last { it.reason == ProgressReason.Started })
+        assertPositionNear(stoppedPosition, resumed)
         pressProgressKey(Key.DirectionDown)
         composeRule.onNodeWithTag("player-play-pause").assertContentDescriptionEquals(
             InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.pause),
@@ -385,9 +436,9 @@ class PlayerLifecycleTest {
         }
         val pausedPosition = progress.last { it.reason == ProgressReason.Seeked }.positionMillis
 
-        selectAlternateDefinition()
+        val resumed = selectAlternateDefinition()
 
-        assertPositionNear(pausedPosition, progress.last { it.reason == ProgressReason.Started })
+        assertPositionNear(pausedPosition, resumed)
         pressProgressKey(Key.DirectionDown)
         composeRule.onNodeWithTag("player-play-pause").assertContentDescriptionEquals(
             InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.play),
@@ -402,11 +453,11 @@ class PlayerLifecycleTest {
             progress.any { it.reason == ProgressReason.Seeked && it.positionMillis >= 10_000 }
         }
 
-        selectAlternateDefinition()
+        val resumed = selectAlternateDefinition()
 
         assertPositionNear(
             progress.last { it.reason == ProgressReason.Exit }.positionMillis,
-            progress.last { it.reason == ProgressReason.Started },
+            resumed,
         )
         pressProgressKey(Key.DirectionDown)
         composeRule.onNodeWithTag("player-play-pause").assertContentDescriptionEquals(
@@ -425,9 +476,9 @@ class PlayerLifecycleTest {
             )
         }
         composeRule.runOnIdle { owner.lifecycle.currentState = Lifecycle.State.RESUMED }
-        awaitStartAfter(startCount)
+        val resumed = awaitStartAfter(startCount)
 
-        assertPositionNear(stoppedPosition, progress.last { it.reason == ProgressReason.Started })
+        assertPositionNear(stoppedPosition, resumed)
         pressProgressKey(Key.DirectionDown)
         composeRule.onNodeWithTag("player-play-pause").assertContentDescriptionEquals(
             InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.play),
@@ -447,9 +498,9 @@ class PlayerLifecycleTest {
             )
         }
         composeRule.runOnIdle { owner.lifecycle.currentState = Lifecycle.State.RESUMED }
-        awaitStartAfter(startCount)
+        val resumed = awaitStartAfter(startCount)
 
-        assertPositionNear(2_000, progress.last { it.reason == ProgressReason.Started })
+        assertPositionNear(2_000, resumed)
         pressProgressKey(Key.DirectionDown)
         composeRule.onNodeWithTag("player-play-pause").assertContentDescriptionEquals(
             InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.pause),
@@ -494,8 +545,7 @@ class PlayerLifecycleTest {
         )
     }
 
-    private fun selectAlternateDefinition() {
-        val startCount = progress.count { it.reason == ProgressReason.Started }
+    private fun selectAlternateDefinition(): Progress {
         val exitCount = progress.count { it.reason == ProgressReason.Exit }
         pressProgressKey(Key.DirectionDown)
         composeRule.onNodeWithTag("player-quality")
@@ -504,11 +554,15 @@ class PlayerLifecycleTest {
         composeRule.onNodeWithText("720p")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
-        awaitStartAfter(startCount)
         composeRule.runOnIdle {
             assertEquals(1, request.value.source.selectedDefinitionIndex)
             assertEquals(exitCount + 1, progress.count { it.reason == ProgressReason.Exit })
         }
+        // The old player can become ready while the quality drawer is opening.
+        val releasedIndex = progress.indexOfLast { it.reason == ProgressReason.Exit }
+        return awaitStartAfter(
+            progress.take(releasedIndex + 1).count { it.reason == ProgressReason.Started },
+        )
     }
 
     private fun loadRetriedSubtitles() {
@@ -529,6 +583,7 @@ class PlayerLifecycleTest {
                     ),
                 )
             }
+            composeRule.waitForIdle()
             composeRule.waitUntil(10_000) { server.requestCount > 0 }
             awaitStartAfter(startCount)
             composeRule.waitUntil(10_000) {
@@ -541,8 +596,14 @@ class PlayerLifecycleTest {
 
     private fun pressProgressKey(key: Key) {
         composeRule.onNodeWithTag("player-progress")
+            .assertIsEnabled()
             .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
             .performKeyInput { pressKey(key) }
+        if (composeRule.mainClock.autoAdvance && key in listOf(Key.DirectionLeft, Key.DirectionRight)) {
+            // Seek settling uses Compose time; Media3 callbacks use the Android main looper.
+            composeRule.mainClock.advanceTimeBy(PlayerSeekCoordinator.SETTLE_DELAY_MILLIS)
+        }
     }
 
     private fun stop(owner: PlayerLifecycleOwner): Long {
@@ -554,10 +615,13 @@ class PlayerLifecycleTest {
         return progress.last { it.reason == ProgressReason.Exit }.positionMillis
     }
 
-    private fun awaitStartAfter(count: Int) {
+    private fun awaitStartAfter(count: Int): Progress {
+        composeRule.waitForIdle()
         composeRule.waitUntil(10_000) {
             progress.count { it.reason == ProgressReason.Started } > count
         }
+        // Buffering may emit more Started events while assertions wait for Compose to settle.
+        return progress.filter { it.reason == ProgressReason.Started }[count]
     }
 
     private fun assertPositionNear(expected: Long, actual: Progress) {
@@ -570,7 +634,7 @@ class PlayerLifecycleTest {
     private fun withPlayer(
         resumePositionMillis: Long = 5_000,
         awaitInitialStart: Boolean = true,
-        onProgressRecorded: (Progress) -> Unit = {},
+        factory: PlaybackControllerFactory? = null,
         block: (PlayerLifecycleOwner) -> Unit,
     ) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -627,12 +691,10 @@ class PlayerLifecycleTest {
                                     extraFailures = emptyMap(),
                                 ),
                                 controllerFactory = remember(playerContext) {
-                                    PlaybackControllerFactory(playerContext)
+                                    factory ?: PlaybackControllerFactory(playerContext)
                                 },
                                 onProgress = { _, position, _, reason ->
-                                    val event = Progress(position, reason)
-                                    progress += event
-                                    onProgressRecorded(event)
+                                    progress += Progress(position, reason)
                                 },
                                 onSelectDefinition = { index, position ->
                                     PlaybackRequestNavigator.selectDefinition(
@@ -662,6 +724,27 @@ class PlayerLifecycleTest {
     }
 
     private data class Progress(val positionMillis: Long, val reason: ProgressReason)
+}
+
+private class ObservedPlaybackControllerFactory(context: Context) : PlaybackControllerFactory(context) {
+    lateinit var controller: PlaybackController
+        private set
+
+    override fun create(
+        session: Session,
+        request: PlaybackRequest,
+        subtitles: List<SubtitleTrack>,
+        probeDurationMillis: Long,
+        resumeState: PlaybackResumeState?,
+        onProgress: (PlaybackRequest, Long, Long, ProgressReason) -> Unit,
+    ): PlaybackController = super.create(
+        session = session,
+        request = request,
+        subtitles = subtitles,
+        probeDurationMillis = probeDurationMillis,
+        resumeState = resumeState,
+        onProgress = onProgress,
+    ).also { controller = it }
 }
 
 private class PlayerLifecycleOwner : LifecycleOwner {
