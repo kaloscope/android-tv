@@ -1780,7 +1780,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionDownFromSearchNavigationSkipsSingleIndexer() {
+    fun directionDownFromSearchNavigationFocusesSearchWithSingleIndexer() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -1810,7 +1810,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionDownFromSearchNavigationFocusesOffscreenSelectedIndexer() {
+    fun directionDownFromSearchNavigationVisitsSearchBeforeSelectedIndexer() {
         val baseProfile = deepSearchState().profiles.single()
         val searchState = deepSearchState().copy(
             profiles = (1L..30L).map { id ->
@@ -1840,6 +1840,16 @@ class MainShellTest {
         composeRule.onNodeWithTag("indexer-30").assertDoesNotExist()
 
         composeRule.onNodeWithTag("main-nav-search")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("network-search-input") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("indexer-30").assertDoesNotExist()
+        composeRule.onNodeWithTag("network-search-input")
+            .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionDown) }
 
         composeRule.waitUntil(timeoutMillis = 3_000) {
@@ -2123,7 +2133,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionDownFromLibraryNavigationSkipsSingleLibrary() {
+    fun directionDownFromLibraryNavigationVisitsSearchBeforeSingleLibrary() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -2145,14 +2155,24 @@ class MainShellTest {
                 hasTestTag("library-search-input") and isFocused(),
             ).fetchSemanticsNodes().size == 1
         }
-        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("library-sidebar-item-21").assertIsNotFocused()
+        composeRule.onNodeWithTag("library-search-input")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("library-sidebar-item-21") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("library-search-input").assertIsNotFocused()
         composeRule.onNodeWithTag("library-sidebar-item-21")
-            .assertIsNotFocused()
+            .assertIsFocused()
             .assertIsSelected()
     }
 
     @Test
-    fun directionDownFromLibraryNavigationFocusesOffscreenSelectedLibrary() {
+    fun directionDownFromLibraryNavigationVisitsSearchBeforeSelectedLibrary() {
         val selectedLibraryState = libraryState().copy(
             libraries = (1L..30L).map { id ->
                 MediaLibrary(id, "媒体库$id", MediaLibraryType.TvShow)
@@ -2177,6 +2197,16 @@ class MainShellTest {
         composeRule.onNodeWithTag("library-sidebar-item-30").assertDoesNotExist()
 
         composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodes(
+                hasTestTag("library-search-input") and isFocused(),
+            ).fetchSemanticsNodes().size == 1
+        }
+        composeRule.onNodeWithTag("library-sidebar-item-30").assertDoesNotExist()
+        composeRule.onNodeWithTag("library-search-input")
+            .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionDown) }
 
         composeRule.waitUntil(timeoutMillis = 3_000) {

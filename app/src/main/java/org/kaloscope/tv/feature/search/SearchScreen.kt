@@ -177,9 +177,7 @@ private fun SearchContent(
     onApplyFilters: (Map<String, SearchFilterValue>) -> Unit,
     onClearFilters: () -> Unit,
 ) {
-    val internalIndexerEntryFocus = remember { FocusRequester() }
-    val indexerEntryFocus =
-        indexerEntryFocusRequester ?: internalIndexerEntryFocus
+    val indexerEntryFocus = remember { FocusRequester() }
     val hasMultipleIndexers = state.indexers.size > 1
     val firstIndexerFocus = remember { FocusRequester() }
     val internalSelectedIndexerFocus = remember { FocusRequester() }
@@ -194,11 +192,8 @@ private fun SearchContent(
         internalSelectedIndexerFocus
     }
     val internalSearchInputFocus = remember { FocusRequester() }
-    val searchInputFocus = if (hasMultipleIndexers) {
-        internalSearchInputFocus
-    } else {
-        indexerEntryFocus
-    }
+    // Navigation enters through search; result cards return through the sidebar.
+    val searchInputFocus = indexerEntryFocusRequester ?: internalSearchInputFocus
     val filterButtonFocus = remember { FocusRequester() }
     val filtersAvailable = state.selectedProfile.filters.isNotEmpty()
     val resultEntryFocus = remember { FocusRequester() }

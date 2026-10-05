@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -170,10 +171,7 @@ private fun LibraryContent(
     onGridViewportChanged: (GridViewportSnapshot) -> Unit,
     onOpenMedia: (Long) -> Unit,
 ) {
-    val internalLibraryEntryFocus = remember { FocusRequester() }
-    val libraryEntryFocus =
-        libraryEntryFocusRequester ?: internalLibraryEntryFocus
-    val hasMultipleLibraries = state.libraries.size > 1
+    val libraryEntryFocus = remember { FocusRequester() }
     val firstLibraryFocus = remember { FocusRequester() }
     val internalSelectedLibraryFocus = remember { FocusRequester() }
     val selectedLibraryIndex = state.libraries
@@ -187,22 +185,19 @@ private fun LibraryContent(
         internalSelectedLibraryFocus
     }
     val internalSearchInputFocus = remember { FocusRequester() }
-    val searchInputFocus = if (hasMultipleLibraries) {
-        internalSearchInputFocus
-    } else {
-        libraryEntryFocus
-    }
+    // Navigation enters through search; media cards return through the sidebar.
+    val searchInputFocus = libraryEntryFocusRequester ?: internalSearchInputFocus
+    val resultEntryFocus = remember { FocusRequester() }
+    val hasFocusableResults = (state.items as? LibraryItemsState.Content)
+        ?.items
+        ?.isNotEmpty() == true
     val restoreTargetId = restoreMediaId ?: state.focusedMediaId
 
     // Source changes refresh content in-place and must not replay root-entry focus.
     // Returning from detail restores its card before applying root entry focus.
     LaunchedEffect(Unit) {
         if (requestInitialFocus && restoreTargetId == null) {
-            if (hasMultipleLibraries) {
-                firstLibraryFocus.requestFocus()
-            } else {
-                searchInputFocus.requestFocus()
-            }
+            firstLibraryFocus.requestFocus()
         }
     }
 
@@ -232,10 +227,10 @@ private fun LibraryContent(
                 libraries = state.libraries,
                 selectedLibraryId = state.selectedLibraryId,
                 selectedLibraryIndex = selectedLibraryIndex,
-                sidebarFocus = libraryEntryFocus.takeIf { hasMultipleLibraries },
+                sidebarFocus = libraryEntryFocus,
                 firstLibraryFocus = firstLibraryFocus,
                 selectedLibraryFocus = selectedLibraryFocus,
-                menuItemsAreFocusable = hasMultipleLibraries,
+                resultEntryFocusRequester = resultEntryFocus.takeIf { hasFocusableResults },
                 searchInputFocusRequester = searchInputFocus,
                 onSelectLibrary = onSelectLibrary,
                 modifier = Modifier.weight(1f),
@@ -252,6 +247,8 @@ private fun LibraryContent(
                 restoreMediaId = restoreTargetId,
                 requestInitialFocus = requestInitialFocus,
                 gridViewport = state.gridViewport,
+                resultEntryFocusRequester = resultEntryFocus,
+                resultExitFocusRequester = libraryEntryFocus,
                 onRetry = onRetry,
                 onLoadMore = onLoadMore,
                 onMediaFocused = onMediaFocused,
@@ -267,10 +264,10 @@ private fun LibrarySidebar(
     libraries: List<MediaLibrary>,
     selectedLibraryId: Long,
     selectedLibraryIndex: Int,
-    sidebarFocus: FocusRequester?,
+    sidebarFocus: FocusRequester,
     firstLibraryFocus: FocusRequester,
     selectedLibraryFocus: FocusRequester,
-    menuItemsAreFocusable: Boolean,
+    resultEntryFocusRequester: FocusRequester?,
     searchInputFocusRequester: FocusRequester,
     onSelectLibrary: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -282,15 +279,15 @@ private fun LibrarySidebar(
     LazyColumn(
         state = listState,
         modifier = modifier
-            .then(
-                sidebarFocus?.let { Modifier.focusRequester(it) } ?: Modifier,
-            )
+            .focusRequester(sidebarFocus)
             .focusProperties {
                 onEnter = {
                     if (
-                        requestedFocusDirection == FocusDirection.Down &&
-                        selectedLibraryIndex >= 0 &&
-                        menuItemsAreFocusable
+                        (
+                            requestedFocusDirection == FocusDirection.Down ||
+                                requestedFocusDirection == FocusDirection.Left
+                        ) &&
+                        selectedLibraryIndex >= 0
                     ) {
                         cancelFocusChange()
                         focusEntryJob?.cancel()
@@ -331,7 +328,9 @@ private fun LibrarySidebar(
                     .fillMaxWidth()
                     .height(BrowseLayoutTokens.SidebarItemHeight)
                     .testTag("library-sidebar-item-${library.id}")
-                    .focusProperties { canFocus = menuItemsAreFocusable }
+                    .focusProperties {
+                        resultEntryFocusRequester?.let { right = it }
+                    }
                     .then(
                         when {
                             isFirstLibrary -> Modifier.focusRequester(firstLibraryFocus)
@@ -443,6 +442,8 @@ private fun LibraryItems(
     restoreMediaId: Long?,
     requestInitialFocus: Boolean,
     gridViewport: GridViewportSnapshot,
+    resultEntryFocusRequester: FocusRequester,
+    resultExitFocusRequester: FocusRequester,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onMediaFocused: (Long) -> Unit,
@@ -474,6 +475,41 @@ private fun LibraryItems(
                 initialFirstVisibleItemScrollOffset =
                     gridViewport.firstVisibleItemScrollOffset,
             )
+            val firstVisibleMediaIndex by remember(gridState, state.items.size) {
+                derivedStateOf {
+                    if (state.items.isEmpty()) {
+                        -1
+                    } else {
+                        val layoutInfo = gridState.layoutInfo
+                        layoutInfo.visibleItemsInfo
+                            .asSequence()
+                            .filter { item ->
+                                val itemTop = item.offset.y
+                                val itemBottom = itemTop + item.size.height
+                                itemBottom > layoutInfo.viewportStartOffset &&
+                                    itemTop < layoutInfo.viewportEndOffset
+                            }
+                            .map { item -> item.index }
+                            .filter { it in state.items.indices }
+                            .minOrNull()
+                            ?: gridState.firstVisibleItemIndex.coerceIn(
+                                0,
+                                state.items.lastIndex,
+                            )
+                    }
+                }
+            }
+            val leftmostMediaIndices by remember(gridState, state.items.size) {
+                derivedStateOf {
+                    gridState.layoutInfo.visibleItemsInfo
+                        .asSequence()
+                        .filter { item ->
+                            item.index in state.items.indices && item.column == 0
+                        }
+                        .map { item -> item.index }
+                        .toSet()
+                }
+            }
             var lastPrefetchedPage by remember { mutableIntStateOf(-1) }
             LaunchedEffect(gridState, state.items.size) {
                 snapshotFlow {
@@ -516,6 +552,12 @@ private fun LibraryItems(
                             media = media,
                             restoreFocus =
                                 requestInitialFocus && media.id == resolvedRestoreMediaId,
+                            entryFocusRequester = resultEntryFocusRequester.takeIf {
+                                mediaIndex == firstVisibleMediaIndex
+                            },
+                            leftFocusRequester = resultExitFocusRequester.takeIf {
+                                mediaIndex in leftmostMediaIndices
+                            },
                             onFocused = {
                                 onMediaFocused(media.id)
                                 if (
@@ -600,11 +642,14 @@ private fun MediaCard(
     session: Session,
     media: MediaSummary,
     restoreFocus: Boolean,
+    entryFocusRequester: FocusRequester?,
+    leftFocusRequester: FocusRequester?,
     onFocused: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val focusRequester = remember(media.id) { FocusRequester() }
-    LaunchedEffect(restoreFocus) {
+    val restoreFocusRequester = remember(media.id) { FocusRequester() }
+    val focusRequester = entryFocusRequester ?: restoreFocusRequester
+    LaunchedEffect(restoreFocus, focusRequester) {
         if (restoreFocus) {
             // Navigation has attached the returning card by the next frame.
             withFrameNanos { }
@@ -622,6 +667,9 @@ private fun MediaCard(
             .fillMaxWidth()
             .testTag("media-card-${media.id}")
             .focusRequester(focusRequester)
+            .focusProperties {
+                leftFocusRequester?.let { left = it }
+            }
             .onFocusChanged {
                 if (it.isFocused) {
                     onFocused()

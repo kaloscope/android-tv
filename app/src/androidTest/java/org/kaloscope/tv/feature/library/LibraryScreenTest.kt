@@ -14,6 +14,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -344,7 +345,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun singleLibraryInitialFocusesSearchInput() {
+    fun singleLibraryInitialFocusesLibrary() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -362,14 +363,60 @@ class LibraryScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
+        composeRule.onNodeWithTag("library-search-input").assertIsNotFocused()
         composeRule.onNodeWithTag("library-sidebar-item-21")
-            .assertIsNotFocused()
+            .assertIsFocused()
             .assertIsSelected()
     }
 
     @Test
-    fun movingLeftFromLibrarySearchInputSkipsSingleLibrary() {
+    fun singleLibraryCanBeSelectedAndMovesBetweenSearchAndMedia() {
+        var selectedLibraryId: Long? = null
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = { selectedLibraryId = it },
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag("library-sidebar-item-21")
+            .assertIsFocused()
+            .assertIsSelected()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            assertEquals(21L, selectedLibraryId)
+        }
+        composeRule.onNodeWithTag("library-sidebar-item-21")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("media-card-1")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithTag("library-sidebar-item-21")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithTag("library-sidebar-item-21")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
+    }
+
+    @Test
+    fun leftFromLibrarySearchInputStaysOnSearchInput() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -423,6 +470,119 @@ class LibraryScreenTest {
 
         composeRule.onNodeWithTag("library-sidebar-item-21").assertIsFocused()
         composeRule.onNodeWithTag("library-search-input").assertIsNotFocused()
+    }
+
+    @Test
+    fun rightFromLowerLibraryAtDeepViewportFocusesFirstVisibleMedia() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(media = mediaItems(30)).copy(
+                        libraries = (21L..27L).map { id ->
+                            MediaLibrary(id, "媒体库$id", MediaLibraryType.TvShow)
+                        },
+                    ),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-results-grid").performScrollToIndex(12)
+        val gridBounds = composeRule.onNodeWithTag("library-results-grid")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val visibleMediaIds = (1..30).filter { mediaId ->
+            composeRule.onAllNodes(hasTestTag("media-card-$mediaId"))
+                .fetchSemanticsNodes()
+                .any { node ->
+                    node.boundsInRoot.bottom > gridBounds.top &&
+                        node.boundsInRoot.top < gridBounds.bottom
+                }
+        }
+        assertTrue("Scrolled grid must contain visible media", visibleMediaIds.isNotEmpty())
+        val firstVisibleMediaId = visibleMediaIds.first()
+        assertTrue("Scrolled grid must leave the first media behind", firstVisibleMediaId > 1)
+        composeRule.onNodeWithTag("library-sidebar-item-27")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithTag("media-card-$firstVisibleMediaId").assertIsFocused()
+        composeRule.onNodeWithTag("media-card-1").assertDoesNotExist()
+    }
+
+    @Test
+    fun leftFromLeftmostMediaFocusesOffscreenSelectedLibrary() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(media = mediaItems(6)).copy(
+                        libraries = (21L..50L).map { id ->
+                            MediaLibrary(id, "媒体库$id", MediaLibraryType.TvShow)
+                        },
+                        selectedLibraryId = 50,
+                    ),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("library-sidebar-item-50").assertDoesNotExist()
+        composeRule.onNodeWithTag("media-card-1")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithTag("library-sidebar-item-50")
+            .assertIsFocused()
+            .assertIsSelected()
+    }
+
+    @Test
+    fun leftFromSecondMediaMovesToAdjacentMedia() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                LibraryScreen(
+                    session = session(),
+                    state = state(media = mediaItems(6)),
+                    restoreMediaId = null,
+                    requestInitialFocus = false,
+                    onSelectLibrary = {},
+                    onQueryChange = {},
+                    onSearch = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onMediaFocused = {},
+                    onOpenMedia = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("media-card-2")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithTag("media-card-1").assertIsFocused()
+        composeRule.onNodeWithTag("library-sidebar-item-21").assertIsNotFocused()
     }
 
     @Test
