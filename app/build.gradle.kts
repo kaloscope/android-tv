@@ -60,8 +60,8 @@ android {
         applicationId = "org.kaloscope.tv"
         minSdk = 23
         targetSdk = 37
-        versionCode = 27
-        versionName = "0.4.0"
+        versionCode = 28
+        versionName = "0.4.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
