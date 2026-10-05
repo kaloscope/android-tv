@@ -426,13 +426,14 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun librarySearchActionUsesCompactSharedControlHeight() {
+    fun librarySearchControlsShareTheSidebarRow() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
                     session = session(),
                     state = state(),
                     restoreMediaId = null,
+                    requestInitialFocus = false,
                     onSelectLibrary = {},
                     onQueryChange = {},
                     onSearch = {},
@@ -449,21 +450,43 @@ class LibraryScreenTest {
         val buttonBounds = composeRule.onNodeWithTag("library-search-action-button")
             .fetchSemanticsNode()
             .boundsInRoot
+        val inputBounds = composeRule.onNodeWithTag("library-search-input")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val sidebarBounds = composeRule.onNodeWithTag("library-sidebar")
+            .fetchSemanticsNode()
+            .boundsInRoot
         val iconBounds = composeRule.onNodeWithTag(
             testTag = "library-search-action-icon",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
 
-        assertEquals(48f * density, buttonBounds.width, 1f)
-        assertEquals(48f * density, buttonBounds.height, 1f)
-        assertEquals(24f * density, iconBounds.width, 1f)
-        assertEquals(24f * density, iconBounds.height, 1f)
-        composeRule.onNodeWithText("搜索", useUnmergedTree = true)
-            .assertDoesNotExist()
+        assertEquals(40f * density, buttonBounds.width, 1f)
+        assertEquals(40f * density, buttonBounds.height, 1f)
+        assertEquals(40f * density, inputBounds.height, 1f)
+        assertEquals(118f * density, inputBounds.width, 1f)
+        assertEquals(20f * density, iconBounds.width, 1f)
+        assertEquals(20f * density, iconBounds.height, 1f)
+        val fieldIconBounds = composeRule.onNodeWithTag(
+            testTag = "browse-search-field-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val labelBounds = composeRule.onNodeWithTag(
+            testTag = "browse-search-field-label",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        assertEquals(16f * density, fieldIconBounds.width, 1f)
+        assertEquals(inputBounds.center.y, fieldIconBounds.center.y, 1f)
+        assertEquals(inputBounds.center.y, labelBounds.center.y, 1f)
+        assertEquals(buttonBounds.center.y, iconBounds.center.y, 1f)
+        assertEquals(inputBounds.top, buttonBounds.top, 1f)
+        assertTrue(inputBounds.right < buttonBounds.left)
+        assertTrue(inputBounds.left >= sidebarBounds.left)
+        assertTrue(buttonBounds.right <= sidebarBounds.right)
     }
 
     @Test
-    fun resultsStartTwentyFourDpBelowSearchField() {
+    fun resultsUseFullHeightBesideTheSidebarSearch() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -482,20 +505,20 @@ class LibraryScreenTest {
             }
         }
 
-        val density = InstrumentationRegistry.getInstrumentation()
-            .targetContext.resources.displayMetrics.density
         val inputBounds = composeRule.onNodeWithTag("library-search-input")
             .fetchSemanticsNode()
             .boundsInRoot
-        val firstResultBounds = composeRule.onNodeWithTag("media-card-1")
+        val gridBounds = composeRule.onNodeWithTag("library-results-grid")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val sidebarBounds = composeRule.onNodeWithTag("library-sidebar")
             .fetchSemanticsNode()
             .boundsInRoot
 
-        assertEquals(
-            24f * density,
-            firstResultBounds.top - inputBounds.bottom,
-            1f,
-        )
+        assertEquals(sidebarBounds.top, gridBounds.top, 1f)
+        assertEquals(sidebarBounds.bottom, gridBounds.bottom, 1f)
+        assertTrue(gridBounds.top < inputBounds.bottom)
+        assertTrue(inputBounds.right < gridBounds.left)
     }
 
     @Test

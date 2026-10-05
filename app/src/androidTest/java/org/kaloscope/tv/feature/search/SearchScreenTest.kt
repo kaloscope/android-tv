@@ -231,7 +231,7 @@ class SearchScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("search-action-button")
+        composeRule.onNodeWithTag("network-search-input")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.mainClock.advanceTimeBy(240)
         val content = composeRule.onNodeWithTag("search-result-footer-v1", useUnmergedTree = true)
@@ -1874,6 +1874,8 @@ class SearchScreenTest {
         composeRule.onNodeWithTag("network-search-input")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("browse-search-dialog-input")
+            .assertIsFocused()
             .performImeAction()
 
         composeRule.runOnIdle {
@@ -1916,12 +1918,13 @@ class SearchScreenTest {
     }
 
     @Test
-    fun searchActionsUseCompactSharedControlHeightInWebUiOrder() {
+    fun compactSearchAndFilterShareTheSidebarRow() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
                     session = session(),
                     state = state(filters = listOf(regionFilter())),
+                    requestInitialFocus = false,
                     onRefreshIndexers = {},
                     onSelectIndexer = {},
                     onQueryChange = {},
@@ -1943,7 +1946,10 @@ class SearchScreenTest {
         val filterBounds = composeRule.onNodeWithTag("search-filter-button")
             .fetchSemanticsNode()
             .boundsInRoot
-        val searchBounds = composeRule.onNodeWithTag("search-action-button")
+        val searchBounds = composeRule.onNodeWithTag("network-search-input")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val sidebarBounds = composeRule.onNodeWithTag("search-sidebar")
             .fetchSemanticsNode()
             .boundsInRoot
         val filterIconBounds = composeRule.onNodeWithTag(
@@ -1951,27 +1957,35 @@ class SearchScreenTest {
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
         val searchIconBounds = composeRule.onNodeWithTag(
-            testTag = "search-action-icon",
+            testTag = "browse-search-field-icon",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val labelBounds = composeRule.onNodeWithTag(
+            testTag = "browse-search-field-label",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
 
-        listOf(filterBounds, searchBounds).forEach { bounds ->
-            assertEquals(48f * density, bounds.width, 1f)
-            assertEquals(48f * density, bounds.height, 1f)
-        }
-        listOf(filterIconBounds, searchIconBounds).forEach { bounds ->
-            assertEquals(24f * density, bounds.width, 1f)
-            assertEquals(24f * density, bounds.height, 1f)
-        }
-        assertTrue(filterBounds.right < searchBounds.left)
+        assertEquals(40f * density, filterBounds.width, 1f)
+        assertEquals(40f * density, filterBounds.height, 1f)
+        assertEquals(40f * density, searchBounds.height, 1f)
+        assertEquals(118f * density, searchBounds.width, 1f)
+        assertEquals(20f * density, filterIconBounds.width, 1f)
+        assertEquals(16f * density, searchIconBounds.width, 1f)
+        assertEquals(searchBounds.center.y, searchIconBounds.center.y, 1f)
+        assertEquals(searchBounds.center.y, labelBounds.center.y, 1f)
+        assertEquals(filterBounds.center.y, filterIconBounds.center.y, 1f)
+        assertEquals(searchBounds.top, filterBounds.top, 1f)
+        assertTrue(searchBounds.right < filterBounds.left)
+        assertTrue(filterBounds.right <= sidebarBounds.right)
+        assertTrue(searchBounds.left >= sidebarBounds.left)
+        composeRule.onNodeWithTag("search-action-button").assertDoesNotExist()
         composeRule.onNodeWithText("筛选", useUnmergedTree = true)
             .assertDoesNotExist()
-        composeRule.onNodeWithText("搜索", useUnmergedTree = true)
-            .assertDoesNotExist()
+        composeRule.onNodeWithText("索引器", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
-    fun resultsStartTwentyFourDpBelowSearchField() {
+    fun resultsUseFullHeightBesideTheSidebarSearch() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -1997,24 +2011,24 @@ class SearchScreenTest {
             }
         }
 
-        val density = InstrumentationRegistry.getInstrumentation()
-            .targetContext.resources.displayMetrics.density
         val inputBounds = composeRule.onNodeWithTag("network-search-input")
             .fetchSemanticsNode()
             .boundsInRoot
-        val firstResultBounds = composeRule.onNodeWithTag("network-result-v1")
+        val gridBounds = composeRule.onNodeWithTag("search-results-grid")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val sidebarBounds = composeRule.onNodeWithTag("search-sidebar")
             .fetchSemanticsNode()
             .boundsInRoot
 
-        assertEquals(
-            24f * density,
-            firstResultBounds.top - inputBounds.bottom,
-            1f,
-        )
+        assertEquals(sidebarBounds.top, gridBounds.top, 1f)
+        assertEquals(sidebarBounds.bottom, gridBounds.bottom, 1f)
+        assertTrue(gridBounds.top < inputBounds.bottom)
+        assertTrue(inputBounds.right < gridBounds.left)
     }
 
     @Test
-    fun rightFromSearchFieldMovesThroughFilterAndSearchActions() {
+    fun rightFromSearchFieldMovesThroughFilterToResults() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -2041,11 +2055,11 @@ class SearchScreenTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithTag("search-action-button").assertIsFocused()
+        composeRule.onNodeWithTag("network-result-v1").assertIsFocused()
     }
 
     @Test
-    fun iconSearchAndFilterActionsInvokeExistingCallbacks() {
+    fun searchDialogAndFilterInvokeExistingCallbacks() {
         var searches = 0
         var filterOpens = 0
         composeRule.setContent {
@@ -2072,7 +2086,10 @@ class SearchScreenTest {
         composeRule.onNodeWithTag("search-filter-button")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithTag("search-action-button")
+        composeRule.onNodeWithTag("network-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("browse-search-dialog-submit")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 
@@ -2083,7 +2100,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun selectedIndexerRemainsSelectedWhileSearchActionOwnsFocus() {
+    fun selectedIndexerRemainsSelectedWhileSearchFieldOwnsFocus() {
         composeRule.setContent {
             KaloscopeTheme {
                 SearchScreen(
@@ -2105,7 +2122,7 @@ class SearchScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("search-action-button")
+        composeRule.onNodeWithTag("network-search-input")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
         composeRule.onNodeWithTag("indexer-11").assertIsSelected()
@@ -2581,16 +2598,16 @@ class SearchScreenTest {
     }
 
     @Test
-    fun menuWhileEditingReturnsToSearchFieldInNavigationMode() {
-        assertMenuShortcutLeavesEditing(filtersAvailable = false)
+    fun menuWhileSearchingKeepsDialogOpenWithoutFilters() {
+        assertMenuShortcutKeepsDialogOpen(filtersAvailable = false)
     }
 
     @Test
-    fun closingFiltersOpenedWhileEditingReturnsToSearchFieldInNavigationMode() {
-        assertMenuShortcutLeavesEditing(filtersAvailable = true)
+    fun menuWhileSearchingKeepsDialogOpenWithFilters() {
+        assertMenuShortcutKeepsDialogOpen(filtersAvailable = true)
     }
 
-    private fun assertMenuShortcutLeavesEditing(filtersAvailable: Boolean) {
+    private fun assertMenuShortcutKeepsDialogOpen(filtersAvailable: Boolean) {
         var currentState by mutableStateOf(
             state(
                 filters = if (filtersAvailable) listOf(regionFilter()) else emptyList(),
@@ -2620,41 +2637,35 @@ class SearchScreenTest {
         }
 
         val input = composeRule.onNodeWithTag("network-search-input")
-        input.assertIsFocused()
-            .performKeyInput { pressKey(Key.Enter) }
+        input.assertIsFocused().performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("browse-search-dialog-input")
+            .assertIsFocused()
             .performTextInput("query")
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        instrumentation.sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_MENU)
-        if (filtersAvailable) {
-            composeRule.onNodeWithTag("filter-option-region-all").assertIsFocused()
-            instrumentation.sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
-            composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
-        }
-        val action = composeRule.onNodeWithTag(
-            if (filtersAvailable) "search-filter-button" else "search-action-button",
-        )
-        action.assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionLeft) }
-        input.assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionRight) }
-        action.assertIsFocused()
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_MENU)
+        composeRule.onNodeWithTag("browse-search-dialog-input").assertIsFocused()
+        composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
         composeRule.runOnIdle {
-            assertEquals("query", currentState.query)
+            assertEquals("", currentState.query)
             assertEquals(0, searches)
         }
 
-        action.performKeyInput { pressKey(Key.DirectionLeft) }
-        input.assertIsFocused()
+        composeRule.onNodeWithTag("browse-search-dialog-cancel")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
-            .performTextInput("!")
-        input.performImeAction()
+        input.assertIsFocused().performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("browse-search-dialog-input")
+            .performTextInput("query!")
+        composeRule.onNodeWithTag("browse-search-dialog-input").performImeAction()
         composeRule.runOnIdle {
             assertEquals("query!", currentState.query)
             assertEquals(1, searches)
         }
         input.assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionRight) }
-        action.assertIsFocused()
+        if (filtersAvailable) {
+            input.performKeyInput { pressKey(Key.DirectionRight) }
+            composeRule.onNodeWithTag("search-filter-button").assertIsFocused()
+        }
     }
 
     @Test
@@ -2666,7 +2677,7 @@ class SearchScreenTest {
     }
 
     @Test
-    fun menuDuringGridScrollKeepsFocusOnSearchAction() {
+    fun menuDuringGridScrollKeepsFocusOnSearchField() {
         assertMenuShortcutFromDeepResults(filtersAvailable = false, duringScroll = true)
     }
 
@@ -2766,7 +2777,7 @@ class SearchScreenTest {
         } else {
             repeat(3) { sendMenu(AndroidKeyEvent.ACTION_DOWN, repeatCount = it + 1) }
             sendMenu(AndroidKeyEvent.ACTION_UP)
-            composeRule.onNodeWithTag("search-action-button").assertIsFocused()
+            composeRule.onNodeWithTag("network-search-input").assertIsFocused()
             composeRule.onNodeWithTag("search-filter-drawer").assertDoesNotExist()
         }
         composeRule.runOnIdle {

@@ -1853,7 +1853,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionUpFromFirstIndexerFocusesActiveSearchNavigation() {
+    fun upFromFirstIndexerPassesThroughSearchToActiveNavigation() {
         val firstProfile = deepSearchState().profiles.single()
         composeRule.setContent {
             KaloscopeTheme {
@@ -1879,6 +1879,10 @@ class MainShellTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithTag("indexer-11")
             .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithTag("network-search-input")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }
 
@@ -2085,8 +2089,18 @@ class MainShellTest {
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.onNode(
-            hasTestTag("network-search-input") and hasSetTextAction(),
+            hasTestTag("browse-search-dialog-input") and hasSetTextAction(),
         ).assertIsFocused()
+        composeRule.onNodeWithTag("main-nav-search").assertIsSelected()
+        composeRule.onNodeWithText("首页").assertIsNotSelected()
+
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        composeRule.onNodeWithTag("browse-search-dialog").assertDoesNotExist()
+        composeRule.onNodeWithTag("network-search-input").assertIsFocused()
         composeRule.onNodeWithTag("main-nav-search").assertIsSelected()
         composeRule.onNodeWithText("首页").assertIsNotSelected()
     }
@@ -2176,7 +2190,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionUpFromFirstLibraryFocusesActiveLibraryNavigation() {
+    fun upFromFirstLibraryPassesThroughSearchToActiveNavigation() {
         val multipleLibraryState = libraryState().copy(
             libraries = listOf(
                 MediaLibrary(21, "剧集库", MediaLibraryType.TvShow),
@@ -2198,6 +2212,10 @@ class MainShellTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.onNodeWithText("剧集库")
             .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithTag("library-search-input")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }
 

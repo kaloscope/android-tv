@@ -213,6 +213,7 @@
     <string name="no_libraries_description">当前账户没有可显示的媒体库。</string>
     <string name="search_library_hint">搜索当前媒体库</string>
     <string name="search_action">搜索</string>
+    <string name="search_keyword_hint">输入关键词</string>
     <string name="no_media">没有找到媒体</string>
     <string name="no_media_description">可更换关键词或选择其他媒体库。</string>
     <string name="library_load_failed">无法加载媒体库</string>

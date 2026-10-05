@@ -75,6 +75,7 @@ fun TvTextField(
     selectorTestTag: String? = null,
     editorTestTag: String? = null,
     shape: Shape = RoundedCornerShape(12.dp),
+    initiallyEditing: Boolean = false,
 ) {
     val internalFocus = remember { FocusRequester() }
     val fieldFocus = focusRequester ?: internalFocus
@@ -96,6 +97,7 @@ fun TvTextField(
             selectorTestTag = selectorTestTag,
             editorTestTag = editorTestTag,
             shape = shape,
+            initiallyEditing = initiallyEditing,
         )
     }
 
@@ -133,6 +135,7 @@ private fun TvTextFieldSurface(
     selectorTestTag: String?,
     editorTestTag: String?,
     shape: Shape,
+    initiallyEditing: Boolean,
 ) {
     val accentPalette = LocalAccentPalette.current
     var editing by remember { mutableStateOf(false) }
@@ -200,6 +203,14 @@ private fun TvTextFieldSurface(
                 exitEditing()
                 onImeAction()
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (initiallyEditing) {
+            withFrameNanos { }
+            fieldFocus.requestFocus()
+            enterEditing()
         }
     }
 

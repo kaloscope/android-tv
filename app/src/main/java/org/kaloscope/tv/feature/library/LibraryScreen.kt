@@ -62,6 +62,7 @@ import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
+import org.kaloscope.tv.core.designsystem.BrowseSearchField
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeBusyIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
@@ -74,11 +75,11 @@ import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.ContentCardFocused
 import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
-import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.model.GridViewportSnapshot
@@ -209,21 +210,13 @@ private fun LibraryContent(
         modifier = Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.PaneSpacing),
     ) {
-        LibrarySidebar(
-            libraries = state.libraries,
-            selectedLibraryId = state.selectedLibraryId,
-            selectedLibraryIndex = selectedLibraryIndex,
-            sidebarFocus = libraryEntryFocus.takeIf { hasMultipleLibraries },
-            firstLibraryFocus = firstLibraryFocus,
-            selectedLibraryFocus = selectedLibraryFocus,
-            menuItemsAreFocusable = hasMultipleLibraries,
-            topNavigationFocusRequester = topNavigationFocusRequester,
-            onSelectLibrary = onSelectLibrary,
-        )
         Column(
             modifier = Modifier
-                .weight(1f)
-                .testTag("library-content"),
+                .width(BrowseLayoutTokens.SidebarWidth)
+                .fillMaxHeight()
+                .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
+                .testTag("library-sidebar")
+                .padding(BrowseLayoutTokens.SidebarContentPadding),
         ) {
             LibrarySearch(
                 value = state.query,
@@ -232,7 +225,27 @@ private fun LibraryContent(
                 onValueChange = onQueryChange,
                 onSearch = onSearch,
             )
-            Spacer(Modifier.height(BrowseLayoutTokens.HeaderContentSpacing))
+            Spacer(Modifier.height(BrowseLayoutTokens.SidebarItemSpacing))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Outline))
+            Spacer(Modifier.height(BrowseLayoutTokens.SidebarItemSpacing))
+            LibrarySidebar(
+                libraries = state.libraries,
+                selectedLibraryId = state.selectedLibraryId,
+                selectedLibraryIndex = selectedLibraryIndex,
+                sidebarFocus = libraryEntryFocus.takeIf { hasMultipleLibraries },
+                firstLibraryFocus = firstLibraryFocus,
+                selectedLibraryFocus = selectedLibraryFocus,
+                menuItemsAreFocusable = hasMultipleLibraries,
+                searchInputFocusRequester = searchInputFocus,
+                onSelectLibrary = onSelectLibrary,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .testTag("library-content"),
+        ) {
             LibraryItems(
                 session = session,
                 state = state.items,
@@ -258,8 +271,9 @@ private fun LibrarySidebar(
     firstLibraryFocus: FocusRequester,
     selectedLibraryFocus: FocusRequester,
     menuItemsAreFocusable: Boolean,
-    topNavigationFocusRequester: FocusRequester?,
+    searchInputFocusRequester: FocusRequester,
     onSelectLibrary: (Long) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val firstLibraryId = libraries.firstOrNull()?.id
     val listState = rememberLazyListState()
@@ -267,7 +281,7 @@ private fun LibrarySidebar(
     var focusEntryJob by remember { mutableStateOf<Job?>(null) }
     LazyColumn(
         state = listState,
-        modifier = Modifier
+        modifier = modifier
             .then(
                 sidebarFocus?.let { Modifier.focusRequester(it) } ?: Modifier,
             )
@@ -294,10 +308,7 @@ private fun LibrarySidebar(
                 }
             }
             .focusGroup()
-            .width(BrowseLayoutTokens.SidebarWidth)
-            .fillMaxHeight()
-            .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
-            .padding(BrowseLayoutTokens.SidebarContentPadding),
+            .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SidebarItemSpacing),
     ) {
         items(
@@ -330,9 +341,7 @@ private fun LibrarySidebar(
                     )
                     .then(
                         if (isFirstLibrary) {
-                            topNavigationFocusRequester?.let { requester ->
-                                Modifier.focusProperties { up = requester }
-                            } ?: Modifier
+                            Modifier.focusProperties { up = searchInputFocusRequester }
                         } else {
                             Modifier
                         },
@@ -386,23 +395,22 @@ private fun LibrarySearch(
     val searchActionFocus = remember { FocusRequester() }
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SearchControlSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TvSearchField(
+        BrowseSearchField(
             value = value,
             hint = stringResource(R.string.search_library_hint),
             onValueChange = onValueChange,
             onSearch = onSearch,
             focusRequester = inputFocusRequester,
-            onMoveUp = topNavigationFocusRequester?.let { requester ->
-                { requester.requestFocus() }
-            },
-            onMoveRight = searchActionFocus::requestFocus,
             modifier = Modifier
                 .weight(1f)
                 .height(BrowseLayoutTokens.SearchControlHeight)
-                .focusProperties { right = searchActionFocus }
+                .focusProperties {
+                    topNavigationFocusRequester?.let { up = it }
+                    right = searchActionFocus
+                }
                 .testTag("library-search-input"),
         )
         KaloscopeIconButton(
@@ -421,7 +429,7 @@ private fun LibrarySearch(
                 painter = painterResource(R.drawable.ic_action_search),
                 contentDescription = stringResource(R.string.search_action),
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(20.dp)
                     .testTag("library-search-action-icon"),
             )
         }

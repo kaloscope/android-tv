@@ -74,6 +74,7 @@ import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
+import org.kaloscope.tv.core.designsystem.BrowseSearchField
 import org.kaloscope.tv.core.designsystem.Danger
 import org.kaloscope.tv.core.designsystem.KaloscopeBusyIndicator
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
@@ -85,11 +86,11 @@ import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.ContentCardFocused
 import org.kaloscope.tv.core.designsystem.RatingBadge
 import org.kaloscope.tv.core.designsystem.ServerImage
-import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.designsystem.appErrorText
 import org.kaloscope.tv.core.designsystem.shouldPrefetchGridItem
 import org.kaloscope.tv.core.model.GridViewportSnapshot
@@ -199,7 +200,6 @@ private fun SearchContent(
         indexerEntryFocus
     }
     val filterButtonFocus = remember { FocusRequester() }
-    val searchActionFocus = remember { FocusRequester() }
     val filtersAvailable = state.selectedProfile.filters.isNotEmpty()
     val resultEntryFocus = remember { FocusRequester() }
     val hasFocusableResults = (state.results as? SearchResultsState.Content)
@@ -251,30 +251,20 @@ private fun SearchContent(
                     if (filtersAvailable) {
                         openFilters()
                     } else {
-                        searchActionFocus.requestFocus()
+                        searchInputFocus.requestFocus()
                     }
                 }
                 true
             },
         horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.PaneSpacing),
     ) {
-        IndexerSidebar(
-            session = session,
-            indexers = state.indexers,
-            selectedIndexerId = state.selectedIndexerId,
-            selectedIndexerIndex = selectedIndexerIndex,
-            sidebarFocus = indexerEntryFocus.takeIf { hasMultipleIndexers },
-            firstIndexerFocus = firstIndexerFocus,
-            selectedIndexerFocus = selectedIndexerFocus,
-            menuItemsAreFocusable = hasMultipleIndexers,
-            resultEntryFocusRequester = resultEntryFocus.takeIf { hasFocusableResults },
-            topNavigationFocusRequester = topNavigationFocusRequester,
-            onSelectIndexer = onSelectIndexer,
-        )
         Column(
             modifier = Modifier
-                .weight(1f)
-                .testTag("search-content"),
+                .width(BrowseLayoutTokens.SidebarWidth)
+                .fillMaxHeight()
+                .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
+                .testTag("search-sidebar")
+                .padding(BrowseLayoutTokens.SidebarContentPadding),
         ) {
             SearchInput(
                 value = state.query,
@@ -282,13 +272,34 @@ private fun SearchContent(
                 filtersActive = state.appliedFilters.isNotEmpty(),
                 inputFocusRequester = searchInputFocus,
                 filterFocusRequester = filterButtonFocus,
-                searchActionFocusRequester = searchActionFocus,
                 topNavigationFocusRequester = topNavigationFocusRequester,
                 onValueChange = onQueryChange,
                 onSearch = onSearch,
                 onOpenFilters = ::openFilters,
             )
-            Spacer(Modifier.height(BrowseLayoutTokens.HeaderContentSpacing))
+            Spacer(Modifier.height(BrowseLayoutTokens.SidebarItemSpacing))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Outline))
+            Spacer(Modifier.height(BrowseLayoutTokens.SidebarItemSpacing))
+            IndexerSidebar(
+                session = session,
+                indexers = state.indexers,
+                selectedIndexerId = state.selectedIndexerId,
+                selectedIndexerIndex = selectedIndexerIndex,
+                sidebarFocus = indexerEntryFocus.takeIf { hasMultipleIndexers },
+                firstIndexerFocus = firstIndexerFocus,
+                selectedIndexerFocus = selectedIndexerFocus,
+                menuItemsAreFocusable = hasMultipleIndexers,
+                resultEntryFocusRequester = resultEntryFocus.takeIf { hasFocusableResults },
+                searchInputFocusRequester = searchInputFocus,
+                onSelectIndexer = onSelectIndexer,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .testTag("search-content"),
+        ) {
             SearchResults(
                 session = session,
                 state = state,
@@ -411,8 +422,9 @@ private fun IndexerSidebar(
     selectedIndexerFocus: FocusRequester,
     menuItemsAreFocusable: Boolean,
     resultEntryFocusRequester: FocusRequester?,
-    topNavigationFocusRequester: FocusRequester?,
+    searchInputFocusRequester: FocusRequester,
     onSelectIndexer: (Long) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val firstIndexerId = indexers.firstOrNull()?.id
     val listState = rememberLazyListState()
@@ -420,7 +432,7 @@ private fun IndexerSidebar(
     var focusEntryJob by remember { mutableStateOf<Job?>(null) }
     LazyColumn(
         state = listState,
-        modifier = Modifier
+        modifier = modifier
             .then(
                 sidebarFocus?.let { Modifier.focusRequester(it) } ?: Modifier,
             )
@@ -450,10 +462,7 @@ private fun IndexerSidebar(
                 }
             }
             .focusGroup()
-            .width(BrowseLayoutTokens.SidebarWidth)
-            .fillMaxHeight()
-            .background(Panel.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
-            .padding(BrowseLayoutTokens.SidebarContentPadding),
+            .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SidebarItemSpacing),
     ) {
         items(indexers, key = NetworkIndexer::id) { indexer ->
@@ -486,9 +495,7 @@ private fun IndexerSidebar(
                     )
                     .then(
                         if (isFirstIndexer) {
-                            topNavigationFocusRequester?.let { requester ->
-                                Modifier.focusProperties { up = requester }
-                            } ?: Modifier
+                            Modifier.focusProperties { up = searchInputFocusRequester }
                         } else {
                             Modifier
                         },
@@ -528,36 +535,29 @@ private fun SearchInput(
     filtersActive: Boolean,
     inputFocusRequester: FocusRequester,
     filterFocusRequester: FocusRequester,
-    searchActionFocusRequester: FocusRequester,
     topNavigationFocusRequester: FocusRequester?,
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
     onOpenFilters: () -> Unit,
 ) {
-    val firstActionFocus = if (filtersAvailable) {
-        filterFocusRequester
-    } else {
-        searchActionFocusRequester
-    }
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SearchControlSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TvSearchField(
+        BrowseSearchField(
             value = value,
             hint = stringResource(R.string.search_indexer_hint),
             onValueChange = onValueChange,
             onSearch = onSearch,
             focusRequester = inputFocusRequester,
-            onMoveUp = topNavigationFocusRequester?.let { requester ->
-                { requester.requestFocus() }
-            },
-            onMoveRight = firstActionFocus::requestFocus,
             modifier = Modifier
                 .weight(1f)
                 .height(BrowseLayoutTokens.SearchControlHeight)
-                .focusProperties { right = firstActionFocus }
+                .focusProperties {
+                    topNavigationFocusRequester?.let { up = it }
+                    if (filtersAvailable) right = filterFocusRequester
+                }
                 .testTag("network-search-input"),
         )
         if (filtersAvailable) {
@@ -569,7 +569,6 @@ private fun SearchInput(
                     .focusRequester(filterFocusRequester)
                     .focusProperties {
                         topNavigationFocusRequester?.let { up = it }
-                        right = searchActionFocusRequester
                     }
                     .testTag("search-filter-button"),
                 variant = KaloscopeControlVariant.Filled,
@@ -585,31 +584,10 @@ private fun SearchInput(
                         },
                     ),
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(20.dp)
                         .testTag("search-filter-icon"),
                 )
             }
-        }
-        KaloscopeIconButton(
-            onClick = onSearch,
-            modifier = Modifier
-                .size(BrowseLayoutTokens.SearchControlHeight)
-                .focusRequester(searchActionFocusRequester)
-                .focusProperties {
-                    topNavigationFocusRequester?.let { up = it }
-                    right = FocusRequester.Cancel
-                }
-                .testTag("search-action-button"),
-            variant = KaloscopeControlVariant.Filled,
-            size = KaloscopeControlSize.Compact,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_action_search),
-                contentDescription = stringResource(R.string.search_action),
-                modifier = Modifier
-                    .size(24.dp)
-                    .testTag("search-action-icon"),
-            )
         }
     }
 }

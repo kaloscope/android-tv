@@ -9,7 +9,8 @@ object BrowseLayoutTokens {
     val ScreenContentBottomPadding = 16.dp
     val SidebarWidth = 176.dp
     val PaneSpacing = 12.dp
-    val SearchControlHeight = 48.dp
+    val SearchControlHeight = 40.dp
+    val SearchControlSpacing = 6.dp
     val HeaderContentSpacing = 6.dp
     val SidebarContentPadding = 6.dp
     val SidebarItemSpacing = 6.dp

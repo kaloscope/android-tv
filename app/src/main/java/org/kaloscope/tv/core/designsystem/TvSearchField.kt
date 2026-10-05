@@ -16,6 +16,8 @@ fun TvSearchField(
     onMoveUp: (() -> Unit)? = null,
     onMoveRight: (() -> Unit)? = null,
     imeAction: ImeAction = ImeAction.Search,
+    initiallyEditing: Boolean = false,
+    onBack: (() -> Unit)? = null,
 ) {
     TvTextField(
         value = value,
@@ -25,7 +27,9 @@ fun TvSearchField(
         focusRequester = focusRequester,
         imeAction = imeAction,
         onImeAction = onSearch,
+        onBack = onBack,
         onMoveUp = onMoveUp,
         onMoveRight = onMoveRight,
+        initiallyEditing = initiallyEditing,
     )
 }
