@@ -60,7 +60,7 @@ class AboutSettingsTest {
         var downloads = 0
         composeRule.setContent {
             KaloscopeTheme {
-                screen(
+                TestSettingsScreen(
                     state,
                     AppUpdateActions(
                         check = { state = AppUpdateUiState(AppUpdatePhase.Available, release, confirmationOpen = true) },
@@ -90,7 +90,7 @@ class AboutSettingsTest {
         var cancellations = 0
         composeRule.setContent {
             KaloscopeTheme {
-                screen(
+                TestSettingsScreen(
                     state,
                     AppUpdateActions(
                         promptDownload = { state = state.copy(confirmationOpen = true) },
@@ -179,11 +179,11 @@ class AboutSettingsTest {
         state: AppUpdateUiState = AppUpdateUiState(),
         actions: AppUpdateActions = AppUpdateActions(),
     ) {
-        composeRule.setContent { KaloscopeTheme { screen(state, actions) } }
+        composeRule.setContent { KaloscopeTheme { TestSettingsScreen(state, actions) } }
     }
 
     @androidx.compose.runtime.Composable
-    private fun screen(state: AppUpdateUiState, actions: AppUpdateActions) {
+    private fun TestSettingsScreen(state: AppUpdateUiState, actions: AppUpdateActions) {
         var section by androidx.compose.runtime.remember { mutableStateOf(SettingsSection.About) }
         SettingsScreen(
             session = Session(SavedServer("sample", "Sample", "https://example.com"), "sample-token", SessionUser(1, "Sample", "user")),

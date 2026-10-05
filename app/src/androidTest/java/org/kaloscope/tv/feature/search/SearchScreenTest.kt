@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.test.platform.app.InstrumentationRegistry
@@ -599,7 +600,7 @@ class SearchScreenTest {
                     Box(
                         Modifier.align(Alignment.TopEnd)
                             .padding(end = 36.dp)
-                            .offset(y = settingsTop)
+                            .offset { IntOffset(0, settingsTop.roundToPx()) }
                             .size(32.dp)
                             .testTag("external-settings")
                             .onFocusChanged { if (it.isFocused) settingsFocusCount += 1 }
