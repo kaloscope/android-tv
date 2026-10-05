@@ -42,4 +42,5 @@ enum class UpdateFailure {
     InstallerUnavailable,
     InstallFailed,
     FileMissing,
+    DownloadExport,
 }

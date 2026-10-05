@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
+import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import androidx.core.content.pm.PackageInfoCompat
 import java.io.File
@@ -18,6 +20,18 @@ internal object AppUpdateInstaller {
     fun hasInstallPermission(context: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
             context.packageManager.canRequestPackageInstalls()
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun openPermissionSettings(packageName: String, launch: (String, String?) -> Boolean): Boolean {
+        // Some TV settings apps only expose a sources list or general security settings.
+        val destinations = listOf(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES to "package:$packageName",
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES to null,
+            Settings.ACTION_SECURITY_SETTINGS to null,
+            Settings.ACTION_SETTINGS to null,
+        )
+        return destinations.any { (action, data) -> launch(action, data) }
+    }
 
     @Suppress("DEPRECATION")
     fun validate(context: Context, apk: File, version: String): UpdateFailure? {

@@ -12,7 +12,9 @@ import kotlinx.coroutines.launch
 import org.kaloscope.tv.BuildConfig
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.common.AppResult
+import org.kaloscope.tv.core.common.UpdateFailure
 import org.kaloscope.tv.core.model.AppUpdateRelease
+import org.kaloscope.tv.data.update.AppUpdateDownloadExporter
 import org.kaloscope.tv.data.update.AppUpdateRepository
 
 enum class AppUpdatePhase { Idle, Checking, UpToDate, Available, Downloading, Ready }
@@ -25,6 +27,9 @@ data class AppUpdateUiState(
     val confirmationOpen: Boolean = false,
     val downloadedApk: File? = null,
     val installRequestId: Long? = null,
+    val savingToDownloads: Boolean = false,
+    val savedDownloadName: String? = null,
+    val manualInstallNoticeOpen: Boolean = false,
 )
 
 data class AppUpdateActions(
@@ -36,12 +41,15 @@ data class AppUpdateActions(
     val install: () -> Unit = {},
     val consumeInstall: (Long) -> Unit = {},
     val installError: (AppError) -> Unit = {},
+    val saveToDownloads: () -> Unit = {},
+    val dismissManualInstallNotice: () -> Unit = {},
     val leave: () -> Unit = {},
 )
 
 @HiltViewModel
 class AppUpdateViewModel @Inject constructor(
     private val repository: AppUpdateRepository,
+    private val downloadExporter: AppUpdateDownloadExporter,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(AppUpdateUiState())
     val uiState = mutableState.asStateFlow()
@@ -125,11 +133,13 @@ class AppUpdateViewModel @Inject constructor(
             },
             confirmationOpen = false,
             installRequestId = null,
+            savingToDownloads = false,
+            manualInstallNoticeOpen = false,
         )
     }
 
     fun install() {
-        if (mutableState.value.phase == AppUpdatePhase.Ready) {
+        if (mutableState.value.phase == AppUpdatePhase.Ready && !mutableState.value.savingToDownloads) {
             mutableState.value = mutableState.value.copy(
                 installRequestId = ++nextInstallRequest,
                 error = null,
@@ -145,5 +155,38 @@ class AppUpdateViewModel @Inject constructor(
 
     fun installError(error: AppError) {
         mutableState.value = mutableState.value.copy(error = error, installRequestId = null)
+    }
+
+    fun saveToDownloads() {
+        val state = mutableState.value
+        if (state.phase != AppUpdatePhase.Ready || operation?.isActive == true) return
+        if (state.savedDownloadName != null) {
+            mutableState.value = state.copy(manualInstallNoticeOpen = true)
+            return
+        }
+        val release = state.release ?: return
+        val apk = state.downloadedApk
+        if (apk == null) {
+            installError(AppError.Update(UpdateFailure.FileMissing))
+            return
+        }
+        val request = ++generation
+        mutableState.value = state.copy(savingToDownloads = true, installRequestId = null, error = null)
+        operation = viewModelScope.launch {
+            val result = downloadExporter.save(apk, release.version)
+            if (request != generation) return@launch
+            mutableState.value = when (result) {
+                is AppResult.Success -> mutableState.value.copy(
+                    savingToDownloads = false,
+                    savedDownloadName = result.value,
+                    manualInstallNoticeOpen = true,
+                )
+                is AppResult.Failure -> mutableState.value.copy(savingToDownloads = false, error = result.error)
+            }
+        }
+    }
+
+    fun dismissManualInstallNotice() {
+        mutableState.value = mutableState.value.copy(manualInstallNoticeOpen = false)
     }
 }

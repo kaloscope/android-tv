@@ -164,6 +164,8 @@ fun KaloscopeApp(
                         install = appUpdateViewModel::install,
                         consumeInstall = appUpdateViewModel::consumeInstall,
                         installError = appUpdateViewModel::installError,
+                        saveToDownloads = appUpdateViewModel::saveToDownloads,
+                        dismissManualInstallNotice = appUpdateViewModel::dismissManualInstallNotice,
                         leave = appUpdateViewModel::cancel,
                     ),
                     initialRoute = currentSettings.startPage.toRootRoute(),

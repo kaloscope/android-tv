@@ -30,5 +30,6 @@ internal fun appErrorText(error: AppError): String =
             UpdateFailure.InstallerUnavailable -> R.string.update_error_installer
             UpdateFailure.InstallFailed -> R.string.update_error_install
             UpdateFailure.FileMissing -> R.string.update_error_file
+            UpdateFailure.DownloadExport -> R.string.update_error_download_export
         })
     }

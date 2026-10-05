@@ -44,12 +44,19 @@ import org.kaloscope.tv.data.server.DefaultServerRepository
 import org.kaloscope.tv.data.server.ServerRepository
 import org.kaloscope.tv.data.settings.PreferencesSettingsRepository
 import org.kaloscope.tv.data.settings.SettingsRepository
+import org.kaloscope.tv.data.update.AndroidAppUpdateDownloadExporter
+import org.kaloscope.tv.data.update.AppUpdateDownloadExporter
 import org.kaloscope.tv.data.update.AppUpdateRepository
 import org.kaloscope.tv.data.update.GitHubAppUpdateRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class AppBindings {
+    @Binds
+    abstract fun bindAppUpdateDownloadExporter(
+        implementation: AndroidAppUpdateDownloadExporter,
+    ): AppUpdateDownloadExporter
+
     @Binds
     abstract fun bindNetworkVideoCodecSupport(
         implementation: AndroidNetworkVideoCodecSupport,

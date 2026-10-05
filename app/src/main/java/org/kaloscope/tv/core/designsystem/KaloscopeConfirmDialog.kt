@@ -46,6 +46,7 @@ fun KaloscopeConfirmDialog(
     confirmTone: KaloscopeControlTone = KaloscopeControlTone.Default,
     busy: Boolean = false,
     errorMessage: String? = null,
+    showCancel: Boolean = true,
 ) {
     val cancelFocus = remember { FocusRequester() }
     val confirmFocus = remember { FocusRequester() }
@@ -71,9 +72,9 @@ fun KaloscopeConfirmDialog(
             usePlatformDefaultWidth = false,
         ),
     ) {
-        LaunchedEffect(Unit) {
+        LaunchedEffect(showCancel) {
             withFrameNanos { }
-            cancelFocus.requestFocus()
+            if (showCancel) cancelFocus.requestFocus() else confirmFocus.requestFocus()
         }
         Box(
             modifier = Modifier
@@ -112,23 +113,25 @@ fun KaloscopeConfirmDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
                 ) {
-                    KaloscopeButton(
-                        onClick = {
-                            if (!busy) {
-                                onDismiss()
-                            }
-                        },
-                        modifier = Modifier
-                            .testTag("confirm-dialog-cancel")
-                            .focusRequester(cancelFocus)
-                            .focusProperties {
-                                left = FocusRequester.Cancel
-                                right = confirmFocus
-                                up = FocusRequester.Cancel
-                                down = FocusRequester.Cancel
+                    if (showCancel) {
+                        KaloscopeButton(
+                            onClick = {
+                                if (!busy) {
+                                    onDismiss()
+                                }
                             },
-                    ) {
-                        Text(cancelLabel)
+                            modifier = Modifier
+                                .testTag("confirm-dialog-cancel")
+                                .focusRequester(cancelFocus)
+                                .focusProperties {
+                                    left = FocusRequester.Cancel
+                                    right = confirmFocus
+                                    up = FocusRequester.Cancel
+                                    down = FocusRequester.Cancel
+                                },
+                        ) {
+                            Text(cancelLabel)
+                        }
                     }
                     KaloscopeButton(
                         onClick = {
@@ -141,7 +144,7 @@ fun KaloscopeConfirmDialog(
                             .testTag("confirm-dialog-confirm")
                             .focusRequester(confirmFocus)
                             .focusProperties {
-                                left = cancelFocus
+                                left = if (showCancel) cancelFocus else FocusRequester.Cancel
                                 right = FocusRequester.Cancel
                                 up = FocusRequester.Cancel
                                 down = FocusRequester.Cancel

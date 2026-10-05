@@ -136,6 +136,41 @@ class AboutSettingsTest {
     }
 
     @Test
+    fun manualInstallNoticeContainsFocusAndBackRestoresSaveButton() {
+        var state by mutableStateOf(AppUpdateUiState(
+            phase = AppUpdatePhase.Ready,
+            release = release,
+            savedDownloadName = "kaloscope-tv-0.3.23.apk",
+            manualInstallNoticeOpen = true,
+        ))
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestSettingsScreen(
+                    state,
+                    AppUpdateActions(
+                        dismissManualInstallNotice = { state = state.copy(manualInstallNoticeOpen = false) },
+                    ),
+                )
+            }
+        }
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertIsDisplayed()
+        composeRule.onNodeWithText("知道了").assertIsDisplayed()
+        composeRule.onNodeWithTag("confirm-dialog-cancel").assertDoesNotExist()
+        composeRule.onNodeWithTag("confirm-dialog-confirm").assertIsFocused()
+        composeRule.onNodeWithTag("confirm-dialog-confirm").performKeyInput {
+            pressKey(Key.DirectionLeft)
+            pressKey(Key.DirectionRight)
+            pressKey(Key.DirectionUp)
+            pressKey(Key.DirectionDown)
+        }
+        composeRule.onNodeWithTag("confirm-dialog-confirm").assertIsFocused()
+        pressBack()
+        composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertDoesNotExist()
+        composeRule.onNodeWithTag("update-save-downloads").assertIsFocused()
+        composeRule.onNodeWithTag("update-save-downloads").assertTextContains("Download/kaloscope-tv-0.3.23.apk")
+    }
+
+    @Test
     fun projectLinksShowQrAndBackRestoresTheirTrigger() {
         content()
         composeRule.onNodeWithText("项目与支持").assertIsDisplayed()
