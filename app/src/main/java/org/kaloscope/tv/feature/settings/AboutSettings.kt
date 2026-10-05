@@ -3,7 +3,7 @@ package org.kaloscope.tv.feature.settings
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -274,10 +275,13 @@ private fun AppUpdateInstallation(
                 permissionPrompt = false
                 restoreFocus = true
                 try {
-                    permission.launch(Intent(
-                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:${context.packageName}"),
-                    ))
+                    // Per-app install permission settings are only available from Android O.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        permission.launch(Intent(
+                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            "package:${context.packageName}".toUri(),
+                        ))
+                    }
                 } catch (_: ActivityNotFoundException) {
                     actions.installError(AppError.Update(UpdateFailure.InstallPermission))
                 } catch (_: SecurityException) {
