@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
@@ -276,7 +277,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun selectedLibraryRemainsSelectedWhileSearchActionOwnsFocus() {
+    fun selectedLibraryRemainsSelectedWhileSearchInputOwnsFocus() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -294,7 +295,7 @@ class LibraryScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("library-search-action-button")
+        composeRule.onNodeWithTag("library-search-input")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
         composeRule.onNodeWithText("剧集库").assertIsSelected()
@@ -586,7 +587,7 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun librarySearchControlsShareTheSidebarRow() {
+    fun librarySearchFieldFillsSidebarWithoutExtraAction() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -607,26 +608,18 @@ class LibraryScreenTest {
 
         val density = InstrumentationRegistry.getInstrumentation()
             .targetContext.resources.displayMetrics.density
-        val buttonBounds = composeRule.onNodeWithTag("library-search-action-button")
-            .fetchSemanticsNode()
-            .boundsInRoot
+        composeRule.onNodeWithTag("library-search-action-button").assertDoesNotExist()
+        composeRule.onNodeWithTag("library-search-action-icon", useUnmergedTree = true)
+            .assertDoesNotExist()
         val inputBounds = composeRule.onNodeWithTag("library-search-input")
             .fetchSemanticsNode()
             .boundsInRoot
         val sidebarBounds = composeRule.onNodeWithTag("library-sidebar")
             .fetchSemanticsNode()
             .boundsInRoot
-        val iconBounds = composeRule.onNodeWithTag(
-            testTag = "library-search-action-icon",
-            useUnmergedTree = true,
-        ).fetchSemanticsNode().boundsInRoot
-
-        assertEquals(40f * density, buttonBounds.width, 1f)
-        assertEquals(40f * density, buttonBounds.height, 1f)
         assertEquals(40f * density, inputBounds.height, 1f)
-        assertEquals(118f * density, inputBounds.width, 1f)
-        assertEquals(20f * density, iconBounds.width, 1f)
-        assertEquals(20f * density, iconBounds.height, 1f)
+        assertEquals(sidebarBounds.left + 6f * density, inputBounds.left, 1f)
+        assertEquals(sidebarBounds.right - 6f * density, inputBounds.right, 1f)
         val fieldIconBounds = composeRule.onNodeWithTag(
             testTag = "browse-search-field-icon",
             useUnmergedTree = true,
@@ -638,11 +631,6 @@ class LibraryScreenTest {
         assertEquals(16f * density, fieldIconBounds.width, 1f)
         assertEquals(inputBounds.center.y, fieldIconBounds.center.y, 1f)
         assertEquals(inputBounds.center.y, labelBounds.center.y, 1f)
-        assertEquals(buttonBounds.center.y, iconBounds.center.y, 1f)
-        assertEquals(inputBounds.top, buttonBounds.top, 1f)
-        assertTrue(inputBounds.right < buttonBounds.left)
-        assertTrue(inputBounds.left >= sidebarBounds.left)
-        assertTrue(buttonBounds.right <= sidebarBounds.right)
     }
 
     @Test
@@ -812,17 +800,18 @@ class LibraryScreenTest {
     }
 
     @Test
-    fun librarySearchActionSubmitsSearch() {
-        var searches = 0
+    fun librarySearchDialogSubmitsSearch() {
+        var query by mutableStateOf("")
+        val searchedQueries = mutableListOf<String>()
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
                     session = session(),
-                    state = state(),
+                    state = state().copy(query = query),
                     restoreMediaId = null,
                     onSelectLibrary = {},
-                    onQueryChange = {},
-                    onSearch = { searches += 1 },
+                    onQueryChange = { query = it },
+                    onSearch = { searchedQueries += query },
                     onRetry = {},
                     onLoadMore = {},
                     onMediaFocused = {},
@@ -831,17 +820,26 @@ class LibraryScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("library-search-action-button")
+        composeRule.onNodeWithTag("library-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("browse-search-dialog-input")
+            .assertIsFocused()
+            .performTextReplacement("星海")
+        composeRule.onNodeWithTag("browse-search-dialog-submit")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
 
+        composeRule.onNodeWithTag("browse-search-dialog").assertDoesNotExist()
+        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
         composeRule.runOnIdle {
-            assertEquals(1, searches)
+            assertEquals("星海", query)
+            assertEquals(listOf("星海"), searchedQueries)
         }
     }
 
     @Test
-    fun rightFromLibrarySearchFieldMovesToSearchAction() {
+    fun rightFromLibrarySearchFieldMovesToMedia() {
         composeRule.setContent {
             KaloscopeTheme {
                 LibraryScreen(
@@ -863,8 +861,7 @@ class LibraryScreenTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionRight) }
 
-        composeRule.onNodeWithTag("library-search-action-button")
-            .assertIsFocused()
+        composeRule.onNodeWithTag("media-card-1").assertIsFocused()
     }
 
     @Test

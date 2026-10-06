@@ -71,7 +71,6 @@ import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurfaceVariant
-import org.kaloscope.tv.core.designsystem.KaloscopeIconButton
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
 import org.kaloscope.tv.core.designsystem.KaloscopeNavigationIcon
 import org.kaloscope.tv.core.designsystem.Muted
@@ -202,7 +201,17 @@ private fun LibraryContent(
     }
 
     Row(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .focusProperties {
+                onExit = {
+                    // Return to the active destination instead of the nearest navigation item.
+                    if (requestedFocusDirection == FocusDirection.Up) {
+                        topNavigationFocusRequester?.requestFocus()
+                    }
+                }
+            }
+            .focusGroup(),
         horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.PaneSpacing),
     ) {
         Column(
@@ -391,48 +400,20 @@ private fun LibrarySearch(
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit,
 ) {
-    val searchActionFocus = remember { FocusRequester() }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(BrowseLayoutTokens.SearchControlSpacing),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BrowseSearchField(
-            value = value,
-            hint = stringResource(R.string.search_library_hint),
-            onValueChange = onValueChange,
-            onSearch = onSearch,
-            focusRequester = inputFocusRequester,
-            modifier = Modifier
-                .weight(1f)
-                .height(BrowseLayoutTokens.SearchControlHeight)
-                .focusProperties {
-                    topNavigationFocusRequester?.let { up = it }
-                    right = searchActionFocus
-                }
-                .testTag("library-search-input"),
-        )
-        KaloscopeIconButton(
-            onClick = onSearch,
-            modifier = Modifier
-                .size(BrowseLayoutTokens.SearchControlHeight)
-                .focusRequester(searchActionFocus)
-                .focusProperties {
-                    topNavigationFocusRequester?.let { up = it }
-                }
-                .testTag("library-search-action-button"),
-            variant = KaloscopeControlVariant.Filled,
-            size = KaloscopeControlSize.Compact,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_action_search),
-                contentDescription = stringResource(R.string.search_action),
-                modifier = Modifier
-                    .size(20.dp)
-                    .testTag("library-search-action-icon"),
-            )
-        }
-    }
+    BrowseSearchField(
+        value = value,
+        hint = stringResource(R.string.search_library_hint),
+        onValueChange = onValueChange,
+        onSearch = onSearch,
+        focusRequester = inputFocusRequester,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(BrowseLayoutTokens.SearchControlHeight)
+            .focusProperties {
+                topNavigationFocusRequester?.let { up = it }
+            }
+            .testTag("library-search-input"),
+    )
 }
 
 @Composable

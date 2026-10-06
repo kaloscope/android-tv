@@ -2270,6 +2270,92 @@ class MainShellTest {
     }
 
     @Test
+    fun directionUpFromLibraryMediaFocusesActiveLibraryNavigation() {
+        val items = listOf(summary(), summary().copy(id = 202, title = "媒体2"))
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(items = items),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        items.forEach { media ->
+            composeRule.onNodeWithTag("media-card-${media.id}")
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+                .performKeyInput { pressKey(Key.DirectionUp) }
+
+            composeRule.onNodeWithText("媒体库").assertIsSelected().assertIsFocused()
+            composeRule.onNodeWithTag("media-card-${media.id}").assertIsNotFocused()
+        }
+    }
+
+    @Test
+    fun repeatedUpFromDeepLibraryGridKeepsActiveLibraryNavigation() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = deepLibraryState().copy(focusedMediaId = null),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("media-card-25")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag("media-card-25").assertIsNotFocused()
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("media-card-25").assertIsFocused()
+
+        repeat(12) {
+            composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionUp) }
+            composeRule.onNodeWithText("媒体库").assertIsSelected()
+        }
+        composeRule.onNodeWithText("媒体库").assertIsFocused()
+    }
+
+    @Test
+    fun librarySearchEditorKeepsRouteAndRestoresInputFocus() {
+        composeRule.setContent {
+            KaloscopeTheme {
+                TestMainShell(
+                    session = session(),
+                    homeState = HomeUiState.Empty,
+                    libraryState = libraryState(),
+                    detailState = MediaDetailUiState.Content(detail()),
+                )
+            }
+        }
+
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.onNodeWithTag("library-search-input")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.onNodeWithTag("browse-search-dialog-input").assertIsFocused()
+        composeRule.onNodeWithText("媒体库").assertIsSelected()
+
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+        instrumentation.sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
+
+        composeRule.onNodeWithTag("browse-search-dialog").assertDoesNotExist()
+        composeRule.onNodeWithTag("library-search-input").assertIsFocused()
+        composeRule.onNodeWithText("媒体库").assertIsSelected()
+    }
+
+    @Test
     fun openingDetailKeepsOutgoingLibraryFrameStableDuringFade() {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
