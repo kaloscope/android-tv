@@ -1,7 +1,9 @@
 package org.kaloscope.tv.feature.search
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -68,9 +70,11 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
@@ -587,6 +591,7 @@ private fun SearchInput(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SearchResults(
     session: Session,
@@ -628,6 +633,7 @@ private fun SearchResults(
                     state.gridViewport.firstVisibleItemScrollOffset,
             )
             val offscreenResultFocus = remember { FocusRequester() }
+            val bringIntoViewSpec = LocalBringIntoViewSpec.current
             var pendingFocusResultId by remember(
                 state.selectedIndexerId,
                 state.submittedKeyword,
@@ -635,18 +641,40 @@ private fun SearchResults(
             ) {
                 mutableStateOf<String?>(null)
             }
-            LaunchedEffect(pendingFocusResultId) {
+            LaunchedEffect(pendingFocusResultId, bringIntoViewSpec) {
                 val targetId = pendingFocusResultId ?: return@LaunchedEffect
                 val targetIndex = results.items.indexOfFirst { it.id == targetId }
                 if (targetIndex < 0) {
                     pendingFocusResultId = null
                     return@LaunchedEffect
                 }
-                gridState.scrollToItem(targetIndex)
+                val layoutInfo = gridState.layoutInfo
+                // Cards share a fixed height. Match normal focus relocation rather than
+                // snapping an offscreen row to the top of the viewport.
+                val scrollOffset = layoutInfo.visibleItemsInfo.firstOrNull()?.let { item ->
+                    val itemHeight = item.size.height.toFloat()
+                    val viewportHeight = layoutInfo.viewportSize.height.toFloat()
+                    val offscreenOffset = if (targetIndex >= gridState.firstVisibleItemIndex) {
+                        viewportHeight
+                    } else {
+                        -itemHeight
+                    }
+                    val targetOffset = offscreenOffset - bringIntoViewSpec.calculateScrollDistance(
+                        offset = offscreenOffset,
+                        size = itemHeight,
+                        containerSize = viewportHeight,
+                    )
+                    (layoutInfo.beforeContentPadding - targetOffset).roundToInt()
+                } ?: 0
+                val revealJob = launch {
+                    gridState.animateScrollToItem(targetIndex, scrollOffset)
+                }
                 snapshotFlow {
                     gridState.layoutInfo.visibleItemsInfo.any { it.key == targetId }
                 }.first { it }
-                withFrameNanos { }
+                // Once placed, focus relocation owns the remaining scroll so the new
+                // card's outline starts animating before the row settles.
+                revealJob.cancelAndJoin()
                 offscreenResultFocus.requestFocus()
                 pendingFocusResultId = null
             }

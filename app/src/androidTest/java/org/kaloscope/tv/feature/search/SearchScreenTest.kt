@@ -558,6 +558,15 @@ class SearchScreenTest {
     }
 
     @Test
+    fun portraitGridDownAnimatesAndFocusesAcrossOffscreenRows() {
+        assertVerticalResultNavigation(
+            coverRatio = 2f / 3f,
+            expectedIds = listOf(2, 6, 10, 14),
+            verifyScrollAnimation = true,
+        )
+    }
+
+    @Test
     fun upwardExitFromLastColumnBypassesCloserSettingsCandidate() {
         val navigationFocus = FocusRequester()
         var settingsTop by mutableStateOf(0.dp)
@@ -633,6 +642,7 @@ class SearchScreenTest {
         expectedIds: List<Int>,
         requestInitialFocus: Boolean = false,
         rapidNavigation: Boolean = false,
+        verifyScrollAnimation: Boolean = false,
     ) {
         var currentState by mutableStateOf(
             state(
@@ -679,9 +689,42 @@ class SearchScreenTest {
             composeRule.onNodeWithTag("network-result-v${expectedIds.last()}").assertIsFocused()
             return
         }
-        expectedIds.zipWithNext().forEach { (from, to) ->
-            composeRule.onNodeWithTag("network-result-v$from")
-                .performKeyInput { pressKey(Key.DirectionDown) }
+        expectedIds.zipWithNext().forEachIndexed { step, (from, to) ->
+            val fromCard = composeRule.onNodeWithTag("network-result-v$from")
+            if (verifyScrollAnimation) {
+                val startTop = fromCard.fetchSemanticsNode().positionInRoot.y
+                composeRule.mainClock.autoAdvance = false
+                try {
+                    fromCard.performKeyInput { pressKey(Key.DirectionDown) }
+                    composeRule.mainClock.advanceTimeBy(64)
+                    composeRule.onNodeWithTag("network-result-v$to").assertIsFocused()
+                    val intermediateTop = fromCard.fetchSemanticsNode().positionInRoot.y
+                    composeRule.mainClock.advanceTimeBy(1_000)
+                    val endTop = fromCard.fetchSemanticsNode().positionInRoot.y
+                    assertTrue(
+                        "Down from v$from must start scrolling",
+                        intermediateTop < startTop - 1f,
+                    )
+                    assertTrue(
+                        "Down from v$from must animate instead of snapping",
+                        intermediateTop > endTop + 1f,
+                    )
+                    if (step > 0) {
+                        val targetTop = composeRule.onNodeWithTag("network-result-v$to")
+                            .fetchSemanticsNode().positionInRoot.y
+                        assertEquals(
+                            "Down must preserve the focus scroll alignment",
+                            startTop,
+                            targetTop,
+                            1f,
+                        )
+                    }
+                } finally {
+                    composeRule.mainClock.autoAdvance = true
+                }
+            } else {
+                fromCard.performKeyInput { pressKey(Key.DirectionDown) }
+            }
             composeRule.runOnIdle {
                 assertEquals("Down from v$from", "v$to", currentState.focusedResultId)
             }
