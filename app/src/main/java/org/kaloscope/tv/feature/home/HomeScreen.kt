@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -38,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -215,6 +217,14 @@ private fun HistoryContent(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
+            .focusProperties {
+                onEnter = {
+                    if (requestedFocusDirection == FocusDirection.Down) {
+                        actionFocusRequester.requestFocus()
+                    }
+                }
+            }
+            .focusGroup()
             .testTag("home-content"),
     ) {
         // Keep full-size actions and cards visible when the shell leaves little vertical space.
