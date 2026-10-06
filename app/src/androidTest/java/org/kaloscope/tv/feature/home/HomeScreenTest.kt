@@ -43,7 +43,6 @@ import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
-import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
@@ -64,7 +63,6 @@ class HomeScreenTest {
                     onRefresh = {},
                     restoreMediaId = null,
                     onOpenLibrary = {},
-                    onOpenSearch = {},
                     onOpenMedia = {},
                     onPlayHistory = {},
                 )
@@ -76,20 +74,23 @@ class HomeScreenTest {
     }
 
     @Test
-    fun emptyHomeShowsRecentWatchingWithoutExtraDescriptions() {
+    fun emptyHomeShowsActionsWithoutSectionHeading() {
         showEmptyHome()
 
-        composeRule.onNodeWithText("最近观看").assertExists()
+        composeRule.onNodeWithText("最近观看").assertDoesNotExist()
         composeRule.onNodeWithText("首页").assertDoesNotExist()
         composeRule.onNodeWithText("来自当前服务器的真实观看历史").assertDoesNotExist()
         composeRule.onNodeWithText("暂无观看记录").assertExists()
         composeRule.onNodeWithText("播放媒体库内容后，真实进度会显示在这里。")
             .assertDoesNotExist()
         composeRule.onNodeWithText("进入媒体库").assertHasClickAction()
+        composeRule.onNodeWithText("刷新").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("刷新").assertHasClickAction()
+        composeRule.onNodeWithTag("home-open-search").assertDoesNotExist()
     }
 
     @Test
-    fun refreshIconInvokesRefreshAction() {
+    fun emptyRefreshIconInvokesRefreshAction() {
         var refreshed = false
         showEmptyHome(onRefresh = { refreshed = true })
 
@@ -107,11 +108,31 @@ class HomeScreenTest {
     }
 
     @Test
+    fun emptyPanelIsCenteredInAvailableContent() {
+        showEmptyHome()
+
+        val contentBounds = composeRule.onNodeWithTag("home-empty")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val panelBounds = composeRule.onNodeWithTag("home-empty-panel")
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+
+        assertEquals(contentBounds.center.x, panelBounds.center.x, tolerance)
+        assertEquals(contentBounds.center.y, panelBounds.center.y, tolerance)
+        composeRule.onNodeWithTag("home-refresh").assertIsDisplayed()
+        composeRule.onNodeWithTag("home-open-library").assertIsDisplayed()
+    }
+
+    @Test
     fun refreshFailureKeepsHistoryWithoutStatusMessage() {
         showContentHome(refreshError = AppError.Offline)
 
         composeRule.onNodeWithTag("history-card-301").assertExists()
-        composeRule.onNodeWithTag("home-refresh").assertHasClickAction()
+        composeRule.onNodeWithTag("home-refresh").assertDoesNotExist()
+        composeRule.onNodeWithText("最近观看").assertDoesNotExist()
     }
 
     @Test
@@ -151,7 +172,7 @@ class HomeScreenTest {
             onBackdropChanged = { selectedBackdrop = it },
         )
 
-        composeRule.onAllNodesWithText("最近观看").assertCountEquals(1)
+        composeRule.onAllNodesWithText("最近观看").assertCountEquals(0)
         composeRule.onNodeWithTag("history-selected-title").assertTextEquals("星海纪行")
         composeRule.onNodeWithTag("history-card-301")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -166,47 +187,42 @@ class HomeScreenTest {
     }
 
     @Test
-    fun recentWatchingLabelIsSecondaryToSelectedTitle() {
-        showContentHome()
-
-        val label = textLayoutFor("最近观看")
-        val title = textLayoutForTag("history-selected-title")
-
-        assertTrue(
-            label.layoutInput.style.fontSize.value <
-                title.layoutInput.style.fontSize.value,
-        )
-        assertEquals(Muted, label.layoutInput.style.color)
-    }
-
-    @Test
-    fun refreshActionSitsBesideRecentWatchingOnItsCenterLine() {
+    fun emptyActionsShowRefreshBeforeLibraryOnSameRow() {
         showEmptyHome()
 
-        val labelBounds = composeRule.onNodeWithText("最近观看")
+        val libraryBounds = composeRule.onNodeWithTag("home-open-library")
             .fetchSemanticsNode()
             .boundsInRoot
         val refreshBounds = composeRule.onNodeWithTag("home-refresh")
             .fetchSemanticsNode()
             .boundsInRoot
-        val minimumGap = with(composeRule.density) { 6.dp.toPx() }
-        val maximumGap = with(composeRule.density) { 10.dp.toPx() }
         val centerTolerance = with(composeRule.density) { 1.dp.toPx() }
-        val heightTolerance = with(composeRule.density) { 8.dp.toPx() }
-        val gap = refreshBounds.left - labelBounds.right
+        val expectedGap = with(composeRule.density) { 12.dp.toPx() }
 
+        assertTrue(refreshBounds.left < libraryBounds.left)
+        assertEquals(refreshBounds.height, refreshBounds.width, 1f)
+        assertEquals(expectedGap, libraryBounds.left - refreshBounds.right, 1f)
         assertTrue(
-            "Refresh action must sit immediately after the label: gap=$gap",
-            gap in minimumGap..maximumGap,
+            "Empty-state actions must share the same vertical center",
+            abs(refreshBounds.center.y - libraryBounds.center.y) <= centerTolerance,
         )
-        assertTrue(
-            "Refresh action and label must share the same vertical center",
-            abs(refreshBounds.center.y - labelBounds.center.y) <= centerTolerance,
-        )
-        assertTrue(
-            "Refresh action must stay visually compact beside the label",
-            refreshBounds.height - labelBounds.height <= heightTolerance,
-        )
+    }
+
+    @Test
+    fun emptyActionsMoveBetweenRefreshAndLibraryAndOpenLibrary() {
+        var openedLibrary = false
+        showEmptyHome(onOpenLibrary = { openedLibrary = true })
+
+        composeRule.onNodeWithTag("home-refresh")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithTag("home-open-library")
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle { assertTrue(openedLibrary) }
+        composeRule.onNodeWithTag("home-open-library")
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithTag("home-refresh").assertIsFocused()
     }
 
     @Test
@@ -301,7 +317,7 @@ class HomeScreenTest {
         val backdropColor = mutableStateOf(Color(0xFF782535))
         showContentHome(backdropColor = backdropColor)
 
-        composeRule.onNodeWithTag("home-refresh").assertHasClickAction()
+        composeRule.onNodeWithTag("home-refresh").assertDoesNotExist()
         composeRule.onNodeWithText("继续播放").assertHasClickAction()
         composeRule.onNodeWithText("查看详情").assertHasClickAction()
         composeRule.onNodeWithTag("history-card-301").assertHasClickAction()
@@ -321,11 +337,11 @@ class HomeScreenTest {
         val backdropColor = mutableStateOf(Color(0xFF782535))
         showContentHome(backdropColor = backdropColor)
 
-        composeRule.onNodeWithTag("home-refresh")
+        composeRule.onNodeWithText("继续播放")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.waitForIdle()
         val warmAction = averageInteriorTopCenterColor(
-            composeRule.onNodeWithTag("home-refresh")
+            composeRule.onNodeWithText("继续播放")
                 .captureToImage()
                 .asAndroidBitmap(),
         )
@@ -334,13 +350,13 @@ class HomeScreenTest {
         }
         composeRule.waitForIdle()
         val coolAction = averageInteriorTopCenterColor(
-            composeRule.onNodeWithTag("home-refresh")
+            composeRule.onNodeWithText("继续播放")
                 .captureToImage()
                 .asAndroidBitmap(),
         )
         assertBackdropIndependence(
-            warm = mapOf("focused refresh" to warmAction),
-            cool = mapOf("focused refresh" to coolAction),
+            warm = mapOf("focused resume" to warmAction),
+            cool = mapOf("focused resume" to coolAction),
         )
 
         composeRule.runOnIdle {
@@ -412,7 +428,7 @@ class HomeScreenTest {
         showContentHome()
         composeRule.onNodeWithTag("history-card-302")
             .performSemanticsAction(SemanticsActions.RequestFocus)
-        composeRule.onNodeWithTag("home-refresh")
+        composeRule.onNodeWithText("继续播放")
             .performSemanticsAction(SemanticsActions.RequestFocus)
         val resting = composeRule.onNodeWithTag("history-card-301")
             .assertIsNotSelected()
@@ -536,8 +552,8 @@ class HomeScreenTest {
     }
 
     @Test
-    fun refreshAfterRestoringHistoryKeepsNewSelectionAndRefreshFocus() {
-        assertRefreshKeepsSelection(
+    fun historyUpdateAfterRestorationKeepsNewSelectionAndActionFocus() {
+        assertHistoryUpdateKeepsSelection(
             refreshedItems = historyItems().reversed().map {
                 it.copy(positionSeconds = 1_200, percentage = 60)
             },
@@ -552,7 +568,7 @@ class HomeScreenTest {
             mediaId = 303,
             episode = 5,
         )
-        assertRefreshKeepsSelection(
+        assertHistoryUpdateKeepsSelection(
             refreshedItems = listOf(
                 nextEpisode,
                 items.first().copy(positionSeconds = 1_200, percentage = 60),
@@ -580,22 +596,17 @@ class HomeScreenTest {
         composeRule.onNodeWithTag("history-card-301").assertIsFocused()
     }
 
-    private fun assertRefreshKeepsSelection(refreshedItems: List<WatchHistoryItem>) {
+    private fun assertHistoryUpdateKeepsSelection(refreshedItems: List<WatchHistoryItem>) {
         val state = mutableStateOf(HomeUiState.Content(historyItems()))
         var playedItem: WatchHistoryItem? = null
-        var refreshCount = 0
         composeRule.setContent {
             KaloscopeTheme {
                 HomeScreen(
                     session = testSession(),
                     state = state.value,
-                    onRefresh = {
-                        refreshCount += 1
-                        state.value = HomeUiState.Content(refreshedItems)
-                    },
+                    onRefresh = {},
                     restoreMediaId = 302L,
                     onOpenLibrary = {},
-                    onOpenSearch = {},
                     onOpenMedia = {},
                     onPlayHistory = { playedItem = it },
                 )
@@ -610,21 +621,17 @@ class HomeScreenTest {
             .performKeyInput { pressKey(Key.DirectionUp) }
         composeRule.onNodeWithText("继续播放")
             .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithTag("home-refresh")
-            .assertIsFocused()
-            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle {
+            state.value = HomeUiState.Content(refreshedItems)
+        }
 
-        composeRule.onNodeWithTag("home-refresh").assertIsFocused()
+        composeRule.onNodeWithText("继续播放").assertIsFocused()
         composeRule.onNodeWithTag("history-card-301").assertIsSelected()
         composeRule.onNodeWithTag("history-selected-title").assertTextEquals("星海纪行")
-        composeRule.onNodeWithTag("home-refresh")
-            .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithText("继续播放")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.runOnIdle {
-            assertEquals(1, refreshCount)
             assertEquals(refreshedItems.single { it.mediaId == 301L }, playedItem)
         }
     }
@@ -839,7 +846,10 @@ class HomeScreenTest {
         )
     }
 
-    private fun showEmptyHome(onRefresh: () -> Unit = {}) {
+    private fun showEmptyHome(
+        onRefresh: () -> Unit = {},
+        onOpenLibrary: () -> Unit = {},
+    ) {
         composeRule.setContent {
             KaloscopeTheme {
                 Box(
@@ -852,8 +862,7 @@ class HomeScreenTest {
                         state = HomeUiState.Empty,
                         onRefresh = onRefresh,
                         restoreMediaId = null,
-                        onOpenLibrary = {},
-                        onOpenSearch = {},
+                        onOpenLibrary = onOpenLibrary,
                         onOpenMedia = {},
                         onPlayHistory = {},
                     )
@@ -886,7 +895,6 @@ class HomeScreenTest {
                         onRefresh = {},
                         restoreMediaId = restoreMediaId,
                         onOpenLibrary = {},
-                        onOpenSearch = {},
                         onOpenMedia = onOpenMedia,
                         onPlayHistory = onPlayHistory,
                         onBackdropChanged = onBackdropChanged,
@@ -899,11 +907,6 @@ class HomeScreenTest {
 
     private fun captureHomeSurfaceColors(): Map<String, AverageColor> =
         mapOf(
-            "refresh" to averageInteriorTopCenterColor(
-                composeRule.onNodeWithTag("home-refresh")
-                    .captureToImage()
-                    .asAndroidBitmap(),
-            ),
             "resume" to averageInteriorTopCenterColor(
                 composeRule.onNodeWithText("继续播放")
                     .captureToImage()
@@ -933,15 +936,6 @@ class HomeScreenTest {
                 warmColor.distanceTo(coolColor) <= 6.0,
             )
         }
-    }
-
-    private fun textLayoutFor(text: String): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        composeRule.onNodeWithText(text, useUnmergedTree = true)
-            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
-                it(results)
-            }
-        return results.single()
     }
 
     private fun textLayoutForTag(tag: String): TextLayoutResult {

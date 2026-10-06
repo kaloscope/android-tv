@@ -97,7 +97,6 @@ internal fun HomeScreen(
     restoreMediaId: Long?,
     topNavigationFocusRequester: FocusRequester? = null,
     onOpenLibrary: () -> Unit,
-    onOpenSearch: () -> Unit,
     onOpenMedia: (Long) -> Unit,
     onPlayHistory: (WatchHistoryItem) -> Unit,
     onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
@@ -117,64 +116,29 @@ internal fun HomeScreen(
 
     when (state) {
         HomeUiState.Loading -> KaloscopeLoadingLayout("home-loading")
-        else -> Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.continue_watching),
-                    color = Muted,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Spacer(Modifier.width(8.dp))
-                KaloscopeIconButton(
-                    onClick = onRefresh,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .focusRequester(refreshFocusRequester)
-                        .focusProperties {
-                            topNavigationFocusRequester?.let { up = it }
-                        }
-                        .testTag("home-refresh"),
-                    variant = KaloscopeControlVariant.Filled,
-                    size = KaloscopeControlSize.Compact,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_refresh),
-                        contentDescription = stringResource(R.string.refresh),
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            when (state) {
-                HomeUiState.Loading -> Unit
 
-                HomeUiState.Empty -> HomeEmpty(
-                    refreshFocusRequester = refreshFocusRequester,
-                    onOpenLibrary = onOpenLibrary,
-                    onOpenSearch = onOpenSearch,
-                )
+        HomeUiState.Empty -> HomeEmpty(
+            refreshFocusRequester = refreshFocusRequester,
+            topNavigationFocusRequester = topNavigationFocusRequester,
+            onRefresh = onRefresh,
+            onOpenLibrary = onOpenLibrary,
+        )
 
-                is HomeUiState.Error -> ErrorPanel(
-                    error = state.error,
-                    refreshFocusRequester = refreshFocusRequester,
-                    onRetry = onRefresh,
-                )
+        is HomeUiState.Error -> ErrorPanel(
+            error = state.error,
+            topNavigationFocusRequester = topNavigationFocusRequester,
+            onRetry = onRefresh,
+        )
 
-                is HomeUiState.Content -> HistoryContent(
-                    session = session,
-                    items = state.carouselItems,
-                    restoreMediaId = state.carouselMediaIdFor(restoreMediaId),
-                    refreshFocusRequester = refreshFocusRequester,
-                    onOpenMedia = onOpenMedia,
-                    onPlayHistory = onPlayHistory,
-                    onBackdropChanged = onBackdropChanged,
-                )
-            }
-        }
+        is HomeUiState.Content -> HistoryContent(
+            session = session,
+            items = state.carouselItems,
+            restoreMediaId = state.carouselMediaIdFor(restoreMediaId),
+            topNavigationFocusRequester = topNavigationFocusRequester,
+            onOpenMedia = onOpenMedia,
+            onPlayHistory = onPlayHistory,
+            onBackdropChanged = onBackdropChanged,
+        )
     }
 }
 
@@ -183,7 +147,7 @@ private fun HistoryContent(
     session: Session,
     items: List<WatchHistoryItem>,
     restoreMediaId: Long?,
-    refreshFocusRequester: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
     onOpenMedia: (Long) -> Unit,
     onPlayHistory: (WatchHistoryItem) -> Unit,
     onBackdropChanged: (HomeBackdropPresentation?) -> Unit,
@@ -266,7 +230,7 @@ private fun HistoryContent(
                 onPlayHistory = onPlayHistory,
                 actionFocusRequester = actionFocusRequester,
                 selectedCardFocusRequester = selectedCardFocusRequester,
-                refreshFocusRequester = refreshFocusRequester,
+                topNavigationFocusRequester = topNavigationFocusRequester,
                 compactLayout = compactLayout,
                 modifier = Modifier
                     .weight(1f)
@@ -344,7 +308,7 @@ private fun SelectedHistoryDetails(
     onPlayHistory: (WatchHistoryItem) -> Unit,
     actionFocusRequester: FocusRequester,
     selectedCardFocusRequester: FocusRequester,
-    refreshFocusRequester: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
     compactLayout: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -356,12 +320,19 @@ private fun SelectedHistoryDetails(
             onPlayHistory = onPlayHistory,
             actionFocusRequester = actionFocusRequester,
             selectedCardFocusRequester = selectedCardFocusRequester,
-            refreshFocusRequester = refreshFocusRequester,
+            topNavigationFocusRequester = topNavigationFocusRequester,
         )
     }
+    val detailsLift = with(LocalDensity.current) { 24.dp.roundToPx() }
     Row(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = if (compactLayout) {
+            Alignment.CenterVertically
+        } else {
+            Alignment.Vertical { height, availableHeight ->
+                ((availableHeight - height) / 2 - detailsLift).coerceAtLeast(0)
+            }
+        },
     ) {
         Column(Modifier.weight(1f)) {
             Text(
@@ -421,7 +392,7 @@ private fun HistoryPlaybackActions(
     onPlayHistory: (WatchHistoryItem) -> Unit,
     actionFocusRequester: FocusRequester,
     selectedCardFocusRequester: FocusRequester,
-    refreshFocusRequester: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
 ) {
     Column {
         ProgressBar(
@@ -438,7 +409,7 @@ private fun HistoryPlaybackActions(
                     .height(42.dp)
                     .focusRequester(actionFocusRequester)
                     .focusProperties {
-                        up = refreshFocusRequester
+                        topNavigationFocusRequester?.let { up = it }
                         down = selectedCardFocusRequester
                     },
                 variant = KaloscopeControlVariant.Filled,
@@ -461,7 +432,7 @@ private fun HistoryPlaybackActions(
                 modifier = Modifier
                     .height(42.dp)
                     .focusProperties {
-                        up = refreshFocusRequester
+                        topNavigationFocusRequester?.let { up = it }
                         down = selectedCardFocusRequester
                     },
                 variant = KaloscopeControlVariant.Filled,
@@ -620,58 +591,80 @@ private fun HistoryCarouselCard(
 @Composable
 private fun HomeEmpty(
     refreshFocusRequester: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
+    onRefresh: () -> Unit,
     onOpenLibrary: () -> Unit,
-    onOpenSearch: () -> Unit,
 ) {
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
-            .background(Panel, RoundedCornerShape(20.dp)),
+            .fillMaxSize()
+            .testTag("home-empty"),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_empty_inbox),
-            contentDescription = null,
-            tint = Muted,
+        Box(
             modifier = Modifier
-                .align(Alignment.Center)
-                .size(120.dp)
-                .alpha(0.1f),
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(34.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.Start,
+                .fillMaxWidth()
+                .height(340.dp)
+                .background(Panel, RoundedCornerShape(20.dp))
+                .testTag("home-empty-panel"),
         ) {
-            Text(
-                text = stringResource(R.string.no_history),
-                color = OnBackground,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+            Icon(
+                painter = painterResource(R.drawable.ic_empty_inbox),
+                contentDescription = null,
+                tint = Muted,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(120.dp)
+                    .alpha(0.1f),
             )
-            Spacer(Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                KaloscopeButton(
-                    onClick = onOpenLibrary,
-                    modifier = Modifier.focusProperties {
-                        up = refreshFocusRequester
-                    },
-                    variant = KaloscopeControlVariant.Filled,
-                    size = KaloscopeControlSize.Compact,
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(34.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.Start,
+            ) {
+                Text(
+                    text = stringResource(R.string.no_history),
+                    color = OnBackground,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(20.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(R.string.open_library))
-                }
-                KaloscopeButton(
-                    onClick = onOpenSearch,
-                    modifier = Modifier
-                        .focusProperties { up = refreshFocusRequester }
-                        .testTag("home-open-search"),
-                    variant = KaloscopeControlVariant.Ghost,
-                    size = KaloscopeControlSize.Compact,
-                ) {
-                    Text(stringResource(R.string.search))
+                    KaloscopeIconButton(
+                        onClick = onRefresh,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .focusRequester(refreshFocusRequester)
+                            .focusProperties {
+                                topNavigationFocusRequester?.let { up = it }
+                            }
+                            .testTag("home-refresh"),
+                        variant = KaloscopeControlVariant.Filled,
+                        size = KaloscopeControlSize.Compact,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_refresh),
+                            contentDescription = stringResource(R.string.refresh),
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                    KaloscopeButton(
+                        onClick = onOpenLibrary,
+                        modifier = Modifier
+                            .focusProperties {
+                                topNavigationFocusRequester?.let { up = it }
+                            }
+                            .testTag("home-open-library"),
+                        variant = KaloscopeControlVariant.Filled,
+                        size = KaloscopeControlSize.Compact,
+                    ) {
+                        Text(stringResource(R.string.open_library))
+                    }
                 }
             }
         }
@@ -752,7 +745,7 @@ private fun ProgressBar(
 @Composable
 private fun ErrorPanel(
     error: AppError,
-    refreshFocusRequester: FocusRequester,
+    topNavigationFocusRequester: FocusRequester?,
     onRetry: () -> Unit,
 ) {
     Column(
@@ -777,7 +770,7 @@ private fun ErrorPanel(
         KaloscopeButton(
             onClick = onRetry,
             modifier = Modifier.focusProperties {
-                up = refreshFocusRequester
+                topNavigationFocusRequester?.let { up = it }
             },
             variant = KaloscopeControlVariant.Filled,
             size = KaloscopeControlSize.Compact,

@@ -99,6 +99,43 @@ class P2GoldenScreenshotTest {
         captureHomeHistory(longTitle = false, focusOnActions = true)
     }
 
+    @Test
+    fun homeEmptyMatchesCurrentResolution() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            KaloscopeTheme {
+                KaloscopeBackground {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(
+                                start = BrowseLayoutTokens.ScreenHorizontalPadding,
+                                top = BrowseLayoutTokens.ScreenContentTopPadding,
+                                end = BrowseLayoutTokens.ScreenHorizontalPadding,
+                                bottom = BrowseLayoutTokens.ScreenContentBottomPadding,
+                            ),
+                    ) {
+                        HomeScreen(
+                            session = session(),
+                            state = HomeUiState.Empty,
+                            onRefresh = {},
+                            restoreMediaId = null,
+                            onOpenLibrary = {},
+                            onOpenMedia = {},
+                            onPlayHistory = {},
+                        )
+                    }
+                }
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.onNodeWithTag("home-refresh")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        composeRule.mainClock.advanceTimeBy(1_000)
+        val width = Resources.getSystem().displayMetrics.widthPixels
+        assertGolden("home-empty-$width", composeRule.onRoot().captureToImage().asAndroidBitmap())
+    }
+
     private fun captureHomeHistory(longTitle: Boolean, focusOnActions: Boolean = false) {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
@@ -121,7 +158,6 @@ class P2GoldenScreenshotTest {
                                 onRefresh = {},
                                 restoreMediaId = null,
                                 onOpenLibrary = {},
-                                onOpenSearch = {},
                                 onOpenMedia = {},
                                 onPlayHistory = {},
                             )

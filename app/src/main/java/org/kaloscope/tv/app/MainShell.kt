@@ -315,12 +315,6 @@ internal fun MainShell(
                                         keepTopBarFocus = false,
                                     )
                                 },
-                                onOpenSearch = {
-                                    activateTopDestination(
-                                        SearchRoute,
-                                        keepTopBarFocus = false,
-                                    )
-                                },
                                 onOpenMedia = ::navigateToMediaDetail,
                                 onPlayHistory = { item ->
                                     destinationEntryKeepsTopFocus = false

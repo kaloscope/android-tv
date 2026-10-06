@@ -320,9 +320,6 @@ class MainShellTest {
         composeRule.onNodeWithText("继续播放")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithTag("home-refresh")
-            .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionUp) }
 
         composeRule.onNode(hasText("首页") and hasClickAction())
             .assertIsSelected()
@@ -330,7 +327,7 @@ class MainShellTest {
     }
 
     @Test
-    fun directionUpFromEmptyHomeMovesThroughRefreshToNavigation() {
+    fun directionUpFromEitherEmptyHomeActionFocusesNavigation() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -342,54 +339,50 @@ class MainShellTest {
             }
         }
 
-        composeRule.onNodeWithText("进入媒体库")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
-            .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithTag("home-refresh")
-            .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionUp) }
+        listOf("home-refresh", "home-open-library").forEach { tag ->
+            composeRule.onNodeWithTag(tag)
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .assertIsFocused()
+                .performKeyInput { pressKey(Key.DirectionUp) }
 
-        composeRule.onNode(hasText("首页") and hasClickAction())
-            .assertIsSelected()
-            .assertIsFocused()
+            composeRule.onNode(hasText("首页") and hasClickAction())
+                .assertIsSelected()
+                .assertIsFocused()
+        }
     }
 
     @Test
-    fun emptyHomeSearchShortcutOpensNetworkSearch() {
+    fun emptyHomeLibraryShortcutOpensLibrary() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
                     session = session(),
                     homeState = HomeUiState.Empty,
-                    searchState = SearchUiState.EmptyIndexers,
                     libraryState = libraryState(),
                     detailState = MediaDetailUiState.Content(detail()),
                 )
             }
         }
 
-        composeRule.onNodeWithTag("home-open-search")
+        composeRule.onNodeWithTag("home-open-library")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.waitUntil(timeoutMillis = 3_000) {
-            composeRule.onAllNodes(hasTestTag("home-open-search"))
+            composeRule.onAllNodes(hasTestTag("home-open-library"))
                 .fetchSemanticsNodes().isEmpty()
         }
 
-        composeRule.onNode(hasText("网络") and hasClickAction())
+        composeRule.onNode(hasText("媒体库") and hasClickAction())
             .assertIsSelected()
         composeRule.onNode(hasText("首页") and hasClickAction())
             .assertIsNotSelected()
-        composeRule.onNodeWithText("当前服务器没有可用的网络搜索数据源。")
-            .assertExists()
-        composeRule.onNodeWithTag("refresh-indexers").assertIsFocused()
+        composeRule.onNodeWithTag("library-sidebar-item-21").assertIsFocused()
     }
 
     @Test
-    fun directionUpFromHomeErrorMovesThroughRefreshToNavigation() {
+    fun directionUpFromHomeErrorRetryFocusesNavigation() {
         composeRule.setContent {
             KaloscopeTheme {
                 TestMainShell(
@@ -403,9 +396,6 @@ class MainShellTest {
 
         composeRule.onNodeWithText("重试")
             .performSemanticsAction(SemanticsActions.RequestFocus)
-            .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithTag("home-refresh")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionUp) }
 
@@ -1301,7 +1291,7 @@ class MainShellTest {
 
         assertEquals(
             expectedTop,
-            composeRule.onNodeWithTag("home-refresh")
+            composeRule.onNodeWithTag("home-content")
                 .fetchSemanticsNode()
                 .boundsInRoot.top,
             1f,
