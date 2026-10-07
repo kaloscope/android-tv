@@ -25,6 +25,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -44,10 +45,12 @@ import org.kaloscope.tv.app.RootFullscreenBackdropFrame
 import org.kaloscope.tv.app.ServerSetupScreen
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
+import org.kaloscope.tv.core.designsystem.ServerBackdrop
 import org.kaloscope.tv.core.designsystem.ServerImagePlaceholder
 import org.kaloscope.tv.core.designsystem.ServerImageVisualState
 import org.kaloscope.tv.core.designsystem.TvSearchField
 import org.kaloscope.tv.core.model.GridViewportSnapshot
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.MediaActor
 import org.kaloscope.tv.core.model.MediaDetail
@@ -94,6 +97,13 @@ class P2GoldenScreenshotTest {
     }
 
     @Test
+    fun homeCinematicBackdropMatchesCurrentResolution() {
+        withCinematicGoldenArtwork { artworkSession ->
+            captureHomeHistory(longTitle = true, cinematicSession = artworkSession)
+        }
+    }
+
+    @Test
     fun homeSelectedHistoryMatches1080p() {
         if (Resources.getSystem().displayMetrics.widthPixels != 1920) return
         captureHomeHistory(longTitle = false, focusOnActions = true)
@@ -136,11 +146,29 @@ class P2GoldenScreenshotTest {
         assertGolden("home-empty-$width", composeRule.onRoot().captureToImage().asAndroidBitmap())
     }
 
-    private fun captureHomeHistory(longTitle: Boolean, focusOnActions: Boolean = false) {
+    private fun captureHomeHistory(
+        longTitle: Boolean,
+        focusOnActions: Boolean = false,
+        cinematicSession: Session? = null,
+    ) {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
-            KaloscopeTheme {
+            KaloscopeTheme(
+                accentColor = if (cinematicSession != null) AccentColor.Green else AccentColor.Blue,
+            ) {
                 KaloscopeBackground {
+                    if (cinematicSession != null) {
+                        RootFullscreenBackdropFrame(
+                            testTag = "golden-home-cinematic-backdrop",
+                            cinematic = true,
+                        ) { imageModifier ->
+                            ServerBackdrop(
+                                session = cinematicSession,
+                                backdropPath = CinematicGoldenArtworkPath,
+                                modifier = imageModifier,
+                            )
+                        }
+                    }
                     Box(
                         Modifier
                             .fillMaxSize()
@@ -166,6 +194,7 @@ class P2GoldenScreenshotTest {
                 }
             }
         }
+        if (cinematicSession != null) waitForCinematicArtwork()
         composeRule.mainClock.advanceTimeBy(1_000)
         composeRule.onNodeWithTag("history-card-301")
             .performSemanticsAction(SemanticsActions.RequestFocus)
@@ -180,6 +209,7 @@ class P2GoldenScreenshotTest {
         }
         val width = Resources.getSystem().displayMetrics.widthPixels
         val titleVariant = when {
+            cinematicSession != null -> "cinematic"
             focusOnActions -> "selected"
             longTitle -> "long-title"
             else -> "short-title"
@@ -206,6 +236,49 @@ class P2GoldenScreenshotTest {
             assertTrue("$label must keep its full height", bounds.height >= minimumActionHeight)
             assertTrue("$label must stay above the carousel", bounds.bottom <= carouselBounds.top)
         }
+    }
+
+    @Test
+    fun detailCinematicBackdropMatchesCurrentResolution() {
+        withCinematicGoldenArtwork { artworkSession ->
+            composeRule.mainClock.autoAdvance = false
+            composeRule.setContent {
+                KaloscopeTheme(accentColor = AccentColor.Purple) {
+                    MediaDetailScreen(
+                        session = artworkSession,
+                        state = MediaDetailUiState.Content(
+                            parent = goldenMovie().copy(backdropPath = CinematicGoldenArtworkPath),
+                        ),
+                        resumePositionsByMediaId = mapOf(501L to 42L),
+                        onBack = {},
+                        onRetry = {},
+                        onChildFocused = {},
+                        onChildViewportChanged = {},
+                        onPlayParent = { _, _ -> },
+                        onPlayChild = { _, _ -> },
+                    )
+                }
+            }
+            waitForCinematicArtwork()
+            val width = Resources.getSystem().displayMetrics.widthPixels
+            assertGolden(
+                "media-detail-cinematic-$width",
+                composeRule.onRoot().captureToImage().asAndroidBitmap(),
+            )
+        }
+    }
+
+    private fun waitForCinematicArtwork() {
+        composeRule.onNodeWithTag("detail-backdrop-$CinematicGoldenArtworkPath").assertExists()
+        composeRule.waitUntil(10_000) {
+            composeRule.mainClock.advanceTimeBy(100)
+            composeRule.onAllNodesWithTag("server-image-loading").fetchSemanticsNodes().isEmpty() &&
+                composeRule.onAllNodesWithTag("server-image-handoff").fetchSemanticsNodes().isEmpty()
+        }
+        composeRule.onAllNodesWithTag("server-image-failed").fetchSemanticsNodes().let {
+            assertTrue("Cinematic artwork must load successfully", it.isEmpty())
+        }
+        composeRule.mainClock.advanceTimeBy(1_000)
     }
 
     @Test

@@ -1,6 +1,9 @@
 package org.kaloscope.tv.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.tv.material3.MaterialTheme
@@ -31,15 +34,30 @@ class KaloscopeThemeTest {
 
     @Test
     fun changingAccentKeepsNeutralAndFunctionalColorsFixed() {
-        val purple = captureTheme(AccentColor.Purple)
+        var accentColor by mutableStateOf(AccentColor.Blue)
+        var snapshot: ThemeSnapshot? = null
+        composeRule.setContent {
+            KaloscopeTheme(accentColor = accentColor) {
+                snapshot = currentThemeSnapshot()
+            }
+        }
 
-        assertEquals(AccentColor.Purple.accentPalette(), purple.accent)
-        assertEquals(AccentColor.Purple.accentPalette().primary, purple.materialPrimary)
-        assertEquals(Background, purple.background)
-        assertEquals(Panel, purple.surface)
-        assertEquals(OnBackground, purple.onBackground)
-        assertEquals(ControlFocused, purple.focusedSurface)
-        assertEquals(Danger, purple.danger)
+        for (accent in AccentColor.entries) {
+            composeRule.runOnIdle { accentColor = accent }
+            composeRule.waitForIdle()
+            val current = requireNotNull(snapshot)
+            val palette = accent.accentPalette()
+            assertEquals(palette, current.accent)
+            assertEquals(palette.primary, current.materialPrimary)
+            assertEquals(palette.controlSelected, current.primaryContainer)
+            assertEquals(palette.soft, current.secondary)
+            assertEquals(palette.panelSelected, current.secondaryContainer)
+            assertEquals(Background, current.background)
+            assertEquals(Panel, current.surface)
+            assertEquals(OnBackground, current.onBackground)
+            assertEquals(ControlFocused, current.focusedSurface)
+            assertEquals(Danger, current.danger)
+        }
     }
 
     private fun captureTheme(
@@ -48,15 +66,7 @@ class KaloscopeThemeTest {
         var snapshot: ThemeSnapshot? = null
         composeRule.setContent {
             val content: @Composable () -> Unit = {
-                snapshot = ThemeSnapshot(
-                    accent = LocalAccentPalette.current,
-                    materialPrimary = MaterialTheme.colorScheme.primary,
-                    background = MaterialTheme.colorScheme.background,
-                    surface = MaterialTheme.colorScheme.surface,
-                    onBackground = MaterialTheme.colorScheme.onBackground,
-                    focusedSurface = ControlFocused,
-                    danger = Danger,
-                )
+                snapshot = currentThemeSnapshot()
             }
             if (accentColor == null) {
                 KaloscopeTheme(content = content)
@@ -69,9 +79,26 @@ class KaloscopeThemeTest {
     }
 }
 
+@Composable
+private fun currentThemeSnapshot() = ThemeSnapshot(
+    accent = LocalAccentPalette.current,
+    materialPrimary = MaterialTheme.colorScheme.primary,
+    primaryContainer = MaterialTheme.colorScheme.primaryContainer,
+    secondary = MaterialTheme.colorScheme.secondary,
+    secondaryContainer = MaterialTheme.colorScheme.secondaryContainer,
+    background = MaterialTheme.colorScheme.background,
+    surface = MaterialTheme.colorScheme.surface,
+    onBackground = MaterialTheme.colorScheme.onBackground,
+    focusedSurface = ControlFocused,
+    danger = MaterialTheme.colorScheme.error,
+)
+
 private data class ThemeSnapshot(
     val accent: AccentPalette,
     val materialPrimary: Color,
+    val primaryContainer: Color,
+    val secondary: Color,
+    val secondaryContainer: Color,
     val background: Color,
     val surface: Color,
     val onBackground: Color,

@@ -10,6 +10,21 @@ import org.kaloscope.tv.core.model.AccentColor
 
 class KaloscopeControlStyleTest {
     @Test
+    fun sidebarSelectionFollowsEveryConfiguredAccent() {
+        for (accent in AccentColor.entries) {
+            val palette = accent.accentPalette()
+            assertEquals(
+                "$accent sidebar selection",
+                palette.panelSelected,
+                resolveKaloscopeControlBaseColor(
+                    KaloscopeControlBaseMaterial.SidebarSelected,
+                    palette,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun selectedMaterialsUseAccentAtRestAndNeutralWhiteWhenFocused() {
         val palette = AccentColor.Green.accentPalette()
         val state = resolveKaloscopeControlState(
@@ -34,7 +49,7 @@ class KaloscopeControlStyleTest {
             resolveKaloscopeControlFocusColor(state.focusMaterial),
         )
         assertEquals(
-            SidebarSelected,
+            palette.panelSelected,
             resolveKaloscopeControlBaseColor(
                 KaloscopeControlBaseMaterial.SidebarSelected,
                 palette,
@@ -113,7 +128,7 @@ class KaloscopeControlStyleTest {
         )
         assertEquals(6.dp, focused.elevation)
         assertEquals(1.02f, focused.scale)
-        assertEquals(Color(0xFF101725), focused.contentColor)
+        assertEquals(OnControlFocused, focused.contentColor)
     }
 
     @Test
@@ -155,7 +170,7 @@ class KaloscopeControlStyleTest {
         assertFalse(state.showPressedShade)
         assertEquals(8.dp, state.elevation)
         assertEquals(1.04f, state.scale)
-        assertEquals(Color(0xFF101725), state.contentColor)
+        assertEquals(OnControlFocused, state.contentColor)
     }
 
     @Test
@@ -201,7 +216,7 @@ class KaloscopeControlStyleTest {
         )
         assertEquals(6.dp, state.elevation)
         assertEquals(1.02f, state.scale)
-        assertEquals(Color(0xFF101725), state.contentColor)
+        assertEquals(OnControlFocused, state.contentColor)
     }
 
     @Test
@@ -223,7 +238,7 @@ class KaloscopeControlStyleTest {
         assertTrue(state.showPressedShade)
         assertEquals(2.dp, state.elevation)
         assertEquals(1f, state.scale)
-        assertEquals(Color(0xFF101725), state.contentColor)
+        assertEquals(OnControlFocused, state.contentColor)
     }
 
     @Test

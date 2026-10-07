@@ -740,7 +740,9 @@ private fun ProgressBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(3.dp)
+            .height(7.dp)
+            .background(Panel, RoundedCornerShape(6.dp))
+            .padding(2.dp)
             .background(Outline, RoundedCornerShape(4.dp)),
     ) {
         Box(

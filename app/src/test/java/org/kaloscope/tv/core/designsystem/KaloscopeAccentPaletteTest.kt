@@ -72,14 +72,16 @@ class KaloscopeAccentPaletteTest {
         for (accent in AccentColor.entries) {
             val palette = accent.accentPalette()
 
-            assertTrue(
-                "$accent primary contrast",
-                contrastRatio(palette.primary, Background) >= MinimumContrast,
-            )
-            assertTrue(
-                "$accent soft contrast",
-                contrastRatio(palette.soft, Background) >= MinimumContrast,
-            )
+            for (surface in listOf(Background, Panel, PanelElevated, ContentCardFocused)) {
+                assertTrue(
+                    "$accent primary contrast on $surface",
+                    contrastRatio(palette.primary, surface) >= MinimumContrast,
+                )
+                assertTrue(
+                    "$accent soft contrast on $surface",
+                    contrastRatio(palette.soft, surface) >= MinimumContrast,
+                )
+            }
             assertTrue(
                 "$accent panel selection contrast",
                 contrastRatio(OnBackground, palette.panelSelected) >= MinimumContrast,
@@ -89,6 +91,19 @@ class KaloscopeAccentPaletteTest {
                 contrastRatio(OnBackground, palette.controlSelected) >= MinimumContrast,
             )
         }
+    }
+
+    @Test
+    fun `neutral surfaces keep primary and secondary text readable`() {
+        for (surface in listOf(Background, BackgroundRaised, Panel, PanelElevated, ContentCardFocused)) {
+            for (text in listOf(OnBackground, Muted, Subtle)) {
+                assertTrue(
+                    "$text contrast on $surface",
+                    contrastRatio(text, surface) >= MinimumContrast,
+                )
+            }
+        }
+        assertTrue(contrastRatio(OnControlFocused, ControlFocused) >= MinimumContrast)
     }
 
     @Test

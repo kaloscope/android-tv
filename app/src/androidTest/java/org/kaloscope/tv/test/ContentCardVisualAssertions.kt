@@ -3,11 +3,14 @@ package org.kaloscope.tv.test
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.toArgb
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.kaloscope.tv.core.designsystem.ContentCardFocused
+import org.kaloscope.tv.core.designsystem.ControlFocused
 
 internal fun assertContentCardFocusOutline(
     label: String,
@@ -15,7 +18,7 @@ internal fun assertContentCardFocusOutline(
     density: Float,
     visible: Boolean = true,
 ) {
-    val outline = Color.rgb(0xE8, 0xED, 0xF4)
+    val outline = ControlFocused.toArgb()
     val searchHeight = (12f * density).roundToInt().coerceIn(1, bitmap.height)
     val expectedWidth = (2f * density).roundToInt()
     listOf(0.25f, 0.5f, 0.75f).forEach { fraction ->
@@ -43,12 +46,12 @@ internal fun assertFocusedContentCardSurface(
     val x = sampleX.coerceIn(0, bitmap.width - 1)
     val y = sampleY.coerceIn(0, bitmap.height - 1)
     val actual = bitmap.getPixel(x, y)
-    val expected = Color.rgb(0x25, 0x32, 0x4A)
+    val expected = ContentCardFocused.toArgb()
     val distance = abs(Color.red(expected) - Color.red(actual)) +
         abs(Color.green(expected) - Color.green(actual)) +
         abs(Color.blue(expected) - Color.blue(actual))
     assertTrue(
-        "$label focused surface expected #25324A but was " +
+        "$label focused surface expected #${String.format("%06X", expected and 0xFFFFFF)} but was " +
             "#${String.format("%06X", actual and 0xFFFFFF)}",
         distance <= 9,
     )
@@ -93,8 +96,8 @@ internal fun assertFocusedContentCardBottomInsideViewport(
     viewportBounds: Rect,
     density: Float,
 ) {
-    val focusedSurface = Color.rgb(0x25, 0x32, 0x4A)
-    val focusOutline = Color.rgb(0xE8, 0xED, 0xF4)
+    val focusedSurface = ContentCardFocused.toArgb()
+    val focusOutline = ControlFocused.toArgb()
     val centerX = cardBounds.center.x.roundToInt().coerceIn(0, bitmap.width - 1)
     val searchPadding = (12f * density).roundToInt()
     val startY = (floor(cardBounds.top).toInt() - searchPadding)

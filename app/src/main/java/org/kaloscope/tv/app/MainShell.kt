@@ -48,8 +48,10 @@ import org.kaloscope.tv.app.navigation.openPlayer
 import org.kaloscope.tv.app.navigation.openReader
 import org.kaloscope.tv.app.navigation.openSettings
 import org.kaloscope.tv.app.navigation.selectRoot
+import org.kaloscope.tv.core.designsystem.Background
 import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.designsystem.KaloscopeBackground
+import org.kaloscope.tv.core.designsystem.KaloscopeCinematicScrim
 import org.kaloscope.tv.core.designsystem.KaloscopeConfirmDialog
 import org.kaloscope.tv.core.designsystem.KaloscopeControlTone
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
@@ -299,6 +301,7 @@ internal fun MainShell(
                                         session = session,
                                         path = backdrop.path,
                                         testTag = "home-fullscreen-backdrop",
+                                        cinematic = true,
                                     )
                                 }
                             },
@@ -603,8 +606,9 @@ private fun RootFullscreenBackdrop(
     session: Session,
     path: String,
     testTag: String,
+    cinematic: Boolean = false,
 ) {
-    RootFullscreenBackdropFrame(testTag = testTag) { imageModifier ->
+    RootFullscreenBackdropFrame(testTag = testTag, cinematic = cinematic) { imageModifier ->
         ServerBackdrop(
             session = session,
             backdropPath = path,
@@ -617,6 +621,7 @@ private fun RootFullscreenBackdrop(
 @Composable
 internal fun RootFullscreenBackdropFrame(
     testTag: String,
+    cinematic: Boolean = false,
     imageLayer: @Composable (Modifier) -> Unit,
 ) {
     Box(
@@ -627,32 +632,36 @@ internal fun RootFullscreenBackdropFrame(
         imageLayer(
             Modifier
                 .fillMaxSize()
-                .rootBackdropEdgeFade(),
+                .then(if (cinematic) Modifier else Modifier.rootBackdropEdgeFade()),
         )
+        if (cinematic) {
+            KaloscopeCinematicScrim()
+            return@Box
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0x24070B14))
+                .background(Background.copy(alpha = 0.14f))
                 .background(
                     Brush.verticalGradient(
-                        0f to Color(0xD9070B14),
-                        0.24f to Color(0x65070B14),
+                        0f to Background.copy(alpha = 0.85f),
+                        0.24f to Background.copy(alpha = 0.4f),
                         0.52f to Color.Transparent,
                     ),
                 )
                 .background(
                     Brush.horizontalGradient(
-                        0f to Color(0xF2070B14),
-                        0.36f to Color(0xC2070B14),
-                        0.7f to Color(0x42070B14),
-                        1f to Color(0x30070B14),
+                        0f to Background.copy(alpha = 0.95f),
+                        0.36f to Background.copy(alpha = 0.76f),
+                        0.7f to Background.copy(alpha = 0.26f),
+                        1f to Background.copy(alpha = 0.19f),
                     ),
                 )
                 .background(
                     Brush.verticalGradient(
                         0.48f to Color.Transparent,
-                        0.78f to Color(0x70070B14),
-                        1f to Color(0xEB070B14),
+                        0.78f to Background.copy(alpha = 0.44f),
+                        1f to Background.copy(alpha = 0.92f),
                     ),
                 ),
         )

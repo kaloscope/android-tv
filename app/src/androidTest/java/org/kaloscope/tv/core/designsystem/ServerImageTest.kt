@@ -82,7 +82,7 @@ class ServerImageTest {
         }
 
         assertTrue(
-            "Failed-image icon should stay visible but softer than the full #BAC6E8 tint; " +
+            "Failed-image icon should stay visible without a bright highlight; " +
                 "brightest blue was $brightestBlue",
             brightestBlue in 120..199,
         )

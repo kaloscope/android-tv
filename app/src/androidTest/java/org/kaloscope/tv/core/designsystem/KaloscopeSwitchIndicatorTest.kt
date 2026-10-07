@@ -9,6 +9,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -120,7 +122,7 @@ class KaloscopeSwitchIndicatorTest {
             .asAndroidBitmap()
 
         assertColorNear(
-            expected = AndroidColor.rgb(0xF7, 0xF8, 0xFC),
+            expected = OnBackground.toArgb(),
             actual = thumb.getPixel(thumb.width / 2, thumb.height / 2),
         )
     }
@@ -137,7 +139,7 @@ class KaloscopeSwitchIndicatorTest {
             .asAndroidBitmap()
 
         assertColorNear(
-            expected = AndroidColor.rgb(0x06, 0x09, 0x12),
+            expected = Background.toArgb(),
             actual = track.getPixel(track.width * 3 / 4, track.height / 2),
         )
     }
@@ -154,7 +156,7 @@ class KaloscopeSwitchIndicatorTest {
             .asAndroidBitmap()
 
         assertColorNear(
-            expected = AndroidColor.rgb(0x7F, 0x81, 0x87),
+            expected = OnBackground.copy(alpha = 0.5f).compositeOver(Background).toArgb(),
             actual = track.getPixel(track.width / 2, 1.coerceAtMost(track.height - 1)),
             tolerance = 8,
         )
@@ -188,7 +190,7 @@ class KaloscopeSwitchIndicatorTest {
             .asAndroidBitmap()
 
         assertColorNear(
-            expected = AndroidColor.rgb(0x7F, 0x81, 0x87),
+            expected = OnBackground.copy(alpha = 0.5f).compositeOver(Background).toArgb(),
             actual = thumb.getPixel(thumb.width / 2, thumb.height / 2),
             tolerance = 4,
         )

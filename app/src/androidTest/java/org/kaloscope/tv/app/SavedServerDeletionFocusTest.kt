@@ -4,6 +4,7 @@ import android.graphics.Color as AndroidColor
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
@@ -21,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.kaloscope.tv.core.designsystem.ControlFocused
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.feature.server.SavedServerDeletionState
@@ -116,7 +118,7 @@ class SavedServerDeletionFocusTest {
             .visibleSurfaceHeight(
                 bounds = focusedServerBounds,
                 density = density,
-                surfaceColor = AndroidColor.rgb(0xE8, 0xED, 0xF4),
+                surfaceColor = ControlFocused.toArgb(),
             )
         composeRule.onNodeWithTag("saved-server-home")
             .performKeyInput { pressKey(Key.DirectionRight) }

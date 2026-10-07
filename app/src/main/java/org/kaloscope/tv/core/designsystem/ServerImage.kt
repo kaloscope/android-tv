@@ -18,7 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -56,8 +55,8 @@ private fun ServerImageSkeleton(
     // Keep the last loading frame beneath the image until its fade-in is complete.
     val frozenOffset = remember(frozen) { animatedOffset.value }
     val offset = if (frozen) frozenOffset else animatedOffset.value
-    val base = Color(0xFF202B40)
-    val highlight = Color(0xFF34425E)
+    val base = PanelElevated
+    val highlight = ContentCardFocused
     val brush = Brush.linearGradient(
         colorStops = arrayOf(
             0f to base,
@@ -85,7 +84,7 @@ internal fun ServerImagePlaceholder(
                     ServerImageVisualState.Success -> "server-image-handoff"
                 },
             )
-            .background(Color(0xFF25334D)),
+            .background(PanelElevated),
         contentAlignment = Alignment.Center,
     ) {
         when (state) {
@@ -105,7 +104,7 @@ private fun ServerImageBrokenIcon() {
     Image(
         painter = painterResource(R.drawable.ic_image_broken),
         contentDescription = null,
-        colorFilter = ColorFilter.tint(Color(0xFFBAC6E8).copy(alpha = 0.55f)),
+        colorFilter = ColorFilter.tint(Subtle),
         modifier = Modifier.testTag("server-image-broken-icon"),
     )
 }
@@ -136,7 +135,7 @@ fun ServerImage(
             animationSpec = tween(KaloscopeMotion.ImageMillis),
             label = "server-image-alpha",
         )
-        Box(modifier = modifier.background(Color(0xFF25334D))) {
+        Box(modifier = modifier.background(PanelElevated)) {
             if (visualState != ServerImageVisualState.Success || imageAlpha < 1f) {
                 ServerImagePlaceholder(
                     state = visualState,

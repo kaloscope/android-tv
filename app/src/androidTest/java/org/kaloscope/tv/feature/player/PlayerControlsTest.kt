@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
@@ -41,6 +42,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.core.designsystem.LocalAccentPalette
+import org.kaloscope.tv.core.designsystem.Subtle
 import org.kaloscope.tv.core.designsystem.accentPalette
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.MediaChapter
@@ -2006,7 +2008,7 @@ class PlayerControlsTest {
             .captureToImage()
             .asAndroidBitmap()
         assertEquals(
-            0xFF747E94.toInt(),
+            Subtle.toArgb(),
             pausedTrack.getPixel(pausedTrack.width / 2, pausedTrack.height / 2),
         )
     }

@@ -22,7 +22,6 @@ enum class KaloscopeControlTone {
 }
 
 object KaloscopeControlTokens {
-    val SidebarSelectedSurface = SidebarSelected
     val FocusedSurface = ControlFocused
     val PressedShade = Color(0x14000000)
     val FocusShadow = Color(0x52000000)
@@ -47,7 +46,7 @@ internal fun resolveKaloscopeControlBaseColor(
     KaloscopeControlBaseMaterial.Filled -> PanelElevated
     KaloscopeControlBaseMaterial.Selected -> accentPalette.controlSelected
     KaloscopeControlBaseMaterial.SidebarSelected ->
-        KaloscopeControlTokens.SidebarSelectedSurface
+        accentPalette.panelSelected
 }
 
 internal fun resolveKaloscopeControlFocusColor(

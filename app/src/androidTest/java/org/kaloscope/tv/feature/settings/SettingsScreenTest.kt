@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
@@ -59,7 +60,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
+import org.kaloscope.tv.core.designsystem.ControlFocused
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.OnControlFocused
 import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.DanmakuDisplayMode
 import org.kaloscope.tv.core.model.DanmakuSettings
@@ -596,7 +599,7 @@ class SettingsScreenTest {
         composeRule.mainClock.advanceTimeBy(500)
         assertCenterColor(
             label = "focused adjustment row",
-            expected = AndroidColor.rgb(0xE8, 0xED, 0xF4),
+            expected = ControlFocused.toArgb(),
             actual = fontSizeRow.captureToImage().asAndroidBitmap(),
         )
 
@@ -1205,15 +1208,15 @@ class SettingsScreenTest {
 
         assertCenterColor(
             label = "focused logout row",
-            expected = AndroidColor.rgb(0xE8, 0xED, 0xF4),
+            expected = ControlFocused.toArgb(),
             actual = logout.captureToImage().asAndroidBitmap(),
         )
         assertEquals(Color(0xFFFF7D91), textLayoutFor("退出登录").layoutInput.style.color)
         assertEquals(
-            Color(0xFF101725).copy(alpha = 0.72f),
+            OnControlFocused.copy(alpha = 0.72f),
             textLayoutFor("清除当前服务器的登录状态").layoutInput.style.color,
         )
-        assertEquals(Color(0xFF101725), textLayoutFor("tv_user").layoutInput.style.color)
+        assertEquals(OnControlFocused, textLayoutFor("tv_user").layoutInput.style.color)
     }
 
     @Test
@@ -1246,9 +1249,9 @@ class SettingsScreenTest {
             Color(0xFF58D8A0),
             textLayoutFor("连接成功 v0.8.7").layoutInput.style.color,
         )
-        assertEquals(Color(0xFFF7F8FC), textLayoutFor("测试连接").layoutInput.style.color)
+        assertEquals(OnBackground, textLayoutFor("测试连接").layoutInput.style.color)
         assertEquals(
-            Color(0xFFF7F8FC),
+            OnBackground,
             textLayoutFor("http://127.0.0.1:8000").layoutInput.style.color,
         )
     }

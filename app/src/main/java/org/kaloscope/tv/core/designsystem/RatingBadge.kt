@@ -22,7 +22,7 @@ fun RatingBadge(
     Row(
         modifier = modifier
             .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
-            .background(Color(0xD9121824), RoundedCornerShape(6.dp))
+            .background(Panel.copy(alpha = 0.85f), RoundedCornerShape(6.dp))
             .padding(horizontal = 7.dp, vertical = 4.dp),
     ) {
         Text(

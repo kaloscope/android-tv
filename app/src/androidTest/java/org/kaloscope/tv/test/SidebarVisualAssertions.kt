@@ -2,8 +2,14 @@ package org.kaloscope.tv.test
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.toArgb
 import kotlin.math.abs
 import org.junit.Assert.assertTrue
+import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.Panel
+import org.kaloscope.tv.core.designsystem.accentPalette
+import org.kaloscope.tv.core.model.AccentColor
 
 fun assertSidebarNavigationSurfaces(
     label: String,
@@ -20,19 +26,21 @@ fun assertSidebarNavigationSurfaces(
         unselected.height / 2,
     )
 
+    val restingSurface = Panel.copy(alpha = 0.72f).compositeOver(Background).toArgb()
     assertColorNear(
         label = "$label transparent resting surface",
-        expected = Color.rgb(0x0D, 0x13, 0x20),
+        expected = restingSurface,
         actual = unselectedPixel,
     )
+    val expectedBlue = Color.blue(restingSurface)
     assertTrue(
-        "$label transparent resting surface blue channel expected 31..32 " +
+        "$label transparent resting surface blue channel expected $expectedBlue ± 1 " +
             "but was ${Color.blue(unselectedPixel)}",
-        Color.blue(unselectedPixel) in 0x1F..0x20,
+        Color.blue(unselectedPixel) in (expectedBlue - 1)..(expectedBlue + 1),
     )
     assertColorNear(
         label = "$label selected surface",
-        expected = Color.rgb(0x20, 0x2B, 0x40),
+        expected = AccentColor.Blue.accentPalette().panelSelected.toArgb(),
         actual = selectedPixel,
     )
 }

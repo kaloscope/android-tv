@@ -45,8 +45,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -74,6 +72,7 @@ import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeButton
 import org.kaloscope.tv.core.designsystem.KaloscopeCarouselEdgeFade
+import org.kaloscope.tv.core.designsystem.KaloscopeCinematicScrim
 import org.kaloscope.tv.core.designsystem.KaloscopeControlSize
 import org.kaloscope.tv.core.designsystem.KaloscopeControlVariant
 import org.kaloscope.tv.core.designsystem.LocalAccentPalette
@@ -227,28 +226,7 @@ internal fun MediaDetailCinematicLayout(
             policy = ServerImagePolicy.Store,
             modifier = Modifier.fillMaxSize(),
         )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        0f to Color(0xFA060912),
-                        0.58f to Color(0xD9060912),
-                        1f to Color(0x52060912),
-                    ),
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.56f to Color(0x52060912),
-                        1f to Color(0xFF060912),
-                    ),
-                ),
-        )
+        KaloscopeCinematicScrim(protectFullWidth = true)
 
         LazyColumn(
             state = detailScrollState,

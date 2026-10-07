@@ -13,6 +13,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
@@ -43,6 +45,8 @@ import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.accentPalette
+import org.kaloscope.tv.core.model.AccentColor
 import org.kaloscope.tv.core.model.SavedServer
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
@@ -310,6 +314,33 @@ class HomeScreenTest {
             "Progress bar must leave at least 16 dp before the action row",
             actionBounds.top - progressBounds.bottom >= minimumGap,
         )
+    }
+
+    @Test
+    fun progressKeepsEveryAccentReadableOverBrightArtwork() {
+        val accent = mutableStateOf(AccentColor.Blue)
+        showContentHome(
+            backdropColor = mutableStateOf(Color.White),
+            accentColor = accent,
+        )
+
+        for (color in AccentColor.entries) {
+            composeRule.runOnIdle { accent.value = color }
+            val progress = composeRule.onNodeWithTag("history-progress")
+                .captureToImage().asAndroidBitmap()
+            val filled = Color(progress.getPixel(progress.width / 4, progress.height / 2))
+            val outlineY = with(composeRule.density) { 1.dp.roundToPx() }
+            val surrounding = Color(progress.getPixel(progress.width / 4, outlineY))
+            val remaining = Color(progress.getPixel(progress.width * 3 / 4, progress.height / 2))
+
+            assertEquals(color.accentPalette().primary.toArgb(), filled.toArgb())
+            for (background in listOf(surrounding, remaining)) {
+                assertTrue(
+                    "$color progress must stay readable against its track and surrounding surface",
+                    (filled.luminance() + 0.05f) / (background.luminance() + 0.05f) >= 3f,
+                )
+            }
+        }
     }
 
     @Test
@@ -880,9 +911,10 @@ class HomeScreenTest {
         onBackdropChanged: (HomeBackdropPresentation?) -> Unit = {},
         viewportHeight: Dp = 440.dp,
         backdropColor: State<Color>? = null,
+        accentColor: State<AccentColor>? = null,
     ) {
         composeRule.setContent {
-            KaloscopeTheme {
+            KaloscopeTheme(accentColor = accentColor?.value ?: AccentColor.Blue) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

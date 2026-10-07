@@ -197,16 +197,16 @@ class KaloscopeControlsTest {
         )
         assertColorNear(
             label = "focused surface",
-            expected = AndroidColor.rgb(0xE8, 0xED, 0xF4),
+            expected = ControlFocused.toArgb(),
             actual = focused.getPixel(sampleX, focused.height / 2),
         )
         assertTrue(
             "Selected content did not inherit the light control color",
-            selected.countPixelsNear(AndroidColor.rgb(0xF7, 0xF8, 0xFC)) >= 12,
+            selected.countPixelsNear(OnBackground.toArgb()) >= 12,
         )
         assertTrue(
             "Focused content did not inherit the dark control color",
-            focused.countPixelsNear(AndroidColor.rgb(0x10, 0x17, 0x25)) >= 12,
+            focused.countPixelsNear(OnControlFocused.toArgb()) >= 12,
         )
     }
 
@@ -268,14 +268,14 @@ class KaloscopeControlsTest {
 
         assertRedChannelBetween(
             label = "surface transition",
-            start = 0x18,
-            end = 0xE8,
+            start = AndroidColor.red(PanelElevated.toArgb()),
+            end = AndroidColor.red(ControlFocused.toArgb()),
             actual = control.getPixel((24 * density).toInt(), control.height / 2),
         )
         assertRedChannelBetween(
             label = "content transition",
-            start = 0xF7,
-            end = 0x10,
+            start = AndroidColor.red(OnBackground.toArgb()),
+            end = AndroidColor.red(OnControlFocused.toArgb()),
             actual = content.getPixel(content.width / 2, content.height / 2),
         )
     }
@@ -336,14 +336,14 @@ class KaloscopeControlsTest {
 
         assertRedChannelBetween(
             label = "icon surface transition",
-            start = 0x18,
-            end = 0xE8,
+            start = AndroidColor.red(PanelElevated.toArgb()),
+            end = AndroidColor.red(ControlFocused.toArgb()),
             actual = control.getPixel((10 * density).toInt(), control.height / 2),
         )
         assertRedChannelBetween(
             label = "icon content transition",
-            start = 0xF7,
-            end = 0x10,
+            start = AndroidColor.red(OnBackground.toArgb()),
+            end = AndroidColor.red(OnControlFocused.toArgb()),
             actual = content.getPixel(content.width / 2, content.height / 2),
         )
     }

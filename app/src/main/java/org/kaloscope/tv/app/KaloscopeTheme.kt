@@ -5,10 +5,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.Danger
+import org.kaloscope.tv.core.designsystem.LocalAccentPalette
+import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
+import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
-import org.kaloscope.tv.core.designsystem.LocalAccentPalette
 import org.kaloscope.tv.core.designsystem.accentPalette
 import org.kaloscope.tv.core.model.AccentColor
 
@@ -22,12 +25,22 @@ internal fun KaloscopeTheme(
         MaterialTheme(
             colorScheme = darkColorScheme(
                 primary = accentPalette.primary,
+                primaryContainer = accentPalette.controlSelected,
+                onPrimaryContainer = OnBackground,
+                secondary = accentPalette.soft,
+                onSecondary = Background,
+                secondaryContainer = accentPalette.panelSelected,
+                onSecondaryContainer = OnBackground,
                 background = Background,
                 surface = Panel,
                 surfaceVariant = PanelElevated,
                 onPrimary = Background,
                 onBackground = OnBackground,
                 onSurface = OnBackground,
+                onSurfaceVariant = Muted,
+                border = Outline,
+                error = Danger,
+                onError = Background,
             ),
             content = content,
         )
