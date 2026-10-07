@@ -58,6 +58,7 @@ import org.kaloscope.tv.R
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.IndexerSourceProfile
 import org.kaloscope.tv.core.model.NetworkIndexer
@@ -576,7 +577,12 @@ class SearchScreenTest {
                 Box(Modifier.fillMaxSize()) {
                     Box(
                         Modifier.fillMaxSize()
-                            .padding(start = 36.dp, top = 74.dp, end = 36.dp, bottom = 16.dp),
+                            .padding(
+                                start = BrowseLayoutTokens.ScreenHorizontalPadding,
+                                top = 74.dp,
+                                end = BrowseLayoutTokens.ScreenHorizontalPadding,
+                                bottom = 16.dp,
+                            ),
                     ) {
                         SearchScreen(
                             session = session(),
@@ -608,7 +614,7 @@ class SearchScreenTest {
                     )
                     Box(
                         Modifier.align(Alignment.TopEnd)
-                            .padding(end = 36.dp)
+                            .padding(end = BrowseLayoutTokens.ScreenHorizontalPadding)
                             .offset { IntOffset(0, settingsTop.roundToPx()) }
                             .size(32.dp)
                             .testTag("external-settings")
@@ -655,7 +661,12 @@ class SearchScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(start = 36.dp, top = 74.dp, end = 36.dp, bottom = 16.dp),
+                        .padding(
+                            start = BrowseLayoutTokens.ScreenHorizontalPadding,
+                            top = 74.dp,
+                            end = BrowseLayoutTokens.ScreenHorizontalPadding,
+                            bottom = 16.dp,
+                        ),
                 ) {
                     SearchScreen(
                         session = session(),
@@ -1611,7 +1622,7 @@ class SearchScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 36.dp),
+                        .padding(horizontal = BrowseLayoutTokens.ScreenHorizontalPadding),
                 ) {
                     SearchScreen(
                         session = session(),
@@ -1662,7 +1673,7 @@ class SearchScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 36.dp),
+                        .padding(horizontal = BrowseLayoutTokens.ScreenHorizontalPadding),
                 ) {
                     SearchScreen(
                         session = session(),
@@ -1717,7 +1728,7 @@ class SearchScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 36.dp),
+                        .padding(horizontal = BrowseLayoutTokens.ScreenHorizontalPadding),
                 ) {
                     SearchScreen(
                         session = session(),
@@ -2749,7 +2760,10 @@ class SearchScreenTest {
             KaloscopeTheme {
                 Box(
                     Modifier.fillMaxSize().padding(
-                        start = 36.dp, top = 74.dp, end = 36.dp, bottom = 16.dp,
+                        start = BrowseLayoutTokens.ScreenHorizontalPadding,
+                        top = 74.dp,
+                        end = BrowseLayoutTokens.ScreenHorizontalPadding,
+                        bottom = 16.dp,
                     ),
                 ) {
                     SearchScreen(
@@ -3125,7 +3139,12 @@ class SearchScreenTest {
             KaloscopeTheme {
                 Box(
                     Modifier.fillMaxSize()
-                        .padding(start = 36.dp, top = 74.dp, end = 36.dp, bottom = 16.dp),
+                        .padding(
+                            start = BrowseLayoutTokens.ScreenHorizontalPadding,
+                            top = 74.dp,
+                            end = BrowseLayoutTokens.ScreenHorizontalPadding,
+                            bottom = 16.dp,
+                        ),
                 ) {
                     SearchScreen(
                         session = session(),

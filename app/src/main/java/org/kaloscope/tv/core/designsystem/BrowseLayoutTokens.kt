@@ -3,7 +3,7 @@ package org.kaloscope.tv.core.designsystem
 import androidx.compose.ui.unit.dp
 
 object BrowseLayoutTokens {
-    val ScreenHorizontalPadding = 36.dp
+    val ScreenHorizontalPadding = 24.dp
     val TopBarHeight = 68.dp
     val ScreenContentTopPadding = TopBarHeight + 6.dp
     val ScreenContentBottomPadding = 16.dp

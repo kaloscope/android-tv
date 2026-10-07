@@ -35,6 +35,7 @@ import org.junit.Test
 import org.kaloscope.tv.app.KaloscopeTheme
 import org.kaloscope.tv.core.common.AppError
 import org.kaloscope.tv.core.designsystem.Background
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
 import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaLibrary
 import org.kaloscope.tv.core.model.MediaLibraryType
@@ -679,7 +680,7 @@ class LibraryScreenTest {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 36.dp),
+                        .padding(horizontal = BrowseLayoutTokens.ScreenHorizontalPadding),
                 ) {
                     LibraryScreen(
                         session = session(),
