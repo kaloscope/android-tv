@@ -210,11 +210,10 @@ internal fun MediaDetailCinematicLayout(
         // Series need room for the episode ribbon at 1080p, while movies only
         // need compact spacing on 720p screens to keep the focused hero visible.
         val compactLayout = maxHeight <= if (parent.children.isNotEmpty()) 600.dp else 400.dp
-        val posterWidth = if (compactLayout) {
-            (maxWidth * 0.13f).coerceIn(128.dp, 176.dp)
-        } else {
-            (maxWidth * 0.14f).coerceIn(136.dp, 196.dp)
-        }
+        // Use the available height while reserving room for metadata on narrower viewports.
+        val posterWidth = (maxHeight * 0.34f)
+            .coerceAtLeast(if (compactLayout) 128.dp else 136.dp)
+            .coerceAtMost(maxWidth * 0.2f)
         val childCardWidth = if (compactLayout) {
             (maxWidth * 0.16f).coerceIn(156.dp, 220.dp)
         } else {

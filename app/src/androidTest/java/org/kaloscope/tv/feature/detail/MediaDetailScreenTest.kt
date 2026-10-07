@@ -1590,11 +1590,17 @@ class MediaDetailScreenTest {
             .fetchSemanticsNode().boundsInRoot
         val synopsisNode = composeRule.onNodeWithText(plot).fetchSemanticsNode()
         val synopsis = synopsisNode.boundsInRoot
+        val poster = composeRule.onNodeWithTag("detail-parent-poster-201")
+            .fetchSemanticsNode().boundsInRoot
         val episodeNode = composeRule.onNodeWithTag("media-child-card-301")
             .fetchSemanticsNode()
         val episode = episodeNode.boundsInRoot
         val tolerance = with(composeRule.density) { 1.dp.toPx() }
 
+        assertTrue(
+            "Poster should use the available hero height in 1080p: $poster",
+            poster.height >= viewport.height * 0.45f,
+        )
         assertTrue("Synopsis should remain inside the first viewport", synopsis.top >= viewport.top)
         assertTrue(
             "Synopsis should be fully visible in 960x540dp: $synopsis",

@@ -448,6 +448,10 @@ class P2GoldenScreenshotTest {
         val episodeCard = composeRule.onNodeWithTag("media-child-card-301")
         episodeCard.performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.mainClock.advanceTimeBy(1_000)
+        assertGolden(
+            "media-detail-series-hero-$width",
+            composeRule.onRoot().captureToImage().asAndroidBitmap(),
+        )
         episodeCard.performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.mainClock.advanceTimeBy(1_000)
 
