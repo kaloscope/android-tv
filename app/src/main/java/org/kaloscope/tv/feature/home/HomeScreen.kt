@@ -538,7 +538,7 @@ private fun HistoryCarouselCard(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(start = 4.dp, top = 4.dp, end = 8.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ServerImage(
@@ -547,17 +547,18 @@ private fun HistoryCarouselCard(
                 contentDescription = item.parentTitle ?: item.title,
                 policy = ServerImagePolicy.Store,
                 modifier = Modifier
-                    .width(48.dp)
+                    .width(56.dp)
                     .fillMaxHeight()
                     .testTag("history-card-poster-${item.mediaId}")
                     .clip(RoundedCornerShape(10.dp)),
                 contentScale = ContentScale.Crop,
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(8.dp))
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxHeight(),
+                    .fillMaxHeight()
+                    .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(

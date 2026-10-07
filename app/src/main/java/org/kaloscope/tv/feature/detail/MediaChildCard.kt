@@ -1,7 +1,6 @@
 package org.kaloscope.tv.feature.detail
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -20,21 +19,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
+import org.kaloscope.tv.core.designsystem.BrowseLayoutTokens
+import org.kaloscope.tv.core.designsystem.ControlFocused
 import org.kaloscope.tv.core.designsystem.KaloscopeFocusSurface
 import org.kaloscope.tv.core.designsystem.KaloscopeMotion
 import org.kaloscope.tv.core.designsystem.LocalAccentPalette
 import org.kaloscope.tv.core.designsystem.Muted
 import org.kaloscope.tv.core.designsystem.OnBackground
-import org.kaloscope.tv.core.designsystem.Outline
 import org.kaloscope.tv.core.designsystem.Panel
 import org.kaloscope.tv.core.designsystem.PanelElevated
 import org.kaloscope.tv.core.designsystem.ServerImage
@@ -51,7 +51,7 @@ internal fun MediaChildCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(BrowseLayoutTokens.ContentCardCornerRadius)
     val accentPalette = LocalAccentPalette.current
     var isFocused by remember(child.id) { mutableStateOf(false) }
     val titleColor by animateColorAsState(
@@ -63,24 +63,12 @@ internal fun MediaChildCard(
         label = "episode-title-color",
     )
     val borderColor by animateColorAsState(
-        targetValue = when {
-            isFocused -> Color.White
-            focusedTarget -> accentPalette.primary.copy(alpha = 0.28f)
-            else -> Outline
-        },
+        targetValue = if (isFocused) ControlFocused else Color.Transparent,
         animationSpec = tween(
             durationMillis = KaloscopeMotion.FocusMillis,
             easing = KaloscopeMotion.ControlEasing,
         ),
         label = "episode-border-color",
-    )
-    val borderWidth by animateDpAsState(
-        targetValue = if (isFocused) 2.dp else 1.dp,
-        animationSpec = tween(
-            durationMillis = KaloscopeMotion.FocusMillis,
-            easing = KaloscopeMotion.ControlEasing,
-        ),
-        label = "episode-border-width",
     )
     val supportingText = child.aired ?: child.year?.toString()
 
@@ -88,19 +76,19 @@ internal fun MediaChildCard(
         onClick = onClick,
         selected = focusedTarget,
         shape = shape,
-        containerColor = Panel.copy(alpha = 0.74f),
-        selectedContainerColor = accentPalette.panelSelected.copy(alpha = 0.42f),
+        containerColor = Panel,
+        selectedContainerColor = accentPalette.panelSelected.copy(alpha = 0.42f).compositeOver(Panel),
         focusedContainerColor = PanelElevated,
         focusScale = 1f,
         modifier = modifier
-            .border(borderWidth, borderColor, shape)
+            .border(2.dp, borderColor, shape)
             .onFocusChanged {
                 isFocused = it.isFocused
                 if (it.isFocused) onFocused()
             }
             .testTag("media-child-card-${child.id}"),
     ) {
-        Column(Modifier.padding(8.dp)) {
+        Column {
             ServerImage(
                 session = session,
                 rawValue = child.posterPath,
@@ -109,45 +97,46 @@ internal fun MediaChildCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(10.dp)),
+                    .testTag("media-child-poster-${child.id}"),
             )
-            Spacer(Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(42.dp),
-                contentAlignment = Alignment.TopStart,
-            ) {
-                Text(
-                    text = mediaChildDisplayTitle(child),
-                    color = titleColor,
-                    fontSize = 15.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+            Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // CJK fallback changes the first-line metrics, so pin the visual baseline.
-                        .paddingFromBaseline(top = 18.dp)
-                        .testTag("media-child-title-${child.id}"),
-                )
-            }
-            Spacer(Modifier.height(3.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Text(
-                    text = supportingText.orEmpty(),
-                    color = Muted,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                        .height(42.dp),
+                    contentAlignment = Alignment.TopStart,
+                ) {
+                    Text(
+                        text = mediaChildDisplayTitle(child),
+                        color = titleColor,
+                        fontSize = 15.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            // CJK fallback changes the first-line metrics, so pin the visual baseline.
+                            .paddingFromBaseline(top = 18.dp)
+                            .testTag("media-child-title-${child.id}"),
+                    )
+                }
+                Spacer(Modifier.height(3.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = supportingText.orEmpty(),
+                        color = Muted,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

@@ -918,8 +918,8 @@ private fun NetworkResultCard(
     }
     KaloscopeFocusSurface(
         onClick = onClick,
-        shape = RoundedCornerShape(15.dp),
-        containerColor = Panel.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(BrowseLayoutTokens.ContentCardCornerRadius),
+        containerColor = Panel,
         focusedContainerColor = ContentCardFocused,
         focusScale = BrowseLayoutTokens.GridCardFocusScale,
         focusScaleEdgeClearance = BrowseLayoutTokens.GridCardFocusEdgeClearance,
@@ -950,13 +950,7 @@ private fun NetworkResultCard(
                     policy = ServerImagePolicy.Auto,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(coverRatio)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 15.dp,
-                                topEnd = 15.dp,
-                            ),
-                        ),
+                        .aspectRatio(coverRatio),
                 )
                 SearchResultBadge(result)
                 SearchResultCoverMetadata(result)

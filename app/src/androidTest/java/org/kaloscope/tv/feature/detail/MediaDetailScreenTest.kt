@@ -271,6 +271,13 @@ class MediaDetailScreenTest {
         composeRule.onAllNodesWithText("S1E1 · 启程").assertCountEquals(2)
         composeRule.onNodeWithText("第 1 集").assertDoesNotExist()
         composeRule.onNodeWithText("2026-01-02").assertExists()
+        val card = composeRule.onNodeWithTag("media-child-card-301")
+            .fetchSemanticsNode().boundsInRoot
+        val poster = composeRule.onNodeWithTag("media-child-poster-301", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        assertEquals(card.left, poster.left, 1f)
+        assertEquals(card.right, poster.right, 1f)
+        assertEquals(card.top, poster.top, 1f)
     }
 
     @Test
