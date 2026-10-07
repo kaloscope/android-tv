@@ -34,7 +34,7 @@ class PlayerExitConfirmationTest {
         pressBack()
 
         composeRule.onNodeWithTag("player-exit-confirmation").assertIsDisplayed()
-        composeRule.onNodeWithText("再按一次返回键退出播放").assertIsDisplayed()
+        composeRule.onNodeWithText("再按返回键退出播放").assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(0, exits) }
 
         pressBack()

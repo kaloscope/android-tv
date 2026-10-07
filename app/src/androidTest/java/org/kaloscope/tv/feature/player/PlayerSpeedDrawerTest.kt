@@ -66,7 +66,7 @@ class PlayerSpeedDrawerTest {
         assertEquals(400f * density, drawer.width, density)
         assertEquals(root.right, drawer.right, 1f)
         composeRule.onNodeWithText(
-            "此处调整仅对本次播放生效，不会修改全局默认值。",
+            "仅本次播放生效，不改变默认设置",
         ).assertExists()
     }
 

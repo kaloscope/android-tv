@@ -142,7 +142,7 @@ class MainShellTest {
 
         composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertExists()
         composeRule.onNodeWithText("确认退出？").assertExists()
-        composeRule.onNodeWithText("确定要关闭当前应用吗？").assertExists()
+        composeRule.onNodeWithText("退出当前应用？").assertExists()
         composeRule.onNodeWithTag("confirm-dialog-cancel").assertIsFocused()
         composeRule.onNode(hasText("媒体库") and hasClickAction()).assertIsSelected()
         composeRule.onNode(hasText("首页") and hasClickAction()).assertIsNotSelected()
@@ -1462,7 +1462,7 @@ class MainShellTest {
         val loading = composeRule.onNodeWithTag("search-playback-loading")
             .assertIsFocused()
         composeRule.onNodeWithTag("search-playback-loading-indicator").assertExists()
-        composeRule.onNodeWithText("正在获取资源…").assertExists()
+        composeRule.onNodeWithText("获取资源…").assertExists()
         composeRule.onNodeWithTag("search-results-grid").assertDoesNotExist()
         composeRule.onNodeWithTag("main-nav-search").assertDoesNotExist()
 

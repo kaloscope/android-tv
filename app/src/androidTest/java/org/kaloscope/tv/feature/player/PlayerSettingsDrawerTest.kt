@@ -396,7 +396,7 @@ class PlayerSettingsDrawerTest {
         setDrawer(DrawerHarness())
 
         composeRule.onNodeWithText(
-            "在此调整的部分显示偏好会自动同步为全局默认值。",
+            "部分显示设置会保存为默认值",
         ).assertExists()
         composeRule.onNodeWithTag(
             testTag = "player-session-settings-hint-icon",

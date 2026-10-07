@@ -2327,9 +2327,9 @@ class PlayerControlsTest {
         }
 
         composeRule.mainClock.advanceTimeBy(499)
-        composeRule.onNodeWithText("正在缓冲…").assertDoesNotExist()
+        composeRule.onNodeWithText("缓冲中…").assertDoesNotExist()
         composeRule.mainClock.advanceTimeBy(1)
-        composeRule.onNodeWithText("正在缓冲…").assertIsDisplayed()
+        composeRule.onNodeWithText("缓冲中…").assertIsDisplayed()
         val spinnerBounds = composeRule.onNodeWithTag(
             testTag = "player-buffering-spinner",
             useUnmergedTree = true,
@@ -2341,7 +2341,7 @@ class PlayerControlsTest {
             rebuffering = false
         }
         composeRule.mainClock.advanceTimeByFrame()
-        composeRule.onNodeWithText("正在缓冲…").assertDoesNotExist()
+        composeRule.onNodeWithText("缓冲中…").assertDoesNotExist()
     }
 
     @Test

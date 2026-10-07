@@ -3179,7 +3179,7 @@ class SearchScreenTest {
             )
         }
 
-        val message = composeRule.onNodeWithText("正在加载…").assertIsDisplayed()
+        val message = composeRule.onNodeWithText("加载中…").assertIsDisplayed()
         val layouts = mutableListOf<TextLayoutResult>()
         message.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
         val messageBounds = message.fetchSemanticsNode().boundsInRoot

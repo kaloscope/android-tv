@@ -388,7 +388,7 @@ class SettingsScreenTest {
 
         assertTrue(decrease.right <= value.left)
         assertTrue(value.right <= increase.left)
-        composeRule.onNodeWithText("正文行高相对于字号的倍数。").assertExists()
+        composeRule.onNodeWithText("行高与字号的比例").assertExists()
     }
 
     @Test
@@ -1152,13 +1152,13 @@ class SettingsScreenTest {
         ).assertExists()
         composeRule.onNode(
             hasClickAction() and
-                hasText("切换或添加服务器") and
+                hasText("管理服务器") and
                 hasText("家庭服务器"),
         ).assertExists()
         composeRule.onNode(
             hasClickAction() and hasText("退出登录") and hasText("tv_user"),
         ).assertExists()
-        composeRule.onNodeWithText("切换或添加服务器")
+        composeRule.onNodeWithText("管理服务器")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.onNodeWithText("测试连接")
@@ -1211,7 +1211,7 @@ class SettingsScreenTest {
         assertEquals(Color(0xFFFF7D91), textLayoutFor("退出登录").layoutInput.style.color)
         assertEquals(
             Color(0xFF101725).copy(alpha = 0.72f),
-            textLayoutFor("清除当前服务器的登录状态。").layoutInput.style.color,
+            textLayoutFor("清除当前服务器的登录状态").layoutInput.style.color,
         )
         assertEquals(Color(0xFF101725), textLayoutFor("tv_user").layoutInput.style.color)
     }
@@ -1289,7 +1289,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("测试连接")
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionDown) }
-        composeRule.onNodeWithText("切换或添加服务器")
+        composeRule.onNodeWithText("管理服务器")
             .assertIsFocused()
             .assertIsDisplayed()
             .performKeyInput { pressKey(Key.Enter) }
@@ -1439,7 +1439,7 @@ class SettingsScreenTest {
 
         listOf(
             "自动播放下一集",
-            "当前内容结束且存在下一集时自动继续。",
+            "播完后自动续播下一集",
         ).forEach { text ->
             val layoutResults = mutableListOf<TextLayoutResult>()
             composeRule.onNodeWithText(text, useUnmergedTree = true)

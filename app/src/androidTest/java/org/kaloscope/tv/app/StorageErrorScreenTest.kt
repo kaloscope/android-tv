@@ -41,7 +41,7 @@ class StorageErrorScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("无法访问本地配置，请稍后重试。")
+        composeRule.onNodeWithText("无法访问本地配置，请重试")
             .assertIsDisplayed()
         val retry = composeRule.onNodeWithText("重试")
         retry.assertIsDisplayed().assertIsFocused()
@@ -79,7 +79,7 @@ class StorageErrorScreenTest {
         }
 
         composeRule.onNodeWithText("无法加载服务器列表").assertIsDisplayed()
-        composeRule.onNodeWithText("无法读取已保存的服务器，请稍后重试。")
+        composeRule.onNodeWithText("无法读取已保存的服务器，请重试")
             .assertIsDisplayed()
         composeRule.onNodeWithText("重试")
             .assertIsFocused()
@@ -102,8 +102,8 @@ class StorageErrorScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("暂时无法退出登录").assertIsDisplayed()
-        composeRule.onNodeWithText("无法清除 Server B 保存的登录状态，请稍后重试。")
+        composeRule.onNodeWithText("退出登录失败").assertIsDisplayed()
+        composeRule.onNodeWithText("无法清除 Server B 的登录状态，请重试")
             .assertIsDisplayed()
         composeRule.onNodeWithText("重试")
             .assertIsFocused()
@@ -126,8 +126,8 @@ class StorageErrorScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("暂时无法切换服务器").assertIsDisplayed()
-        composeRule.onNodeWithText("无法访问 Server B 的本地配置，请稍后重试。")
+        composeRule.onNodeWithText("切换服务器失败").assertIsDisplayed()
+        composeRule.onNodeWithText("无法访问 Server B 的本地配置，请重试")
             .assertIsDisplayed()
         composeRule.onNodeWithText("重试")
             .assertIsFocused()

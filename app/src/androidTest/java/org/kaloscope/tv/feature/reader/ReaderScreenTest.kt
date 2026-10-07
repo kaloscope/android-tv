@@ -144,7 +144,7 @@ class ReaderScreenTest {
                 contentRevision = state.contentRevision + 1,
             )
         }
-        composeRule.onNodeWithText("本章没有文本内容").assertExists()
+        composeRule.onNodeWithText("本章没有文本").assertExists()
         composeRule.onNodeWithTag("text-reader-paragraph-0").assertDoesNotExist()
 
         composeRule.runOnIdle {
@@ -154,7 +154,7 @@ class ReaderScreenTest {
             )
         }
         composeRule.onNodeWithTag("text-reader-paragraph-0").assertTextEquals("恢复正文")
-        composeRule.onNodeWithText("本章没有文本内容").assertDoesNotExist()
+        composeRule.onNodeWithText("本章没有文本").assertDoesNotExist()
     }
 
     @Test
@@ -162,7 +162,7 @@ class ReaderScreenTest {
         var exits = 0
         setReader(textState(text = ""), onBack = { exits += 1 })
 
-        composeRule.onNodeWithText("本章没有文本内容").assertExists()
+        composeRule.onNodeWithText("本章没有文本").assertExists()
         val content = composeRule.onNodeWithTag("text-reader-content")
         content.assertIsFocused()
             .performKeyInput {
@@ -200,7 +200,7 @@ class ReaderScreenTest {
             ),
         )
 
-        composeRule.onNodeWithText("本章没有文本内容").assertExists()
+        composeRule.onNodeWithText("本章没有文本").assertExists()
         val content = composeRule.onNodeWithTag("text-reader-content")
         content.assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionDown) }
@@ -1014,7 +1014,7 @@ class ReaderScreenTest {
             .fetchSemanticsNode().boundsInRoot
         val indicator = composeRule.onNodeWithTag("reader-chapter-loading-indicator")
             .fetchSemanticsNode().boundsInRoot
-        val message = composeRule.onNodeWithText("正在切换章节…")
+        val message = composeRule.onNodeWithText("切换章节…")
             .fetchSemanticsNode().boundsInRoot
 
         assertEquals(screen, loading)
@@ -1218,7 +1218,7 @@ class ReaderScreenTest {
         assertEquals(Color.Black.toArgb(), panel.getPixel(2, panel.height / 2))
         assertEquals(
             OnBackground,
-            textLayoutForText("章节显示顺序").layoutInput.style.color,
+            textLayoutForText("章节顺序").layoutInput.style.color,
         )
     }
 
@@ -1264,7 +1264,7 @@ class ReaderScreenTest {
 
         assertEquals(
             OnBackground,
-            textLayoutForText("章节显示顺序").layoutInput.style.color,
+            textLayoutForText("章节顺序").layoutInput.style.color,
         )
     }
 
@@ -1832,7 +1832,7 @@ class ReaderScreenTest {
         control("阅读设置").performKeyInput { pressKey(Key.Enter) }
 
         composeRule.onNodeWithText(
-            "在此调整的部分阅读偏好会自动同步为全局默认值。",
+            "部分阅读设置会保存为默认值",
         ).assertExists()
 
         val icon = composeRule.onNodeWithTag(

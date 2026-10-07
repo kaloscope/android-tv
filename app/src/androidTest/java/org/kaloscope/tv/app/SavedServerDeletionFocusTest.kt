@@ -363,7 +363,7 @@ class SavedServerDeletionFocusTest {
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.onNodeWithTag("kaloscope-confirm-dialog").assertExists()
-        composeRule.onNodeWithText("无法删除服务器，请重试。").assertExists()
+        composeRule.onNodeWithText("无法删除服务器，请重试").assertExists()
         composeRule.onNodeWithTag("confirm-dialog-confirm").assertIsFocused()
     }
 

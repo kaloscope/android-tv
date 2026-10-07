@@ -117,7 +117,7 @@ class LoginScreenFocusTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithText("正在登录…")
+        composeRule.onNodeWithText("登录中…")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.onNodeWithTag(

@@ -55,7 +55,7 @@ class PlayerDefinitionDrawerTest {
             }
         }
 
-        composeRule.onNodeWithText("暂无可用清晰度").assertExists()
+        composeRule.onNodeWithText("暂无清晰度选项").assertExists()
         InstrumentationRegistry.getInstrumentation().apply {
             waitForIdleSync()
             sendKeyDownUpSync(AndroidKeyEvent.KEYCODE_BACK)
@@ -71,7 +71,7 @@ class PlayerDefinitionDrawerTest {
         setDrawer(selectedIndex = 0)
 
         composeRule.onNodeWithText(
-            "此处调整仅对本次播放生效，不会修改全局默认值。",
+            "仅本次播放生效，不改变默认设置",
         ).assertExists()
     }
 

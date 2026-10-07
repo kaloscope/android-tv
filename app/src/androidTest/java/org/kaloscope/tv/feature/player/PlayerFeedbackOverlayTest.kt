@@ -35,7 +35,7 @@ class PlayerFeedbackOverlayTest {
         }
 
         composeRule.onNodeWithTag("player-loading-indicator").assertExists()
-        composeRule.onNodeWithText("正在准备播放…").assertExists()
+        composeRule.onNodeWithText("准备播放…").assertExists()
     }
 
     @Test
@@ -54,7 +54,7 @@ class PlayerFeedbackOverlayTest {
         val indicator = composeRule.onNodeWithTag("player-switching-loading-indicator")
             .assertIsDisplayed()
             .fetchSemanticsNode().boundsInRoot
-        val message = composeRule.onNodeWithText("正在切换剧集…")
+        val message = composeRule.onNodeWithText("切换剧集…")
             .assertIsDisplayed()
             .fetchSemanticsNode().boundsInRoot
 
@@ -74,7 +74,7 @@ class PlayerFeedbackOverlayTest {
             }
         }
         composeRule.onNodeWithTag("player-fallback-loading-indicator").assertIsDisplayed()
-        composeRule.onNodeWithText("直连失败，正在切换转码…").assertIsDisplayed()
+        composeRule.onNodeWithText("直连失败，切换转码…").assertIsDisplayed()
     }
 
     @Test
@@ -91,7 +91,7 @@ class PlayerFeedbackOverlayTest {
             }
         }
         composeRule.onNodeWithTag("player-loading").assertDoesNotExist()
-        composeRule.onNodeWithText("播放加载超时，请重试或返回").assertIsDisplayed()
+        composeRule.onNodeWithText("加载超时，请重试或返回").assertIsDisplayed()
         composeRule.onNodeWithText("重试")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }

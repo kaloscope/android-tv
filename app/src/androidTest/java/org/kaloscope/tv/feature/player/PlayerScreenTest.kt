@@ -46,7 +46,7 @@ class PlayerScreenTest {
         }
 
         composeRule.onNodeWithTag("player-loading-indicator").assertExists()
-        composeRule.onNodeWithText("正在获取资源…").assertExists()
+        composeRule.onNodeWithText("获取资源…").assertExists()
     }
 
     @Test
@@ -72,7 +72,7 @@ class PlayerScreenTest {
         }
 
         composeRule.onNodeWithTag("player-loading-indicator").assertExists()
-        composeRule.onNodeWithText("正在获取弹幕…").assertExists()
+        composeRule.onNodeWithText("获取弹幕…").assertExists()
     }
 
     @Test

@@ -1457,7 +1457,7 @@ class LibraryScreenTest {
 
         composeRule.onNodeWithTag("library-results-grid").performScrollToIndex(20)
         composeRule.onNodeWithTag("library-load-more-loading-indicator").assertExists()
-        composeRule.onNodeWithText("正在加载…").assertExists()
+        composeRule.onNodeWithText("加载中…").assertExists()
     }
 
     @Test

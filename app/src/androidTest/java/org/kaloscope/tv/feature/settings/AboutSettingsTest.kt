@@ -111,10 +111,10 @@ class AboutSettingsTest {
         composeRule.onNodeWithTag("confirm-dialog-cancel").performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithTag("confirm-dialog-confirm").assertIsFocused()
         composeRule.onNodeWithTag("confirm-dialog-confirm").performKeyInput { pressKey(Key.DirectionCenter) }
-        composeRule.onNodeWithTag("update-download").assertTextContains("正在下载并校验：42%")
+        composeRule.onNodeWithTag("update-download").assertTextContains("下载并校验：42%")
         composeRule.onNodeWithTag("update-download").assertIsFocused()
         composeRule.onNodeWithTag("update-download").performKeyInput { pressKey(Key.DirectionCenter) }
-        composeRule.onNodeWithTag("update-download").assertTextContains("安装包不完整或校验失败，请重新下载。")
+        composeRule.onNodeWithTag("update-download").assertTextContains("安装包不完整或校验失败，请重新下载")
         composeRule.onNodeWithText("下载并安装").assertIsDisplayed()
         composeRule.runOnIdle {
             assertEquals(1, downloads)

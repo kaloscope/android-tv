@@ -48,7 +48,7 @@ class ServerSetupFocusTest {
 
         composeRule.onNodeWithText("配置服务器").assertExists()
         composeRule.onNodeWithText("登录账户").assertExists()
-        composeRule.onNodeWithText("连接到你的服务器").assertExists()
+        composeRule.onNodeWithText("连接服务器").assertExists()
     }
 
     @Test
@@ -206,7 +206,7 @@ class ServerSetupFocusTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithText("正在测试…")
+        composeRule.onNodeWithText("测试中…")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.onNodeWithTag(
@@ -246,7 +246,7 @@ class ServerSetupFocusTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithText("正在测试…").assertIsFocused()
+        composeRule.onNodeWithText("测试中…").assertIsFocused()
 
         composeRule.runOnIdle {
             state.value = state.value.copy(
@@ -292,7 +292,7 @@ class ServerSetupFocusTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
 
-        composeRule.onNodeWithText("正在保存…")
+        composeRule.onNodeWithText("保存中…")
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
         composeRule.onNodeWithTag(
@@ -335,7 +335,7 @@ class ServerSetupFocusTest {
             .performSemanticsAction(SemanticsActions.RequestFocus)
             .assertIsFocused()
             .performKeyInput { pressKey(Key.Enter) }
-        composeRule.onNodeWithText("正在测试…").assertIsFocused()
+        composeRule.onNodeWithText("测试中…").assertIsFocused()
 
         composeRule.runOnIdle {
             state.value = state.value.copy(
