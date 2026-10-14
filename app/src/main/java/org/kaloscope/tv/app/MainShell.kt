@@ -457,6 +457,14 @@ internal fun MainShell(
                             resumePositionsByMediaId = resumePositionsByMediaId,
                             onBack = ::goBack,
                             onRetry = detailActions.retry,
+                            onRead = { detail, childId ->
+                                detailActions.read(detail, childId)?.let { requestId ->
+                                    destinationEntryKeepsTopFocus = false
+                                    backStack.openReader(requestId)
+                                    currentRoute = ReaderRoute(requestId)
+                                    readerActions.load(requestId)
+                                }
+                            },
                             onChildFocused = detailActions.rememberFocusedChild,
                             onChildViewportChanged = detailActions.rememberChildViewport,
                             onPlayParent = { detail, resume ->
@@ -499,6 +507,12 @@ internal fun MainShell(
                             onBack = ::goBack,
                             onSelectChapter = readerActions.selectChapter,
                             onLoadMoreImages = readerActions.loadMoreImages,
+                            onLoadPreviousImages = readerActions.loadPreviousImages,
+                            onRetry = readerActions.retry,
+                            onRefreshLocal = readerActions.refreshLocal,
+                            onProgress = readerActions.recordProgress,
+                            onFlushProgress = readerActions.flushProgress,
+                            onDismissProgressError = readerActions.dismissProgressError,
                             onImageSettings = readerActions.setImageSettings,
                             onTextSettings = readerActions.setTextSettings,
                             onChapterOrder = readerActions.setChapterOrder,

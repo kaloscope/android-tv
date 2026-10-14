@@ -1,0 +1,34 @@
+{
+  "request_id": "synthetic-local-reading",
+  "status": 200,
+  "message": "",
+  "data": {
+    "item_id": 101,
+    "source_item_id": 101,
+    "title": "测试小说",
+    "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "chapter_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "chapters": [
+      {
+        "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "title": "第一章",
+        "part": 1,
+        "volume": null
+      },
+      {
+        "id": "cccccccccccccccccccccccccccccccc",
+        "title": null,
+        "part": 2,
+        "volume": null
+      }
+    ],
+    "media_type": "text",
+    "format": "txt",
+    "content_type": "text",
+    "text": [
+      "第一段。",
+      "第二段，含有\n换行。",
+      "第三段。"
+    ]
+  }
+}

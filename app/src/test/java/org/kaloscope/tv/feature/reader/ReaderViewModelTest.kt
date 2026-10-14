@@ -28,7 +28,7 @@ import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.SessionUser
 import org.kaloscope.tv.core.reader.ReaderRequest
 import org.kaloscope.tv.core.reader.ReaderRequestStore
-import org.kaloscope.tv.data.reader.ReaderContentLoader
+import org.kaloscope.tv.test.StubReaderContentLoader
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelTest {
@@ -203,7 +203,7 @@ class ReaderViewModelTest {
     }
 }
 
-private class PendingReaderContentLoader : ReaderContentLoader {
+private class PendingReaderContentLoader : StubReaderContentLoader() {
     val pageResult = CompletableDeferred<AppResult<ReaderImagePage>>()
     val chapterResult = CompletableDeferred<AppResult<ReaderContent>>()
     val pageRequests = mutableListOf<ReaderImageContent>()
@@ -228,6 +228,7 @@ private class PendingReaderContentLoader : ReaderContentLoader {
     override suspend fun loadImagePage(
         session: Session,
         content: ReaderImageContent,
+        previous: Boolean,
     ): AppResult<ReaderImagePage> {
         pageRequests += content
         return try {

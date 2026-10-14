@@ -236,6 +236,9 @@ fun KaloscopeApp(
                         rememberGridViewport = libraryViewModel::rememberGridViewport,
                     ),
                     detailActions = DetailActions(
+                        read = { detail, childId ->
+                            readerViewModel.createLocal(state.session, detail, childId, currentSettings)
+                        },
                         open = { mediaId ->
                             detailViewModel.load(state.session, mediaId)
                         },
@@ -333,6 +336,14 @@ fun KaloscopeApp(
                     ),
                     readerState = readerState,
                     readerActions = ReaderActions(
+                        retry = { readerViewModel.retry(state.session) },
+                        refreshLocal = { readerViewModel.refreshLocal(state.session) },
+                        loadPreviousImages = { readerViewModel.loadMoreImages(state.session, previous = true) },
+                        recordProgress = { content, position ->
+                            readerViewModel.updateProgress(state.session, content, position)
+                        },
+                        flushProgress = readerViewModel::flushProgress,
+                        dismissProgressError = readerViewModel::dismissProgressError,
                         load = { requestId ->
                             readerViewModel.load(requestId, state.session)
                         },

@@ -39,6 +39,9 @@ data class MediaItemData(
 
 @Serializable
 data class MediaMetadataData(
+    val authors: List<String>? = null,
+    val illustrators: List<String>? = null,
+    val publisher: String? = null,
     val plot: String? = null,
     val genres: List<String>? = null,
     val directors: List<String>? = null,

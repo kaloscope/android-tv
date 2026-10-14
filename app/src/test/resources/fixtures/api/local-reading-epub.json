@@ -1,0 +1,106 @@
+{
+  "request_id": "synthetic-local-reading",
+  "status": 200,
+  "message": "",
+  "data": {
+    "item_id": 101,
+    "source_item_id": 101,
+    "title": "测试小说",
+    "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "chapter_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "chapters": [
+      {
+        "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "title": "第一章",
+        "part": 1,
+        "volume": null
+      },
+      {
+        "id": "cccccccccccccccccccccccccccccccc",
+        "title": null,
+        "part": 2,
+        "volume": null
+      }
+    ],
+    "media_type": "text",
+    "format": "epub",
+    "content_type": "blocks",
+    "blocks": [
+      {
+        "id": "11111111111111111111111111111111",
+        "type": "heading",
+        "runs": [
+          {
+            "text": "章节标题",
+            "marks": []
+          }
+        ],
+        "level": 1
+      },
+      {
+        "id": "22222222222222222222222222222222",
+        "type": "paragraph",
+        "runs": [
+          {
+            "text": "加粗",
+            "marks": [
+              "strong"
+            ]
+          },
+          {
+            "text": " 与斜体",
+            "marks": [
+              "em"
+            ]
+          }
+        ],
+        "level": null
+      },
+      {
+        "id": "33333333333333333333333333333333",
+        "type": "quote",
+        "runs": [
+          {
+            "text": "引用内容",
+            "marks": []
+          }
+        ],
+        "level": null
+      },
+      {
+        "id": "44444444444444444444444444444444",
+        "type": "list",
+        "ordered": true,
+        "start": 3,
+        "items": [
+          [
+            {
+              "text": "列表项目",
+              "marks": []
+            }
+          ]
+        ]
+      },
+      {
+        "id": "55555555555555555555555555555555",
+        "type": "image",
+        "asset_id": "dddddddddddddddddddddddddddddddd",
+        "url": "/_api/media/101/assets/dddddddddddddddddddddddddddddddd?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "alt": "示例插图"
+      },
+      {
+        "id": "66666666666666666666666666666666",
+        "type": "image",
+        "asset_id": null,
+        "url": null,
+        "alt": "缺失插图"
+      }
+    ],
+    "warnings": [
+      {
+        "code": "missing_image",
+        "block_id": "66666666666666666666666666666666"
+      }
+    ]
+  }
+}

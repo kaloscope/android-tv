@@ -5,6 +5,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonObject
 import org.kaloscope.tv.data.media.remote.DanmakuWrapperData
+import org.kaloscope.tv.data.reader.remote.LocalContentData
+import org.kaloscope.tv.data.reader.remote.ReadingHistoryPageData
+import org.kaloscope.tv.data.reader.remote.ReadingRecordData
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.Body
@@ -27,6 +30,32 @@ import org.kaloscope.tv.data.search.remote.IndexerResourceData
 import org.kaloscope.tv.data.search.remote.IndexerResourcePageData
 
 interface KaloscopeApi {
+    @GET("media/{mediaId}/content")
+    suspend fun getLocalContent(
+        @Header("Authorization") authorization: String,
+        @Path("mediaId") mediaId: Long,
+        @Query("chapter_id") chapterId: String? = null,
+        @Query("version") version: String? = null,
+        @Query("page_id") pageId: String? = null,
+        @Query("offset") offset: Int? = null,
+        @Query("limit") limit: Int? = null,
+    ): ApiEnvelope<LocalContentData>
+
+    @GET("user/history/list")
+    suspend fun getReadingHistory(
+        @Header("Authorization") authorization: String,
+        @Query("rel_type") relationType: String,
+        @Query("rel_id") mediaId: Long,
+        @Query("page_size") pageSize: Int = 1,
+        @Query("ordering") ordering: String = "-updated_at",
+    ): ApiEnvelope<ReadingHistoryPageData>
+
+    @POST("user/history/record")
+    suspend fun recordReadingProgress(
+        @Header("Authorization") authorization: String,
+        @Body body: ReadingRecordData,
+    ): Response<Unit>
+
     @GET("system/version")
     suspend fun getVersion(): Response<ApiEnvelope<VersionData>>
 

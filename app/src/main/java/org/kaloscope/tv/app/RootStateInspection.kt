@@ -42,7 +42,8 @@ internal fun ReaderUiState.hasUnauthorized(): Boolean =
     when (this) {
         is ReaderUiState.Error -> error == AppError.Unauthorized
         is ReaderUiState.Image ->
-            chapterError == AppError.Unauthorized || pageError == AppError.Unauthorized
-        is ReaderUiState.Text -> chapterError == AppError.Unauthorized
-        ReaderUiState.Idle -> false
+            chapterError == AppError.Unauthorized || pageError == AppError.Unauthorized ||
+                progressError == AppError.Unauthorized
+        is ReaderUiState.Text -> chapterError == AppError.Unauthorized || progressError == AppError.Unauthorized
+        ReaderUiState.Idle, is ReaderUiState.Loading -> false
     }

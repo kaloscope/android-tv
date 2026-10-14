@@ -81,6 +81,11 @@ import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ImageZoomMode
 import org.kaloscope.tv.core.model.ReaderChapter
 import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderContent
+import org.kaloscope.tv.core.model.ReaderPosition
+import org.kaloscope.tv.core.model.ReaderSource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import org.kaloscope.tv.core.model.ReaderSettingsPolicy
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.model.TextReaderFont
@@ -109,10 +114,21 @@ fun ReaderScreen(
     onDismissPageError: () -> Unit,
     onImagePreferencesChanged: (ImageReaderSettings) -> Unit = {},
     onTextPreferencesChanged: (TextReaderSettings) -> Unit = {},
+    onLoadPreviousImages: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    onRefreshLocal: () -> Unit = {},
+    onProgress: (ReaderContent, ReaderPosition) -> Unit = { _, _ -> },
+    onFlushProgress: () -> Unit = {},
+    onDismissProgressError: () -> Unit = {},
 ) {
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE, onEvent = onFlushProgress)
     when (state) {
         ReaderUiState.Idle -> ReaderUnavailable(onBack)
-        is ReaderUiState.Error -> ReaderUnavailable(onBack, state)
+        is ReaderUiState.Loading -> {
+            BackHandler(onBack = onBack)
+            KaloscopeLoadingLayout("reader-loading", blockInteraction = true)
+        }
+        is ReaderUiState.Error -> ReaderUnavailable(onBack, state, onRetry)
         is ReaderUiState.Active -> ActiveReader(
             session = session,
             state = state,
@@ -126,6 +142,10 @@ fun ReaderScreen(
             onDismissPageError = onDismissPageError,
             onImagePreferencesChanged = onImagePreferencesChanged,
             onTextPreferencesChanged = onTextPreferencesChanged,
+            onLoadPreviousImages = onLoadPreviousImages,
+            onRefreshLocal = onRefreshLocal,
+            onProgress = onProgress,
+            onDismissProgressError = onDismissProgressError,
         )
     }
 }
@@ -144,6 +164,10 @@ private fun ActiveReader(
     onDismissPageError: () -> Unit,
     onImagePreferencesChanged: (ImageReaderSettings) -> Unit,
     onTextPreferencesChanged: (TextReaderSettings) -> Unit,
+    onLoadPreviousImages: () -> Unit,
+    onRefreshLocal: () -> Unit,
+    onProgress: (ReaderContent, ReaderPosition) -> Unit,
+    onDismissProgressError: () -> Unit,
 ) {
     val contentFocus = remember { FocusRequester() }
     val controlFocus = remember {
@@ -163,11 +187,19 @@ private fun ActiveReader(
     var initialTitleVisible by remember(state.requestId) { mutableStateOf(true) }
     var imagePosition by remember(state.requestId, state.contentRevision) {
         mutableIntStateOf(
-            if ((state as? ReaderUiState.Image)?.content?.images?.isNotEmpty() == true) 1 else 0,
+            if ((state as? ReaderUiState.Image)?.content?.images?.isNotEmpty() == true) {
+                state.content.initialPosition.index + 1
+            } else 0,
         )
     }
     var failedImagesAvailable by remember(state.requestId, state.contentRevision) {
         mutableStateOf(false)
+    }
+    var imageScrollOffset by remember(state.requestId, state.contentRevision) {
+        mutableStateOf(state.content.initialPosition.offset)
+    }
+    var imageInitialAtBottom by remember(state.requestId, state.contentRevision) {
+        mutableStateOf((state as? ReaderUiState.Image)?.loadingPrevious == true)
     }
     var imageRetryRevision by remember(state.requestId, state.contentRevision) {
         mutableIntStateOf(0)
@@ -242,6 +274,10 @@ private fun ActiveReader(
     }
 
     fun openBoundary(boundary: ReaderBoundary) {
+        if (boundary == ReaderBoundary.Start && state is ReaderUiState.Image && state.content.imageOffset > 0) {
+            if (!state.isLoadingMore) onLoadPreviousImages()
+            return
+        }
         requestControl(
             ReaderRemoteKeyPolicy.boundaryTarget(
                 boundary = boundary,
@@ -319,8 +355,10 @@ private fun ActiveReader(
                 settings = state.settings,
                 contentRevision = state.contentRevision,
                 initialImageIndex = (imagePosition - 1).coerceAtLeast(0),
+                initialImageOffset = imageScrollOffset,
+                initialImageAtBottom = imageInitialAtBottom,
                 imagesExhausted = state.imagesExhausted,
-                isLoadingMore = state.isLoadingMore,
+                isLoadingMore = state.isLoadingMore && !state.loadingPrevious,
                 controlsVisible = controlsVisible,
                 focusRequester = contentFocus,
                 onToggleControls = ::toggleControls,
@@ -334,6 +372,11 @@ private fun ActiveReader(
                 },
                 manualRetryRevision = imageRetryRevision,
                 onFailedImagesChanged = { failedImagesAvailable = it },
+                onProgress = {
+                    imageInitialAtBottom = false
+                    imageScrollOffset = it.offset
+                    onProgress(state.content, it)
+                },
             )
 
             is ReaderUiState.Text -> Box(
@@ -342,6 +385,7 @@ private fun ActiveReader(
                     .padding(top = READER_EDGE_HEIGHT),
             ) {
                 TextReaderSurface(
+                    session = session,
                     content = state.content,
                     settings = state.settings,
                     contentRevision = state.contentRevision,
@@ -352,6 +396,9 @@ private fun ActiveReader(
                         requestControl(entryControlTarget())
                     },
                     onBoundary = ::openBoundary,
+                    onPositionChanged = { onProgress(state.content, it) },
+                    manualRetryRevision = imageRetryRevision,
+                    onFailedImagesChanged = { failedImagesAvailable = it },
                 )
             }
         }
@@ -365,6 +412,7 @@ private fun ActiveReader(
             ReaderTitleOverlay(
                 title = content.title,
                 chapter = content.selectedChapterIndex?.let(content.chapters::getOrNull),
+                chapterIndex = content.selectedChapterIndex ?: 0,
                 textColor = overlayText,
                 mutedColor = overlayMuted,
                 scrimColor = background,
@@ -372,7 +420,7 @@ private fun ActiveReader(
                     imagePosition.takeIf { it > 0 }?.let { position ->
                         stringResource(
                             R.string.reader_image_progress,
-                            position,
+                            position + imageContent.imageOffset,
                             imageContent.imageCount.coerceAtLeast(imageContent.images.size),
                         )
                     }
@@ -411,6 +459,7 @@ private fun ActiveReader(
                 onRetryImages = {
                     lastControlTarget = ReaderControlTarget.RetryImages
                     imageRetryRevision += 1
+                    if (content.source is ReaderSource.Local) onRefreshLocal()
                 },
                 onNext = {
                     nextChapter?.let {
@@ -472,9 +521,9 @@ private fun ActiveReader(
                 message = stringResource(R.string.reader_switch_chapter_failed),
                 detail = appErrorText(error),
                 onDismiss = { runRecoverableErrorAction(onDismissChapterError) },
-                onRetry = lastRequestedChapterIndex?.let { index ->
+                onRetry = lastRequestedChapterIndex?.takeIf { it != content.selectedChapterIndex }?.let { index ->
                     { selectChapter(index) }
-                },
+                } ?: onRefreshLocal.takeIf { content.source is ReaderSource.Local },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -484,15 +533,28 @@ private fun ActiveReader(
                     message = stringResource(R.string.reader_load_more_failed),
                     detail = appErrorText(error),
                     onDismiss = { runRecoverableErrorAction(onDismissPageError) },
-                    onRetry = { runRecoverableErrorAction(onLoadMoreImages) },
+                    onRetry = {
+                        runRecoverableErrorAction(if (state.loadingPrevious) onLoadPreviousImages else onLoadMoreImages)
+                    },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }
-        if (state.isChapterLoading) {
+        if (state.chapterError == null && (state as? ReaderUiState.Image)?.pageError == null) {
+            state.progressError?.let { error ->
+                ReaderRecoverableError(
+                    message = stringResource(R.string.reader_progress_failed),
+                    detail = appErrorText(error),
+                    onRetry = null,
+                    onDismiss = { runRecoverableErrorAction(onDismissProgressError) },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
+        }
+        if (state.isChapterLoading || (state is ReaderUiState.Image && state.isLoadingMore && state.loadingPrevious)) {
             KaloscopeLoadingLayout(
                 testTag = "reader-chapter-loading",
-                message = stringResource(R.string.reader_switching_chapter),
+                message = stringResource(if (state.isChapterLoading) R.string.reader_switching_chapter else R.string.loading_more),
                 blockInteraction = true,
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.72f)),
@@ -509,6 +571,7 @@ internal fun ReaderTitleOverlay(
     mutedColor: Color,
     scrimColor: Color,
     status: String?,
+    chapterIndex: Int = 0,
 ) {
     Box(
         modifier = Modifier
@@ -551,7 +614,7 @@ internal fun ReaderTitleOverlay(
             }
             chapter?.let {
                 Text(
-                    text = it.title,
+                    text = readerChapterTitle(it, chapterIndex),
                     color = mutedColor,
                     fontSize = 14.sp,
                     maxLines = 1,
@@ -787,7 +850,7 @@ private fun ReaderChapterDrawer(
                     items(group.chapters, key = ReaderChapter::id) { chapter ->
                         val sourceIndex = chapters.indexOfFirst { it.id == chapter.id }
                         KaloscopeSidePanelSelectionRow(
-                            title = chapter.title,
+                            title = readerChapterTitle(chapter, sourceIndex),
                             onClick = { onSelect(sourceIndex) },
                             selected = sourceIndex == selectedIndex,
                             modifier = Modifier
@@ -1168,6 +1231,7 @@ private fun ReaderRecoverableError(
 private fun ReaderUnavailable(
     onBack: () -> Unit,
     error: ReaderUiState.Error? = null,
+    onRetry: () -> Unit = {},
 ) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -1180,7 +1244,7 @@ private fun ReaderUnavailable(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = stringResource(R.string.reader_request_missing),
+                text = stringResource(if (error?.retryable == true) R.string.reader_load_failed else R.string.reader_request_missing),
                 color = Color.White,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
@@ -1192,9 +1256,15 @@ private fun ReaderUnavailable(
                 fontSize = 15.sp,
             )
             Spacer(Modifier.height(18.dp))
+            if (error?.retryable == true) {
+                KaloscopeButton(onClick = onRetry, modifier = Modifier.focusRequester(focus)) {
+                    Text(stringResource(R.string.retry))
+                }
+                Spacer(Modifier.height(12.dp))
+            }
             KaloscopeButton(
                 onClick = onBack,
-                modifier = Modifier.focusRequester(focus),
+                modifier = if (error?.retryable == true) Modifier else Modifier.focusRequester(focus),
             ) {
                 Text(stringResource(R.string.back))
             }
@@ -1204,6 +1274,12 @@ private fun ReaderUnavailable(
 
 private fun defaultControlTarget(chapters: List<ReaderChapter>): ReaderControlTarget =
     if (chapters.size > 1) ReaderControlTarget.Chapters else ReaderControlTarget.Settings
+
+@Composable
+private fun readerChapterTitle(chapter: ReaderChapter, index: Int): String {
+    val title = chapter.title.ifBlank { stringResource(R.string.reader_chapter_number, index + 1) }
+    return if (chapter.part > 1) stringResource(R.string.reader_chapter_part, title, chapter.part) else title
+}
 
 private enum class ReaderDrawer {
     Chapters,

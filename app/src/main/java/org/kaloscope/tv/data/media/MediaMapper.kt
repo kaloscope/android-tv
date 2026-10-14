@@ -26,6 +26,8 @@ internal fun MediaLibraryData.toModel(): MediaLibrary =
         type = when (libraryType) {
             "movie" -> MediaLibraryType.Movie
             "tv_show" -> MediaLibraryType.TvShow
+            "novel" -> MediaLibraryType.Novel
+            "comic" -> MediaLibraryType.Comic
             else -> MediaLibraryType.Unknown
         },
     )
@@ -116,6 +118,9 @@ internal fun MediaItemData.toDetail(): MediaDetail? {
                 )
             },
         children = visibleChildren,
+        authors = detailMetadata?.authors.cleanValues(),
+        illustrators = detailMetadata?.illustrators.cleanValues(),
+        publisher = detailMetadata?.publisher.trimmedOrNull(),
     )
 }
 

@@ -1,6 +1,14 @@
 package org.kaloscope.tv.core.model
 
 sealed interface ReaderSource {
+    data class Local(
+        val mediaId: Long,
+        val sourceItemId: Long,
+        val chapterId: String,
+        val version: String,
+        val format: String,
+    ) : ReaderSource
+
     data class Network(
         val indexerId: Long,
         val resourceId: String,
@@ -12,7 +20,37 @@ data class ReaderChapter(
     val id: String,
     val title: String,
     val volume: String? = null,
+    val part: Int = 1,
 )
+
+data class ReaderPosition(
+    val index: Int = 0,
+    val offset: Double = 0.0,
+    /** Fraction of the chapter read, independent of the anchor used for resuming. */
+    val chapterProgress: Double? = null,
+)
+
+data class ReaderTextRun(val text: String, val strong: Boolean = false, val emphasis: Boolean = false)
+
+sealed interface ReaderTextBlock {
+    val id: String
+
+    data class Text(
+        override val id: String,
+        val runs: List<ReaderTextRun>,
+        val headingLevel: Int? = null,
+        val quote: Boolean = false,
+    ) : ReaderTextBlock
+
+    data class ListBlock(
+        override val id: String,
+        val items: List<List<ReaderTextRun>>,
+        val ordered: Boolean,
+        val start: Int = 1,
+    ) : ReaderTextBlock
+
+    data class Image(override val id: String, val url: String?, val alt: String) : ReaderTextBlock
+}
 
 sealed interface ReaderContent {
     val source: ReaderSource
@@ -21,6 +59,7 @@ sealed interface ReaderContent {
     val title: String
     val chapters: List<ReaderChapter>
     val selectedChapterIndex: Int?
+    val initialPosition: ReaderPosition
 }
 
 data class ReaderImageContent(
@@ -30,6 +69,9 @@ data class ReaderImageContent(
     val imageCount: Int,
     override val chapters: List<ReaderChapter> = emptyList(),
     override val selectedChapterIndex: Int? = null,
+    val imageOffset: Int = 0,
+    val nextOffset: Int? = null,
+    override val initialPosition: ReaderPosition = ReaderPosition(),
 ) : ReaderContent {
     companion object {
         fun network(
@@ -58,7 +100,13 @@ data class ReaderTextContent(
     val text: String,
     override val chapters: List<ReaderChapter> = emptyList(),
     override val selectedChapterIndex: Int? = null,
+    val localParagraphs: List<String>? = null,
+    val blocks: List<ReaderTextBlock> = emptyList(),
+    override val initialPosition: ReaderPosition = ReaderPosition(),
 ) : ReaderContent {
+    val paragraphs: List<String> = localParagraphs ?: text.split(Regex("\\n\\s*\\n"))
+        .map(String::trim).filter(String::isNotEmpty)
+
     companion object {
         fun network(
             indexerId: Long,
@@ -82,6 +130,8 @@ data class ReaderImagePage(
     val images: List<String>,
     val imageCount: Int,
     val exhausted: Boolean,
+    val imageOffset: Int? = null,
+    val nextOffset: Int? = null,
 )
 
 sealed interface ResolvedNetworkResource {

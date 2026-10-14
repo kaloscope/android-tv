@@ -1,0 +1,54 @@
+{
+  "request_id": "synthetic-local-reading",
+  "status": 200,
+  "message": "",
+  "data": {
+    "item_id": 201,
+    "source_item_id": 202,
+    "title": "第一卷",
+    "version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "chapter_id": "item:202",
+    "chapters": [
+      {
+        "id": "item:202",
+        "title": "第一卷",
+        "part": 1,
+        "volume": null
+      },
+      {
+        "id": "item:203",
+        "title": "第二卷",
+        "part": 1,
+        "volume": null
+      }
+    ],
+    "media_type": "image",
+    "format": "cbz",
+    "content_type": "images",
+    "images": [
+      "/_api/media/202/assets/00000000000000000000000000000001?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000002?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000003?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000004?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000005?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000006?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000007?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000008?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000009?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/0000000000000000000000000000000a?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/0000000000000000000000000000000b?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/0000000000000000000000000000000c?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/0000000000000000000000000000000d?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/0000000000000000000000000000000e?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/0000000000000000000000000000000f?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000010?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000011?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000012?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000013?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "/_api/media/202/assets/00000000000000000000000000000014?version=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "offset": 0,
+    "image_count": 45,
+    "next_offset": 20
+  }
+}

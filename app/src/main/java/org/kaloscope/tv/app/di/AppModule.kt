@@ -32,7 +32,7 @@ import org.kaloscope.tv.data.auth.DefaultSessionRepository
 import org.kaloscope.tv.data.auth.SessionRepository
 import org.kaloscope.tv.data.history.DefaultHistoryRepository
 import org.kaloscope.tv.data.history.HistoryRepository
-import org.kaloscope.tv.data.reader.NetworkReaderContentLoader
+import org.kaloscope.tv.data.reader.DefaultReaderContentLoader
 import org.kaloscope.tv.data.reader.ReaderContentLoader
 import org.kaloscope.tv.data.media.DefaultMediaRepository
 import org.kaloscope.tv.data.media.MediaRepository
@@ -99,7 +99,7 @@ abstract class AppBindings {
 
     @Binds
     abstract fun bindReaderContentLoader(
-        implementation: NetworkReaderContentLoader,
+        implementation: DefaultReaderContentLoader,
     ): ReaderContentLoader
 
     @Binds

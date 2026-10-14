@@ -88,6 +88,8 @@ import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.RatingDisplayPolicy
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.MediaLibraryType
+import org.kaloscope.tv.core.model.isReading
 import org.kaloscope.tv.core.network.ServerImagePolicy
 
 @Composable
@@ -303,7 +305,8 @@ internal fun MediaDetailCinematicLayout(
                 parent.directors.isNotEmpty() ||
                 parent.writers.isNotEmpty() ||
                 parent.studios.isNotEmpty() ||
-                parent.actors.isNotEmpty()
+                parent.actors.isNotEmpty() || parent.authors.isNotEmpty() ||
+                parent.illustrators.isNotEmpty() || parent.publisher != null
             ) {
                 item(key = "detail-credits-${parent.id}") {
                     DetailCreditsAndCast(
@@ -439,7 +442,8 @@ private fun DetailHero(
             if (parent.children.isEmpty() || focusedChild != null) {
                 Spacer(Modifier.height(if (compactLayout) 12.dp else 18.dp))
                 DetailPlaybackActions(
-                    resumePositionSeconds = resumePositionSeconds,
+                    resumePositionSeconds = resumePositionSeconds.takeUnless { parent.library?.type?.isReading == true },
+                    readingType = parent.library?.type?.takeIf { it.isReading },
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     moreInfoAvailable = !plot.isNullOrBlank() ||
                         !parent.plot.isNullOrBlank() || parent.genres.isNotEmpty(),
@@ -474,6 +478,7 @@ private fun DetailHero(
 @Composable
 private fun DetailPlaybackActions(
     resumePositionSeconds: Long?,
+    readingType: MediaLibraryType?,
     primaryActionFocusRequester: FocusRequester,
     moreInfoAvailable: Boolean,
     moreInfoFocusRequester: FocusRequester,
@@ -520,7 +525,18 @@ private fun DetailPlaybackActions(
                 variant = KaloscopeControlVariant.Filled,
                 size = KaloscopeControlSize.Compact,
             ) {
-                DetailPrimaryPlayActionLabel(stringResource(R.string.play))
+                if (readingType != null) {
+                    Icon(
+                        painter = painterResource(
+                            if (readingType == MediaLibraryType.Comic) R.drawable.ic_library_comic
+                            else R.drawable.ic_library_novel,
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text(stringResource(R.string.detail_read))
+                } else DetailPrimaryPlayActionLabel(stringResource(R.string.play))
             }
         }
         if (moreInfoAvailable) {
@@ -589,6 +605,7 @@ private fun DetailChildRibbon(
             when (sectionKind) {
                 MediaChildSectionKind.Episodes -> R.string.episodes
                 MediaChildSectionKind.Parts -> R.string.parts
+                MediaChildSectionKind.Chapters -> R.string.reader_chapters
             },
         ),
         color = OnBackground,
@@ -869,12 +886,22 @@ private fun DetailCreditsAndCast(
     ) {
         val hasCredits = parent.directors.isNotEmpty() ||
             parent.writers.isNotEmpty() ||
-            parent.studios.isNotEmpty()
+            parent.studios.isNotEmpty() || parent.authors.isNotEmpty() ||
+            parent.illustrators.isNotEmpty() || parent.publisher != null
         if (hasCredits) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
             ) {
+                parent.authors.takeIf(List<String>::isNotEmpty)?.let {
+                    DetailCreditColumn(stringResource(R.string.reader_author), it, Modifier.weight(1f))
+                }
+                parent.illustrators.takeIf(List<String>::isNotEmpty)?.let {
+                    DetailCreditColumn(stringResource(R.string.reader_illustrator), it, Modifier.weight(1f))
+                }
+                parent.publisher?.let {
+                    DetailCreditColumn(stringResource(R.string.reader_publisher), listOf(it), Modifier.weight(1f))
+                }
                 parent.directors.takeIf(List<String>::isNotEmpty)?.let { directors ->
                     DetailCreditColumn(
                         label = stringResource(R.string.director_title),

@@ -19,6 +19,27 @@ import org.kaloscope.tv.data.media.remote.MediaPageData
 
 class MediaMapperTest {
     @Test
+    fun `reading libraries and publishing credits map from server metadata`() {
+        for ((kind, type) in listOf("novel" to MediaLibraryType.Novel, "comic" to MediaLibraryType.Comic)) {
+            val detail = checkNotNull(MediaItemData(
+                id = 101,
+                name = "Test book",
+                path = "/fixtures/book",
+                lib = MediaLibraryData(1, "Books", kind),
+                metadata = MediaMetadataData(
+                    authors = listOf(" Author ", " "),
+                    illustrators = listOf(" Artist "),
+                    publisher = " Publisher ",
+                ),
+            ).toDetail())
+            assertEquals(type, detail.library?.type)
+            assertEquals(listOf("Author"), detail.authors)
+            assertEquals(listOf("Artist"), detail.illustrators)
+            assertEquals("Publisher", detail.publisher)
+        }
+    }
+
+    @Test
     fun `maps only the media library fields used by TV`() {
         val model = MediaLibraryData(
             id = 21,

@@ -8,6 +8,7 @@ import org.kaloscope.tv.core.model.formatEpisodeDisplayTitle
 internal enum class MediaChildSectionKind {
     Episodes,
     Parts,
+    Chapters,
 }
 
 internal fun resolveDetailBackdrop(
@@ -36,10 +37,10 @@ internal fun resolveDetailPlot(
 }
 
 internal fun childSectionKind(parent: MediaDetail): MediaChildSectionKind =
-    if (parent.library?.type == MediaLibraryType.TvShow) {
-        MediaChildSectionKind.Episodes
-    } else {
-        MediaChildSectionKind.Parts
+    when (parent.library?.type) {
+        MediaLibraryType.TvShow -> MediaChildSectionKind.Episodes
+        MediaLibraryType.Comic, MediaLibraryType.Novel -> MediaChildSectionKind.Chapters
+        else -> MediaChildSectionKind.Parts
     }
 
 internal fun mediaChildDisplayTitle(child: MediaSummary): String = formatEpisodeDisplayTitle(

@@ -8,6 +8,8 @@ import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.SearchFilterValue
 import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderContent
+import org.kaloscope.tv.core.model.ReaderPosition
 import org.kaloscope.tv.core.model.StartPage
 import org.kaloscope.tv.core.model.SubtitleSettings
 import org.kaloscope.tv.core.model.TextReaderSettings
@@ -61,6 +63,7 @@ internal data class DetailActions(
     val rememberChildViewport: (GridViewportSnapshot) -> Unit = {},
     val playParent: (MediaDetail, Long?) -> String? = { _, _ -> null },
     val playChild: (MediaSummary, Long?) -> String? = { _, _ -> null },
+    val read: (MediaDetail, Long?) -> String? = { _, _ -> null },
 )
 
 internal data class SettingsActions(
@@ -98,6 +101,12 @@ internal data class ReaderActions(
     val load: (String) -> Unit = {},
     val selectChapter: (Int) -> Unit = {},
     val loadMoreImages: () -> Unit = {},
+    val loadPreviousImages: () -> Unit = {},
+    val retry: () -> Unit = {},
+    val refreshLocal: () -> Unit = {},
+    val recordProgress: (ReaderContent, ReaderPosition) -> Unit = { _, _ -> },
+    val flushProgress: () -> Unit = {},
+    val dismissProgressError: () -> Unit = {},
     val setImageSettings: (ImageReaderSettings) -> Unit = {},
     val setTextSettings: (TextReaderSettings) -> Unit = {},
     val setChapterOrder: (ReaderChapterOrder) -> Unit = {},

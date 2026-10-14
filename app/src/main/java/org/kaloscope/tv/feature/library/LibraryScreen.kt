@@ -382,6 +382,8 @@ private fun MediaLibraryType.iconResource(): Int =
     when (this) {
         MediaLibraryType.Movie -> R.drawable.ic_library_movie
         MediaLibraryType.TvShow -> R.drawable.ic_library_tv_show
+        MediaLibraryType.Novel -> R.drawable.ic_library_novel
+        MediaLibraryType.Comic -> R.drawable.ic_library_comic
         MediaLibraryType.Unknown -> R.drawable.ic_library_unknown
     }
 
@@ -389,6 +391,8 @@ private fun MediaLibraryType.iconTestTag(): String =
     when (this) {
         MediaLibraryType.Movie -> "library-type-icon-movie"
         MediaLibraryType.TvShow -> "library-type-icon-tv-show"
+        MediaLibraryType.Novel -> "library-type-icon-novel"
+        MediaLibraryType.Comic -> "library-type-icon-comic"
         MediaLibraryType.Unknown -> "library-type-icon-unknown"
     }
 

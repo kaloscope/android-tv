@@ -47,6 +47,7 @@ import org.kaloscope.tv.core.model.GridViewportSnapshot
 import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.MediaSummary
 import org.kaloscope.tv.core.model.Session
+import org.kaloscope.tv.core.model.isReading
 
 @Composable
 fun MediaDetailScreen(
@@ -59,6 +60,7 @@ fun MediaDetailScreen(
     onChildViewportChanged: (GridViewportSnapshot) -> Unit,
     onPlayParent: (MediaDetail, Long?) -> Unit,
     onPlayChild: (MediaSummary, Long?) -> Unit,
+    onRead: (MediaDetail, Long?) -> Unit = { _, _ -> },
 ) {
     val initialFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
@@ -158,15 +160,23 @@ fun MediaDetailScreen(
                             }
                         },
                         onStartOverPlayback = {
-                            val child = state.parent.children
-                                .firstOrNull { it.id == focusedChildId }
-                            if (child == null) {
-                                onPlayParent(state.parent, null)
+                            if (state.parent.library?.type?.isReading == true) {
+                                onRead(state.parent, null)
                             } else {
-                                onPlayChild(child, null)
+                                val child = state.parent.children
+                                    .firstOrNull { it.id == focusedChildId }
+                                if (child == null) {
+                                    onPlayParent(state.parent, null)
+                                } else {
+                                    onPlayChild(child, null)
+                                }
                             }
                         },
-                        onPlayChild = onPlayChild,
+                        onPlayChild = { child, resume ->
+                            if (state.parent.library?.type?.isReading == true) {
+                                onRead(state.parent, child.id)
+                            } else onPlayChild(child, resume)
+                        },
                     )
                 }
             }

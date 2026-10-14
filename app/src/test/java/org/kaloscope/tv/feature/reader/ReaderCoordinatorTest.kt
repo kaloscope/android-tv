@@ -34,6 +34,7 @@ import org.kaloscope.tv.core.network.networkCall
 import org.kaloscope.tv.core.reader.ReaderRequest
 import org.kaloscope.tv.core.reader.ReaderRequestStore
 import org.kaloscope.tv.data.reader.ReaderContentLoader
+import org.kaloscope.tv.test.StubReaderContentLoader
 import retrofit2.HttpException
 import retrofit2.Response
 
@@ -399,6 +400,7 @@ class ReaderCoordinatorTest {
             override suspend fun loadImagePage(
                 session: Session,
                 content: ReaderImageContent,
+                previous: Boolean,
             ) = response.await()
         }
         val coordinator = ReaderCoordinator(
@@ -431,6 +433,7 @@ class ReaderCoordinatorTest {
             override suspend fun loadImagePage(
                 session: Session,
                 content: ReaderImageContent,
+                previous: Boolean,
             ) = response.await()
         }
         val coordinator = ReaderCoordinator(
@@ -709,7 +712,7 @@ private class FakeReaderContentLoader(
         mutableMapOf(),
     private val pageResults: ArrayDeque<AppResult<ReaderImagePage>> = ArrayDeque(),
     private val pendingPageResult: CompletableDeferred<AppResult<ReaderImagePage>>? = null,
-) : ReaderContentLoader {
+) : StubReaderContentLoader() {
     val chapterRequests = mutableListOf<Int>()
     val pageRequests = mutableListOf<ReaderImageContent>()
 
@@ -725,6 +728,7 @@ private class FakeReaderContentLoader(
     override suspend fun loadImagePage(
         session: Session,
         content: ReaderImageContent,
+        previous: Boolean,
     ): AppResult<ReaderImagePage> {
         pageRequests += content
         return pendingPageResult?.await() ?: pageResults.removeFirst()

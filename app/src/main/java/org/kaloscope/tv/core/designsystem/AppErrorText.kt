@@ -15,7 +15,12 @@ internal fun appErrorText(error: AppError): String =
         AppError.Timeout -> stringResource(R.string.error_timeout)
         AppError.Offline -> stringResource(R.string.error_offline)
         AppError.SessionSaveFailed -> stringResource(R.string.error_session_save)
-        is AppError.Api -> stringResource(R.string.error_api, error.code.orEmpty())
+        is AppError.Api -> when (error.code) {
+            "content_changed" -> stringResource(R.string.reader_content_changed)
+            "content_not_ready" -> stringResource(R.string.reader_content_not_ready)
+            "empty_content" -> stringResource(R.string.reader_content_empty)
+            else -> stringResource(R.string.error_api, error.code.orEmpty())
+        }
         is AppError.InvalidData -> stringResource(R.string.error_invalid_data)
         is AppError.Update -> stringResource(when (error.reason) {
             UpdateFailure.NoRelease -> R.string.update_error_no_release

@@ -106,8 +106,9 @@ Leanback TV feature and launcher declarations are not the Leanback UI toolkit.
   states. Saved servers retain separate tokens. Authentication failure clears
   the affected session; ordinary network failures and forbidden access do not.
   Keep nested feature errors covered by `app/RootStateInspection.kt`.
-- Home shows only `video` watch history. Network video and reader content must
-  not create local `MediaItem` history.
+- Home shows only `video` watch history. Network video and network reader content
+  must not create local `MediaItem` history. Local reading uses `text`/`image`
+  history and versioned locators, separate from video playback positions.
 - Search selects the first available real indexer and automatically searches
   when a keyword is not required. Indexer configuration determines available
   filters and request fields; preserve `IndexerSearchRequestFactory` mapping.
@@ -201,8 +202,9 @@ Leanback TV feature and launcher declarations are not the Leanback UI toolkit.
   tolerance and nullable workflow resource fields.
 - Tokens reach DataStore only through `SecureSessionStore` encryption and stay
   keyed by server ID. Preserve disabled backups and the backup-rule resources.
-  Debug form defaults may come from ignored `local.properties`; release defaults
-  remain empty. Never copy these values into source, output, or test fixtures.
+  Debug form defaults use the public local test fixture (`localhost:8000` and
+  `kaloscope` credentials); release defaults remain empty. Never put real server
+  credentials or private local configuration into source, output, or fixtures.
 - Local HTTP support currently comes from `android:usesCleartextTraffic="true"`
   in `app/src/main/AndroidManifest.xml`. Preserve support for user-managed local
   servers; never disable certificate/hostname validation or weaken HTTPS.

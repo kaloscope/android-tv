@@ -9,16 +9,41 @@ import org.kaloscope.tv.core.model.MediaDetail
 import org.kaloscope.tv.core.model.NetworkChapter
 import org.kaloscope.tv.core.model.NetworkPlaybackSource
 import org.kaloscope.tv.core.model.NetworkVideoType
+import org.kaloscope.tv.core.model.ReaderChapterOrder
+import org.kaloscope.tv.core.model.ReaderImageContent
+import org.kaloscope.tv.core.model.ReaderTextContent
+import org.kaloscope.tv.core.model.ReaderSource
+import org.kaloscope.tv.core.model.TextReaderSettings
+import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.player.PlaybackRequest
 import org.kaloscope.tv.feature.detail.MediaDetailUiState
 import org.kaloscope.tv.feature.home.HomeUiState
 import org.kaloscope.tv.feature.library.LibraryItemsState
 import org.kaloscope.tv.feature.library.LibraryUiState
 import org.kaloscope.tv.feature.player.PlayerUiState
+import org.kaloscope.tv.feature.reader.ReaderUiState
 import org.kaloscope.tv.feature.search.SearchResultsState
 import org.kaloscope.tv.feature.search.SearchUiState
 
 class RootStateInspectionTest {
+    @Test
+    fun `reader progress authorization failures reach root session handling`() {
+        val source = ReaderSource.Local(1, 1, "chapter", "version", "txt")
+        val text = ReaderUiState.Text(
+            "request", "server", ReaderTextContent(source, "Book", "Text"),
+            TextReaderSettings(), ReaderChapterOrder.Ascending,
+        )
+        val image = ReaderUiState.Image(
+            "request", "server", ReaderImageContent(source, "Comic", emptyList(), 0),
+            ImageReaderSettings(), ReaderChapterOrder.Ascending,
+        )
+        assertFalse(ReaderUiState.Loading("request", "server").hasUnauthorized())
+        for (error in listOf(AppError.Unauthorized, AppError.Forbidden, AppError.Offline)) {
+            assertEquals(error == AppError.Unauthorized, text.copy(progressError = error).hasUnauthorized())
+            assertEquals(error == AppError.Unauthorized, image.copy(progressError = error).hasUnauthorized())
+        }
+    }
+
     @Test
     fun `library invalidates the session only for catalog or page authorization failures`() {
         val content = LibraryUiState.Content(libraries = emptyList(), selectedLibraryId = 21)

@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.legacy.kapt)
@@ -11,16 +9,6 @@ plugins {
 kotlin {
     jvmToolchain(17)
 }
-
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.isFile) {
-    localPropertiesFile.reader().use { reader ->
-        localProperties.load(reader)
-    }
-}
-
-fun localDebugValue(key: String): String = localProperties.getProperty(key).orEmpty()
 
 fun String.asBuildConfigString(): String =
     "\"" +
@@ -88,22 +76,22 @@ android {
             buildConfigField(
                 "String",
                 "DEBUG_SERVER_NAME",
-                localDebugValue("kaloscope.debug.serverName").asBuildConfigString(),
+                "Local Kaloscope".asBuildConfigString(),
             )
             buildConfigField(
                 "String",
                 "DEBUG_SERVER_URL",
-                localDebugValue("kaloscope.debug.serverUrl").asBuildConfigString(),
+                "http://localhost:8000".asBuildConfigString(),
             )
             buildConfigField(
                 "String",
                 "DEBUG_USERNAME",
-                localDebugValue("kaloscope.debug.username").asBuildConfigString(),
+                "kaloscope".asBuildConfigString(),
             )
             buildConfigField(
                 "String",
                 "DEBUG_PASSWORD",
-                localDebugValue("kaloscope.debug.password").asBuildConfigString(),
+                "kaloscope".asBuildConfigString(),
             )
         }
 

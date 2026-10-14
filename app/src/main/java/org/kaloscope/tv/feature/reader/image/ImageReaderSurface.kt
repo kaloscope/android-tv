@@ -53,6 +53,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kaloscope.tv.R
 import org.kaloscope.tv.core.designsystem.KaloscopeLoadingLayout
@@ -60,6 +61,7 @@ import org.kaloscope.tv.core.model.ImageReadMode
 import org.kaloscope.tv.core.model.ImageReaderSettings
 import org.kaloscope.tv.core.model.ImageZoomMode
 import org.kaloscope.tv.core.model.ReaderImageContent
+import org.kaloscope.tv.core.model.ReaderPosition
 import org.kaloscope.tv.core.model.Session
 import org.kaloscope.tv.core.reader.ReaderBoundary
 import org.kaloscope.tv.core.reader.ReaderDirection
@@ -85,6 +87,9 @@ internal fun ImageReaderSurface(
     onPositionChanged: (Int) -> Unit,
     manualRetryRevision: Int,
     onFailedImagesChanged: (Boolean) -> Unit,
+    onProgress: (ReaderPosition) -> Unit = {},
+    initialImageOffset: Double = content.initialPosition.offset,
+    initialImageAtBottom: Boolean = false,
 ) {
     val failedImages = remember(contentRevision) { mutableStateMapOf<String, Boolean>() }
     val preloadController = rememberReaderImagePreloadController(session)
@@ -110,6 +115,8 @@ internal fun ImageReaderSurface(
                 settings = settings,
                 contentRevision = contentRevision,
                 initialImageIndex = initialImageIndex,
+                initialImageOffset = initialImageOffset,
+                initialImageAtBottom = initialImageAtBottom,
                 imagesExhausted = imagesExhausted,
                 isLoadingMore = isLoadingMore,
                 controlsVisible = controlsVisible,
@@ -120,6 +127,7 @@ internal fun ImageReaderSurface(
                 onBoundary = onBoundary,
                 onLoadMore = onLoadMore,
                 onPositionChanged = onPositionChanged,
+                onProgress = onProgress,
                 manualRetryRevision = manualRetryRevision,
                 onFinalFailureChanged = ::updateImageFailure,
                 preloadController = preloadController,
@@ -140,6 +148,7 @@ internal fun ImageReaderSurface(
                 onBoundary = onBoundary,
                 onLoadMore = onLoadMore,
                 onPositionChanged = onPositionChanged,
+                onProgress = onProgress,
                 manualRetryRevision = manualRetryRevision,
                 onFinalFailureChanged = ::updateImageFailure,
                 preloadController = preloadController,
@@ -155,6 +164,8 @@ private fun ScrollingImages(
     settings: ImageReaderSettings,
     contentRevision: Long,
     initialImageIndex: Int,
+    initialImageOffset: Double,
+    initialImageAtBottom: Boolean,
     imagesExhausted: Boolean,
     isLoadingMore: Boolean,
     controlsVisible: Boolean,
@@ -165,6 +176,7 @@ private fun ScrollingImages(
     onBoundary: (ReaderBoundary) -> Unit,
     onLoadMore: () -> Unit,
     onPositionChanged: (Int) -> Unit,
+    onProgress: (ReaderPosition) -> Unit,
     manualRetryRevision: Int,
     onFinalFailureChanged: (String, Boolean) -> Unit,
     preloadController: ReaderImagePreloadController,
@@ -182,10 +194,27 @@ private fun ScrollingImages(
     var loadStartImageCount by remember(contentRevision) {
         mutableIntStateOf(content.images.size)
     }
+    var positionReady by remember(contentRevision) { mutableStateOf(false) }
+    var initialImageSettled by remember(contentRevision) { mutableStateOf(false) }
+    var lastImageSettled by remember(contentRevision, content.images.lastOrNull()) { mutableStateOf(false) }
     LaunchedEffect(contentRevision) {
         // Resume the current image on mode changes; a new chapter supplies index zero.
+        positionReady = false
         listState.scrollToItem(initialImageIndex)
+        if ((initialImageOffset > 0 || initialImageAtBottom) && settings.zoomMode == ImageZoomMode.FitWidth) {
+            // A loading placeholder does not have the final image's aspect ratio.
+            snapshotFlow { initialImageSettled }.first { it }
+        }
+        withFrameNanos { }
+        val height = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == initialImageIndex }?.size ?: 0
+        if (height > 0 && (initialImageOffset > 0 || initialImageAtBottom)) {
+            val offset = if (initialImageAtBottom) {
+                ContinuousImageScrollPolicy.bottomOffsetPx(height, viewportPixels)
+            } else (height * initialImageOffset).toInt()
+            listState.scrollToItem(initialImageIndex, offset)
+        }
         horizontalBias = 0f
+        positionReady = true
     }
     LaunchedEffect(settings.zoomMode) { horizontalBias = 0f }
     LaunchedEffect(contentRevision, listState, content.images) {
@@ -199,11 +228,24 @@ private fun ScrollingImages(
             .collect(preloadController::updateTarget)
     }
     // Appended images change the position callback's bounds, even at the same visible index.
-    LaunchedEffect(contentRevision, listState, content.images.size) {
-        snapshotFlow { listState.firstVisibleItemIndex }
+    LaunchedEffect(contentRevision, listState, content.images.size, positionReady, imagesExhausted) {
+        if (!positionReady) return@LaunchedEffect
+        snapshotFlow {
+            val index = listState.firstVisibleItemIndex
+            val height = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.size ?: 0
+            val offset = if (height > 0) {
+                (listState.firstVisibleItemScrollOffset.toDouble() / height).coerceIn(0.0, 1.0)
+            } else 0.0
+            ReaderPosition(
+                index, offset,
+                chapterProgress = if (imagesExhausted && lastImageSettled && !listState.canScrollForward) 1.0
+                    else (content.imageOffset + index + offset) / content.imageCount.coerceAtLeast(1),
+            )
+        }
             .distinctUntilChanged()
-            .collect { index ->
-                onPositionChanged(if (content.images.isEmpty()) 0 else index + 1)
+            .collect { position ->
+                onPositionChanged(if (content.images.isEmpty()) 0 else position.index + 1)
+                if (position.index in content.images.indices) onProgress(position)
             }
     }
     LaunchedEffect(isLoadingMore, content.images.size, advanceAfterLoad) {
@@ -248,7 +290,7 @@ private fun ScrollingImages(
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                if (scrollInProgress || isLoadingMore) return@onPreviewKeyEvent true
+                if (scrollInProgress || isLoadingMore || !positionReady) return@onPreviewKeyEvent true
                 if (content.images.isEmpty()) {
                     when (event.key) {
                         Key.DirectionUp -> onBoundary(ReaderBoundary.Start)
@@ -375,7 +417,7 @@ private fun ScrollingImages(
         }
         itemsIndexed(
             items = content.images,
-            key = { index, url -> "$index:$url" },
+            key = { _, url -> url },
         ) { index, url ->
             // A chapter may reuse the same URL after the previous chapter exhausted its retries.
             key(contentRevision) {
@@ -387,6 +429,10 @@ private fun ScrollingImages(
                     horizontalBias = horizontalBias,
                     manualRetryRevision = manualRetryRevision,
                     onFinalFailureChanged = onFinalFailureChanged,
+                    onImageSettled = {
+                        if (index == initialImageIndex) initialImageSettled = true
+                        if (index == content.images.lastIndex) lastImageSettled = true
+                    },
                     viewportHeight = viewportHeight,
                     loadingTestTag = "reader-image-$index-loading",
                     modifier = Modifier
@@ -437,6 +483,7 @@ private fun PagedImages(
     onBoundary: (ReaderBoundary) -> Unit,
     onLoadMore: () -> Unit,
     onPositionChanged: (Int) -> Unit,
+    onProgress: (ReaderPosition) -> Unit,
     manualRetryRevision: Int,
     onFinalFailureChanged: (String, Boolean) -> Unit,
     preloadController: ReaderImagePreloadController,
@@ -462,8 +509,12 @@ private fun PagedImages(
         }
         previousSize.intValue = content.images.size
     }
-    LaunchedEffect(index, content.images.size) {
+    LaunchedEffect(contentRevision, index, content.images.size) {
         onPositionChanged(if (content.images.isEmpty()) 0 else index + 1)
+        if (index in content.images.indices) onProgress(ReaderPosition(
+            index,
+            chapterProgress = (content.imageOffset + index + 1).toDouble() / content.imageCount.coerceAtLeast(1),
+        ))
     }
     LaunchedEffect(contentRevision, content.images, index, preloadController) {
         preloadController.updateTarget(
@@ -587,7 +638,7 @@ private fun rememberReaderImagePreloadController(
 }
 
 @Composable
-private fun ReaderRemoteImage(
+internal fun ReaderRemoteImage(
     session: Session,
     url: String,
     contentDescription: String,
@@ -598,6 +649,7 @@ private fun ReaderRemoteImage(
     viewportHeight: Dp,
     loadingTestTag: String,
     modifier: Modifier,
+    onImageSettled: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var requestGeneration by remember(url) { mutableIntStateOf(0) }
@@ -658,6 +710,9 @@ private fun ReaderRemoteImage(
             failed = false
             requestGeneration += 1
         }
+    }
+    LaunchedEffect(imageLoading) {
+        if (!imageLoading) onImageSettled()
     }
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         if (imageRequest == null) {

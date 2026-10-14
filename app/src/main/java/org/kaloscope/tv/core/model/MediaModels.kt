@@ -3,8 +3,13 @@ package org.kaloscope.tv.core.model
 enum class MediaLibraryType {
     Movie,
     TvShow,
+    Novel,
+    Comic,
     Unknown,
 }
+
+val MediaLibraryType.isReading: Boolean
+    get() = this == MediaLibraryType.Novel || this == MediaLibraryType.Comic
 
 data class MediaLibrary(
     val id: Long,
@@ -58,4 +63,7 @@ data class MediaDetail(
     val studios: List<String>,
     val actors: List<MediaActor>,
     val children: List<MediaSummary>,
+    val authors: List<String> = emptyList(),
+    val illustrators: List<String> = emptyList(),
+    val publisher: String? = null,
 )
